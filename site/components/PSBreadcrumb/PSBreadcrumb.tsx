@@ -12,7 +12,7 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
 
 export default function PSBreadcrumb() {
   const paths: string | null = usePathname();
-  if (paths == '/v2/accueil') {
+  if (paths === '/v2/accueil' || paths === '/') {
     return null;
   }
   return (

@@ -9,6 +9,7 @@ import Link from 'next/link';
 import PSFooter from '../../components/PSFooter';
 import PSNavigation from '../../components/PSNavigation';
 import PSBreadcrumb from '../../components/PSBreadcrumb/PSBreadcrumb';
+import React from 'react';
 
 export const metadata: Metadata = {
   title: "Pass'Sport - Accueil",
