@@ -13,8 +13,12 @@
 # 
 # Génération de 2 csvs distincts en fonction de si allocataire = bénéficiaire et si allocataire != bénéficiaire 
 # 
+# ## Tests unitaires
+# Pour effectuer des tests unitaires, il convient de mettre la variable d'environnement "ENV" à "test" dans .env
+# Et également exécuter le notebook "fixtures_for_mailing_campaigns_script"
+# 
 
-# In[32]:
+# In[1]:
 
 
 import pandas as pd
@@ -24,39 +28,40 @@ import json
 
 load_dotenv()
 
-pathfile_benef_2024 = os.environ['BENEF_2024_PATHFILE']
+is_test_env = os.environ['ENV'].lower() == 'test'
+pathfile_benef_2024 = os.environ['TEST_BENEF_2024_PATHFILE'] if is_test_env else os.environ['BENEF_2024_PATHFILE']
 qr_code_signature_secret = os.environ['BENEF_2024_QR_CODE_URL_SECRET']
 qr_code_base_url = os.environ['BENEF_2024_QR_CODE_BASE_URL']
 pathfile_campaign_csv_output_b = os.environ['CAMPAIGN_CSV_OUTPUT_B']
 pathfile_campaign_csv_output_b_and_a = os.environ['CAMPAIGN_CSV_OUTPUT_B_AND_A']
 
 
-# In[33]:
+# In[2]:
 
 
 df_main = pd.read_csv(pathfile_benef_2024, index_col=0, sep=',')
 
 
-# In[34]:
+# In[3]:
 
 
 df_json_normalized = pd.json_normalize(df_main['allocataire'].apply(json.loads))
 df_json_normalized = df_json_normalized.add_prefix('allocataire_')
 
 
-# In[35]:
+# In[4]:
 
 
 df_main.index = pd.RangeIndex(start=0, stop=len(df_main), step=1)
 
 
-# In[36]:
+# In[5]:
 
 
 df_unwrapped_alloc = pd.merge(df_main, df_json_normalized, left_index=True, right_index=True)
 
 
-# In[37]:
+# In[6]:
 
 
 column_mapping = {
@@ -75,7 +80,7 @@ column_mapping = {
 df_unwrapped_alloc.columns = df_unwrapped_alloc.columns.to_series().replace(column_mapping)
 
 
-# In[38]:
+# In[7]:
 
 
 df_campaign = df_unwrapped_alloc[['email','allocataire_qualite',
@@ -83,7 +88,7 @@ df_campaign = df_unwrapped_alloc[['email','allocataire_qualite',
 'allocataire_prenom','beneficiaire_prenom', 'beneficiaire_nom', 'beneficiaire_genre', 'beneficiaire_date_naissance', 'code']]
 
 
-# In[39]:
+# In[8]:
 
 
 # new format for birth date
@@ -91,7 +96,7 @@ df_campaign['beneficiaire_date_naissance'] = pd.to_datetime(df_campaign['benefic
 df_campaign['beneficiaire_date_naissance'] = df_campaign['beneficiaire_date_naissance'].dt.strftime('%d/%m/%Y')
 
 
-# In[40]:
+# In[9]:
 
 
 # Ajout d'une colonne pour le sexe 
@@ -100,7 +105,7 @@ mask_girl = df_campaign['beneficiaire_genre'] == 'F'
 df_campaign.loc[mask_girl, 'neele'] =  'Née le'
 
 
-# In[61]:
+# In[10]:
 
 
 df_campaign['allocataire_prenom'] = df_campaign['allocataire_prenom'].astype(str).apply(lambda x: x.capitalize())
@@ -109,7 +114,7 @@ df_campaign['beneficiaire_prenom'] = df_campaign['beneficiaire_prenom'].astype(s
 df_campaign['beneficiaire_nom'] = df_campaign['beneficiaire_nom'].astype(str).apply(lambda x: x.capitalize())
 
 
-# In[71]:
+# In[11]:
 
 
 # Génération csv dans le cas allocataire = bénéficiaire
@@ -117,7 +122,7 @@ mask_alloc_diff_benef = df_campaign['beneficiaire_prenom'].str.lower() != df_cam
 df_alloc_diff_benef = df_campaign[mask_alloc_diff_benef]
 
 
-# In[70]:
+# In[12]:
 
 
 # Génération csv dans le cas allocataire != bénéficiaire
@@ -125,7 +130,7 @@ mask_alloc_eq_benef = df_campaign['beneficiaire_prenom'].str.lower() == df_campa
 df_alloc_eq_benef = df_campaign[mask_alloc_eq_benef]
 
 
-# In[65]:
+# In[13]:
 
 
 # # Génération des URLs pour le QR code
@@ -156,14 +161,14 @@ df_alloc_eq_benef = df_campaign[mask_alloc_eq_benef]
 # df_campaign['url_qr_code'] = df_campaign.apply(generate_url_column, axis=1)
 
 
-# In[66]:
+# In[14]:
 
 
 # (Opt) Ajout de la taille de l'URL
 # df_campaign['url_qr_code_len'] = df_campaign['url_qr_code'].apply(lambda x: len(x))
 
 
-# In[67]:
+# In[15]:
 
 
 # (Opt) Check sur la longueur des URLs
@@ -171,9 +176,64 @@ df_alloc_eq_benef = df_campaign[mask_alloc_eq_benef]
 # df_excedeed = df_campaign[mask_max_len_filter]
 
 
-# In[72]:
+# In[16]:
 
 
-df_alloc_eq_benef[['email','beneficiaire_prenom', 'beneficiaire_nom']].to_csv(pathfile_campaign_csv_output_b, index=False)
-df_alloc_diff_benef[['email','beneficiaire_prenom', 'beneficiaire_nom', 'allocataire_nom', 'allocataire_prenom']].to_csv(pathfile_campaign_csv_output_b_and_a, index=False)
+df_alloc_eq_benef_partial =  df_alloc_eq_benef[['email','beneficiaire_prenom', 'beneficiaire_nom']]
+df_alloc_diff_benef_partial =  df_alloc_diff_benef[['email','beneficiaire_prenom', 'beneficiaire_nom', 'allocataire_nom', 'allocataire_prenom']]
+
+if not is_test_env:
+    df_alloc_eq_benef_partial.to_csv(pathfile_campaign_csv_output_b, index=False)
+    df_alloc_diff_benef_partial.to_csv(pathfile_campaign_csv_output_b_and_a, index=False)
+
+
+# ## Tests unitaires
+# Ce qui est fait ci-dessous est une série d'assertions sur deux fichiers CSV créés pour des campagnes d'envoi de courriers :
+# 
+# - Campagne d'envoi de courriers avec des bénéficiaires qui sont allocataires.
+# - Campagne d'envoi de courriers avec des bénéficiaires différents des allocataires.
+# 
+# Nous vérifions principalement les noms des colonnes, leur ordre et leurs valeurs.
+# Ceci constitue une base pour d'autres tests unitaires par la suite lorsque d'autres colonnes seront ajoutées.
+
+# In[17]:
+
+
+if is_test_env:
+    ######################################################################
+    # Check length of CSV produced for beneficiaires that are allocataires
+    ######################################################################
+    assert(len(df_alloc_eq_benef_partial) == 4)
+
+    # Check column names
+    assert(len(df_alloc_eq_benef_partial.columns) == 3)
+    assert(df_alloc_eq_benef_partial.columns[0] == 'email')
+    assert(df_alloc_eq_benef_partial.columns[1] == 'beneficiaire_prenom')
+    assert(df_alloc_eq_benef_partial.columns[2] == 'beneficiaire_nom')
+
+    # Check various column values
+    for index, row in df_alloc_eq_benef_partial.iterrows():
+        assert(row['beneficiaire_nom'].istitle() == True)
+        assert(row['beneficiaire_prenom'].istitle() == True)
+
+    #####################################################################################
+    # Check length of CSV produced for beneficiaires that are different than allocataires
+    #####################################################################################
+    assert(len(df_alloc_diff_benef_partial) == 4)
+
+    # Check column names
+    assert(len(df_alloc_diff_benef_partial.columns) == 5)
+    assert(df_alloc_diff_benef_partial.columns[0] == 'email')
+    assert(df_alloc_diff_benef_partial.columns[1] == 'beneficiaire_prenom')
+    assert(df_alloc_diff_benef_partial.columns[2] == 'beneficiaire_nom')
+    assert(df_alloc_diff_benef_partial.columns[3] == 'allocataire_nom')
+    assert(df_alloc_diff_benef_partial.columns[4] == 'allocataire_prenom')
+
+    # Check various column values
+    for index, row in df_alloc_diff_benef_partial.iterrows():
+        assert(len(row['email']) > 0)
+        assert(row['beneficiaire_nom'].istitle() == True)
+        assert(row['beneficiaire_prenom'].istitle() == True)
+        assert(row['allocataire_nom'].istitle() == True)
+        assert(row['allocataire_prenom'].istitle() == True)
 
