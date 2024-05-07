@@ -4,10 +4,10 @@ import { useState } from 'react';
 import RadioButtonsGroup from '../radioButtonsGroup/RadioButtonsGroup';
 import Link from 'next/link';
 import { AGE_RANGE } from '../types/types';
-import VerdictPanel from '../verdictPanel/VerdictPanel';
+import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import { useRouter } from 'next/navigation';
-import styles from '../../styles.module.scss';
-
+import rootStyles from '@/app/styles.module.scss';
+import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
 interface Props {
   ageRange: AGE_RANGE;
 }
@@ -27,11 +27,11 @@ const AeehStep = ({ ageRange }: Props) => {
         <Question
           question={
             <>
-              <p className={`fr-text--lg fr-mb-0 ${styles['text--medium']}`}>
+              <p className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
                 Vos parent bénéficient-ils de l&apos;allocation d&apos;éducation de l&apos;enfant
                 handicapé (AEEH) ?
               </p>
-              <p className={`fr-text--lg fr-mb-0 ${styles['text--medium']}`}>
+              <p className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
                 Si vous ne le savez pas, rapprochez de vos parents, ils sauront vous répondre.
               </p>
             </>
@@ -89,30 +89,8 @@ const AeehStep = ({ ageRange }: Props) => {
           isSuccess={false}
         >
           <div className="fr-mb-2w">En effet, ce dispositif est ouvert aux:</div>
-          <ul className="fr-ml-2w">
-            <li className="fr-mb-3w">
-              personnes nées entre le 16 septembre 2006 et le 31 décembre 2018 bénéficiant de
-              l&apos;allocation de rentrée scolaire (ARS) (6 à 17 ans révolus)
-            </li>
-            <li className="fr-mb-3w">
-              personnes nées entre le 1er juin 2004 et le 31 décembre 2018 bénéficiant de
-              l&apos;allocation d&apos;éducation de l&apos;enfant handicapé (AEEH) (6 à 19 ans
-              révolus)
-            </li>
-            <li className="fr-mb-3w">
-              personnes nées entre le 16 septembre 1993 et le 31 décembre 2008 bénéficiant de
-              l&apos;allocation aux adultes handicapés (AAH) (16 à 30 ans)
-            </li>
-            <li>
-              étudiants, âgés de 28 ans révolus au plus, et bénéficient au plus tard le 15 octobre
-              2024, d&apos;une bourse de l&apos;état de l&apos;enseignement supérieur sous
-              conditions de ressources, d&apos;une aide annuelle du CROUS ou d&apos;une bourse
-              régionale pour les formations sanitaires et sociales pour l&apos;année universitaire
-              2024 - 2025.
-            </li>
-            <br />
-          </ul>
-          <span className={styles['text--medium']}>
+          <EligibilityCriteriaList />
+          <span className={rootStyles['text--medium']}>
             Pour autant, vous avez peut-être droit à d&apos;autres aides. N&apos;hésitez pas à vous
             rapprocher de votre région, département ou commune de résidence.
           </span>

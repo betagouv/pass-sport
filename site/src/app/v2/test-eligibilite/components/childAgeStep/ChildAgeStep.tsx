@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import Question from '../Question/Question';
-import VerdictPanel from '../verdictPanel/VerdictPanel';
+import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import AllowancesStep from '../allowancesStep/AllowancesStep';
 import RadioButtonsGroup from '../radioButtonsGroup/RadioButtonsGroup';
 import { CHILD_AGE } from '../types/types';
-import styles from '../../styles.module.scss';
+import rootStyles from '@/app/styles.module.scss';
 
 const ChildAgeStep = () => {
   const [childAge, setChildAge] = useState<CHILD_AGE | null>(null);
@@ -18,7 +18,7 @@ const ChildAgeStep = () => {
       <ul className="fr-pl-4w">
         <li>Personnes nées entre le 16 septembre 1993 et le 31 décembre 2018.</li>
       </ul>
-      <span className={styles['text--medium']}>
+      <span className={rootStyles['text--medium']}>
         Pour autant, vous avez peut-être droit à d&apos;autres aides. N&apos;hésitez pas à vous
         rapprocher de votre région, département ou commune de résidence.
       </span>
