@@ -6,7 +6,14 @@ import cn from 'classnames';
 const SocialMediaLinks = () => {
   return (
     <div>
-      <p className={cn('fr-text--lg', 'fr-mb-0', rootStyles['text--medium'])}>
+      <p
+        className={cn(
+          'fr-text--lg',
+          'fr-mb-0',
+          rootStyles['text--medium'],
+          rootStyles['text--black'],
+        )}
+      >
         Pour plus d&apos;informations, suivez-nous sur les réseaux sociaux :
       </p>
       <div className={cn('fr-pt-3v', styles['link-container'])}>

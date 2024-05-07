@@ -1,0 +1,12 @@
+.text {
+  &--medium {
+    font-weight: 500;
+  }
+  &--black {
+    color: var(--color-black);
+  }
+
+  &--title-grey {
+    color: var(--text-title-grey);
+  }
+}

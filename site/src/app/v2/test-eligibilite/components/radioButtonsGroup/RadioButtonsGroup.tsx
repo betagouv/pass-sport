@@ -10,9 +10,10 @@ type Options = {
 interface Props {
   fieldsetId: string;
   options: Options;
+  description?: JSX.Element;
 }
 
-const RadioButtonsGroup: React.FC<Props> = ({ options, fieldsetId }) => {
+const RadioButtonsGroup: React.FC<Props> = ({ options, fieldsetId, description }) => {
   const [buttonClickedIndex, setButtonClickedIndex] = useState<number | null>(null);
 
   const buttonHandler = (index: number) => {
@@ -25,7 +26,7 @@ const RadioButtonsGroup: React.FC<Props> = ({ options, fieldsetId }) => {
         className={`fr-fieldset__legend--regular fr-fieldset__legend fr-pt-1w fr-pb-2w ${styles.legend}`}
         id={`${fieldsetId}-legend`}
       >
-        Choisissez une option
+        Choisissez une option *
       </legend>
 
       {options.map((option, index) => {
@@ -57,6 +58,7 @@ const RadioButtonsGroup: React.FC<Props> = ({ options, fieldsetId }) => {
           </div>
         );
       })}
+      {description && <div className={cn(styles.descrpition)}>{description}</div>}
     </fieldset>
   );
 };
