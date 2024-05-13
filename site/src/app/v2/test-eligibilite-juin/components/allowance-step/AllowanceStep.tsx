@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
 import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
+import StepOneForm from '../step-one-form/StepOneForm';
+import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 
 const AllowanceStep = () => {
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
@@ -47,8 +49,7 @@ const AllowanceStep = () => {
           options={[
             {
               label: 'AEEH, ARS, AAH',
-              // onChange: () => setIsForMyself(true),
-              onChange: () => null,
+              onChange: () => setAllowance(ALLOWANCE.ARS_AEEH_AAH),
             },
             {
               label: 'CROUS',
@@ -97,6 +98,8 @@ const AllowanceStep = () => {
           </span>
         </VerdictPanel>
       )}
+
+      {allowance === ALLOWANCE.ARS_AEEH_AAH && <EligibilityTestForms />}
     </>
   );
 };
