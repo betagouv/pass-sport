@@ -1,6 +1,9 @@
-.container {
-  border-radius: 16px 16px 16px 0px;
+.background {
   background-color: var(--color-white);
+}
+
+.bordered{
+  border-radius: 16px 16px 16px 0px;
 }
 
 .callout-title {

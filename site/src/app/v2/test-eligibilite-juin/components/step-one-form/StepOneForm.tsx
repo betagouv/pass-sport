@@ -2,9 +2,13 @@ import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
 import { FormEvent, useRef, useState } from 'react';
-import { InputsState, SearchResponseBody, SearchResponseError } from 'types/EligibilityTest';
+import {
+  StepOneFormInputsState,
+  SearchResponseBody,
+  SearchResponseError,
+} from 'types/EligibilityTest';
 
-const initialInputsState: InputsState = {
+const initialInputsState: StepOneFormInputsState = {
   beneficiaryLastname: 'default',
   beneficiaryFirstname: 'default',
   beneficiaryBirthDate: 'default',
@@ -18,13 +22,15 @@ interface Props {
 const StepOneForm = ({ onDataRecieved }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [inputStates, setInputStates] = useState<InputsState>(initialInputsState);
+  const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [error, setError] = useState<string | null>();
 
-  const isFormValid = (formData: FormData): { isValid: boolean; states: InputsState } => {
+  const isFormValid = (
+    formData: FormData,
+  ): { isValid: boolean; states: StepOneFormInputsState } => {
     let isValid = true;
 
-    const fieldNames = Object.keys(initialInputsState) as (keyof InputsState)[];
+    const fieldNames = Object.keys(initialInputsState) as (keyof StepOneFormInputsState)[];
 
     const states = { ...initialInputsState };
 
@@ -70,6 +76,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
       setError('Le service est actuellement fermé');
     }
   };
+
   const requestEligibilityTest = (): Promise<{ status: number; body: unknown }> => {
     const domain = process.env.NEXT_PUBLIC_LCA_API_URL;
 
@@ -85,7 +92,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
     params.append('nom', formData.get('beneficiaryLastname') as string);
     params.append('prenom', formData.get('beneficiaryFirstname') as string);
     params.append('dateNaissance', formData.get('beneficiaryBirthDate') as string);
-    params.append('codeInsee', '67482');
+    params.append('codeInsee', formData.get('recipientResidencePlace') as string);
 
     const url = new URL(baseUrl);
     url.search = params.toString();

@@ -11,6 +11,7 @@ import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
 import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
 import StepOneForm from '../step-one-form/StepOneForm';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
+import CrousStep from '../crous-step/crousStep';
 
 const AllowanceStep = () => {
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
@@ -53,8 +54,7 @@ const AllowanceStep = () => {
             },
             {
               label: 'CROUS',
-              // onChange: () => setIsForMyself(false),
-              onChange: () => null,
+              onChange: () => setAllowance(ALLOWANCE.CROUS),
             },
             {
               label: 'Aucune',
@@ -92,14 +92,15 @@ const AllowanceStep = () => {
             En effet, ce dispositif est ouvert aux:
           </p>
           <EligibilityCriteriaList />
-          <span className={cn('fr-text--bold', rootStyles['text--black'])}>
+          <p className={cn('fr-text--bold', rootStyles['text--black'])}>
             Pour autant, vous avez peut-être droit à d&apos;autres aides. N&apos;hésitez pas à vous
             rapprocher de votre région, département ou commune de résidence.
-          </span>
+          </p>
         </VerdictPanel>
       )}
 
       {allowance === ALLOWANCE.ARS_AEEH_AAH && <EligibilityTestForms />}
+      {allowance === ALLOWANCE.CROUS && <CrousStep />}
     </>
   );
 };
