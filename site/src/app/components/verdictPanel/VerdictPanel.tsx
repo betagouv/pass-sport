@@ -14,6 +14,7 @@ interface Props {
   isSuccess: boolean;
   hasSocialLinks?: boolean;
   children: ReactNode;
+  isLean?: boolean;
 }
 
 const VerdictPanel = ({
@@ -22,10 +23,13 @@ const VerdictPanel = ({
   children,
   isSuccess,
   hasSocialLinks = true,
+  isLean = false,
 }: Props) => {
   return (
     <div>
-      <div className={cn('fr-p-2w', styles.container)}>
+      <div
+        className={cn(styles.background, { 'fr-p-2w': !isLean, [`${styles.bordered}`]: !isLean })}
+      >
         <CallOut
           title={title}
           colorVariant={isSuccess ? 'green-emeraude' : 'pink-tuile'}
@@ -45,7 +49,7 @@ const VerdictPanel = ({
         <Actions />
       </div>
 
-      <div className={cn('fr-p-2w', styles.container)}>
+      <div className={cn(styles.background, { 'fr-p-2w': !isLean })}>
         <CallOut
           title="Pour vous engager dans des missions de volontariat ou de bénévolat :"
           colorVariant="blue-ecume"
