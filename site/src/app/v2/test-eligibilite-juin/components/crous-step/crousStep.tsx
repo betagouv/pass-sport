@@ -6,7 +6,6 @@ import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
 import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
 import rootStyles from '@/app/styles.module.scss';
 import cn from 'classnames';
-import classNames from 'classnames';
 import Link from 'next/link';
 import Button from '@codegouvfr/react-dsfr/Button';
 

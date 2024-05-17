@@ -4,6 +4,7 @@ import YoungCafForm from '../step-two-forms/youngCafForm';
 import { ConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
 import YoungMsaForm from '../step-two-forms/youngMsaForm';
 import AahCafForm from '../step-two-forms/aahCafForm';
+import QrCodeVerdict from '../qrcode-verdict/QrCOdeVerdict';
 
 const EligibilityTestForms = () => {
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody>([]);
@@ -11,7 +12,12 @@ const EligibilityTestForms = () => {
 
   return (
     <div>
-      <StepOneForm onDataRecieved={(data: SearchResponseBody) => setEligibilityData(data)} />
+      <StepOneForm
+        onDataRecieved={(data: SearchResponseBody) => {
+          setEligibilityData(data);
+          setpspCodeData([]);
+        }}
+      />
 
       {JSON.stringify(eligibilityData)}
 
@@ -41,7 +47,11 @@ const EligibilityTestForms = () => {
             onDataRecieved={(data: ConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
-      {pspCodeData.length > 0 && <p> Le code pass sport est {pspCodeData[0].id_psp}</p>}
+      {pspCodeData.length > 0 && (
+        <div className="fr-mt-6w">
+          <QrCodeVerdict data={pspCodeData[0]} />
+        </div>
+      )}
     </div>
   );
 };
