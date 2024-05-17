@@ -32,9 +32,12 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungMsaInputsState } => {
     let isValid = true;
 
-    const fieldNames = Object.keys(initialInputsState) as (keyof YoungMsaInputsState)[];
+    const fieldNames = Object.keys(inputStates) as (keyof YoungMsaInputsState)[];
 
     const states = { ...initialInputsState };
+    fieldNames.forEach((fieldname) => {
+      states[fieldname] = { state: 'default' };
+    });
 
     fieldNames.forEach((fieldName) => {
       const value = formData.get(fieldName);
@@ -110,10 +113,10 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     });
   };
 
-  const onCountrySelectedHandler = (e: ChangeEvent<HTMLInputElement>) => {
+  const onCountrySelectedHandler = (e: ChangeEvent<HTMLSelectElement>) => {
     const country = e.target.value;
 
-    if (country.toUpperCase() === 'FRANCE') {
+    if (country.toUpperCase() === 'FR') {
       setInputStates((inputStates) => ({
         ...inputStates,
         recipientBirthPlace: { state: 'default' },
