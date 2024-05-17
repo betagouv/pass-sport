@@ -10,7 +10,6 @@ export const mapper: Record<keyof YoungCafInputsState | keyof YoungMsaInputsStat
 };
 
 export const convertDate = (date: string): string | null => {
-  console.log(date);
   const [year, month, day] = date.split('-');
 
   if (!year || !month || !day) {

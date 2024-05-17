@@ -3,6 +3,9 @@ import Select from '@codegouvfr/react-dsfr/Select';
 import { ChangeEvent } from 'react';
 import { AahMsaInputsState } from 'types/EligibilityTest';
 import { countries } from '../../../helpers/countries';
+import AsyncSelect from 'react-select/async';
+import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';
+import { City } from 'types/City';
 
 interface Props {
   onCountryChanged: (e: ChangeEvent<HTMLSelectElement>) => void;
@@ -11,6 +14,11 @@ interface Props {
   inputStates: AahMsaInputsState;
   areInputsDisabled: boolean;
   isBirthInputRequired: boolean;
+}
+
+interface Option {
+  label: string;
+  value: string;
 }
 
 const CommonMsaInputs = ({
@@ -37,6 +45,15 @@ const CommonMsaInputs = ({
           {country.label}
         </option>
       ));
+
+  const parseCities = (cities: City[]): Option[] =>
+    cities.map((city) => {
+      return { label: city.nom, value: city.code };
+    });
+
+  const fetchCityOptions = (inputValue: string) =>
+    getFranceCitiesByName(inputValue).then((cities) => parseCities(cities));
+
   return (
     <>
       <Select
@@ -58,13 +75,27 @@ const CommonMsaInputs = ({
       </Select>
 
       {isBirthInputRequired && (
-        <Input
-          label="Commune de naissance de l’allocataire*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
-          nativeInputProps={{ name: birthPlaceInputName }}
-          state={inputStates.recipientBirthPlace?.state}
-          stateRelatedMessage={inputStates.recipientBirthPlace?.errorMsg}
-          disabled={areInputsDisabled}
+        // <Input
+        //   label="Commune de naissance de l’allocataire*"
+        //   // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
+        //   nativeInputProps={{ name: birthPlaceInputName }}
+        //   state={inputStates.recipientBirthPlace?.state}
+        //   stateRelatedMessage={inputStates.recipientBirthPlace?.errorMsg}
+        //   disabled={areInputsDisabled}
+        // />
+        <AsyncSelect
+          instanceId="city-select-id"
+          name={birthPlaceInputName}
+          loadingMessage={() => <p>Chargement des villes...</p>}
+          noOptionsMessage={() => <p>Aucune ville trouvée</p>}
+          placeholder="Trouver votre ville"
+          cacheOptions
+          isClearable
+          loadOptions={fetchCityOptions}
+          isDisabled={areInputsDisabled}
+
+          // onChange={cityChangeHandler}
+          // styles={selectStyles}
         />
       )}
     </>
