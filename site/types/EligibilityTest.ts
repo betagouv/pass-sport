@@ -17,8 +17,8 @@ export interface YoungMsaInputsState {
   recipientLastname: { state: InputState; errorMsg?: string };
   recipientFirstname: { state: InputState; errorMsg?: string };
   recipientBirthDate: { state: InputState; errorMsg?: string };
-  recipientBirthPlace: { state: InputState; errorMsg?: string };
   recipientBirthCountry: { state: InputState; errorMsg?: string };
+  recipientBirthPlace?: { state: InputState; errorMsg?: string };
 }
 
 export interface AahCafInputsState {
@@ -26,8 +26,8 @@ export interface AahCafInputsState {
 }
 
 export interface AahMsaInputsState {
-  recipientBirthPlace: { state: InputState; errorMsg?: string };
   recipientBirthCountry: { state: InputState; errorMsg?: string };
+  recipientBirthPlace?: { state: InputState; errorMsg?: string };
 }
 
 export interface SearchResponseBodyItem {
