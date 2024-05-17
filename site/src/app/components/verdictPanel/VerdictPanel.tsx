@@ -15,6 +15,7 @@ interface Props {
   hasSocialLinks?: boolean;
   children: ReactNode;
   isLean?: boolean;
+  qrCodeComponent?: ReactNode;
 }
 
 const VerdictPanel = ({
@@ -24,6 +25,7 @@ const VerdictPanel = ({
   isSuccess,
   hasSocialLinks = true,
   isLean = false,
+  qrCodeComponent,
 }: Props) => {
   return (
     <div>
@@ -42,6 +44,9 @@ const VerdictPanel = ({
         >
           {children}
         </CallOut>
+
+        {qrCodeComponent}
+
         {hasSocialLinks && <SocialMediaLinks />}
       </div>
 

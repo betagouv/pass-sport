@@ -74,6 +74,8 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
         "Aucun exercice en cours, vous n'êtes pas autorisé à vous inscrire au Pass'Sport pour le moment."
     ) {
       setError('Le service est actuellement fermé');
+    } else {
+      setError('Une erreur est apparue. Merci de réessayer ultérieurement.');
     }
   };
 
@@ -96,6 +98,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
 
     const url = new URL(baseUrl);
     url.search = params.toString();
+
     return fetch(url).then(async (response) => ({
       status: response.status,
       body: (await response.json()) as unknown,

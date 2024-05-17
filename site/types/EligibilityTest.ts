@@ -8,8 +8,6 @@ export interface StepOneFormInputsState {
 }
 
 export interface YoungCafInputsState {
-  // recipientBirthPlace: { state: InputState; errorMsg?: string };
-  // recipientBirthCountry: { state: InputState; errorMsg?: string };
   recipientCafNumber: { state: InputState; errorMsg?: string };
   recipientLastname: { state: InputState; errorMsg?: string };
   recipientFirstname: { state: InputState; errorMsg?: string };
@@ -67,7 +65,7 @@ export interface ConfirmResponseBodyItem {
   };
 
   id: number;
-  genre: string;
+  genre: string; // 'F', 'M', else ?
   nom: string;
   prenom: string;
   nom_complet: string;

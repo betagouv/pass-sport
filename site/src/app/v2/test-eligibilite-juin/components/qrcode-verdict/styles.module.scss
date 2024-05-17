@@ -1,0 +1,21 @@
+.container {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  justify-content: space-around;
+
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+}
+
+.blue {
+  color: var(--artwork-major-blue-france);
+}
+
+.text-casing {
+  text-transform: lowercase;
+  display: inline-block;
+  &::first-letter {
+    text-transform: uppercase;
+  }
+}
