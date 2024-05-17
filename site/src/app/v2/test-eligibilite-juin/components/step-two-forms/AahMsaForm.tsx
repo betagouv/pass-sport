@@ -1,6 +1,5 @@
-import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
-import { FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
   AahMsaInputsState,
   ConfirmResponseBody,
@@ -9,9 +8,9 @@ import {
 } from 'types/EligibilityTest';
 import { mapper } from './helper';
 import FormButton from './FormButton';
+import CommonMsaInputs from './common-msa-inputs/CommonMsaInputs';
 
 const initialInputsState: AahMsaInputsState = {
-  recipientBirthPlace: { state: 'default' },
   recipientBirthCountry: { state: 'default' },
 };
 
@@ -30,7 +29,6 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     let isValid = true;
 
     const fieldNames = Object.keys(initialInputsState) as (keyof AahMsaInputsState)[];
-
     const states = { ...initialInputsState };
 
     fieldNames.forEach((fieldName) => {
@@ -57,8 +55,12 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
     const formData = new FormData(formRef.current!);
 
+    const birthCountry = formData.get('recipientBirthCountry') as string;
+    if (birthCountry !== 'FRANCE') {
+      params.append('codeIso', birthCountry);
+    }
+
     params.append('codeInseeBirth', formData.get('recipientBirthPlace') as string);
-    // params.append('codeIso', formData.get('recipientBirthCountry') as string); //peut etre a virer qd née en france
     params.append('id', eligibilityDataItem.id.toString());
     params.append('situation', eligibilityDataItem.situation);
     params.append('organisme', eligibilityDataItem.organisme);
@@ -97,25 +99,33 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     });
   };
 
+  const onCountrySelectedHandler = (e: ChangeEvent<HTMLInputElement>) => {
+    const country = e.target.value;
+
+    if (country.toUpperCase() === 'FRANCE') {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'default' },
+      }));
+    } else {
+      setInputStates(initialInputsState);
+    }
+  };
+
+  const isBirthPlaceRequired = () => {
+    return !!Object.keys(inputStates).find((key) => key === 'recipientBirthPlace');
+  };
+
   return (
     <div>
       <form ref={formRef} onSubmit={onSubmitHandler}>
-        <Input
-          label="Pays de naissance de l’allocataire*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
-          nativeInputProps={{ name: 'recipientBirthCountry' }}
-          state={inputStates.recipientBirthCountry.state}
-          stateRelatedMessage={inputStates.recipientBirthCountry.errorMsg}
-          disabled={isFormDisabled}
-        />
-
-        <Input
-          label="Commune de naissance de l’allocataire*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
-          nativeInputProps={{ name: 'recipientBirthPlace' }}
-          state={inputStates.recipientBirthPlace.state}
-          stateRelatedMessage={inputStates.recipientBirthPlace.errorMsg}
-          disabled={isFormDisabled}
+        <CommonMsaInputs
+          onCountryChanged={onCountrySelectedHandler}
+          birthCountryInputName="recipientBirthCountry"
+          birthPlaceInputName="recipientBirthPlace"
+          inputStates={inputStates}
+          areInputsDisabled={isFormDisabled}
+          isBirthInputRequired={isBirthPlaceRequired()}
         />
 
         <FormButton isDisabled={isFormDisabled} />
