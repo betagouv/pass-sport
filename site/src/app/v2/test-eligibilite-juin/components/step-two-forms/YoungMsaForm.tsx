@@ -8,6 +8,7 @@ import {
   YoungMsaInputsState,
 } from 'types/EligibilityTest';
 import { convertDate, mapper } from './helper';
+import FormButton from './FormButton';
 
 const initialInputsState: YoungMsaInputsState = {
   recipientLastname: { state: 'default' },
@@ -25,6 +26,8 @@ interface Props {
 const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungMsaInputsState>(initialInputsState);
+  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
+
   const [error, setError] = useState<string | null>();
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungMsaInputsState } => {
@@ -98,6 +101,7 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         notifyError(status, body as ConfirmResponseError);
       } else {
         onDataRecieved(body as ConfirmResponseBody);
+        setIsFormDisabled(true);
       }
     });
   };
@@ -114,6 +118,7 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           }}
           state={inputStates.recipientLastname.state}
           stateRelatedMessage={inputStates.recipientLastname.errorMsg}
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -122,6 +127,7 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'recipientFirstname', placeholder: 'ex: Marie' }}
           state={inputStates.recipientFirstname.state}
           stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -130,6 +136,7 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'recipientBirthDate', type: 'date', placeholder: 'ex: Marie' }}
           state={inputStates.recipientBirthDate.state}
           stateRelatedMessage={inputStates.recipientBirthDate.errorMsg}
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -138,6 +145,7 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'recipientBirthPlace' }}
           state={inputStates.recipientBirthPlace.state}
           stateRelatedMessage={inputStates.recipientBirthPlace.errorMsg}
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -146,11 +154,10 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'recipientBirthCountry' }}
           state={inputStates.recipientBirthCountry.state}
           stateRelatedMessage={inputStates.recipientBirthCountry.errorMsg}
+          disabled={isFormDisabled}
         />
 
-        <Button priority="primary" iconId="fr-icon-arrow-right-line" iconPosition="right">
-          Je vérifie mon éligibilité
-        </Button>
+        <FormButton isDisabled={isFormDisabled} />
       </form>
     </div>
   );

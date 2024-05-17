@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
-import YoungCafForm from '../step-two-forms/youngCafForm';
+import YoungCafForm from '../step-two-forms/YoungCafForm';
 import { ConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
-import YoungMsaForm from '../step-two-forms/youngMsaForm';
-import AahCafForm from '../step-two-forms/aahCafForm';
+import YoungMsaForm from '../step-two-forms/YoungMsaForm';
+import AahCafForm from '../step-two-forms/AahCafForm';
 import QrCodeVerdict from '../qrcode-verdict/QrCOdeVerdict';
+import AahMsaForm from '../step-two-forms/AahMsaForm';
 
 const EligibilityTestForms = () => {
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody>([]);
@@ -43,6 +44,15 @@ const EligibilityTestForms = () => {
         eligibilityData[0].situation === 'AAH' &&
         eligibilityData[0].organisme === 'CAF' && (
           <AahCafForm
+            eligibilityDataItem={eligibilityData[0]}
+            onDataRecieved={(data: ConfirmResponseBody) => setpspCodeData(data)}
+          />
+        )}
+
+      {eligibilityData.length > 0 &&
+        eligibilityData[0].situation === 'AAH' &&
+        eligibilityData[0].organisme === 'MSA' && (
+          <AahMsaForm
             eligibilityDataItem={eligibilityData[0]}
             onDataRecieved={(data: ConfirmResponseBody) => setpspCodeData(data)}
           />

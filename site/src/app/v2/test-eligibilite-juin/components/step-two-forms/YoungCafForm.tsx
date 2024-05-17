@@ -2,16 +2,19 @@ import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
 import { FormEvent, useRef, useState } from 'react';
 import {
-  AahCafInputsState,
   ConfirmResponseBody,
   ConfirmResponseError,
   SearchResponseBodyItem,
+  YoungCafInputsState,
 } from 'types/EligibilityTest';
 import { mapper } from './helper';
 import Alert from '@codegouvfr/react-dsfr/Alert';
+import FormButton from './FormButton';
 
-const initialInputsState: AahCafInputsState = {
+const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },
+  recipientLastname: { state: 'default' },
+  recipientFirstname: { state: 'default' },
 };
 
 interface Props {
@@ -19,15 +22,17 @@ interface Props {
   onDataRecieved: (data: ConfirmResponseBody) => void;
 }
 
-const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
+const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
-  const [inputStates, setInputStates] = useState<AahCafInputsState>(initialInputsState);
+  const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
+  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
+
   const [error, setError] = useState<string | null>();
 
-  const isFormValid = (formData: FormData): { isValid: boolean; states: AahCafInputsState } => {
+  const isFormValid = (formData: FormData): { isValid: boolean; states: YoungCafInputsState } => {
     let isValid = true;
 
-    const fieldNames = Object.keys(initialInputsState) as (keyof AahCafInputsState)[];
+    const fieldNames = Object.keys(initialInputsState) as (keyof YoungCafInputsState)[];
 
     const states = { ...initialInputsState };
 
@@ -68,6 +73,8 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
     const formData = new FormData(formRef.current!);
 
+    params.append('allocataireName', formData.get('recipientLastname') as string);
+    params.append('allocataireSurname', formData.get('recipientFirstname') as string);
     params.append('matricule', formData.get('recipientCafNumber') as string);
     params.append('id', eligibilityDataItem.id.toString());
     params.append('situation', eligibilityDataItem.situation);
@@ -102,6 +109,7 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         notifyError(status, body as ConfirmResponseError);
       } else {
         onDataRecieved(body as ConfirmResponseBody);
+        setIsFormDisabled(true);
       }
     });
   };
@@ -119,11 +127,31 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           }}
           state={inputStates.recipientCafNumber.state}
           stateRelatedMessage={inputStates.recipientCafNumber.errorMsg}
+          disabled={isFormDisabled}
         />
 
-        <Button priority="primary" iconId="fr-icon-arrow-right-line" iconPosition="right">
-          Je vérifie mon éligibilité
-        </Button>
+        <Input
+          label="Nom de l’allocataire CAF*"
+          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
+          nativeInputProps={{
+            name: 'recipientLastname',
+            placeholder: 'ex: Dupont',
+          }}
+          state={inputStates.recipientLastname.state}
+          stateRelatedMessage={inputStates.recipientLastname.errorMsg}
+          disabled={isFormDisabled}
+        />
+
+        <Input
+          label="Prénom de l’allocataire CAF*"
+          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
+          nativeInputProps={{ name: 'recipientFirstname', placeholder: 'ex: Marie' }}
+          state={inputStates.recipientFirstname.state}
+          stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
+          disabled={isFormDisabled}
+        />
+
+        <FormButton isDisabled={isFormDisabled} />
       </form>
 
       {error && (
@@ -141,4 +169,4 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   );
 };
 
-export default AahCafForm;
+export default YoungCafForm;
