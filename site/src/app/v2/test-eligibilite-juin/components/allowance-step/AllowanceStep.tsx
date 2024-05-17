@@ -9,14 +9,23 @@ import { useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
 import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
-import StepOneForm from '../step-one-form/StepOneForm';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
-import CrousStep from '../crous-step/crousStep';
+import CrousStep from '../crous-step/CrousStep';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
+
+/* This is a trick to force the RadioButtonsGroup to reload */
+let CustomButtonsGroupKey = 0;
 
 const AllowanceStep = () => {
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
+
+  const restartTest = () => {
+    CustomButtonsGroupKey = Math.round(Math.random() * 1000);
+    setAllowance(null);
+  };
+
   return (
-    <>
+    <EligibilityTestContext.Provider value={{ performNewTest: restartTest }}>
       <Question
         question={
           <>
@@ -45,7 +54,7 @@ const AllowanceStep = () => {
         }
       >
         <RadioButtonsGroup
-          // key={CustomButtonsGroupKey}
+          key={CustomButtonsGroupKey}
           fieldsetId="allowanceStep"
           options={[
             {
@@ -101,7 +110,7 @@ const AllowanceStep = () => {
 
       {allowance === ALLOWANCE.ARS_AEEH_AAH && <EligibilityTestForms />}
       {allowance === ALLOWANCE.CROUS && <CrousStep />}
-    </>
+    </EligibilityTestContext.Provider>
   );
 };
 

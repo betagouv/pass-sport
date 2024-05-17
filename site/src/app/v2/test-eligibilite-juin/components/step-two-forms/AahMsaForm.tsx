@@ -8,6 +8,7 @@ import {
   SearchResponseBodyItem,
 } from 'types/EligibilityTest';
 import { mapper } from './helper';
+import FormButton from './FormButton';
 
 const initialInputsState: AahMsaInputsState = {
   recipientBirthPlace: { state: 'default' },
@@ -22,6 +23,7 @@ interface Props {
 const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AahMsaInputsState>(initialInputsState);
+  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: AahMsaInputsState } => {
@@ -56,7 +58,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     const formData = new FormData(formRef.current!);
 
     params.append('codeInseeBirth', formData.get('recipientBirthPlace') as string);
-    params.append('codeIso', formData.get('recipientBirthCountry') as string); //peut etre a virer qd née en france
+    // params.append('codeIso', formData.get('recipientBirthCountry') as string); //peut etre a virer qd née en france
     params.append('id', eligibilityDataItem.id.toString());
     params.append('situation', eligibilityDataItem.situation);
     params.append('organisme', eligibilityDataItem.organisme);
@@ -90,6 +92,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         notifyError(status, body as ConfirmResponseError);
       } else {
         onDataRecieved(body as ConfirmResponseBody);
+        setIsFormDisabled(true);
       }
     });
   };
@@ -103,6 +106,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'recipientBirthCountry' }}
           state={inputStates.recipientBirthCountry.state}
           stateRelatedMessage={inputStates.recipientBirthCountry.errorMsg}
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -111,11 +115,10 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'recipientBirthPlace' }}
           state={inputStates.recipientBirthPlace.state}
           stateRelatedMessage={inputStates.recipientBirthPlace.errorMsg}
+          disabled={isFormDisabled}
         />
 
-        <Button priority="primary" iconId="fr-icon-arrow-right-line" iconPosition="right">
-          Je vérifie mon éligibilité
-        </Button>
+        <FormButton isDisabled={isFormDisabled} />
       </form>
     </div>
   );

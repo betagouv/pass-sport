@@ -23,6 +23,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
+  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
 
   const isFormValid = (
@@ -62,6 +63,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
       if (status !== 200) {
         notifyError(status, body as SearchResponseError);
       } else {
+        setIsFormDisabled(true);
         onDataRecieved(body as SearchResponseBody);
       }
     });
@@ -116,6 +118,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'beneficiaryLastname' }}
           state={inputStates.beneficiaryLastname}
           stateRelatedMessage="Le nom est requis"
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -124,6 +127,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'beneficiaryFirstname' }}
           state={inputStates.beneficiaryFirstname}
           stateRelatedMessage="Le prénom est requis"
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -132,6 +136,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'beneficiaryBirthDate' }}
           state={inputStates.beneficiaryBirthDate}
           stateRelatedMessage="La date de naissance est requise"
+          disabled={isFormDisabled}
         />
 
         <Input
@@ -141,9 +146,16 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           nativeInputProps={{ name: 'recipientResidencePlace' }}
           state={inputStates.recipientResidencePlace}
           stateRelatedMessage="La commune de naissance est requise"
+          disabled={isFormDisabled}
         />
 
-        <Button priority="primary" type="submit">
+        <Button
+          priority="primary"
+          type="submit"
+          disabled={isFormDisabled}
+          iconId={isFormDisabled ? 'fr-icon-success-line' : 'fr-icon-arrow-right-line'}
+          iconPosition="right"
+        >
           Je valide les informations
         </Button>
       </form>
