@@ -12,7 +12,7 @@ import rootStyles from '@/app/styles.module.scss';
 import cn from 'classnames';
 
 const EligibilityTestForms = () => {
-  const [eligibilityData, setEligibilityData] = useState<SearchResponseBody>([]);
+  const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setpspCodeData] = useState<ConfirmResponseBody | null>(null);
 
   return (
@@ -26,7 +26,8 @@ const EligibilityTestForms = () => {
 
       {JSON.stringify(eligibilityData)}
 
-      {eligibilityData.length > 0 &&
+      {eligibilityData &&
+        eligibilityData.length > 0 &&
         eligibilityData[0].situation === 'jeune' &&
         eligibilityData[0].organisme === 'CAF' && (
           <YoungCafForm
@@ -35,7 +36,8 @@ const EligibilityTestForms = () => {
           />
         )}
 
-      {eligibilityData.length > 0 &&
+      {eligibilityData &&
+        eligibilityData.length > 0 &&
         eligibilityData[0].situation === 'jeune' &&
         eligibilityData[0].organisme === 'MSA' && (
           <YoungMsaForm
@@ -44,7 +46,8 @@ const EligibilityTestForms = () => {
           />
         )}
 
-      {eligibilityData.length > 0 &&
+      {eligibilityData &&
+        eligibilityData.length > 0 &&
         eligibilityData[0].situation === 'AAH' &&
         eligibilityData[0].organisme === 'CAF' && (
           <AahCafForm
@@ -53,7 +56,8 @@ const EligibilityTestForms = () => {
           />
         )}
 
-      {eligibilityData.length > 0 &&
+      {eligibilityData &&
+        eligibilityData.length > 0 &&
         eligibilityData[0].situation === 'AAH' &&
         eligibilityData[0].organisme === 'MSA' && (
           <AahMsaForm
@@ -62,7 +66,8 @@ const EligibilityTestForms = () => {
           />
         )}
 
-      {pspCodeData && pspCodeData.length === 0 && (
+      {((eligibilityData && eligibilityData.length === 0) ||
+        (pspCodeData && pspCodeData.length === 0)) && (
         <div className="fr-mt-6w">
           <VerdictPanel
             title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes
