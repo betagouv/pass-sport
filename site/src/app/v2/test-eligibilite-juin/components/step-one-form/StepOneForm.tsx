@@ -1,3 +1,4 @@
+import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/Question/Question';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
@@ -7,6 +8,9 @@ import {
   SearchResponseBody,
   SearchResponseError,
 } from 'types/EligibilityTest';
+import styles from './styles.module.scss';
+import cn from 'classnames';
+import CustomInput from '../custom-input/CustomInput';
 
 const initialInputsState: StepOneFormInputsState = {
   beneficiaryLastname: 'default',
@@ -109,56 +113,68 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
 
   return (
     <div>
-      <form ref={formRef} onSubmit={onSubmitHandler}>
-        <p>Veuillez rentrer les informations ci-dessous sur vous ou sur votre enfant :</p>
-        <p>Les champs ci-dessous sont obligatoires</p>
-        <Input
-          label="Nom du bénéficaire*"
-          hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
-          nativeInputProps={{ name: 'beneficiaryLastname' }}
-          state={inputStates.beneficiaryLastname}
-          stateRelatedMessage="Le nom est requis"
-          disabled={isFormDisabled}
-        />
+      <Question
+        question="Veuillez rentrer les informations ci-dessous sur vous ou sur votre enfant :"
+        style={QUESTION_STYLES.JUNE_STYLE}
+      >
+        <form ref={formRef} onSubmit={onSubmitHandler}>
+          <p className={cn('fr-pb-2w', styles.paragraph)}>
+            Les champs ci-dessous sont obligatoires*
+          </p>
 
-        <Input
-          label="Prénom du bénéficaire*"
-          hintText="Prénom de la personne qui bénéficie des aides de la CAF ou la MSA"
-          nativeInputProps={{ name: 'beneficiaryFirstname' }}
-          state={inputStates.beneficiaryFirstname}
-          stateRelatedMessage="Le prénom est requis"
-          disabled={isFormDisabled}
-        />
+          <CustomInput
+            inputProps={{
+              label: 'Nom du bénéficaire*',
+              nativeInputProps: { name: 'beneficiaryLastname' },
+              state: inputStates.beneficiaryLastname,
+              stateRelatedMessage: 'Le nom est requis',
+              disabled: isFormDisabled,
+            }}
+            secondHint="Personne qui bénéficie des aides de la CAF ou la MSA"
+          />
 
-        <Input
-          label="Date de naissance du bénéficaire*"
-          hintText="Date de naissance de la personne qui bénéficie des aides de la CAF ou la MSA, sous le format jour, mois, année comme suit JJ/MM/AAAA"
-          nativeInputProps={{ name: 'beneficiaryBirthDate' }}
-          state={inputStates.beneficiaryBirthDate}
-          stateRelatedMessage="La date de naissance est requise"
-          disabled={isFormDisabled}
-        />
+          <Input
+            label="Prénom du bénéficaire*"
+            nativeInputProps={{ name: 'beneficiaryFirstname' }}
+            state={inputStates.beneficiaryFirstname}
+            stateRelatedMessage="Le prénom est requis"
+            disabled={isFormDisabled}
+          />
 
-        <Input
-          label="Commune de résidence de l’allocataire*"
-          hintText="L’allocataire est la personne qui perçoit au moins une aide en regard de leur situation familiale et/ou monétaire.
-      Si le nom de la commune est composé, veillez à saisir un tiret entre deux noms (ex : Saint-Joseph), sauf si la commune débute par le, la, les, auxquels cas vous devez séparer d’un caractère « espace » (ex : Le Havre). Si votre commune comporte moins de 4 caractères il faut ajouter un espace à la fin (ex : Eus)."
-          nativeInputProps={{ name: 'recipientResidencePlace' }}
-          state={inputStates.recipientResidencePlace}
-          stateRelatedMessage="La commune de naissance est requise"
-          disabled={isFormDisabled}
-        />
+          <Input
+            label="Date de naissance du bénéficaire*"
+            hintText="Format attendu: JJ/MM/AAAA"
+            nativeInputProps={{ name: 'beneficiaryBirthDate' }}
+            state={inputStates.beneficiaryBirthDate}
+            stateRelatedMessage="La date de naissance est requise"
+            disabled={isFormDisabled}
+          />
 
-        <Button
-          priority="primary"
-          type="submit"
-          disabled={isFormDisabled}
-          iconId={isFormDisabled ? 'fr-icon-success-line' : 'fr-icon-arrow-right-line'}
-          iconPosition="right"
-        >
-          Je valide les informations
-        </Button>
-      </form>
+          <CustomInput
+            inputProps={{
+              label: 'Commune de résidence de l’allocataire*',
+              hintText:
+                'Format attendu : Si le nom de la commune est composé, veillez à saisir un tiret entre deux noms (ex : Saint-Joseph), sauf si la commune débute par le, la, les, auxquels cas vous devez séparer d’un caractère « espace » (ex : Le Havre). Si votre commune comporte moins de 4 caractères il faut ajouter un espace à la fin (ex : Eus).',
+              nativeInputProps: { name: 'recipientResidencePlace' },
+              state: inputStates.recipientResidencePlace,
+              stateRelatedMessage: 'La commune de naissance est requise',
+              disabled: isFormDisabled,
+            }}
+            secondHint="L’allocataire est la personne qui perçoit au moins une aide en regard de leur situation familiale et/ou monétaire."
+          />
+
+          <Button
+            priority="primary"
+            type="submit"
+            disabled={isFormDisabled}
+            iconId={isFormDisabled ? 'fr-icon-success-line' : 'fr-icon-arrow-right-line'}
+            iconPosition="right"
+            className="fr-mb-6w fr-mt-3w"
+          >
+            Je valide les informations
+          </Button>
+        </form>
+      </Question>
 
       {error && (
         <Alert

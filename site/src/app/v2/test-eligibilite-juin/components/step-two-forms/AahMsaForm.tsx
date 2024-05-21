@@ -6,7 +6,7 @@ import {
   ConfirmResponseError,
   SearchResponseBodyItem,
 } from 'types/EligibilityTest';
-import { mapper } from './helper';
+import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import CommonMsaInputs from './common-msa-inputs/CommonMsaInputs';
 
@@ -110,9 +110,24 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
       setInputStates((inputStates) => ({
         ...inputStates,
         recipientBirthPlace: { state: 'default' },
+        recipientBirthCountry: { state: 'default' },
       }));
     } else {
       setInputStates(initialInputsState);
+    }
+  };
+
+  const onBirthPlaceChanged = (text: string | null) => {
+    if (!text) {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'error' },
+      }));
+    } else {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'default' },
+      }));
     }
   };
 
@@ -124,12 +139,13 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     <div>
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <CommonMsaInputs
-          onCountryChanged={onCountrySelectedHandler}
           birthCountryInputName="recipientBirthCountry"
           birthPlaceInputName="recipientBirthPlace"
           inputStates={inputStates}
           areInputsDisabled={isFormDisabled}
           isBirthInputRequired={isBirthPlaceRequired()}
+          onCountryChanged={onCountrySelectedHandler}
+          onBirthPlaceChanged={onBirthPlaceChanged}
         />
 
         <FormButton isDisabled={isFormDisabled} />

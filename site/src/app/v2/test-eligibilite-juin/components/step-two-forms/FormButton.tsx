@@ -9,6 +9,7 @@ const FormButton = ({ isDisabled }: Props) => (
     iconId={isDisabled ? 'fr-icon-success-line' : 'fr-icon-arrow-right-line'}
     iconPosition="right"
     disabled={isDisabled}
+    className="fr-mt-3w"
   >
     Je vérifie mon éligibilité
   </Button>

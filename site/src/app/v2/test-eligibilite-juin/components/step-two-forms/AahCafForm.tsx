@@ -7,7 +7,7 @@ import {
   ConfirmResponseError,
   SearchResponseBodyItem,
 } from 'types/EligibilityTest';
-import { mapper } from './helper';
+import { mapper } from '../../helpers/helper';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import FormButton from './FormButton';
 
