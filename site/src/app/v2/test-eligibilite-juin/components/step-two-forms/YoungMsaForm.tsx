@@ -169,7 +169,7 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         <Input
           label="Date de naissance de l’allocataire*"
           hintText="Format attendu JJ/MM/AAAA"
-          nativeInputProps={{ name: 'recipientBirthDate', type: 'date', placeholder: 'ex: Marie' }}
+          nativeInputProps={{ name: 'recipientBirthDate', type: 'date' }}
           state={inputStates.recipientBirthDate.state}
           stateRelatedMessage={inputStates.recipientBirthDate.errorMsg}
           disabled={isFormDisabled}
