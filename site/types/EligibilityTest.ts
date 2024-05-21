@@ -1,4 +1,9 @@
-type InputState = 'default' | 'success' | 'error';
+type DsfrInputState = 'default' | 'success' | 'error';
+
+export interface InputState {
+  state: DsfrInputState;
+  errorMsg?: string;
+}
 
 export interface StepOneFormInputsState {
   beneficiaryLastname: InputState;
@@ -8,26 +13,26 @@ export interface StepOneFormInputsState {
 }
 
 export interface YoungCafInputsState {
-  recipientCafNumber: { state: InputState; errorMsg?: string };
-  recipientLastname: { state: InputState; errorMsg?: string };
-  recipientFirstname: { state: InputState; errorMsg?: string };
+  recipientCafNumber: InputState;
+  recipientLastname: InputState;
+  recipientFirstname: InputState;
 }
 
 export interface YoungMsaInputsState {
-  recipientLastname: { state: InputState; errorMsg?: string };
-  recipientFirstname: { state: InputState; errorMsg?: string };
-  recipientBirthDate: { state: InputState; errorMsg?: string };
-  recipientBirthCountry: { state: InputState; errorMsg?: string };
-  recipientBirthPlace?: { state: InputState; errorMsg?: string };
+  recipientLastname: InputState;
+  recipientFirstname: InputState;
+  recipientBirthDate: InputState;
+  recipientBirthCountry: InputState;
+  recipientBirthPlace?: InputState;
 }
 
 export interface AahCafInputsState {
-  recipientCafNumber: { state: InputState; errorMsg?: string };
+  recipientCafNumber: InputState;
 }
 
 export interface AahMsaInputsState {
-  recipientBirthCountry: { state: InputState; errorMsg?: string };
-  recipientBirthPlace?: { state: InputState; errorMsg?: string };
+  recipientBirthCountry: InputState;
+  recipientBirthPlace?: InputState;
 }
 
 export interface SearchResponseBodyItem {

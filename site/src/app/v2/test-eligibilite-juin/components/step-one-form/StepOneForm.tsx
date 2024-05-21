@@ -11,12 +11,13 @@ import {
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import CustomInput from '../custom-input/CustomInput';
+import CityFinder from '../city-finder/CityFinder';
 
 const initialInputsState: StepOneFormInputsState = {
-  beneficiaryLastname: 'default',
-  beneficiaryFirstname: 'default',
-  beneficiaryBirthDate: 'default',
-  recipientResidencePlace: 'default',
+  beneficiaryLastname: { state: 'default' },
+  beneficiaryFirstname: { state: 'default' },
+  beneficiaryBirthDate: { state: 'default' },
+  recipientResidencePlace: { state: 'default' },
 };
 
 interface Props {
@@ -43,7 +44,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
       const value = formData.get(fieldName);
 
       if (!value) {
-        states[fieldName] = 'error';
+        states[fieldName].state = 'error';
         isValid = false;
       }
     });
@@ -111,6 +112,20 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
     }));
   };
 
+  const onResidencePlaceChanged = (text: string | null) => {
+    if (!text) {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientResidencePlace: { state: 'error' },
+      }));
+    } else {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientResidencePlace: { state: 'default' },
+      }));
+    }
+  };
+
   return (
     <div>
       <Question
@@ -126,7 +141,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
             inputProps={{
               label: 'Nom du bénéficaire*',
               nativeInputProps: { name: 'beneficiaryLastname' },
-              state: inputStates.beneficiaryLastname,
+              state: inputStates.beneficiaryLastname.state,
               stateRelatedMessage: 'Le nom est requis',
               disabled: isFormDisabled,
             }}
@@ -136,7 +151,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           <Input
             label="Prénom du bénéficaire*"
             nativeInputProps={{ name: 'beneficiaryFirstname' }}
-            state={inputStates.beneficiaryFirstname}
+            state={inputStates.beneficiaryFirstname.state}
             stateRelatedMessage="Le prénom est requis"
             disabled={isFormDisabled}
           />
@@ -145,22 +160,17 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
             label="Date de naissance du bénéficaire*"
             hintText="Format attendu: JJ/MM/AAAA"
             nativeInputProps={{ name: 'beneficiaryBirthDate' }}
-            state={inputStates.beneficiaryBirthDate}
+            state={inputStates.beneficiaryBirthDate.state}
             stateRelatedMessage="La date de naissance est requise"
             disabled={isFormDisabled}
           />
 
-          <CustomInput
-            inputProps={{
-              label: 'Commune de résidence de l’allocataire*',
-              hintText:
-                'Format attendu : Si le nom de la commune est composé, veillez à saisir un tiret entre deux noms (ex : Saint-Joseph), sauf si la commune débute par le, la, les, auxquels cas vous devez séparer d’un caractère « espace » (ex : Le Havre). Si votre commune comporte moins de 4 caractères il faut ajouter un espace à la fin (ex : Eus).',
-              nativeInputProps: { name: 'recipientResidencePlace' },
-              state: inputStates.recipientResidencePlace,
-              stateRelatedMessage: 'La commune de naissance est requise',
-              disabled: isFormDisabled,
-            }}
-            secondHint="L’allocataire est la personne qui perçoit au moins une aide en regard de leur situation familiale et/ou monétaire."
+          <CityFinder
+            legend="Commune de résidence de l’allocataire*"
+            isDisabled={isFormDisabled}
+            inputName="recipientResidencePlace"
+            inputState={inputStates.recipientResidencePlace}
+            onChanged={onResidencePlaceChanged}
           />
 
           <Button
