@@ -1,4 +1,3 @@
-import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
 import { FormEvent, useRef, useState } from 'react';
 import {
@@ -7,9 +6,10 @@ import {
   SearchResponseBodyItem,
   YoungCafInputsState,
 } from 'types/EligibilityTest';
-import { mapper } from './helper';
+import { mapper } from '../../helpers/helper';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import FormButton from './FormButton';
+import CustomInput from '../custom-input/CustomInput';
 
 const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -117,22 +117,26 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   return (
     <div>
       <form ref={formRef} onSubmit={onSubmitHandler}>
-        <Input
-          label="Numéro de l’allocataire CAF*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
-          nativeInputProps={{
-            name: 'recipientCafNumber',
-            placeholder: 'ex: 0000000',
-            type: 'number',
+        <CustomInput
+          inputProps={{
+            label: 'Numéro de l’allocataire CAF*',
+            hintText: 'Format attendu : 7 chiffres au plus. Ex : 0000000',
+            nativeInputProps: {
+              name: 'recipientCafNumber',
+              placeholder: 'ex: 0000000',
+              type: 'number',
+            },
+            state: inputStates.recipientCafNumber.state,
+            stateRelatedMessage: inputStates.recipientCafNumber.errorMsg,
+            disabled: isFormDisabled,
           }}
-          state={inputStates.recipientCafNumber.state}
-          stateRelatedMessage={inputStates.recipientCafNumber.errorMsg}
-          disabled={isFormDisabled}
+          secondHint="Appelé « numéro de dossier » Le numéro figure en haut à gauche de tous les courriers émis
+          par la CAF ainsi que sur toutes les attestations que vous pouvez télécharger depuis votre
+          espace personnel."
         />
 
         <Input
           label="Nom de l’allocataire CAF*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
           nativeInputProps={{
             name: 'recipientLastname',
             placeholder: 'ex: Dupont',
@@ -141,16 +145,13 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           stateRelatedMessage={inputStates.recipientLastname.errorMsg}
           disabled={isFormDisabled}
         />
-
         <Input
           label="Prénom de l’allocataire CAF*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
           nativeInputProps={{ name: 'recipientFirstname', placeholder: 'ex: Marie' }}
           state={inputStates.recipientFirstname.state}
           stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
           disabled={isFormDisabled}
         />
-
         <FormButton isDisabled={isFormDisabled} />
       </form>
 

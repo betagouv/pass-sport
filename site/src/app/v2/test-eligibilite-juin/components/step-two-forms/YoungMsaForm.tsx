@@ -6,7 +6,7 @@ import {
   SearchResponseBodyItem,
   YoungMsaInputsState,
 } from 'types/EligibilityTest';
-import { convertDate, mapper } from './helper';
+import { convertDate, mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import CommonMsaInputs from './common-msa-inputs/CommonMsaInputs';
 
@@ -126,6 +126,20 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     }
   };
 
+  const onBirthPlaceChanged = (text: string | null) => {
+    if (!text) {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'error' },
+      }));
+    } else {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'default' },
+      }));
+    }
+  };
+
   const isBirthPlaceRequired = () => {
     return !!Object.keys(inputStates).find((key) => key === 'recipientBirthPlace');
   };
@@ -135,7 +149,6 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
           label="Nom de l’allocataire*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
           nativeInputProps={{
             name: 'recipientLastname',
             placeholder: 'ex: Dupont',
@@ -147,7 +160,6 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
         <Input
           label="Prénom de l’allocataire*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
           nativeInputProps={{ name: 'recipientFirstname', placeholder: 'ex: Marie' }}
           state={inputStates.recipientFirstname.state}
           stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
@@ -164,15 +176,17 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         />
 
         <CommonMsaInputs
-          onCountryChanged={onCountrySelectedHandler}
           birthCountryInputName="recipientBirthCountry"
           birthPlaceInputName="recipientBirthPlace"
           inputStates={inputStates}
           areInputsDisabled={isFormDisabled}
           isBirthInputRequired={isBirthPlaceRequired()}
+          onCountryChanged={onCountrySelectedHandler}
+          onBirthPlaceChanged={onBirthPlaceChanged}
         />
-
-        <FormButton isDisabled={isFormDisabled} />
+        <div className="fr-mt-3w">
+          <FormButton isDisabled={isFormDisabled} />
+        </div>
       </form>
     </div>
   );

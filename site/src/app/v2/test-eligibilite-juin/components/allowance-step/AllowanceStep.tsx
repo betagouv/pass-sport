@@ -1,10 +1,8 @@
 'use client';
 
-import Question from '@/app/v2/test-eligibilite/components/Question/Question';
-import RadioButtonsGroup from '@/app/v2/test-eligibilite/components/radioButtonsGroup/RadioButtonsGroup';
+import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/Question/Question';
 import rootStyles from '@/app/styles.module.scss';
 import cn from 'classnames';
-import styles from './styles.module.scss';
 import { useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
@@ -12,6 +10,7 @@ import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import CrousStep from '../crous-step/CrousStep';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
+import RadioButtons from '@codegouvfr/react-dsfr/RadioButtons';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
@@ -52,50 +51,54 @@ const AllowanceStep = () => {
             </p>
           </>
         }
+        style={QUESTION_STYLES.JUNE_STYLE}
       >
-        <RadioButtonsGroup
+        <RadioButtons
           key={CustomButtonsGroupKey}
-          fieldsetId="allowanceStep"
+          legend="Choisissez une option:"
+          name="radio"
           options={[
             {
               label: 'AEEH, ARS, AAH',
-              onChange: () => setAllowance(ALLOWANCE.ARS_AEEH_AAH),
+              nativeInputProps: {
+                onChange: () => setAllowance(ALLOWANCE.ARS_AEEH_AAH),
+              },
             },
             {
               label: 'CROUS',
-              onChange: () => setAllowance(ALLOWANCE.CROUS),
+              nativeInputProps: {
+                onChange: () => setAllowance(ALLOWANCE.CROUS),
+              },
             },
             {
               label: 'Aucune',
-              onChange: () => setAllowance(ALLOWANCE.NONE),
+              nativeInputProps: {
+                onChange: () => setAllowance(ALLOWANCE.NONE),
+              },
             },
           ]}
-          description={
+          hintText={
             <>
-              <div className={styles.container}>
-                <span className="fr-icon--sm fr-icon-info-fill" aria-hidden="true"></span>
-                <div>
-                  <p className={cn('fr-text--xs', 'fr-mb-0')}>
-                    ARS : Allocation de rentrée scolaire
-                  </p>
-                  <p className={cn('fr-text--xs', 'fr-mb-0')}>
-                    AEEH : Allocation d’éducation de l’enfant handicapé
-                  </p>
-                  <p className={cn('fr-text--xs', 'fr-mb-0')}>AAH : Allocation adulte handicapé</p>
-                  <p className={cn('fr-text--xs', 'fr-mb-0')}>
-                    CROUS : (Étudiant boursier) Centre régional des œuvres universitaires et
-                    scolaires
-                  </p>
-                </div>
+              <div>
+                <p className={cn('fr-text--xs', 'fr-mb-0')}>ARS : Allocation de rentrée scolaire</p>
+                <p className={cn('fr-text--xs', 'fr-mb-0')}>
+                  AEEH : Allocation d’éducation de l’enfant handicapé
+                </p>
+                <p className={cn('fr-text--xs', 'fr-mb-0')}>AAH : Allocation adulte handicapé</p>
+                <p className={cn('fr-text--xs', 'fr-mb-0')}>
+                  CROUS : Étudiant boursier. Centre régional des œuvres universitaires et scolaires
+                </p>
               </div>
             </>
           }
         />
       </Question>
+
       {allowance === ALLOWANCE.NONE && (
         <VerdictPanel
           title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes pas éligible au pass Sport"
           isSuccess={false}
+          isLean
         >
           <p className={cn('fr-mb-2w', 'fr-text--lg', rootStyles['text--black'])}>
             En effet, ce dispositif est ouvert aux:

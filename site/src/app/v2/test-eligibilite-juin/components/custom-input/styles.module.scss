@@ -1,0 +1,14 @@
+.container {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.color {
+  color: var(--text-default-info);
+}
+
+.position {
+  position: relative;
+  top: -2px;
+}

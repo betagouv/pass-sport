@@ -1,5 +1,4 @@
-import Question from '@/app/v2/test-eligibilite/components/Question/Question';
-import RadioButtonsGroup from '@/app/v2/test-eligibilite/components/radioButtonsGroup/RadioButtonsGroup';
+import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/Question/Question';
 import { useState } from 'react';
 import { CROUS_AGE_RANGE } from '../types/types';
 import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
@@ -8,27 +7,34 @@ import rootStyles from '@/app/styles.module.scss';
 import cn from 'classnames';
 import Link from 'next/link';
 import Button from '@codegouvfr/react-dsfr/Button';
+import RadioButtons from '@codegouvfr/react-dsfr/RadioButtons';
 
 const CrousStep = () => {
   const [ageRange, setAgeRange] = useState<CROUS_AGE_RANGE | null>(null);
 
   return (
     <div>
-      <Question question="Quel âge avez-vous ?">
-        <RadioButtonsGroup
-          fieldsetId="ageStep"
+      <Question question="Quel âge avez-vous ?" style={QUESTION_STYLES.JUNE_STYLE}>
+        <RadioButtons
+          legend="Choississez une option:"
           options={[
             {
               label: 'Moins de 28 ans',
-              onChange: () => setAgeRange(CROUS_AGE_RANGE.LESS_THAN_28),
+              nativeInputProps: {
+                onChange: () => setAgeRange(CROUS_AGE_RANGE.LESS_THAN_28),
+              },
             },
             {
               label: '28 ans révolus (au plus tard le 15 octobre 2024)',
-              onChange: () => setAgeRange(CROUS_AGE_RANGE.MORE_THAN_28),
+              nativeInputProps: {
+                onChange: () => setAgeRange(CROUS_AGE_RANGE.MORE_THAN_28),
+              },
             },
             {
               label: 'Plus de 29 ans',
-              onChange: () => setAgeRange(CROUS_AGE_RANGE.MORE_THAN_29),
+              nativeInputProps: {
+                onChange: () => setAgeRange(CROUS_AGE_RANGE.MORE_THAN_29),
+              },
             },
           ]}
         />
@@ -60,7 +66,7 @@ const CrousStep = () => {
         </VerdictPanel>
       )}
 
-      {ageRange === CROUS_AGE_RANGE.MORE_THAN_29 && (
+      {(ageRange === CROUS_AGE_RANGE.MORE_THAN_29 || ageRange === CROUS_AGE_RANGE.MORE_THAN_28) && (
         <VerdictPanel
           title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes
         pas éligible au pass Sport."

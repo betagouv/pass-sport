@@ -1,0 +1,12 @@
+.hint {
+  color: var(--text-mention-grey);
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  gap:8px
+}
+.error {
+  color: var(--text-default-error);
+}

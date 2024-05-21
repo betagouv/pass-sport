@@ -6,7 +6,12 @@
 
 .panel {
   border-radius: 16px 16px 16px 0px;
-  background-color: var(--color-white);
+  &_may {
+    background-color: var(--color-white);
+  }
+  &_june{
+    background-color: var(--border-action-low-green-menthe);
+  }
 }
 
 .paragraph {

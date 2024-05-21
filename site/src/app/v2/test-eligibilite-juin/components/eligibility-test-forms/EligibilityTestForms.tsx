@@ -24,8 +24,6 @@ const EligibilityTestForms = () => {
         }}
       />
 
-      {JSON.stringify(eligibilityData)}
-
       {eligibilityData &&
         eligibilityData.length > 0 &&
         eligibilityData[0].situation === 'jeune' &&
