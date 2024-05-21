@@ -159,7 +159,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           <Input
             label="Date de naissance du bénéficaire*"
             hintText="Format attendu: JJ/MM/AAAA"
-            nativeInputProps={{ name: 'beneficiaryBirthDate' }}
+            nativeInputProps={{ name: 'beneficiaryBirthDate', type: 'date' }}
             state={inputStates.beneficiaryBirthDate.state}
             stateRelatedMessage="La date de naissance est requise"
             disabled={isFormDisabled}
