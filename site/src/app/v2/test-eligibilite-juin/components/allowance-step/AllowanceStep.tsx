@@ -5,12 +5,11 @@ import rootStyles from '@/app/styles.module.scss';
 import cn from 'classnames';
 import { useState } from 'react';
 import { ALLOWANCE } from '../types/types';
-import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
-import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import CrousStep from '../crous-step/CrousStep';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import RadioButtons from '@codegouvfr/react-dsfr/RadioButtons';
+import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
@@ -94,23 +93,7 @@ const AllowanceStep = () => {
         />
       </Question>
 
-      {allowance === ALLOWANCE.NONE && (
-        <VerdictPanel
-          title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes pas éligible au pass Sport"
-          isSuccess={false}
-          isLean
-        >
-          <p className={cn('fr-mb-2w', 'fr-text--lg', rootStyles['text--black'])}>
-            En effet, ce dispositif est ouvert aux:
-          </p>
-          <EligibilityCriteriaList />
-          <p className={cn('fr-text--bold', rootStyles['text--black'])}>
-            Pour autant, vous avez peut-être droit à d&apos;autres aides. N&apos;hésitez pas à vous
-            rapprocher de votre région, département ou commune de résidence.
-          </p>
-        </VerdictPanel>
-      )}
-
+      {allowance === ALLOWANCE.NONE && <FullNegativeVerdictPanel isLean />}
       {allowance === ALLOWANCE.ARS_AEEH_AAH && <EligibilityTestForms />}
       {allowance === ALLOWANCE.CROUS && <CrousStep />}
     </EligibilityTestContext.Provider>

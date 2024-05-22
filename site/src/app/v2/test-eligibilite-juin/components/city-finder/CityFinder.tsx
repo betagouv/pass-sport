@@ -39,7 +39,7 @@ const CityFinder = ({ inputState, legend, inputName, isDisabled, onChanged }: Pr
       ...baseStyles,
       borderColor: '#ffffff',
       backgroundColor: '#eeeeee',
-      borderBottom: 'solid black 2px',
+      borderBottom: inputState.state === 'error' ? 'solid #CE0500 2px' : 'solid black 2px',
     }),
     indicatorSeparator: (baseStyles: Record<string, unknown>) => ({
       ...baseStyles,
@@ -72,7 +72,7 @@ const CityFinder = ({ inputState, legend, inputName, isDisabled, onChanged }: Pr
         name={inputName}
         loadingMessage={() => <p>Chargement des villes...</p>}
         noOptionsMessage={() => <p>Aucune ville trouvée</p>}
-        placeholder="Trouver votre ville"
+        placeholder="Trouver la commune"
         cacheOptions
         isClearable
         loadOptions={fetchCityOptions}
@@ -87,9 +87,7 @@ const CityFinder = ({ inputState, legend, inputName, isDisabled, onChanged }: Pr
             className={cn('fr-icon--sm', 'fr-icon-error-fill', styles.error)}
             aria-hidden="true"
           ></span>
-          <p className={cn('fr-text--xs', 'fr-mb-0', styles.error)}>
-            {mapper['recipientBirthPlace']}
-          </p>
+          <p className={cn('fr-text--xs', 'fr-mb-0', styles.error)}>{inputState.errorMsg}</p>
         </div>
       )}
     </div>

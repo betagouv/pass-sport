@@ -33,8 +33,8 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     let isValid = true;
 
     const fieldNames = Object.keys(inputStates) as (keyof YoungMsaInputsState)[];
+    const states = structuredClone(initialInputsState);
 
-    const states = { ...initialInputsState };
     fieldNames.forEach((fieldname) => {
       states[fieldname] = { state: 'default' };
     });

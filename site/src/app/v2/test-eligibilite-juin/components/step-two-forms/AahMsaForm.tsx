@@ -30,7 +30,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
     const fieldNames = Object.keys(inputStates) as (keyof AahMsaInputsState)[];
 
-    const states = { ...initialInputsState };
+    const states = structuredClone(initialInputsState);
     fieldNames.forEach((fieldname) => {
       states[fieldname] = { state: 'default' };
     });
@@ -103,7 +103,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     });
   };
 
-  const onCountrySelectedHandler = (e: ChangeEvent<HTMLSelectElement>) => {
+  const onCountrySelected = (e: ChangeEvent<HTMLSelectElement>) => {
     const country = e.target.value;
 
     if (country.toUpperCase() === 'FR') {
@@ -144,7 +144,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           inputStates={inputStates}
           areInputsDisabled={isFormDisabled}
           isBirthInputRequired={isBirthPlaceRequired()}
-          onCountryChanged={onCountrySelectedHandler}
+          onCountryChanged={onCountrySelected}
           onBirthPlaceChanged={onBirthPlaceChanged}
         />
 

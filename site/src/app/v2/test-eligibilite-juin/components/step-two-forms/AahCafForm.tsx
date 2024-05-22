@@ -1,6 +1,6 @@
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
-import { FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
   AahCafInputsState,
   ConfirmResponseBody,
@@ -31,7 +31,7 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
     const fieldNames = Object.keys(initialInputsState) as (keyof AahCafInputsState)[];
 
-    const states = { ...initialInputsState };
+    const states = structuredClone(initialInputsState);
 
     fieldNames.forEach((fieldName) => {
       const value = formData.get(fieldName);
@@ -109,16 +109,31 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     });
   };
 
+  const onInputChanged = (text: string, field: keyof AahCafInputsState) => {
+    if (!text) {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        [`${field}`]: { state: 'error', errorMsg: mapper[field] },
+      }));
+    } else {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        [`${field}`]: { state: 'default' },
+      }));
+    }
+  };
+
   return (
     <div>
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
           label="Numéro de l’allocataire CAF*"
-          // hintText="Nom de la personne qui bénéficie des aides de la CAF ou la MSA"
           nativeInputProps={{
             name: 'recipientCafNumber',
             placeholder: 'ex: 0000000',
             type: 'number',
+            onChange: (e: ChangeEvent<HTMLInputElement>) =>
+              onInputChanged(e.target.value, 'recipientCafNumber'),
           }}
           state={inputStates.recipientCafNumber.state}
           stateRelatedMessage={inputStates.recipientCafNumber.errorMsg}

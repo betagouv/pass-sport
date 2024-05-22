@@ -1,5 +1,5 @@
 import Input from '@codegouvfr/react-dsfr/Input';
-import { FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
   ConfirmResponseBody,
   ConfirmResponseError,
@@ -34,7 +34,7 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
     const fieldNames = Object.keys(initialInputsState) as (keyof YoungCafInputsState)[];
 
-    const states = { ...initialInputsState };
+    const states = structuredClone(initialInputsState);
 
     fieldNames.forEach((fieldName) => {
       const value = formData.get(fieldName);
@@ -114,6 +114,20 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     });
   };
 
+  const onInputChanged = (text: string | null, field: keyof YoungCafInputsState) => {
+    if (!text) {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        [`${field}`]: { state: 'error', errorMsg: mapper[field] },
+      }));
+    } else {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        [`${field}`]: { state: 'default' },
+      }));
+    }
+  };
+
   return (
     <div>
       <form ref={formRef} onSubmit={onSubmitHandler}>
@@ -125,6 +139,8 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
               name: 'recipientCafNumber',
               placeholder: 'ex: 0000000',
               type: 'number',
+              onChange: (e: ChangeEvent<HTMLInputElement>) =>
+                onInputChanged(e.target.value, 'recipientCafNumber'),
             },
             state: inputStates.recipientCafNumber.state,
             stateRelatedMessage: inputStates.recipientCafNumber.errorMsg,
@@ -140,6 +156,8 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
           nativeInputProps={{
             name: 'recipientLastname',
             placeholder: 'ex: Dupont',
+            onChange: (e: ChangeEvent<HTMLInputElement>) =>
+              onInputChanged(e.target.value, 'recipientLastname'),
           }}
           state={inputStates.recipientLastname.state}
           stateRelatedMessage={inputStates.recipientLastname.errorMsg}
@@ -147,7 +165,12 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         />
         <Input
           label="Prénom de l’allocataire CAF*"
-          nativeInputProps={{ name: 'recipientFirstname', placeholder: 'ex: Marie' }}
+          nativeInputProps={{
+            name: 'recipientFirstname',
+            placeholder: 'ex: Marie',
+            onChange: (e: ChangeEvent<HTMLInputElement>) =>
+              onInputChanged(e.target.value, 'recipientFirstname'),
+          }}
           state={inputStates.recipientFirstname.state}
           stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
           disabled={isFormDisabled}

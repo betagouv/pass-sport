@@ -8,6 +8,9 @@ import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import { useRouter } from 'next/navigation';
 import rootStyles from '@/app/styles.module.scss';
 import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
+import cn from 'classnames';
+import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
+
 interface Props {
   ageRange: AGE_RANGE;
 }
@@ -65,37 +68,28 @@ const AeehStep = ({ ageRange }: Props) => {
             },
           }}
         >
-          Vous devriez le recevoir soit entre le 30 mai et le 1er juin, soit le 29 et le 31 août
-          2024 sur l&apos;adresse e-mail que vous avez communiquée à votre CAF, Mutualité sociale
-          agricole ou votre CROUS.
+          <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+            Vous devriez le recevoir soit entre le 30 mai et le 1er juin, soit le 29 et le 31 août
+            2024 sur l&apos;adresse e-mail que vous avez communiquée à votre CAF, Mutualité sociale
+            agricole ou votre CROUS.
+          </p>
           <br />
+          <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+            Il vous permettra de déduire 50 euros de votre adhésion sportif dans plus de 85 000
+            clubs et associations sportives partenaires dans toute la France.
+          </p>
           <br />
-          Il vous permettra de déduire 50 euros de votre adhésion sportif dans plus de 85 000 clubs
-          et associations sportives partenaires dans toute la France.
-          <br />
-          <br />
-          Si après le 1er septembre vous ne l&apos;avez pas reçu, vous aurez la possibilité
-          d&apos;en faire la demande sur{' '}
-          <Link href="https://pass.sports.gouv.fr" target="_blank">
-            pass.sports.gouv.fr
-          </Link>
+          <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+            Si après le 1er septembre vous ne l&apos;avez pas reçu, vous aurez la possibilité
+            d&apos;en faire la demande sur{' '}
+            <Link href="https://pass.sports.gouv.fr" target="_blank">
+              pass.sports.gouv.fr
+            </Link>
+          </p>
         </VerdictPanel>
       )}
 
-      {displayFailure && (
-        <VerdictPanel
-          title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes
-        pas éligible au pass Sport"
-          isSuccess={false}
-        >
-          <div className="fr-mb-2w">En effet, ce dispositif est ouvert aux:</div>
-          <EligibilityCriteriaList />
-          <span className={rootStyles['text--medium']}>
-            Pour autant, vous avez peut-être droit à d&apos;autres aides. N&apos;hésitez pas à vous
-            rapprocher de votre région, département ou commune de résidence.
-          </span>
-        </VerdictPanel>
-      )}
+      {displayFailure && <FullNegativeVerdictPanel isLean={false} />}
     </>
   );
 };

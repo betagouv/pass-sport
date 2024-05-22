@@ -7,6 +7,7 @@ import AeehStep from '../aeehStep/AeehStep';
 import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import { useRouter } from 'next/navigation';
 import rootStyles from '@/app/styles.module.scss';
+import cn from 'classnames';
 
 interface AgeStep2Props {
   ageRange: AGE_RANGE;
@@ -81,20 +82,24 @@ const AgeStep2 = ({ ageRange }: AgeStep2Props) => {
           }}
           isSuccess
         >
-          Vous devriez le recevoir soit entre le 30 mai et le 1er juin, soit le 29 et le 31 août
-          2024 sur l&apos;adresse e-mail que vous avez communiquée à votre CAF, Mutualité sociale
-          agricole ou votre CROUS.
+          <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+            Vous devriez le recevoir soit entre le 30 mai et le 1er juin, soit le 29 et le 31 août
+            2024 sur l&apos;adresse e-mail que vous avez communiquée à votre CAF, Mutualité sociale
+            agricole ou votre CROUS.
+          </p>
           <br />
+          <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+            Il vous permettra de déduire 50 euros de votre adhésion sportif dans plus de 85 000
+            clubs et associations sportives partenaires dans toute la France.
+          </p>
           <br />
-          Il vous permettra de déduire 50 euros de votre adhésion sportif dans plus de 85 000 clubs
-          et associations sportives partenaires dans toute la France.
-          <br />
-          <br />
-          Si après le 1er septembre vous ne l&apos;avez pas reçu, vous aurez la possibilité
-          d&apos;en faire la demande sur{' '}
-          <Link href="https://pass.sports.gouv.fr" target="_blank">
-            pass.sports.gouv.fr
-          </Link>
+          <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+            Si après le 1er septembre vous ne l&apos;avez pas reçu, vous aurez la possibilité
+            d&apos;en faire la demande sur{' '}
+            <Link href="https://pass.sports.gouv.fr" target="_blank">
+              pass.sports.gouv.fr
+            </Link>
+          </p>
         </VerdictPanel>
       )}
 

@@ -63,7 +63,7 @@ const ContactForm = ({ closeFn }: Props) => {
       'consent',
     ];
 
-    const states = { ...initialInputsState };
+    const states = structuredClone(initialInputsState);
 
     fieldNames.forEach((fieldName) => {
       const value = formData.get(fieldName);
