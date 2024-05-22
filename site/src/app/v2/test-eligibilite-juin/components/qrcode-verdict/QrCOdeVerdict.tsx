@@ -38,7 +38,7 @@ const QrCodePanel = ({ data }: Props) => {
       <div>
         <QRCodeSVG value={id_psp} />
       </div>
-      <div>
+      <div className={styles.center}>
         <h6 className={cn('fr-mb-1w', styles.blue)}>
           <span className={styles['text-casing']}>{prenom}</span>{' '}
           <span className={styles['text-casing']}>{nom}</span>
