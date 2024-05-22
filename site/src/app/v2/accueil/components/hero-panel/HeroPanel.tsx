@@ -6,9 +6,19 @@ import { useRouter } from 'next/navigation';
 import cn from 'classnames';
 
 const HeroPanel = () => {
-  const eligibilityTestOnClick = () => router.push('/v2/test-eligibilite');
+  const isUsingJuneEligibilityTest = new Date().valueOf() > 1717027200000; //2024-05-30T00:00:00.000Z
 
   const router = useRouter();
+
+  const eligibilityTestOnClick = () => {
+    isUsingJuneEligibilityTest
+      ? router.push('/v2/test-eligibilite-juin')
+      : router.push('/v2/test-eligibilite');
+  };
+
+  const getButtonText = () => {
+    return isUsingJuneEligibilityTest ? 'Obtenir mon pass Sport' : 'Je fais le test';
+  };
 
   return (
     <div className={cn('fr-px-3w', styles.background, styles.sizer, styles.padder)}>
@@ -38,7 +48,7 @@ const HeroPanel = () => {
           iconPosition="right"
           onClick={eligibilityTestOnClick}
         >
-          Je fais le test
+          {getButtonText()}
         </Button>
       </div>
     </div>
