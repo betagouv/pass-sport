@@ -1,4 +1,6 @@
-import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/Question/Question';
+import Question, {
+  QUESTION_STYLES,
+} from '@/app/v2/test-eligibilite-mai/components/Question/Question';
 import { useState } from 'react';
 import { CROUS_AGE_RANGE } from '../types/types';
 import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';

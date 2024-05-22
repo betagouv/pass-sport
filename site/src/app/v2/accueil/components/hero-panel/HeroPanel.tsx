@@ -12,8 +12,8 @@ const HeroPanel = () => {
 
   const eligibilityTestOnClick = () => {
     isUsingJuneEligibilityTest
-      ? router.push('/v2/test-eligibilite-juin')
-      : router.push('/v2/test-eligibilite');
+      ? router.push('/v2/test-eligibilite')
+      : router.push('/v2/test-eligibilite-mai');
   };
 
   const getButtonText = () => {
