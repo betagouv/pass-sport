@@ -1,5 +1,4 @@
 import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/Question/Question';
-import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
 import { ChangeEvent, FormEvent, useRef, useState } from 'react';
@@ -13,6 +12,7 @@ import cn from 'classnames';
 import CustomInput from '../custom-input/CustomInput';
 import CityFinder from '../city-finder/CityFinder';
 import { mapper } from '../../helpers/helper';
+import ErrorAlert from '../error-alert/ErrorAlert';
 
 const initialInputsState: StepOneFormInputsState = {
   beneficiaryLastname: { state: 'default' },
@@ -65,10 +65,10 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
     }
 
     await requestEligibilityTest().then(({ status, body }) => {
+      setIsFormDisabled(true);
       if (status !== 200) {
         notifyError(status, body as SearchResponseError);
       } else {
-        setIsFormDisabled(true);
         onDataRecieved(body as SearchResponseBody);
       }
     });
@@ -199,17 +199,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
         </form>
       </Question>
 
-      {error && (
-        <Alert
-          //   className={styles.error}
-          severity="error"
-          //   isClosed={!isError}
-          onClose={() => setError(null)}
-          title={error}
-          //   description="Veuillez réessayer plus tard"
-          closable
-        />
-      )}
+      {error && <ErrorAlert title={error} />}
     </div>
   );
 };

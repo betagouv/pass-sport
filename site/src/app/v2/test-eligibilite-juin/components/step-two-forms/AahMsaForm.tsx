@@ -9,6 +9,7 @@ import {
 import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import CommonMsaInputs from './common-msa-inputs/CommonMsaInputs';
+import ErrorAlert from '../error-alert/ErrorAlert';
 
 const initialInputsState: AahMsaInputsState = {
   recipientBirthCountry: { state: 'default' },
@@ -94,11 +95,11 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     }
 
     await requestPassSportCode().then(({ status, body }: { body: unknown; status: number }) => {
+      setIsFormDisabled(true);
       if (status !== 200) {
         notifyError(status, body as ConfirmResponseError);
       } else {
         onDataRecieved(body as ConfirmResponseBody);
-        setIsFormDisabled(true);
       }
     });
   };
@@ -150,6 +151,8 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
         <FormButton isDisabled={isFormDisabled} />
       </form>
+
+      {error && <ErrorAlert title={error} />}
     </div>
   );
 };

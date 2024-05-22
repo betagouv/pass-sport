@@ -1,4 +1,3 @@
-import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
 import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
@@ -8,8 +7,8 @@ import {
   SearchResponseBodyItem,
 } from 'types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
-import Alert from '@codegouvfr/react-dsfr/Alert';
 import FormButton from './FormButton';
+import ErrorAlert from '../error-alert/ErrorAlert';
 
 const initialInputsState: AahCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -100,11 +99,11 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     }
 
     await requestPassSportCode().then(({ status, body }: { body: unknown; status: number }) => {
+      setIsFormDisabled(true);
       if (status !== 200) {
         notifyError(status, body as ConfirmResponseError);
       } else {
         onDataRecieved(body as ConfirmResponseBody);
-        setIsFormDisabled(true);
       }
     });
   };
@@ -143,17 +142,7 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         <FormButton isDisabled={isFormDisabled} />
       </form>
 
-      {error && (
-        <Alert
-          //   className={styles.error}
-          severity="error"
-          //   isClosed={!isError}
-          onClose={() => setError(null)}
-          title={error}
-          //   description="Veuillez réessayer plus tard"
-          closable
-        />
-      )}
+      {error && <ErrorAlert title={error} />}
     </div>
   );
 };
