@@ -12,6 +12,7 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/trouver-un-club': 'Trouver un club partenaire',
   '/v2/politique-de-confidentialite': 'Politique de confidentialité',
   '/v2/mentions-legales': 'Mentions légales',
+  '/v2/test-eligibilite-juin': 'Obtenir mon pass Sport',
 };
 
 export default function PassSportBreadcrumbStandard() {
