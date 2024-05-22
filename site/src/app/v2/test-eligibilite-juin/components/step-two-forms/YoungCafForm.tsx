@@ -10,6 +10,7 @@ import { mapper } from '../../helpers/helper';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import FormButton from './FormButton';
 import CustomInput from '../custom-input/CustomInput';
+import ErrorAlert from '../error-alert/ErrorAlert';
 
 const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -105,11 +106,11 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     }
 
     await requestPassSportCode().then(({ status, body }: { body: unknown; status: number }) => {
+      setIsFormDisabled(true);
       if (status !== 200) {
         notifyError(status, body as ConfirmResponseError);
       } else {
         onDataRecieved(body as ConfirmResponseBody);
-        setIsFormDisabled(true);
       }
     });
   };
@@ -178,17 +179,7 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         <FormButton isDisabled={isFormDisabled} />
       </form>
 
-      {error && (
-        <Alert
-          //   className={styles.error}
-          severity="error"
-          //   isClosed={!isError}
-          onClose={() => setError(null)}
-          title={error}
-          //   description="Veuillez réessayer plus tard"
-          closable
-        />
-      )}
+      {error && <ErrorAlert title={error} />}
     </div>
   );
 };
