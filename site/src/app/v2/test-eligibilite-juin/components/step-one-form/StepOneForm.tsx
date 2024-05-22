@@ -2,7 +2,7 @@ import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
-import { FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
   StepOneFormInputsState,
   SearchResponseBody,
@@ -12,6 +12,7 @@ import styles from './styles.module.scss';
 import cn from 'classnames';
 import CustomInput from '../custom-input/CustomInput';
 import CityFinder from '../city-finder/CityFinder';
+import { mapper } from '../../helpers/helper';
 
 const initialInputsState: StepOneFormInputsState = {
   beneficiaryLastname: { state: 'default' },
@@ -37,14 +38,14 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
     let isValid = true;
 
     const fieldNames = Object.keys(initialInputsState) as (keyof StepOneFormInputsState)[];
-
-    const states = { ...initialInputsState };
+    const states = structuredClone(initialInputsState);
 
     fieldNames.forEach((fieldName) => {
       const value = formData.get(fieldName);
 
       if (!value) {
         states[fieldName].state = 'error';
+        states[fieldName].errorMsg = mapper[fieldName];
         isValid = false;
       }
     });
@@ -57,7 +58,6 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
 
     const formData = new FormData(formRef.current!);
     const { isValid, states } = isFormValid(formData);
-
     setInputStates({ ...states });
 
     if (!isValid) {
@@ -112,16 +112,16 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
     }));
   };
 
-  const onResidencePlaceChanged = (text: string | null) => {
+  const onInputChanged = (text: string | null, field: keyof StepOneFormInputsState) => {
     if (!text) {
       setInputStates((inputStates) => ({
         ...inputStates,
-        recipientResidencePlace: { state: 'error' },
+        [`${field}`]: { state: 'error', errorMsg: mapper[field] },
       }));
     } else {
       setInputStates((inputStates) => ({
         ...inputStates,
-        recipientResidencePlace: { state: 'default' },
+        [`${field}`]: { state: 'default' },
       }));
     }
   };
@@ -140,9 +140,13 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           <CustomInput
             inputProps={{
               label: 'Nom du bénéficaire*',
-              nativeInputProps: { name: 'beneficiaryLastname' },
+              nativeInputProps: {
+                name: 'beneficiaryLastname',
+                onChange: (e: ChangeEvent<HTMLInputElement>) =>
+                  onInputChanged(e.target.value, 'beneficiaryLastname'),
+              },
               state: inputStates.beneficiaryLastname.state,
-              stateRelatedMessage: 'Le nom est requis',
+              stateRelatedMessage: inputStates.beneficiaryLastname.errorMsg,
               disabled: isFormDisabled,
             }}
             secondHint="Personne qui bénéficie des aides de la CAF ou la MSA"
@@ -150,18 +154,27 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
 
           <Input
             label="Prénom du bénéficaire*"
-            nativeInputProps={{ name: 'beneficiaryFirstname' }}
+            nativeInputProps={{
+              name: 'beneficiaryFirstname',
+              onChange: (e: ChangeEvent<HTMLInputElement>) =>
+                onInputChanged(e.target.value, 'beneficiaryFirstname'),
+            }}
             state={inputStates.beneficiaryFirstname.state}
-            stateRelatedMessage="Le prénom est requis"
+            stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
             disabled={isFormDisabled}
           />
 
           <Input
             label="Date de naissance du bénéficaire*"
             hintText="Format attendu: JJ/MM/AAAA"
-            nativeInputProps={{ name: 'beneficiaryBirthDate', type: 'date' }}
+            nativeInputProps={{
+              name: 'beneficiaryBirthDate',
+              type: 'date',
+              onChange: (e: ChangeEvent<HTMLInputElement>) =>
+                onInputChanged(e.target.value, 'beneficiaryBirthDate'),
+            }}
             state={inputStates.beneficiaryBirthDate.state}
-            stateRelatedMessage="La date de naissance est requise"
+            stateRelatedMessage={inputStates.beneficiaryBirthDate.errorMsg}
             disabled={isFormDisabled}
           />
 
@@ -170,7 +183,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
             isDisabled={isFormDisabled}
             inputName="recipientResidencePlace"
             inputState={inputStates.recipientResidencePlace}
-            onChanged={onResidencePlaceChanged}
+            onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
           />
 
           <Button

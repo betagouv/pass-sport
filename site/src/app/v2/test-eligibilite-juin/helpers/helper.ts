@@ -1,6 +1,17 @@
-import { YoungCafInputsState, YoungMsaInputsState } from 'types/EligibilityTest';
+import {
+  StepOneFormInputsState,
+  YoungCafInputsState,
+  YoungMsaInputsState,
+} from 'types/EligibilityTest';
 
-export const mapper: Record<keyof YoungCafInputsState | keyof YoungMsaInputsState, string> = {
+export const mapper: Record<
+  keyof StepOneFormInputsState | keyof YoungCafInputsState | keyof YoungMsaInputsState,
+  string
+> = {
+  beneficiaryLastname: 'Le nom est requis',
+  beneficiaryFirstname: 'Le prénom est requis',
+  beneficiaryBirthDate: 'La date de naissance est requise',
+  recipientResidencePlace: 'La commune de résidence est requise',
   recipientLastname: 'Le nom est requis',
   recipientFirstname: 'Le prénom est requis',
   recipientBirthDate: 'La date de naissance est requise',

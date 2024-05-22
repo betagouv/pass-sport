@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import rootStyles from '@/app/styles.module.scss';
 import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
+import cn from 'classnames';
 
 interface Props {
   isForChild: boolean;
@@ -27,24 +28,24 @@ const AllowancesStep = ({ isForChild }: Props) => {
           },
         }}
       >
-        <div className="fr-my-2w">
-          Vous devriez recevoir votre pass Sport soit entre le 30 mai et le 1er juin, soit le 29 et
-          le 31 août 2024 sur l&apos;adresse e-mail que vous avez communiquée à votre CAF, Mutualité
-          sociale agricole ou votre CROUS.
-        </div>
-
-        <div className="fr-my-2w">
-          Il vous permettra de déduire 50 euros de votre inscription dans l&apos;une des 85 000
-          structures sportives et associations sportives partenaires dans toute la France.
-        </div>
-
-        <div className="fr-my-2t">
-          Si après le 1er septembre vous n&apos;avez pas reçu votre pass, vous aurez la possibilité
+        <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+          Vous devriez le recevoir soit entre le 30 mai et le 1er juin, soit le 29 et le 31 août
+          2024 sur l&apos;adresse e-mail que vous avez communiquée à votre CAF, Mutualité sociale
+          agricole ou votre CROUS.
+        </p>
+        <br />
+        <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+          Il vous permettra de déduire 50 euros de votre adhésion sportif dans plus de 85 000 clubs
+          et associations sportives partenaires dans toute la France.
+        </p>
+        <br />
+        <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
+          Si après le 1er septembre vous ne l&apos;avez pas reçu, vous aurez la possibilité
           d&apos;en faire la demande sur{' '}
           <Link href="https://pass.sports.gouv.fr" target="_blank">
             pass.sports.gouv.fr
           </Link>
-        </div>
+        </p>
       </VerdictPanel>
     </div>
   );
@@ -54,7 +55,9 @@ const AllowancesStep = ({ isForChild }: Props) => {
       title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes pas éligible au pass Sport"
       isSuccess={false}
     >
-      En effet, ce dispositif n&apos;est pas accessible à tous, il est ouvert aux:
+      <p className={cn('fr-text--lg', rootStyles['text--black'], rootStyles['text--medium'])}>
+        En effet, ce dispositif n&apos;est pas accessible à tous, il est ouvert aux:
+      </p>
       <EligibilityCriteriaList />
     </VerdictPanel>
   );

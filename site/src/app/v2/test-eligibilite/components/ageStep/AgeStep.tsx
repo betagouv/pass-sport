@@ -5,6 +5,7 @@ import RadioButtonsGroup from '../radioButtonsGroup/RadioButtonsGroup';
 import { AGE_RANGE } from '../types/types';
 import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import rootStyles from '@/app/styles.module.scss';
+import cn from 'classnames';
 
 const AgeStep = () => {
   const [ageRange, setAgeRange] = useState<AGE_RANGE | null>(null);
@@ -37,14 +38,32 @@ const AgeStep = () => {
         pas éligible au pass Sport"
           isSuccess={false}
         >
-          En effet, ce dispositif est ouvert aux:
-          <ul className="fr-ml-2w">
-            <li>Personnes nées entre le 16 septembre 1993 et le 31 décembre 2018.</li>
+          <p className={cn('fr-text--lg', rootStyles['text--black'], rootStyles['text--medium'])}>
+            En effet, ce dispositif est ouvert aux:
+          </p>
+          <ul
+            className={cn(
+              'fr-ml-2w',
+              'fr-text--lg',
+              rootStyles['text--black'],
+              rootStyles['text--medium'],
+            )}
+          >
+            <li className="fr-my-2w">
+              Personnes nées entre le 16 septembre 1993 et le 31 décembre 2018.
+            </li>
           </ul>
-          <span className={rootStyles['text--medium']}>
+          <p
+            className={cn(
+              'fr-text--lg',
+              'fr-text--bold',
+              rootStyles['text--medium'],
+              rootStyles['text--black'],
+            )}
+          >
             Pour autant, vous avez peut-être droit à d&apos;autres aides. N&apos;hésitez pas à vous
             rapprocher de votre région, département ou commune de résidence.
-          </span>
+          </p>
         </VerdictPanel>
       )}
 
