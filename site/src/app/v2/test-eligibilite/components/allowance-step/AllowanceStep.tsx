@@ -1,6 +1,8 @@
 'use client';
 
-import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/Question/Question';
+import Question, {
+  QUESTION_STYLES,
+} from '@/app/v2/test-eligibilite-mai/components/Question/Question';
 import rootStyles from '@/app/styles.module.scss';
 import cn from 'classnames';
 import { useState } from 'react';

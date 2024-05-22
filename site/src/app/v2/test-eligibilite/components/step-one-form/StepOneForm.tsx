@@ -1,4 +1,6 @@
-import Question, { QUESTION_STYLES } from '@/app/v2/test-eligibilite/components/Question/Question';
+import Question, {
+  QUESTION_STYLES,
+} from '@/app/v2/test-eligibilite-mai/components/Question/Question';
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
 import { ChangeEvent, FormEvent, useRef, useState } from 'react';

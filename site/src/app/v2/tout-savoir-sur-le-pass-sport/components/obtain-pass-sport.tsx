@@ -35,7 +35,7 @@ export default function ObtainPassPort() {
       <Button
         iconId="fr-icon-arrow-right-line"
         iconPosition="right"
-        onClick={() => router.push('test-eligibilite', { scroll: true })}
+        onClick={() => router.push('/v2/test-eligibilite', { scroll: true })}
       >
         Je fais le test
       </Button>
