@@ -2,7 +2,6 @@ import cn from 'classnames';
 import rootStyles from '../../../../styles.module.scss';
 import styles from './styles.module.scss';
 import AsyncSelect from 'react-select/async';
-import { mapper } from '../../helpers/helper';
 import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';
 import { City } from 'types/City';
 import { InputState } from 'types/EligibilityTest';
@@ -22,13 +21,25 @@ interface Props {
 }
 
 const CityFinder = ({ inputState, legend, inputName, isDisabled, onChanged }: Props) => {
-  const parseCities = (cities: City[]): Option[] =>
-    cities.map((city) => {
-      return { label: city.nom, value: city.code };
-    });
+  const parseCities = (cities: City[]): Option[] => {
+    return cities
+      .map((city) => {
+        return { label: `${city.nom} (${city.codeDepartement})`, value: city.code };
+      })
+
+      .sort((a: Option, b: Option) => {
+        if (a.label < b.label) {
+          return -1;
+        }
+        if (a.label > b.label) {
+          return 1;
+        }
+        return 0;
+      });
+  };
 
   const fetchCityOptions = (inputValue: string) =>
-    getFranceCitiesByName(inputValue).then((cities) => parseCities(cities));
+    getFranceCitiesByName(inputValue, true).then((cities) => parseCities(cities));
 
   const birthPlaceChangedHandler = (newValue: SingleValue<Option>) => {
     onChanged(newValue as string | null);

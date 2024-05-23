@@ -2,6 +2,7 @@ export interface City {
   nom: string;
   code: string;
   codesPostaux: string[];
+  codeDepartement: string;
 }
 
 export interface CityWithPostalCode {
