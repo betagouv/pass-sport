@@ -60,13 +60,20 @@ export const getFranceRegions = async (): Promise<GeoGouvRegion[]> => {
   return response.json();
 };
 
-export const getFranceCitiesByName = async (cityName: string): Promise<City[]> => {
+export const getFranceCitiesByName = async (
+  cityName: string,
+  includeDistricts: boolean,
+): Promise<City[]> => {
   const baseUrl = 'https://geo.api.gouv.fr/communes';
 
   const params = new URLSearchParams();
-  params.append('limit', '10');
+  params.append('limit', '30');
   params.append('boost', 'population');
   params.append('nom', cityName);
+  params.append(
+    'type',
+    includeDistricts ? 'arrondissement-municipal,commune-actuelle' : 'commune-actuelle',
+  );
 
   const url = new URL(baseUrl);
   url.search = params.toString();

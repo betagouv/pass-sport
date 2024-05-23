@@ -63,7 +63,7 @@ const ClubFilters: React.FC<Props> = ({
       .flat();
 
   const fetchCityOptions = (inputValue: string) =>
-    getFranceCitiesByName(inputValue).then((cities) => parseCities(cities));
+    getFranceCitiesByName(inputValue, false).then((cities) => parseCities(cities));
 
   const regionChangeHandler = (newValue: SingleValue<Option>) => {
     if (!newValue) {
