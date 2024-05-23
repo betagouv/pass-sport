@@ -10,9 +10,11 @@ import Link from 'next/link';
 import Button from '@codegouvfr/react-dsfr/Button';
 import RadioButtons from '@codegouvfr/react-dsfr/RadioButtons';
 import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
+import { useRouter } from 'next/navigation';
 
 const CrousStep = () => {
   const [ageRange, setAgeRange] = useState<CROUS_AGE_RANGE | null>(null);
+  const router = useRouter();
 
   return (
     <div>
@@ -85,7 +87,10 @@ const CrousStep = () => {
             </Link>
             .
           </p>
-          <Button priority="primary"> Trouver une structure partenaire</Button>
+          <Button priority="primary" onClick={() => router.push('/v2/trouver-un-club')}>
+            {' '}
+            Trouver une structure partenaire
+          </Button>
         </VerdictPanel>
       )}
 
