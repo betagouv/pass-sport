@@ -2,6 +2,7 @@
 
 import Button from '@codegouvfr/react-dsfr/Button';
 import { useRouter } from 'next/navigation';
+import { isUsingJuneEligibilityTest } from 'utils/eligibility-test';
 
 export default function ObtainPassPort() {
   const router = useRouter();
@@ -35,7 +36,11 @@ export default function ObtainPassPort() {
       <Button
         iconId="fr-icon-arrow-right-line"
         iconPosition="right"
-        onClick={() => router.push('/v2/test-eligibilite', { scroll: true })}
+        onClick={() => {
+          isUsingJuneEligibilityTest
+            ? router.push('/v2/test-eligibilite', { scroll: true })
+            : router.push('/v2/test-eligibilite-mai', { scroll: true });
+        }}
       >
         Je fais le test
       </Button>
