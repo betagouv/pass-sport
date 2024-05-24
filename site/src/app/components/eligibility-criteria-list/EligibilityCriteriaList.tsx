@@ -1,4 +1,4 @@
-import rootStyles from '@/app/styles.module.scss';
+import rootStyles from '@/app/utilities.module.scss';
 import cn from 'classnames';
 
 const EligibilityCriteriaList = () => {

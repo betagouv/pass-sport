@@ -4,7 +4,7 @@ import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import RadioButtonsGroup from '../radioButtonsGroup/RadioButtonsGroup';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import rootStyles from '@/app/styles.module.scss';
+import rootStyles from '@/app/utilities.module.scss';
 import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
 import cn from 'classnames';
 

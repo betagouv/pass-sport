@@ -1,6 +1,6 @@
 import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
 import cn from 'classnames';
-import rootStyles from '@/app/styles.module.scss';
+import rootStyles from '@/app/utilities.module.scss';
 import { QRCodeSVG } from 'qrcode.react';
 import styles from './styles.module.scss';
 import { ConfirmResponseBodyItem } from 'types/EligibilityTest';

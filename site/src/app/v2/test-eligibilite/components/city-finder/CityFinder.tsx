@@ -1,5 +1,5 @@
 import cn from 'classnames';
-import rootStyles from '../../../../styles.module.scss';
+import rootStyles from '../../../../utilities.module.scss';
 import styles from './styles.module.scss';
 import AsyncSelect from 'react-select/async';
 import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';

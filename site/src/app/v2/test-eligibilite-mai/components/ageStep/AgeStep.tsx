@@ -4,7 +4,7 @@ import AgeStep2 from '../ageStep2/AgeStep2';
 import RadioButtonsGroup from '../radioButtonsGroup/RadioButtonsGroup';
 import { AGE_RANGE } from '../types/types';
 import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
-import rootStyles from '@/app/styles.module.scss';
+import rootStyles from '@/app/utilities.module.scss';
 import cn from 'classnames';
 
 const AgeStep = () => {

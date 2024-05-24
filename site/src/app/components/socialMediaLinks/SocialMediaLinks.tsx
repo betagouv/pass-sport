@@ -1,5 +1,5 @@
 import styles from './styles.module.scss';
-import rootStyles from '../../styles.module.scss';
+import rootStyles from '../../utilities.module.scss';
 import { socialMedia } from '@/app/constants/social-media';
 import cn from 'classnames';
 

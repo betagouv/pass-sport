@@ -4,7 +4,7 @@ import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import AllowancesStep from '../allowancesStep/AllowancesStep';
 import RadioButtonsGroup from '../radioButtonsGroup/RadioButtonsGroup';
 import { CHILD_AGE } from '../types/types';
-import rootStyles from '@/app/styles.module.scss';
+import rootStyles from '@/app/utilities.module.scss';
 import cn from 'classnames';
 
 const ChildAgeStep = () => {

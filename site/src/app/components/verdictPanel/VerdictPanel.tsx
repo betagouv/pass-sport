@@ -1,5 +1,5 @@
 import styles from './styles.module.scss';
-import rootStyles from '../../styles.module.scss';
+import rootStyles from '../../utilities.module.scss';
 import SocialMediaLinks from '../socialMediaLinks/SocialMediaLinks';
 import Actions from '../actions/Actions';
 import { CallOut } from '@codegouvfr/react-dsfr/CallOut';

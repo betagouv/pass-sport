@@ -1,6 +1,6 @@
 import VerdictPanel from './VerdictPanel';
 import cn from 'classnames';
-import rootStyles from '@/app/styles.module.scss';
+import rootStyles from '@/app/utilities.module.scss';
 import EligibilityCriteriaList from '../eligibility-criteria-list/EligibilityCriteriaList';
 
 interface Props {

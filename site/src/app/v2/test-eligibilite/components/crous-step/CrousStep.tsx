@@ -4,7 +4,7 @@ import Question, {
 import { useState } from 'react';
 import { CROUS_AGE_RANGE } from '../types/types';
 import VerdictPanel from '@/app/components/verdictPanel/VerdictPanel';
-import rootStyles from '@/app/styles.module.scss';
+import rootStyles from '@/app/utilities.module.scss';
 import cn from 'classnames';
 import Link from 'next/link';
 import Button from '@codegouvfr/react-dsfr/Button';
