@@ -69,7 +69,7 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
 
     const formData = new FormData(formRef.current!);
 
-    params.append('matricule', formData.get('recipientCafNumber') as string);
+    params.append('matricule', formData.get('recipientCafNumber')!.toString().trim());
     params.append('id', eligibilityDataItem.id.toString());
     params.append('situation', eligibilityDataItem.situation);
     params.append('organisme', eligibilityDataItem.organisme);

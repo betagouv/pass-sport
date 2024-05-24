@@ -100,9 +100,9 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
 
     const formData = new FormData(formRef.current!);
 
-    params.append('nom', formData.get('beneficiaryLastname') as string);
-    params.append('prenom', formData.get('beneficiaryFirstname') as string);
-    params.append('dateNaissance', formData.get('beneficiaryBirthDate') as string);
+    params.append('nom', formData.get('beneficiaryLastname')!.toString().trim());
+    params.append('prenom', formData.get('beneficiaryFirstname')!.toString().trim());
+    params.append('dateNaissance', formData.get('beneficiaryBirthDate')!.toString().trim());
     params.append('codeInsee', formData.get('recipientResidencePlace') as string);
 
     const url = new URL(baseUrl);

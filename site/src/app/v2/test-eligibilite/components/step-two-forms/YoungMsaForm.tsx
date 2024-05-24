@@ -71,8 +71,8 @@ const YoungMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
       params.append('codeIso', birthCountry);
     }
 
-    params.append('allocataireName', formData.get('recipientLastname') as string);
-    params.append('allocataireSurname', formData.get('recipientFirstname') as string);
+    params.append('allocataireName', formData.get('recipientLastname')!.toString().trim());
+    params.append('allocataireSurname', formData.get('recipientFirstname')!.toString().trim());
     params.append('allocataireBirthDate', formattedRecipientBirthDate);
     params.append('codeInseeBirth', formData.get('recipientBirthPlace') as string);
 
