@@ -9,6 +9,7 @@ import {
 import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import ErrorAlert from '../error-alert/ErrorAlert';
+import { fetchPspCode } from '../../agent';
 
 const initialInputsState: AahCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -58,28 +59,13 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   };
 
   const requestPassSportCode = (): Promise<{ status: number; body: unknown }> => {
-    const domain = process.env.NEXT_PUBLIC_LCA_API_URL;
-
-    if (!domain) {
-      throw new Error('Error: NEXT_PUBLIC_LCA_API_URL is not set');
-    }
-
-    const baseUrl = `${domain}/gw/psp-server/beneficiaires/confirm`;
-    const params = new URLSearchParams();
-
     const formData = new FormData(formRef.current!);
+    formData.append('id', eligibilityDataItem.id.toString());
+    formData.append('situation', eligibilityDataItem.situation);
+    formData.append('organisme', eligibilityDataItem.organisme);
+    formData.set('recipientCafNumber', formData.get('recipientCafNumber')!.toString().trim());
 
-    params.append('matricule', formData.get('recipientCafNumber')!.toString().trim());
-    params.append('id', eligibilityDataItem.id.toString());
-    params.append('situation', eligibilityDataItem.situation);
-    params.append('organisme', eligibilityDataItem.organisme);
-
-    const url = new URL(baseUrl);
-    url.search = params.toString();
-    return fetch(url).then(async (response) => ({
-      status: response.status,
-      body: (await response.json()) as unknown,
-    }));
+    return fetchPspCode(formData);
   };
 
   const notifyError = (status: number, body: ConfirmResponseError) => {

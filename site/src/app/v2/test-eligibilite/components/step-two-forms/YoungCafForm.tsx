@@ -7,10 +7,10 @@ import {
   YoungCafInputsState,
 } from 'types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
-import Alert from '@codegouvfr/react-dsfr/Alert';
 import FormButton from './FormButton';
 import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
+import { fetchPspCode } from '../../agent';
 
 const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -63,30 +63,15 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
   };
 
   const requestPassSportCode = (): Promise<{ status: number; body: unknown }> => {
-    const domain = process.env.NEXT_PUBLIC_LCA_API_URL;
-
-    if (!domain) {
-      throw new Error('Error: NEXT_PUBLIC_LCA_API_URL is not set');
-    }
-
-    const baseUrl = `${domain}/gw/psp-server/beneficiaires/confirm`;
-    const params = new URLSearchParams();
-
     const formData = new FormData(formRef.current!);
+    formData.append('id', eligibilityDataItem.id.toString());
+    formData.append('situation', eligibilityDataItem.situation);
+    formData.append('organisme', eligibilityDataItem.organisme);
+    formData.set('recipientLastname', formData.get('recipientLastname')!.toString().trim());
+    formData.set('recipientFirstname', formData.get('recipientFirstname')!.toString().trim());
+    formData.set('recipientCafNumber', formData.get('recipientCafNumber')!.toString().trim());
 
-    params.append('allocataireName', formData.get('recipientLastname')!.toString().trim());
-    params.append('allocataireSurname', formData.get('recipientFirstname')!.toString().trim());
-    params.append('matricule', formData.get('recipientCafNumber')!.toString().trim());
-    params.append('id', eligibilityDataItem.id.toString());
-    params.append('situation', eligibilityDataItem.situation);
-    params.append('organisme', eligibilityDataItem.organisme);
-
-    const url = new URL(baseUrl);
-    url.search = params.toString();
-    return fetch(url).then(async (response) => ({
-      status: response.status,
-      body: (await response.json()) as unknown,
-    }));
+    return fetchPspCode(formData);
   };
 
   const notifyError = (status: number, body: ConfirmResponseError) => {
