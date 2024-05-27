@@ -1,14 +1,34 @@
 import { buildLCAConfirmUrl } from '@/app/services/eligibility-test';
 import { addQrCodeToConfirmResponse } from '@/app/services/qr-code';
 import { NextResponse } from 'next/server';
-import { ConfirmResponseBody, ConfirmResponseErrorBody } from 'types/EligibilityTest';
+import {
+  ConfirmPayload,
+  ConfirmResponseBody,
+  ConfirmResponseErrorBody,
+} from 'types/EligibilityTest';
+import { zfd } from 'zod-form-data';
+import z from 'zod';
+
+const schema = zfd.formData({
+  id: z.string(),
+  situation: z.string(),
+  organisme: z.string(),
+  recipientLastname: z.string().optional(),
+  recipientFirstname: z.string().optional(),
+  recipientCafNumber: z.string().optional(),
+  recipientBirthPlace: z.string().optional(),
+  recipientBirthDate: z.string().optional(),
+  recipientBirthCountry: z.string().optional(),
+});
 
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  let url: URL;
-
   try {
-    url = buildLCAConfirmUrl(formData);
+    const formData = await request.formData();
+    const payload: ConfirmPayload = schema.parse(formData);
+
+    let url: URL;
+
+    url = buildLCAConfirmUrl(payload);
     const response = await fetch(url);
     const responseBody = (await response.json()) as ConfirmResponseBody | ConfirmResponseErrorBody;
 

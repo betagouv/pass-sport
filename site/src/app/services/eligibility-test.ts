@@ -1,4 +1,6 @@
-export const buildLCAConfirmUrl = (formData: FormData): URL => {
+import { ConfirmPayload } from 'types/EligibilityTest';
+
+export const buildLCAConfirmUrl = (data: ConfirmPayload): URL => {
   const domain = process.env.NEXT_PUBLIC_LCA_API_URL;
 
   if (!domain) {
@@ -6,36 +8,36 @@ export const buildLCAConfirmUrl = (formData: FormData): URL => {
   }
 
   const params = new URLSearchParams();
-  params.append('id', formData.get('id') as string);
-  params.append('situation', formData.get('situation') as string);
-  params.append('organisme', formData.get('organisme') as string);
+  params.append('id', data.id);
+  params.append('situation', data.situation);
+  params.append('organisme', data.organisme);
 
-  const allocataireName = formData.get('recipientLastname') as string;
+  const allocataireName = data.recipientLastname;
   if (allocataireName) {
     params.append('allocataireName', allocataireName);
   }
 
-  const allocataireSurname = formData.get('recipientFirstname') as string;
+  const allocataireSurname = data.recipientFirstname;
   if (allocataireSurname) {
     params.append('allocataireSurname', allocataireSurname);
   }
 
-  const matricule = formData.get('recipientCafNumber') as string;
+  const matricule = data.recipientCafNumber;
   if (matricule) {
     params.append('matricule', matricule);
   }
 
-  const recipientBirthPlace = formData.get('recipientBirthPlace') as string;
+  const recipientBirthPlace = data.recipientBirthPlace;
   if (recipientBirthPlace) {
     params.append('codeInseeBirth', recipientBirthPlace);
   }
 
-  const recipientBirthDate = formData.get('recipientBirthDate') as string;
+  const recipientBirthDate = data.recipientBirthDate;
   if (recipientBirthDate) {
     params.append('allocataireBirthDate', recipientBirthDate);
   }
 
-  const recipientBirthCountry = formData.get('recipientBirthCountry') as string;
+  const recipientBirthCountry = data.recipientBirthCountry;
   if (recipientBirthCountry) {
     params.append('codeIso', recipientBirthCountry);
   }

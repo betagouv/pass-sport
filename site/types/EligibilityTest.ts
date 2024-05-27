@@ -103,3 +103,15 @@ export type EnhancedConfirmResponseBody = EnhancedConfirmResponseBodyItem[];
 export interface ConfirmResponseErrorBody {
   message: string;
 }
+
+export interface ConfirmPayload {
+  id: string;
+  situation: string;
+  organisme: string;
+  recipientLastname?: string;
+  recipientFirstname?: string;
+  recipientCafNumber?: string;
+  recipientBirthPlace?: string;
+  recipientBirthDate?: string;
+  recipientBirthCountry?: string;
+}
