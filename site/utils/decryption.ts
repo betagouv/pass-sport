@@ -5,7 +5,7 @@ export function base64Decode(data: string) {
   return Buffer.from(data, 'base64');
 }
 
-export function decryptData(base64Key: string, data: string) {
+export function decryptData(data: string, base64Key: string) {
   try {
     const algorithm = 'aes-256-cbc';
     const inputEncoding = 'base64';

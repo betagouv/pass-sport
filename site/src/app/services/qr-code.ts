@@ -24,9 +24,13 @@ export const buildQRCodeUrl = (data: ConfirmResponseBody) => {
       throw new Error('Error : QR_CODE_BASE_URL missing');
     }
 
+    if (!process.env.BASE_64_KEY) {
+      throw new Error('BASE_64_KEY missing');
+    }
+
     const queryToEncrypt = buildQuery(data);
 
-    const encryptedQuery = encrypt(queryToEncrypt);
+    const encryptedQuery = encrypt(queryToEncrypt, process.env.BASE_64_KEY);
 
     return `${process.env.QR_CODE_BASE_URL}/${encodeURIComponent(encryptedQuery)}`;
   } catch (e) {
@@ -54,16 +58,12 @@ export const buildQuery = (data: ConfirmResponseBody) => {
   return query.toString();
 };
 
-export const encrypt = (dataToEncrypt: string): string => {
-  if (!process.env.BASE_64_KEY) {
-    throw new Error('BASE_64_KEY missing');
-  }
-
+export const encrypt = (dataToEncrypt: string, secret: string): string => {
   const algorithm = 'aes-256-cbc';
-  const secret = Buffer.from(process.env.BASE_64_KEY, 'base64');
+  const secretBuffer = Buffer.from(secret, 'base64');
 
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(algorithm, secret, iv);
+  const cipher = crypto.createCipheriv(algorithm, secretBuffer, iv);
   let encrypted = cipher.update(dataToEncrypt, 'utf8');
   const final = cipher.final();
 

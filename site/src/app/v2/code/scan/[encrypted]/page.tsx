@@ -24,7 +24,7 @@ function Page({ params: { encrypted } }: Props) {
   const base64Key = process.env.BASE_64_KEY;
   encrypted = decodeURIComponent(encrypted.replace(/\+/g, ' '));
 
-  const decryptedParams = decryptData(base64Key, encrypted);
+  const decryptedParams = decryptData(encrypted, base64Key);
 
   if (decryptedParams === null) return <InvalidContainer />;
 

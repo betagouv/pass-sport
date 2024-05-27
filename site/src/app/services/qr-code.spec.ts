@@ -17,27 +17,30 @@ describe('qr-code units tests', () => {
 
   describe('encrypt()', () => {
     const textToEncode = 'bp=Manon&bn=Dupond&bg=F&bdn=01%2F01%2F2011&c=24-IIII-IIII';
-    const encrypted = encrypt(textToEncode);
-    const decrypted = decryptData(process.env.BASE_64_KEY!, encrypted);
+    const secret = btoa('0123456789ABCDEF0123456789ABCDEF');
+    const encrypted = encrypt(textToEncode, secret);
+    const decrypted = decryptData(encrypted, secret);
+
     expect(decrypted).toEqual(textToEncode);
   });
 
   describe('buildQRCodeUrl()', () => {
     it('returns an empty string when secret is missing', () => {
-      const savedSecret = process.env.BASE_64_KEY;
-      delete process.env.BASE_64_KEY;
       const eligible: ConfirmResponseBody = buildConfirmResponseBody({});
 
       const qrCodeUrl = buildQRCodeUrl(eligible);
       expect(qrCodeUrl).toEqual('');
-      process.env.BASE_64_KEY = savedSecret;
     });
 
     it('encode relevant eligible data', () => {
       const eligible: ConfirmResponseBody = buildConfirmResponseBody({});
+      const secret = btoa('0123456789ABCDEF0123456789ABCDEF');
+      process.env.BASE_64_KEY = secret;
 
       const qrCodeUrl = buildQRCodeUrl(eligible);
       expect(qrCodeUrl).not.toEqual(''); // since iV changes all the time, the encrypted segment of the url is unpredicable
+
+      delete process.env.BASE_64_KEY;
     });
   });
 });
