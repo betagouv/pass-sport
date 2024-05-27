@@ -7,7 +7,7 @@ import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
   StepOneFormInputsState,
   SearchResponseBody,
-  SearchResponseError,
+  SearchResponseErrorBody,
 } from 'types/EligibilityTest';
 import styles from './styles.module.scss';
 import cn from 'classnames';
@@ -69,14 +69,18 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
     await requestEligibilityTest().then(({ status, body }) => {
       setIsFormDisabled(true);
       if (status !== 200) {
-        notifyError(status, body as SearchResponseError);
+        notifyError(status, body as SearchResponseErrorBody);
       } else {
-        onDataRecieved(body as SearchResponseBody);
+        if ('message' in body) {
+          notifyError(status, body);
+          return;
+        }
+        onDataRecieved(body);
       }
     });
   };
 
-  const notifyError = (status: number, body: SearchResponseError) => {
+  const notifyError = (status: number, body: SearchResponseErrorBody) => {
     if (
       status === 400 &&
       body.message ===
@@ -88,7 +92,10 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
     }
   };
 
-  const requestEligibilityTest = (): Promise<{ status: number; body: unknown }> => {
+  const requestEligibilityTest = (): Promise<{
+    status: number;
+    body: SearchResponseBody | SearchResponseErrorBody;
+  }> => {
     const domain = process.env.NEXT_PUBLIC_LCA_API_URL;
 
     if (!domain) {
@@ -110,7 +117,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
 
     return fetch(url).then(async (response) => ({
       status: response.status,
-      body: (await response.json()) as unknown,
+      body: (await response.json()) as SearchResponseBody | SearchResponseErrorBody,
     }));
   };
 

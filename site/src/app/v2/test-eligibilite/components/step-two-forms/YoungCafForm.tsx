@@ -1,7 +1,7 @@
 import Input from '@codegouvfr/react-dsfr/Input';
 import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
-  ConfirmResponseError,
+  ConfirmResponseErrorBody,
   EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
   YoungCafInputsState,
@@ -62,7 +62,10 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     return { isValid, states };
   };
 
-  const requestPassSportCode = (): Promise<{ status: number; body: unknown }> => {
+  const requestPassSportCode = (): Promise<{
+    status: number;
+    body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
+  }> => {
     const formData = new FormData(formRef.current!);
     formData.append('id', eligibilityDataItem.id.toString());
     formData.append('situation', eligibilityDataItem.situation);
@@ -74,7 +77,7 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
     return fetchPspCode(formData);
   };
 
-  const notifyError = (status: number, body: ConfirmResponseError) => {
+  const notifyError = (status: number) => {
     setError('Une erreur a eu lieu. Merci de rééessayer plus tard');
   };
 
@@ -90,14 +93,26 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
       return;
     }
 
-    await requestPassSportCode().then(({ status, body }: { body: unknown; status: number }) => {
-      setIsFormDisabled(true);
-      if (status !== 200) {
-        notifyError(status, body as ConfirmResponseError);
-      } else {
-        onDataRecieved(body as EnhancedConfirmResponseBody);
-      }
-    });
+    await requestPassSportCode().then(
+      ({
+        status,
+        body,
+      }: {
+        body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
+        status: number;
+      }) => {
+        setIsFormDisabled(true);
+        if (status !== 200) {
+          notifyError(status);
+        } else {
+          if ('message' in body) {
+            notifyError(status);
+            return;
+          }
+          onDataRecieved(body);
+        }
+      },
+    );
   };
 
   const onInputChanged = (text: string | null, field: keyof YoungCafInputsState) => {
@@ -164,7 +179,11 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
         <FormButton isDisabled={isFormDisabled} />
       </form>
 
-      {error && <ErrorAlert title={error} />}
+      {error && (
+        <div className="fr-mt-4w">
+          <ErrorAlert title={error} />
+        </div>
+      )}
     </div>
   );
 };

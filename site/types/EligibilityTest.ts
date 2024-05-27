@@ -47,7 +47,7 @@ export interface SearchResponseBodyItem {
 
 export type SearchResponseBody = SearchResponseBodyItem[];
 
-export interface SearchResponseError {
+export interface SearchResponseErrorBody {
   message: string;
 }
 
@@ -100,6 +100,6 @@ export interface EnhancedConfirmResponseBodyItem extends ConfirmResponseBodyItem
 
 export type EnhancedConfirmResponseBody = EnhancedConfirmResponseBodyItem[];
 
-export interface ConfirmResponseError {
+export interface ConfirmResponseErrorBody {
   message: string;
 }
