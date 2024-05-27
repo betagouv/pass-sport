@@ -32,6 +32,17 @@ describe('qr-code units tests', () => {
       expect(qrCodeUrl).toEqual('');
     });
 
+    it('returns an empty string when baseUrl is missing', () => {
+      const baseUrl = process.env.QR_CODE_BASE_URL;
+      delete process.env.QR_CODE_BASE_URL;
+      const eligible: ConfirmResponseBody = buildConfirmResponseBody({});
+
+      const qrCodeUrl = buildQRCodeUrl(eligible);
+      expect(qrCodeUrl).toEqual('');
+
+      process.env.QR_CODE_BASE_URL = baseUrl;
+    });
+
     it('encode relevant eligible data', () => {
       const eligible: ConfirmResponseBody = buildConfirmResponseBody({});
       const secret = btoa('0123456789ABCDEF0123456789ABCDEF');
