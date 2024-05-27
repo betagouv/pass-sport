@@ -17,10 +17,10 @@ const initialInputsState: AahCafInputsState = {
 
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
-  onDataRecieved: (data: EnhancedConfirmResponseBody) => void;
+  onDataReceived: (data: EnhancedConfirmResponseBody) => void;
 }
 
-const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
+const AahCafForm = ({ eligibilityDataItem, onDataReceived }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AahCafInputsState>(initialInputsState);
   const [error, setError] = useState<string | null>();
@@ -103,7 +103,7 @@ const AahCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
             notifyError(status);
             return;
           }
-          onDataRecieved(body);
+          onDataReceived(body);
         }
       },
     );

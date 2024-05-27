@@ -17,10 +17,10 @@ const initialInputsState: AahMsaInputsState = {
 
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
-  onDataRecieved: (data: EnhancedConfirmResponseBody) => void;
+  onDataReceived: (data: EnhancedConfirmResponseBody) => void;
 }
 
-const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
+const AahMsaForm = ({ eligibilityDataItem, onDataReceived }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AahMsaInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
@@ -98,7 +98,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
             notifyError(status);
             return;
           }
-          onDataRecieved(body);
+          onDataReceived(body);
         }
       },
     );

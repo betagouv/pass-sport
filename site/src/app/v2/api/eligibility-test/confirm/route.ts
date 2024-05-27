@@ -26,21 +26,19 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const payload: ConfirmPayload = schema.parse(formData);
 
-    let url: URL;
-
-    url = buildLCAConfirmUrl(payload);
+    const url: URL = buildLCAConfirmUrl(payload);
     const response = await fetch(url);
     const responseBody = (await response.json()) as ConfirmResponseBody | ConfirmResponseErrorBody;
 
     if ('message' in responseBody) {
-      console.log(responseBody);
+      console.error(responseBody);
       return NextResponse.json(responseBody);
     }
 
     const enhancedResponse = addQrCodeToConfirmResponse(responseBody);
     return NextResponse.json(enhancedResponse);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return NextResponse.json('Internal error', { status: 500 });
   }
 }

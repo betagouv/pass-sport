@@ -20,10 +20,10 @@ const initialInputsState: YoungCafInputsState = {
 
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
-  onDataRecieved: (data: EnhancedConfirmResponseBody) => void;
+  onDataReceived: (data: EnhancedConfirmResponseBody) => void;
 }
 
-const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
+const YoungCafForm = ({ eligibilityDataItem, onDataReceived }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
@@ -109,7 +109,7 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
             notifyError(status);
             return;
           }
-          onDataRecieved(body);
+          onDataReceived(body);
         }
       },
     );

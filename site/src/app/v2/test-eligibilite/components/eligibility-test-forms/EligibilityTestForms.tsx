@@ -15,7 +15,7 @@ const EligibilityTestForms = () => {
   return (
     <div>
       <StepOneForm
-        onDataRecieved={(data: SearchResponseBody) => {
+        onDataReceived={(data: SearchResponseBody) => {
           setEligibilityData(data);
           setpspCodeData(null);
         }}
@@ -27,7 +27,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'CAF' && (
           <YoungCafForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+            onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 
@@ -37,7 +37,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'MSA' && (
           <YoungMsaForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+            onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 
@@ -47,7 +47,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'CAF' && (
           <AahCafForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+            onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 
@@ -57,7 +57,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'MSA' && (
           <AahMsaForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+            onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 

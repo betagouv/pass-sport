@@ -24,10 +24,10 @@ const initialInputsState: StepOneFormInputsState = {
 };
 
 interface Props {
-  onDataRecieved: (data: SearchResponseBody) => void;
+  onDataReceived: (data: SearchResponseBody) => void;
 }
 
-const StepOneForm = ({ onDataRecieved }: Props) => {
+const StepOneForm = ({ onDataReceived }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
@@ -75,7 +75,7 @@ const StepOneForm = ({ onDataRecieved }: Props) => {
           notifyError(status, body);
           return;
         }
-        onDataRecieved(body);
+        onDataReceived(body);
       }
     });
   };
