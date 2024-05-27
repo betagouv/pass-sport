@@ -67,6 +67,9 @@ export interface ConfirmResponseBodyItem {
     matricule: string;
     code_organisme: string;
     telephone: string;
+    commune_naissance: string;
+    code_insee_commune_naissance: string;
+    date_naissance: string;
   };
 
   id: number;
@@ -90,6 +93,12 @@ export interface ConfirmResponseBodyItem {
 }
 
 export type ConfirmResponseBody = ConfirmResponseBodyItem[];
+
+export interface EnhancedConfirmResponseBodyItem extends ConfirmResponseBodyItem {
+  qrcodeUrl: string;
+}
+
+export type EnhancedConfirmResponseBody = EnhancedConfirmResponseBodyItem[];
 
 export interface ConfirmResponseError {
   message: string;

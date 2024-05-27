@@ -11,8 +11,6 @@ export function decryptData(base64Key: string, data: string) {
     const inputEncoding = 'base64';
     const outputEncoding = 'utf8';
 
-    data = decodeURIComponent(data.replace(/\+/g, ' '));
-
     const key = base64Decode(base64Key);
     const encryptedData = base64Decode(data);
 

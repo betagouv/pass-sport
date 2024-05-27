@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
 import YoungCafForm from '../step-two-forms/YoungCafForm';
-import { ConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
+import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
 import YoungMsaForm from '../step-two-forms/YoungMsaForm';
 import AahCafForm from '../step-two-forms/AahCafForm';
 import QrCodeVerdict from '../qrcode-verdict/QrCOdeVerdict';
@@ -10,7 +10,7 @@ import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegative
 
 const EligibilityTestForms = () => {
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
-  const [pspCodeData, setpspCodeData] = useState<ConfirmResponseBody | null>(null);
+  const [pspCodeData, setpspCodeData] = useState<EnhancedConfirmResponseBody | null>(null);
 
   return (
     <div>
@@ -27,7 +27,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'CAF' && (
           <YoungCafForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: ConfirmResponseBody) => setpspCodeData(data)}
+            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 
@@ -37,7 +37,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'MSA' && (
           <YoungMsaForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: ConfirmResponseBody) => setpspCodeData(data)}
+            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 
@@ -47,7 +47,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'CAF' && (
           <AahCafForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: ConfirmResponseBody) => setpspCodeData(data)}
+            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 
@@ -57,7 +57,7 @@ const EligibilityTestForms = () => {
         eligibilityData[0].organisme === 'MSA' && (
           <AahMsaForm
             eligibilityDataItem={eligibilityData[0]}
-            onDataRecieved={(data: ConfirmResponseBody) => setpspCodeData(data)}
+            onDataRecieved={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
           />
         )}
 

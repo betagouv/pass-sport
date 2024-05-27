@@ -3,14 +3,14 @@ import cn from 'classnames';
 import rootStyles from '@/app/utilities.module.scss';
 import { QRCodeSVG } from 'qrcode.react';
 import styles from './styles.module.scss';
-import { ConfirmResponseBodyItem } from 'types/EligibilityTest';
+import { EnhancedConfirmResponseBodyItem } from 'types/EligibilityTest';
 
 interface Props {
-  data: ConfirmResponseBodyItem;
+  data: EnhancedConfirmResponseBodyItem;
 }
 
 const QrCodePanel = ({ data }: Props) => {
-  const { nom, prenom, date_naissance, id_psp, genre } = data;
+  const { nom, prenom, date_naissance, qrcodeUrl, genre, id_psp } = data;
 
   const formatBirthDate = (rawDate: string | undefined, gender: string | undefined) => {
     if (!rawDate) {
@@ -36,7 +36,7 @@ const QrCodePanel = ({ data }: Props) => {
   return (
     <div className={cn('fr-mx-4w', 'fr-p-3w', 'fr-mb-3w', styles.container)}>
       <div>
-        <QRCodeSVG value={id_psp} />
+        <QRCodeSVG value={qrcodeUrl} size={240} />
       </div>
       <div className={styles.center}>
         <h6 className={cn('fr-mb-1w', styles.blue)}>

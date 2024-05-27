@@ -1,8 +1,8 @@
 import Input from '@codegouvfr/react-dsfr/Input';
 import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
-  ConfirmResponseBody,
   ConfirmResponseError,
+  EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
   YoungCafInputsState,
 } from 'types/EligibilityTest';
@@ -20,7 +20,7 @@ const initialInputsState: YoungCafInputsState = {
 
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
-  onDataRecieved: (data: ConfirmResponseBody) => void;
+  onDataRecieved: (data: EnhancedConfirmResponseBody) => void;
 }
 
 const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
@@ -95,7 +95,7 @@ const YoungCafForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
       if (status !== 200) {
         notifyError(status, body as ConfirmResponseError);
       } else {
-        onDataRecieved(body as ConfirmResponseBody);
+        onDataRecieved(body as EnhancedConfirmResponseBody);
       }
     });
   };

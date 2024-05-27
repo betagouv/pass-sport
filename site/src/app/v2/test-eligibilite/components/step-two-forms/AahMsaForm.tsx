@@ -1,8 +1,8 @@
 import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import {
   AahMsaInputsState,
-  ConfirmResponseBody,
   ConfirmResponseError,
+  EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
 } from 'types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
@@ -17,7 +17,7 @@ const initialInputsState: AahMsaInputsState = {
 
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
-  onDataRecieved: (data: ConfirmResponseBody) => void;
+  onDataRecieved: (data: EnhancedConfirmResponseBody) => void;
 }
 
 const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
@@ -84,7 +84,7 @@ const AahMsaForm = ({ eligibilityDataItem, onDataRecieved }: Props) => {
       if (status !== 200) {
         notifyError(status, body as ConfirmResponseError);
       } else {
-        onDataRecieved(body as ConfirmResponseBody);
+        onDataRecieved(body as EnhancedConfirmResponseBody);
       }
     });
   };
