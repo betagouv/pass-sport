@@ -33,8 +33,18 @@ function Page({ params: { encrypted } }: Props) {
 
   let decryptedParams = decryptData(encrypted, base64Key);
 
+  // We need to do this in case the user lands in this page with encoded query parameters but with missing slashes
+  // Context: Some users initially lands in this page after a redirection from scan/[...rest] because of non encoded query parameters due to slashes
+  // Some of these query parameters have trailing slashes that are automatically removed by nextjs,
+  // That's why we need to add slahes to check if the code exists or not
   if (decryptedParams === null) {
-    decryptedParams = decryptData(`/${encrypted}`, base64Key);
+    ['/', '//', '///'].some((charactersToAdd) => {
+      decryptedParams = decryptData(`${charactersToAdd}${encrypted}`, base64Key);
+
+      if (decryptedParams !== null) {
+        return true;
+      }
+    });
   }
 
   if (decryptedParams === null) return <InvalidContainer />;
