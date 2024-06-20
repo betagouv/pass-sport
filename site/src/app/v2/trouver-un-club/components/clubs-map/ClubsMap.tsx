@@ -68,11 +68,13 @@ const ClubsMap: React.FC<Props> = ({ clubs, centerPosition, radius }) => {
 
   return (
     <MapContainer
-      className={styles.map}
-      center={computeMapCenter()}
+      className={`fr-mx-auto ${styles.map}`}
+      // center={computeMapCenter()}
+      center={{ lat: 48.864716, lng: 2.349014 }}
       zoom={3}
       scrollWheelZoom={true}
       maxZoom={25}
+      minZoom={3}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -8,7 +8,7 @@ interface Props {
 }
 
 const ClubMapView: React.FC<Props> = ({ clubsResponse }) => {
-  const ClubsMap = dynamic(() => import('../clubs-map/ClubsMap'));
+  const ClubsMap = useMemo(() => dynamic(() => import('../clubs-map/ClubsMap')), []);
 
   const { longitude, latitude } = useContext(GeolocationContext);
 
