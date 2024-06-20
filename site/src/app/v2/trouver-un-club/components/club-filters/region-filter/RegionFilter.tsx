@@ -6,7 +6,6 @@ import Select, { SingleValue } from 'react-select';
 import { GeoGouvRegion } from '../../../../../../../types/Region';
 import { selectStyles, Option } from '../ClubFilters';
 import styles from '../styles.module.scss';
-import { useEffect } from 'react';
 import { SEARCH_QUERY_PARAMS } from '@/app/constants/search-query-params';
 
 interface Props {

@@ -1,0 +1,31 @@
+@import '../../../../sassVariables.module';
+
+.sizer {
+  max-width: $xl;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-evenly;
+}
+
+.item {
+  width: 100%;
+  @media (min-width: $sm) {
+    width: 306px;
+  }
+}
+
+.more-clubs-wrapper {
+  text-align: center;
+  button {
+    justify-content: center;
+    width: 100%;
+
+    @media screen and (min-width: $sm) {
+      width: 337px;
+    }
+  }
+}

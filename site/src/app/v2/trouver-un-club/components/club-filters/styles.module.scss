@@ -16,7 +16,7 @@
   min-height: 154px;
 }
 
-.filtersContainer {
+.firstLinefiltersContainer {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -40,7 +40,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    flex-grow: 1
+    flex-grow: 1;
   }
 
   .input-container {
@@ -51,6 +51,27 @@
     .select {
       display: flex;
       flex-grow: 1;
+    }
+  }
+}
+
+.secondLinefilters {
+  &_separator {
+    background-color: var(--border-default-grey);
+    height: 1px;
+
+    @media (min-width: $md) {
+      height: 0px;
+    }
+  }
+  &_container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+
+    @media (min-width: $md) {
+      flex-direction: row;
     }
   }
 }

@@ -6,4 +6,5 @@ export const SEARCH_QUERY_PARAMS = {
   activity: 'activity',
   handicap: 'disability',
   departmentCode: 'departmentCode',
+  distance: 'distance',
 };

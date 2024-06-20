@@ -1,25 +1,29 @@
 'use client';
 
-import { Badge } from '@codegouvfr/react-dsfr/Badge';
-import { Card } from '@codegouvfr/react-dsfr/Card';
-import { Tag } from '@codegouvfr/react-dsfr/Tag';
 import styles from './style.module.scss';
-import { useEffect, useState } from 'react';
-import { getClubs, SqlSearchParams } from '../../agent';
+import { useContext, useEffect, useState } from 'react';
+import { getClubs, getClubsWithoutLimit, SqlSearchParams } from '../../agent';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import Button from '@codegouvfr/react-dsfr/Button';
 import ClubFilters from '../club-filters/ClubFilters';
 import { GeoGouvRegion } from 'types/Region';
-import { ActivityResponse, SportGouvJSONResponse } from 'types/Club';
+import {
+  ActivityResponse,
+  SportGouvJSONExportsResponse,
+  SportGouvJSONRecordsResponse,
+} from 'types/Club';
 import cn from 'classnames';
 import EligibilityTestBanner from '@/components/eligibility-test-banner/EligibilityTestBanner';
-import ClubCount from '../club-count/ClubCount';
-import { DisabilityTag } from '../disability-tag/DisabilityTag';
 import { SEARCH_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { useAppendQueryString } from '@/app/hooks/use-append-query-string';
 import { useRemoveQueryString } from '@/app/hooks/use-remove-query-string';
 import { GeoGouvDepartment } from '../../../../../../types/Department';
 import { escapeSingleQuotes } from '../../../../../../utils/string';
+import ClubMapView from '../club-map-view/ClubMapView';
+import ClubListView from '../club-list-view/ClubListView';
+import MissingClubInformationPanel from '../missing-club-information-panel/MissingClubInformationPanel';
+import { SegmentedControl } from '@codegouvfr/react-dsfr/SegmentedControl';
+import ClubCount from '../club-count/ClubCount';
+import { GeolocationContext } from '@/store/geolocationContext';
 
 interface Props {
   regions: GeoGouvRegion[];
@@ -30,16 +34,38 @@ interface Props {
 
 const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) => {
   const limit = 20;
-  const pathName = usePathname();
   const router = useRouter();
   const pathname = usePathname();
   const appendQueryString = useAppendQueryString();
   const removeQueryString = useRemoveQueryString();
   const searchParams = useSearchParams();
-  const [clubs, setClubs] = useState<SportGouvJSONResponse>({
+
+  const geolocationContext = useContext(GeolocationContext);
+
+  const [clubsOnList, setClubsOnList] = useState<SportGouvJSONRecordsResponse>({
     results: [],
     total_count: 0,
   });
+  const [clubsOnMap, setClubsOnMap] = useState<SportGouvJSONExportsResponse>({
+    results: [],
+    total_count: 0,
+  });
+
+  const buildDistanceExpression = () => {
+    const distanceParam = searchParams && searchParams.get(SEARCH_QUERY_PARAMS.distance);
+
+    if (!distanceParam) {
+      return undefined;
+    }
+
+    const { latitude, longitude } = geolocationContext;
+
+    if (!latitude && !longitude) {
+      return undefined;
+    }
+
+    return `within_distance(geoloc_finale, GEOM'POINT(${longitude} ${latitude} )',${distanceParam}km)`;
+  };
 
   const [clubParams, setClubParams] = useState<SqlSearchParams>({
     limit,
@@ -66,26 +92,45 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
       [SEARCH_QUERY_PARAMS.departmentCode]: searchParams.get(SEARCH_QUERY_PARAMS.departmentCode)
         ? `dep_code='${searchParams.get(SEARCH_QUERY_PARAMS.departmentCode)}'`
         : undefined,
+      [SEARCH_QUERY_PARAMS.distance]: buildDistanceExpression(),
     }),
   });
 
-  const { clubName, regionCode, city, postalCode, activity, disability, offset } = clubParams;
+  const [showClubListOnMap, setShowClubListOnMap] = useState(false);
+
+  const { clubName, regionCode, city, postalCode, activity, disability, offset, distance } =
+    clubParams;
 
   useEffect(() => {
     if (offset === 0) {
-      getClubs(clubParams).then(setClubs);
+      getClubs(clubParams).then(setClubsOnList);
     } else {
       getClubs(clubParams).then((res) =>
-        setClubs((clubs) => {
+        setClubsOnList((clubs) => {
           return { results: [...clubs.results, ...res.results], total_count: res.total_count };
         }),
       );
     }
   }, [clubName, regionCode, city, postalCode, activity, disability, offset, clubParams]);
 
+  useEffect(() => {
+    getClubsWithoutLimit(clubParams).then(setClubsOnMap);
+  }, [clubName, regionCode, city, postalCode, activity, disability, offset, clubParams, distance]);
+
   const seeMoreClubsHandler = () => {
     setClubParams((clubParams) => ({ ...clubParams, offset: clubParams.offset + limit }));
   };
+
+  useEffect(() => {
+    if (!geolocationContext.loading) {
+      setClubParams((previousState) => {
+        return {
+          ...previousState,
+          [SEARCH_QUERY_PARAMS.distance]: buildDistanceExpression(),
+        };
+      });
+    }
+  }, [geolocationContext.loading]);
 
   const searchClubByTextHandler = (text: string) => {
     const params: SqlSearchParams = { ...clubParams, offset: 0, clubName: undefined };
@@ -230,111 +275,73 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
     router.push(`${pathname}?${queryString}`, { scroll: false });
   };
 
-  const onResetDepartments = () => {
+  const onDistanceChanged = (distance: string) => {
     setClubParams((clubParams) => ({
       ...clubParams,
       offset: 0,
-      departmentCode: undefined,
+      distance,
     }));
 
-    const queryString = removeQueryString(SEARCH_QUERY_PARAMS.departmentCode);
-
-    router.push(`${pathname}?${queryString}`, { scroll: false });
+    appendQueryString([{ key: SEARCH_QUERY_PARAMS.distance, value: distance }]);
   };
-
-  const isLastPage = clubs.total_count === clubs.results.length;
 
   return (
     <>
-      <div className={styles.spacer}>
+      <div className={cn('fr-mb-10w', styles.spacer)}>
         <ClubFilters
           regions={regions}
           activities={activities}
           departments={departments}
+          isGeolocationFilterVisible={showClubListOnMap}
           onTextSearch={searchClubByTextHandler}
           onRegionChanged={onRegionChanged}
           onDepartmentChanged={onDepartmentChanged}
           onCityChanged={onCityChanged}
           onActivityChanged={onActivityChanged}
           onDisabilityChanged={onDisabilityChanged}
+          onDistanceChanged={onDistanceChanged}
         />
 
-        <ClubCount displayedClubCount={clubs.results.length} totalClubCount={clubs.total_count} />
-
-        <div className={cn('fr-mx-auto', 'fr-mt-6w', 'fr-mb-10w', styles.sizer)}>
-          <div className={cn('fr-mt-6w', styles.container)}>
-            {clubs.results.map((club) => (
-              /** @ts-ignore */
-              <Card
-                key={club.nom + club.adresse + club.commune}
-                className={styles.item}
-                background
-                badge={
-                  !!club.activites &&
-                  club.activites.slice(0, 1).map((a) => (
-                    <Badge key={a} severity="new">
-                      {a}
-                    </Badge>
-                  ))
-                }
-                imageAlt=""
-                border
-                detail={club.adresse ? `${club.adresse}, ${club.com_arm_name}` : club.com_arm_name}
-                enlargeLink
-                linkProps={{
-                  href: `${pathName}/${encodeURIComponent(club.nom)}`,
-                }}
-                size="medium"
-                start={
-                  <ul className="fr-tags-group">
-                    {!!club.activites && club.activites.length > 0 && (
-                      <li>
-                        <Tag>
-                          {club.activites.length}{' '}
-                          {club.activites.length > 1 ? 'activités' : 'activité'}
-                        </Tag>
-                      </li>
-                    )}
-
-                    {club.handicap === 'Oui' && (
-                      <li>
-                        <DisabilityTag club={club} />
-                      </li>
-                    )}
-                  </ul>
-                }
-                title={`${club.nom}`}
-                titleAs="h3"
-              />
-            ))}
-          </div>
-          {!isLastPage && (
-            <div className={cn('fr-mt-9w', styles['more-clubs-wrapper'])}>
-              <Button priority="primary" size="large" onClick={seeMoreClubsHandler}>
-                Voir plus de clubs
-              </Button>
-            </div>
-          )}
-
-          <div
-            className={cn(
-              'fr-alert',
-              'fr-alert--info',
-              'fr-mt-9w',
-              'fr-mx-auto',
-              styles['alert-sizer'],
-            )}
-          >
-            <h6 className="fr-alert__title">Information</h6>
-            <p>
-              {isProVersion
-                ? `Si votre club n'apparait pas, c'est qu'il n'est pas encore référencé. Dans ce cas là, n'hésitez pas à vous rapprocher de plusieurs interlocuteurs dans votre département en fonction de votre statut`
-                : `Si mon club n’apparait pas, c’est qu’il n’accepte probablement pas encore le pass
-              Sport. N’hésitez pas à vous rapprocher de votre club en lui proposant d’accepter le
-              dispositif.`}
-            </p>
-          </div>
+        <div className={styles.center}>
+          <SegmentedControl
+            hideLegend={true}
+            segments={[
+              {
+                label: 'Liste',
+                iconId: 'fr-icon-settings-5-line',
+                nativeInputProps: {
+                  checked: !showClubListOnMap,
+                  onChange: () => setShowClubListOnMap(false),
+                },
+              },
+              {
+                label: 'Carte',
+                iconId: 'fr-icon-settings-5-line',
+                nativeInputProps: {
+                  checked: showClubListOnMap,
+                  onChange: () => setShowClubListOnMap(true),
+                },
+              },
+            ]}
+          />
         </div>
+
+        <div className={cn('fr-mt-9w')}>
+          <ClubCount
+            displayedClubCount={clubsOnList.results.length}
+            totalClubCount={clubsOnList.total_count}
+          />
+        </div>
+
+        <div className="fr-pt-3w">
+          {showClubListOnMap ? (
+            <ClubMapView clubsResponse={clubsOnMap} />
+          ) : (
+            <ClubListView clubs={clubsOnList} onSeeMoreClubsClicked={seeMoreClubsHandler} />
+          )}
+        </div>
+
+        <MissingClubInformationPanel isProVersion={isProVersion} />
       </div>
 
       {!isProVersion && <EligibilityTestBanner />}

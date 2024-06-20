@@ -7,7 +7,7 @@ interface Props {
 }
 const ClubCount: React.FC<Props> = ({ displayedClubCount, totalClubCount }) => {
   return (
-    <p className={cn('fr-text--lead', styles.paragraph)}>
+    <p className={cn('fr-text--lead', 'fr-mb-0', styles.paragraph)}>
       {displayedClubCount} {displayedClubCount > 1 ? 'clubs affichés' : 'club affiché'} sur{' '}
       {totalClubCount} {totalClubCount > 1 ? 'clubs référencés' : 'club référencé'}
     </p>

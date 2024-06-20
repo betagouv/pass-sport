@@ -1,11 +1,16 @@
 import { City } from 'types/City';
-import { ActivityResponse, SportGouvJSONResponse } from 'types/Club';
+import {
+  ActivityResponse,
+  SportGouvJSONExportsResponse,
+  SportGouvJSONRecordsResponse,
+} from 'types/Club';
 import { GeoGouvRegion } from 'types/Region';
 import * as Sentry from '@sentry/nextjs';
 import { parseFranceRegions } from 'utils/region';
 import { GeoGouvDepartment } from '../../../../types/Department';
 
 export interface SqlSearchParams {
+  offset: number;
   clubName?: string;
   regionCode?: string;
   departmentCode?: string;
@@ -14,17 +19,10 @@ export interface SqlSearchParams {
   activity?: string;
   disability?: string;
   limit?: number;
-  offset: number;
+  distance?: string;
 }
 
-export const getClubs = async (param: SqlSearchParams): Promise<SportGouvJSONResponse> => {
-  const baseUrl =
-    'https://sports-sgsocialgouv.opendatasoft.com/api/explore/v2.1/catalog/datasets/passsports-asso_volontaires/records';
-
-  const params: URLSearchParams = new URLSearchParams();
-  params.append('limit', param.limit ? param.limit.toString() : '20');
-  params.append('offset', param.offset.toString());
-
+const buildWhereClause = (param: SqlSearchParams, excludedParams: (keyof SqlSearchParams)[]) => {
   let whereClause = 'nom is not null';
 
   whereClause += param?.clubName ? ` AND ${param.clubName}` : '';
@@ -35,6 +33,22 @@ export const getClubs = async (param: SqlSearchParams): Promise<SportGouvJSONRes
   whereClause += param?.activity ? ` AND ${param.activity}` : '';
   whereClause += param?.disability ? ` AND ${param.disability}` : '';
 
+  if (!excludedParams.includes('distance')) {
+    whereClause += param.distance ? ` AND ${param.distance}` : '';
+  }
+
+  return whereClause;
+};
+
+export const getClubs = async (param: SqlSearchParams): Promise<SportGouvJSONRecordsResponse> => {
+  const baseUrl =
+    'https://sports-sgsocialgouv.opendatasoft.com/api/explore/v2.1/catalog/datasets/passsports-asso_volontaires/records';
+
+  const params: URLSearchParams = new URLSearchParams();
+  params.append('limit', param.limit ? param.limit.toString() : '20');
+  params.append('offset', param.offset.toString());
+
+  let whereClause = buildWhereClause(param, ['distance']);
   params.append('where', whereClause);
 
   const url = new URL(baseUrl);
@@ -46,7 +60,9 @@ export const getClubs = async (param: SqlSearchParams): Promise<SportGouvJSONRes
       scope.setLevel('warning');
       scope.setExtra('responseBody', response.body);
       scope.setExtra('responseStatus', response.status);
-      scope.captureMessage('Unexpected response from sports-sgsocialgouv.opendatasoft.com');
+      scope.captureMessage(
+        'Unexpected response from sports-sgsocialgouv.opendatasoft.com; endpoint: records',
+      );
     });
     return {
       results: [],
@@ -55,6 +71,46 @@ export const getClubs = async (param: SqlSearchParams): Promise<SportGouvJSONRes
   }
 
   return response.json();
+};
+
+export const getClubsWithoutLimit = async (
+  param: SqlSearchParams,
+): Promise<SportGouvJSONExportsResponse> => {
+  const baseUrl =
+    'https://sports-sgsocialgouv.opendatasoft.com/api/explore/v2.1/catalog/datasets/passsports-asso_volontaires/exports/json';
+
+  const params: URLSearchParams = new URLSearchParams();
+
+  params.append('select', 'nom,geoloc_finale');
+  params.append('limit', '-1');
+  let whereClause = buildWhereClause(param, []);
+  params.append('where', whereClause);
+
+  const url = new URL(baseUrl);
+  url.search = params.toString();
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    Sentry.withScope((scope) => {
+      scope.setLevel('warning');
+      scope.setExtra('responseBody', response.body);
+      scope.setExtra('responseStatus', response.status);
+      scope.captureMessage(
+        'Unexpected response from sports-sgsocialgouv.opendatasoft.com; endpoint: exports',
+      );
+    });
+    return {
+      results: [],
+      total_count: 0,
+    };
+  }
+
+  const results = await response.json();
+
+  return {
+    results,
+    total_count: results.length,
+  };
 };
 
 export const getFranceRegions = async (): Promise<GeoGouvRegion[]> => {
