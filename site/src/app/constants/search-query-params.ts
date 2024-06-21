@@ -7,4 +7,8 @@ export const SEARCH_QUERY_PARAMS = {
   handicap: 'disability',
   departmentCode: 'departmentCode',
   distance: 'distance',
+  centerLat: 'centerLat',
+  centerLng: 'centerLng',
+  zoom: 'zoom',
+  isShowingMapTab: 'map',
 };

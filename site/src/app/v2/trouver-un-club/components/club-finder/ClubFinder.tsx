@@ -6,11 +6,7 @@ import { getClubs, getClubsWithoutLimit, SqlSearchParams } from '../../agent';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ClubFilters from '../club-filters/ClubFilters';
 import { GeoGouvRegion } from 'types/Region';
-import {
-  ActivityResponse,
-  SportGouvJSONExportsResponse,
-  SportGouvJSONRecordsResponse,
-} from 'types/Club';
+import { ActivityResponse, ClubsOnMapProvider, SportGouvJSONRecordsResponse } from 'types/Club';
 import cn from 'classnames';
 import EligibilityTestBanner from '@/components/eligibility-test-banner/EligibilityTestBanner';
 import { SEARCH_QUERY_PARAMS } from '@/app/constants/search-query-params';
@@ -24,6 +20,7 @@ import MissingClubInformationPanel from '../missing-club-information-panel/Missi
 import { SegmentedControl } from '@codegouvfr/react-dsfr/SegmentedControl';
 import ClubCount from '../club-count/ClubCount';
 import { GeolocationContext } from '@/store/geolocationContext';
+import { DEFAULT_DISTANCE } from 'utils/map';
 
 interface Props {
   regions: GeoGouvRegion[];
@@ -46,24 +43,25 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
     results: [],
     total_count: 0,
   });
-  const [clubsOnMap, setClubsOnMap] = useState<SportGouvJSONExportsResponse>({
+  const [clubsOnMap, setClubsOnMap] = useState<ClubsOnMapProvider>({
     results: [],
     total_count: 0,
+    isFetchingClubsOnMap: true,
   });
 
-  const buildDistanceExpression = () => {
-    const distanceParam = searchParams && searchParams.get(SEARCH_QUERY_PARAMS.distance);
-
-    if (!distanceParam) {
-      return undefined;
-    }
-
+  const buildDistanceExpression = (): string | null => {
     const { latitude, longitude } = geolocationContext;
 
     if (!latitude && !longitude) {
-      return undefined;
+      return null;
     }
 
+    // geolocation is enabled by user
+    let distanceParam = searchParams && searchParams.get(SEARCH_QUERY_PARAMS.distance);
+
+    if (!distanceParam) {
+      distanceParam = DEFAULT_DISTANCE.toString();
+    }
     return `within_distance(geoloc_finale, GEOM'POINT(${longitude} ${latitude} )',${distanceParam}km)`;
   };
 
@@ -92,11 +90,22 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
       [SEARCH_QUERY_PARAMS.departmentCode]: searchParams.get(SEARCH_QUERY_PARAMS.departmentCode)
         ? `dep_code='${searchParams.get(SEARCH_QUERY_PARAMS.departmentCode)}'`
         : undefined,
-      [SEARCH_QUERY_PARAMS.distance]: buildDistanceExpression(),
+      [SEARCH_QUERY_PARAMS.distance]: undefined,
     }),
   });
 
-  const [showClubListOnMap, setShowClubListOnMap] = useState(false);
+  const getParameterFromQuery = (searchQUeryParam: keyof typeof SEARCH_QUERY_PARAMS) => {
+    const param = searchParams && searchParams.get(SEARCH_QUERY_PARAMS[searchQUeryParam]);
+
+    if (searchQUeryParam === 'isShowingMapTab') {
+      if (isNaN(Number(param))) {
+        return undefined;
+      }
+      return param;
+    }
+  };
+
+  const showClubListOnMap = getParameterFromQuery('isShowingMapTab') === '1';
 
   const { clubName, regionCode, city, postalCode, activity, disability, offset, distance } =
     clubParams;
@@ -114,12 +123,24 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
   }, [clubName, regionCode, city, postalCode, activity, disability, offset, clubParams]);
 
   useEffect(() => {
-    getClubsWithoutLimit(clubParams).then(setClubsOnMap);
-  }, [clubName, regionCode, city, postalCode, activity, disability, offset, clubParams, distance]);
-
-  const seeMoreClubsHandler = () => {
-    setClubParams((clubParams) => ({ ...clubParams, offset: clubParams.offset + limit }));
-  };
+    if (!geolocationContext.loading && distance !== undefined) {
+      setClubsOnMap((provider) => ({ ...provider, isFetchingClubsOnMap: true }));
+      getClubsWithoutLimit(clubParams).then((response) =>
+        setClubsOnMap({ ...response, isFetchingClubsOnMap: false }),
+      );
+    }
+  }, [
+    clubName,
+    regionCode,
+    city,
+    postalCode,
+    activity,
+    disability,
+    offset,
+    clubParams,
+    distance,
+    geolocationContext.loading,
+  ]);
 
   useEffect(() => {
     if (!geolocationContext.loading) {
@@ -131,6 +152,10 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
       });
     }
   }, [geolocationContext.loading]);
+
+  const seeMoreClubsHandler = () => {
+    setClubParams((clubParams) => ({ ...clubParams, offset: clubParams.offset + limit }));
+  };
 
   const searchClubByTextHandler = (text: string) => {
     const params: SqlSearchParams = { ...clubParams, offset: 0, clubName: undefined };
@@ -276,13 +301,35 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
   };
 
   const onDistanceChanged = (distance: string) => {
-    setClubParams((clubParams) => ({
-      ...clubParams,
-      offset: 0,
-      distance,
-    }));
+    const { longitude, latitude } = geolocationContext;
 
-    appendQueryString([{ key: SEARCH_QUERY_PARAMS.distance, value: distance }]);
+    if (latitude && longitude) {
+      setClubParams((clubParams) => ({
+        ...clubParams,
+        offset: 0,
+        distance: `within_distance(geoloc_finale, GEOM'POINT(${longitude} ${latitude} )',${distance}km)`,
+      }));
+
+      const queryString = appendQueryString([
+        { key: SEARCH_QUERY_PARAMS.distance, value: distance },
+      ]);
+      router.push(`${pathname}?${queryString}`, { scroll: false });
+    }
+  };
+
+  const showClubsOnListTabHandler = () => {
+    const queryString = appendQueryString([
+      { key: SEARCH_QUERY_PARAMS.isShowingMapTab, value: '0' },
+    ]);
+
+    router.push(`${pathname}?${queryString}`, { scroll: false });
+  };
+
+  const showClubsOnMapTabHandler = () => {
+    const queryString = appendQueryString([
+      { key: SEARCH_QUERY_PARAMS.isShowingMapTab, value: '1' },
+    ]);
+    router.push(`${pathname}?${queryString}`, { scroll: false });
   };
 
   return (
@@ -311,7 +358,7 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
                 iconId: 'fr-icon-settings-5-line',
                 nativeInputProps: {
                   checked: !showClubListOnMap,
-                  onChange: () => setShowClubListOnMap(false),
+                  onChange: showClubsOnListTabHandler,
                 },
               },
               {
@@ -319,7 +366,7 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
                 iconId: 'fr-icon-settings-5-line',
                 nativeInputProps: {
                   checked: showClubListOnMap,
-                  onChange: () => setShowClubListOnMap(true),
+                  onChange: showClubsOnMapTabHandler,
                 },
               },
             ]}
@@ -328,14 +375,17 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
 
         <div className={cn('fr-mt-9w')}>
           <ClubCount
-            displayedClubCount={clubsOnList.results.length}
+            displayedClubCount={
+              showClubListOnMap ? clubsOnMap.total_count : clubsOnList.results.length
+            }
             totalClubCount={clubsOnList.total_count}
+            isPaginating={!showClubListOnMap}
           />
         </div>
 
         <div className="fr-pt-3w">
           {showClubListOnMap ? (
-            <ClubMapView clubsResponse={clubsOnMap} />
+            <ClubMapView clubsProvider={clubsOnMap} />
           ) : (
             <ClubListView clubs={clubsOnList} onSeeMoreClubsClicked={seeMoreClubsHandler} />
           )}

@@ -21,12 +21,7 @@ interface Props {
 const GeolocationProvider: React.FC<Props> = ({ children }) => {
   const geolocation = useGeolocation();
 
-  return (
-    <>
-      {JSON.stringify(geolocation)}
-      <GeolocationContext.Provider value={geolocation}>{children}</GeolocationContext.Provider>;
-    </>
-  );
+  return <GeolocationContext.Provider value={geolocation}>{children}</GeolocationContext.Provider>;
 };
 
 export default GeolocationProvider;

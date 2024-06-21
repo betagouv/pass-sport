@@ -8,4 +8,5 @@ interface Props {
 const Geolocation: React.FC<Props> = ({ children }) => {
   return <GeolocationProvider>{children}</GeolocationProvider>;
 };
+
 export default Geolocation;

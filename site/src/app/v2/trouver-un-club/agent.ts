@@ -8,6 +8,7 @@ import { GeoGouvRegion } from 'types/Region';
 import * as Sentry from '@sentry/nextjs';
 import { parseFranceRegions } from 'utils/region';
 import { GeoGouvDepartment } from '../../../../types/Department';
+import { LIMIT } from 'utils/map';
 
 export interface SqlSearchParams {
   offset: number;
@@ -19,7 +20,7 @@ export interface SqlSearchParams {
   activity?: string;
   disability?: string;
   limit?: number;
-  distance?: string;
+  distance?: string | null;
 }
 
 const buildWhereClause = (param: SqlSearchParams, excludedParams: (keyof SqlSearchParams)[]) => {
@@ -82,7 +83,8 @@ export const getClubsWithoutLimit = async (
   const params: URLSearchParams = new URLSearchParams();
 
   params.append('select', 'nom,geoloc_finale');
-  params.append('limit', '-1');
+  params.append('limit', LIMIT.toString());
+
   let whereClause = buildWhereClause(param, []);
   params.append('where', whereClause);
 

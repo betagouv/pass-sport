@@ -1,3 +1,6 @@
+'use client';
+
+import dynamic from 'next/dynamic';
 import cn from 'classnames';
 import { ActivityResponse } from 'types/Club';
 import { GeoGouvRegion } from 'types/Region';
@@ -9,8 +12,6 @@ import ActivityFilter from '@/app/v2/trouver-un-club/components/club-filters/act
 import HandicapFilter from '@/app/v2/trouver-un-club/components/club-filters/handicap-filter/HandicapFilter';
 import { GeoGouvDepartment } from '../../../../../../types/Department';
 import DepartmentFilter from '@/app/v2/trouver-un-club/components/club-filters/department-filter/DepartmentFilter';
-import dynamic from 'next/dynamic';
-import GeolocalisationFilter from './geolocalisation-filter/GeolocalisationFilter';
 
 export interface Option {
   label: string;
@@ -57,6 +58,10 @@ export const selectStyles = {
     zIndex: 999,
   }),
 };
+
+const GeolocationFilter = dynamic(() => import('./geolocation-filter/GeolocationFilter'), {
+  ssr: false,
+});
 
 const ClubFilters: React.FC<Props> = ({
   regions,
@@ -106,7 +111,7 @@ const ClubFilters: React.FC<Props> = ({
             <div className={styles.secondLinefilters_separator} />
           </div>
           <div className={styles.secondLinefilters_container}>
-            {isGeolocationFilterVisible && <GeolocalisationFilter onChanged={onDistanceChanged} />}
+            {isGeolocationFilterVisible && <GeolocationFilter onChanged={onDistanceChanged} />}
             <HandicapFilter onDisabilityChanged={onDisabilityChanged} />
           </div>
         </div>

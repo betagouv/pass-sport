@@ -8,6 +8,10 @@ export interface SportGouvJSONExportsResponse {
   total_count: number;
 }
 
+export interface ClubsOnMapProvider extends SportGouvJSONExportsResponse {
+  isFetchingClubsOnMap: boolean;
+}
+
 type YesNo = 'Oui' | 'Non';
 
 export interface Club {
