@@ -30,9 +30,9 @@ const ClubMapView: React.FC<Props> = ({ clubsProvider }) => {
     () =>
       dynamic(() => import('../clubs-map/ClubsMap'), {
         ssr: false,
-        loading: () => (isFetching ? null : <Loading />),
+        loading: () => <Loading />,
       }),
-    [isFetching],
+    [],
   );
 
   const searchParams = useSearchParams();
@@ -97,14 +97,17 @@ const ClubMapView: React.FC<Props> = ({ clubsProvider }) => {
 
   return (
     <div className={styles.main}>
-      {isFetching && <Loading />}
-      <ClubsMap
-        clubs={clubsProvider.results}
-        centerPosition={buildMapCenterPosition()}
-        userPosition={buildUserPosition()}
-        distance={getDistance()}
-        zoom={buildZoomValue()}
-      />
+      {isFetching ? (
+        <Loading />
+      ) : (
+        <ClubsMap
+          clubs={clubsProvider.results}
+          centerPosition={buildMapCenterPosition()}
+          userPosition={buildUserPosition()}
+          distance={getDistance()}
+          zoom={buildZoomValue()}
+        />
+      )}
     </div>
   );
 };
