@@ -178,11 +178,16 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
   };
 
   const onRegionChanged = (region?: string) => {
+    const queryParams = [
+      { key: SEARCH_QUERY_PARAMS.centerLat, value: '' },
+      { key: SEARCH_QUERY_PARAMS.centerLng, value: '' },
+      { key: SEARCH_QUERY_PARAMS.zoom, value: '' },
+    ];
+
     if (!region) {
       setClubParams((clubParams) => ({ ...clubParams, offset: 0, regionCode: undefined }));
 
-      const queryString = removeQueryString(SEARCH_QUERY_PARAMS.regionCode);
-      router.push(`${pathname}?${queryString}`, { scroll: false });
+      queryParams.push({ key: SEARCH_QUERY_PARAMS.regionCode, value: '' });
     } else {
       setClubParams((clubParams) => ({
         ...clubParams,
@@ -190,25 +195,26 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
         regionCode: `reg_code='${region}'`,
       }));
 
-      const queryString = appendQueryString([
-        { key: SEARCH_QUERY_PARAMS.regionCode, value: region },
-      ]);
-      router.push(`${pathname}?${queryString}`, { scroll: false });
+      queryParams.push({ key: SEARCH_QUERY_PARAMS.regionCode, value: region });
     }
+
+    const queryString = appendQueryString(queryParams);
+    router.push(`${pathname}?${queryString}`, { scroll: false });
   };
 
   const onDepartmentChanged = (departmentCode?: string) => {
+    const queryParams = [
+      { key: SEARCH_QUERY_PARAMS.centerLat, value: '' },
+      { key: SEARCH_QUERY_PARAMS.centerLng, value: '' },
+      { key: SEARCH_QUERY_PARAMS.zoom, value: '' },
+    ];
+
     if (!departmentCode) {
-      const queryString = removeQueryString(SEARCH_QUERY_PARAMS.departmentCode);
-      router.push(`${pathname}?${queryString}`, { scroll: false });
+      queryParams.push({ key: SEARCH_QUERY_PARAMS.departmentCode, value: '' });
 
       setClubParams((clubParams) => ({ ...clubParams, offset: 0, departmentCode: undefined }));
     } else {
-      const queryString = appendQueryString([
-        { key: SEARCH_QUERY_PARAMS.departmentCode, value: departmentCode },
-      ]);
-
-      router.push(`${pathname}?${queryString}`, { scroll: false });
+      queryParams.push({ key: SEARCH_QUERY_PARAMS.departmentCode, value: departmentCode });
 
       setClubParams((clubParams) => ({
         ...clubParams,
@@ -216,9 +222,18 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
         departmentCode: `dep_code='${departmentCode}'`,
       }));
     }
+
+    const queryString = appendQueryString(queryParams);
+    router.push(`${pathname}?${queryString}`, { scroll: false });
   };
 
   const onCityChanged = ({ city, postalCode }: { city?: string; postalCode?: string }) => {
+    const queryParams = [
+      { key: SEARCH_QUERY_PARAMS.centerLat, value: '' },
+      { key: SEARCH_QUERY_PARAMS.centerLng, value: '' },
+      { key: SEARCH_QUERY_PARAMS.zoom, value: '' },
+    ];
+
     if (!city && !postalCode) {
       setClubParams((clubParams) => ({
         ...clubParams,
@@ -247,20 +262,20 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
         postalCode: undefined,
       }));
 
-      const queryString = appendQueryString([
-        { key: SEARCH_QUERY_PARAMS.city, value: escapedSingleQuotesCity.toUpperCase() },
-        { key: SEARCH_QUERY_PARAMS.postalCode, value: '' },
-      ]);
-
-      router.push(`${pathname}?${queryString}`, { scroll: false });
+      queryParams.push({
+        key: SEARCH_QUERY_PARAMS.city,
+        value: escapedSingleQuotesCity.toUpperCase(),
+      });
+      queryParams.push({ key: SEARCH_QUERY_PARAMS.postalCode, value: '' });
     } else {
-      const queryString = appendQueryString([
-        { key: SEARCH_QUERY_PARAMS.city, value: '' },
-        { key: SEARCH_QUERY_PARAMS.postalCode, value: postalCode?.toUpperCase() || '' },
-      ]);
-
-      router.push(`${pathname}?${queryString}`, { scroll: false });
+      queryParams.push({ key: SEARCH_QUERY_PARAMS.city, value: '' });
+      queryParams.push({
+        key: SEARCH_QUERY_PARAMS.postalCode,
+        value: postalCode?.toUpperCase() || '',
+      });
     }
+    const queryString = appendQueryString(queryParams);
+    router.push(`${pathname}?${queryString}`, { scroll: false });
   };
 
   const onActivityChanged = (activity?: string) => {
