@@ -37,8 +37,11 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
   const appendQueryString = useAppendQueryString();
   const removeQueryString = useRemoveQueryString();
   const searchParams = useSearchParams();
+  let distanceParam =
+    (searchParams && searchParams.get(SEARCH_QUERY_PARAMS.distance)) || DEFAULT_DISTANCE.toString();
 
   const geolocationContext = useContext(GeolocationContext);
+  const { latitude, longitude, loading } = geolocationContext;
 
   const [clubsOnList, setClubsOnList] = useState<SportGouvJSONRecordsResponse>({
     results: [],
@@ -49,22 +52,6 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
     total_count: 0,
     isFetchingClubsOnMap: true,
   });
-
-  const buildDistanceExpression = (): string | null => {
-    const { latitude, longitude } = geolocationContext;
-
-    if (!latitude && !longitude) {
-      return null;
-    }
-
-    // geolocation is enabled by user
-    let distanceParam = searchParams && searchParams.get(SEARCH_QUERY_PARAMS.distance);
-
-    if (!distanceParam) {
-      distanceParam = DEFAULT_DISTANCE.toString();
-    }
-    return `within_distance(geoloc_finale, GEOM'POINT(${longitude} ${latitude} )',${distanceParam}km)`;
-  };
 
   const [clubParams, setClubParams] = useState<SqlSearchParams>({
     limit,
@@ -144,7 +131,15 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
   ]);
 
   useEffect(() => {
-    if (!geolocationContext.loading) {
+    const buildDistanceExpression = (): string | null => {
+      if (!latitude && !longitude) {
+        return null;
+      }
+
+      return `within_distance(geoloc_finale, GEOM'POINT(${longitude} ${latitude} )',${distanceParam}km)`;
+    };
+
+    if (!loading) {
       setClubParams((previousState) => {
         return {
           ...previousState,
@@ -152,7 +147,7 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
         };
       });
     }
-  }, [geolocationContext.loading]);
+  }, [loading, latitude, longitude, distanceParam]);
 
   const seeMoreClubsHandler = () => {
     setClubParams((clubParams) => ({ ...clubParams, offset: clubParams.offset + limit }));

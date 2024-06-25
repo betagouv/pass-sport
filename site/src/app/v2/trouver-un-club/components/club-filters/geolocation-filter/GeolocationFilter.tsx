@@ -20,15 +20,18 @@ const GeolocalisationFilter: React.FC<Props> = ({ onChanged }) => {
   const defaultDistance =
     (searchParam && searchParam.get(SEARCH_QUERY_PARAMS.distance)) || DEFAULT_DISTANCE.toString();
 
-  const [selectedDistance, setSelectedDistance] = useState<string>(defaultDistance);
+  const [selectedDistance, setSelectedDistance] = useState<string | null>(null);
 
   useEffect(() => {
     const identifier = setTimeout(() => {
-      onChanged(selectedDistance);
+      if (selectedDistance) {
+        onChanged(selectedDistance);
+        setSelectedDistance(null);
+      }
     }, 300);
 
     return () => clearTimeout(identifier);
-  }, [selectedDistance]);
+  }, [selectedDistance, onChanged]);
 
   const isVisible: boolean = !(loading || !!error);
 
