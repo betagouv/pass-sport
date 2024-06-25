@@ -36,7 +36,7 @@ const GeolocalisationFilter: React.FC<Props> = ({ onChanged }) => {
     <>
       {isVisible && (
         <Range
-          hintText={'Dans un rayon autour de'}
+          hintText="Dans un rayon autour de"
           label="Autour de moi"
           max={200}
           min={10}
