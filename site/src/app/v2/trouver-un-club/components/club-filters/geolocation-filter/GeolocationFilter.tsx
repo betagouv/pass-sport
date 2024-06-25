@@ -44,7 +44,7 @@ const GeolocalisationFilter: React.FC<Props> = ({ onChanged }) => {
       hintText={isDisabled ? buildHintTextWhenDisabled() : 'Dans un rayon autour de'}
       label="Autour de moi"
       max={200}
-      min={0}
+      min={10}
       suffix=" km"
       step={10}
       nativeInputProps={{
