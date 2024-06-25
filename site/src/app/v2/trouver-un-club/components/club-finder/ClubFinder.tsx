@@ -21,6 +21,7 @@ import { SegmentedControl } from '@codegouvfr/react-dsfr/SegmentedControl';
 import ClubCount from '../club-count/ClubCount';
 import { GeolocationContext } from '@/store/geolocationContext';
 import { DEFAULT_DISTANCE } from 'utils/map';
+import { push } from '@socialgouv/matomo-next';
 
 interface Props {
   regions: GeoGouvRegion[];
@@ -316,6 +317,8 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
   };
 
   const onDistanceChanged = (distance: string) => {
+    push(['trackEvent', 'Searching clubs', 'Change distance', 'Around me filter', distance]);
+
     const { longitude, latitude } = geolocationContext;
 
     if (latitude && longitude) {
