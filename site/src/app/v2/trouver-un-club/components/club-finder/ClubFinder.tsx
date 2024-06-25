@@ -95,10 +95,30 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
 
   const showClubListOnMap = getParameterFromQuery('isShowingMapTab') === '1';
 
-  const { clubName, regionCode, city, postalCode, activity, disability, offset, distance } =
-    clubParams;
+  const {
+    clubName,
+    regionCode,
+    city,
+    postalCode,
+    activity,
+    disability,
+    offset,
+    distance,
+    departmentCode,
+  } = clubParams;
 
   useEffect(() => {
+    const clubParams = {
+      limit,
+      offset,
+      clubName,
+      regionCode,
+      departmentCode,
+      city,
+      postalCode,
+      disability,
+      activity,
+    };
     if (offset === 0) {
       getClubs(clubParams).then(setClubsOnList);
     } else {
@@ -108,26 +128,34 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
         }),
       );
     }
-  }, [clubName, regionCode, city, postalCode, activity, disability, offset, clubParams]);
+  }, [clubName, regionCode, city, postalCode, activity, disability, offset, limit, departmentCode]);
 
   useEffect(() => {
-    if (!geolocationContext.loading && distance !== undefined) {
+    if (!loading && distance !== undefined) {
       setClubsOnMap((provider) => ({ ...provider, isFetchingClubsOnMap: true }));
-      getClubsWithoutLimit(clubParams).then((response) =>
-        setClubsOnMap({ ...response, isFetchingClubsOnMap: false }),
-      );
+      getClubsWithoutLimit({
+        clubName,
+        regionCode,
+        city,
+        postalCode,
+        activity,
+        disability,
+        distance,
+        offset,
+        departmentCode,
+      }).then((response) => setClubsOnMap({ ...response, isFetchingClubsOnMap: false }));
     }
   }, [
+    offset,
     clubName,
     regionCode,
+    departmentCode,
     city,
     postalCode,
     activity,
     disability,
-    offset,
-    clubParams,
     distance,
-    geolocationContext.loading,
+    loading,
   ]);
 
   useEffect(() => {
@@ -314,20 +342,13 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
   const onDistanceChanged = (distance: string) => {
     push(['trackEvent', 'Searching clubs', 'Change distance', 'Around me filter', distance]);
 
-    const { longitude, latitude } = geolocationContext;
+    setClubParams((clubParams) => ({
+      ...clubParams,
+      offset: 0,
+    }));
 
-    if (latitude && longitude) {
-      setClubParams((clubParams) => ({
-        ...clubParams,
-        offset: 0,
-        distance: `within_distance(geoloc_finale, GEOM'POINT(${longitude} ${latitude} )',${distance}km)`,
-      }));
-
-      const queryString = appendQueryString([
-        { key: SEARCH_QUERY_PARAMS.distance, value: distance },
-      ]);
-      router.push(`${pathname}?${queryString}`, { scroll: false });
-    }
+    const queryString = appendQueryString([{ key: SEARCH_QUERY_PARAMS.distance, value: distance }]);
+    router.push(`${pathname}?${queryString}`, { scroll: false });
   };
 
   const showClubsOnListTabHandler = () => {
