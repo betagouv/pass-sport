@@ -22,13 +22,6 @@ const GeolocalisationFilter: React.FC<Props> = ({ onChanged }) => {
 
   const [selectedDistance, setSelectedDistance] = useState<string>(defaultDistance);
 
-  const buildHintTextWhenDisabled = (): string => {
-    if (loading || error) {
-      return 'Veuillez authoriser la geolocalisation pour utiliser ce filtre';
-    }
-    return '';
-  };
-
   useEffect(() => {
     const identifier = setTimeout(() => {
       onChanged(selectedDistance);
@@ -37,24 +30,28 @@ const GeolocalisationFilter: React.FC<Props> = ({ onChanged }) => {
     return () => clearTimeout(identifier);
   }, [selectedDistance]);
 
-  const isDisabled: boolean = loading || !!error;
+  const isVisible: boolean = !(loading || !!error);
+
   return (
-    <Range
-      disabled={isDisabled}
-      hintText={isDisabled ? buildHintTextWhenDisabled() : 'Dans un rayon autour de'}
-      label="Autour de moi"
-      max={200}
-      min={10}
-      suffix=" km"
-      step={10}
-      nativeInputProps={{
-        defaultValue: defaultDistance,
-        onChange: (e: React.FormEvent<HTMLInputElement>) => {
-          setSelectedDistance(e.currentTarget.value);
-        },
-      }}
-      className={cn('fr-py-2w', styles.width)}
-    />
+    <>
+      {isVisible && (
+        <Range
+          hintText={'Dans un rayon autour de'}
+          label="Autour de moi"
+          max={200}
+          min={10}
+          suffix=" km"
+          step={10}
+          nativeInputProps={{
+            defaultValue: defaultDistance,
+            onChange: (e: React.FormEvent<HTMLInputElement>) => {
+              setSelectedDistance(e.currentTarget.value);
+            },
+          }}
+          className={cn('fr-py-2w', styles.width)}
+        />
+      )}
+    </>
   );
 };
 
