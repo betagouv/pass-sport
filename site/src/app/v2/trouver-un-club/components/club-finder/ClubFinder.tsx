@@ -82,18 +82,15 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
     }),
   });
 
-  const getParameterFromQuery = (searchQUeryParam: keyof typeof SEARCH_QUERY_PARAMS) => {
-    const param = searchParams && searchParams.get(SEARCH_QUERY_PARAMS[searchQUeryParam]);
+  const parseParameterFromQuery = (searchQueryParam: keyof typeof SEARCH_QUERY_PARAMS) => {
+    const param = searchParams && searchParams.get(SEARCH_QUERY_PARAMS[searchQueryParam]);
 
-    if (searchQUeryParam === 'isShowingMapTab') {
-      if (isNaN(Number(param))) {
-        return undefined;
-      }
-      return param;
+    if (searchQueryParam === 'isShowingMapTab') {
+      return Number(param) === 1 || Number(param) === 0 ? param : undefined;
     }
   };
 
-  const showClubListOnMap = getParameterFromQuery('isShowingMapTab') === '1';
+  const showClubListOnMap = parseParameterFromQuery('isShowingMapTab') === '1';
 
   const {
     clubName,

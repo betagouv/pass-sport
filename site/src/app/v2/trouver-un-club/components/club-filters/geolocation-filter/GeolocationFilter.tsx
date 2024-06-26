@@ -28,33 +28,31 @@ const GeolocalisationFilter: React.FC<Props> = ({ onChanged }) => {
         onChanged(selectedDistance);
         setSelectedDistance(null);
       }
-    }, 300);
+    }, 700);
 
     return () => clearTimeout(identifier);
   }, [selectedDistance, onChanged]);
 
-  const isVisible: boolean = !(loading || !!error);
+  const isHidden = loading || !!error;
+
+  if (isHidden) return null;
 
   return (
-    <>
-      {isVisible && (
-        <Range
-          hintText="Dans un rayon autour de"
-          label="Autour de moi"
-          max={200}
-          min={10}
-          suffix=" km"
-          step={10}
-          nativeInputProps={{
-            defaultValue: defaultDistance,
-            onChange: (e: React.FormEvent<HTMLInputElement>) => {
-              setSelectedDistance(e.currentTarget.value);
-            },
-          }}
-          className={cn('fr-py-2w', styles.width)}
-        />
-      )}
-    </>
+    <Range
+      hintText="Dans un rayon autour de"
+      label="Autour de moi"
+      max={200}
+      min={10}
+      suffix=" km"
+      step={10}
+      nativeInputProps={{
+        defaultValue: defaultDistance,
+        onChange: (e: React.FormEvent<HTMLInputElement>) => {
+          setSelectedDistance(e.currentTarget.value);
+        },
+      }}
+      className={cn('fr-py-2w', styles.width)}
+    />
   );
 };
 

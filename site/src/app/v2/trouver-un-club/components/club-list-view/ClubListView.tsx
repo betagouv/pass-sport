@@ -18,7 +18,7 @@ const ClubListView = ({ clubs, onSeeMoreClubsClicked }: Props) => {
   const isLastPage = clubs.total_count === clubs.results.length;
 
   return (
-    <div>
+    <>
       <div className={cn('fr-mx-auto', 'fr-mt-6w', 'fr-mb-10w', styles.sizer)}>
         <div className={cn('fr-mt-6w', styles.container)}>
           {clubs.results.map((club) => (
@@ -75,7 +75,7 @@ const ClubListView = ({ clubs, onSeeMoreClubsClicked }: Props) => {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 };
 
