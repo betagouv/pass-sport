@@ -29,7 +29,7 @@ const Clusterizer: React.FC<Props> = ({ clubs }) => {
       const popup = L.popup().setContent(`
         <div>
           <p class='fr-text--lg fr-text--bold'> ${nom} </p> 
-          <a class="fr-btn fr-btn--tertiary" href='trouver-un-club/${encodeURIComponent(nom)}'>
+          <a class="fr-btn fr-btn--tertiary" href="trouver-un-club/${encodeURIComponent(nom)}">
             Détails du club
           </a>
         </div>
