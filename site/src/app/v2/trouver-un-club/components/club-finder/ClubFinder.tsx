@@ -86,7 +86,7 @@ const ClubFinder = ({ regions, activities, departments, isProVersion }: Props) =
     const param = searchParams && searchParams.get(SEARCH_QUERY_PARAMS[searchQueryParam]);
 
     if (searchQueryParam === 'isShowingMapTab') {
-      return Number(param) === 1 || Number(param) === 0 ? param : undefined;
+      return Number(param) === 1 ? param : undefined;
     }
   };
 
