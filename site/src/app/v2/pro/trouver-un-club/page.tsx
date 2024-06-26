@@ -56,7 +56,7 @@ const TrouverUnClub = async () => {
           container: styles['page-header'],
         }}
       />
-      <Suspense>
+      <Suspense fallback={<p>En cours de chargement</p>}>
         <Geolocation>
           <ClubFinder
             regions={regions}

@@ -19,7 +19,7 @@ const TrouverUnClub = async () => {
   return (
     <>
       <PageHeader title="Trouver un club" />
-      <Suspense fallback={<p>Loading</p>}>
+      <Suspense fallback={<p>En cours de chargement</p>}>
         <Geolocation>
           <ClubFinder regions={regions} activities={activities} departments={departments} />
         </Geolocation>
