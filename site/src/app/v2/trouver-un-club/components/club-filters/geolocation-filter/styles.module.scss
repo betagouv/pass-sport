@@ -1,0 +1,8 @@
+@import '../../../../../sassVariables.module.scss';
+
+.width {
+  width: auto;
+  @media (min-width: $md) {
+    width: 384px;
+  }
+}

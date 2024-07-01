@@ -10,6 +10,7 @@ import {
 import styles from './styles.module.scss';
 import { Metadata } from 'next';
 import { Suspense } from 'react';
+import Geolocation from '../../trouver-un-club/components/geolocation/Geolocation';
 
 export const metadata: Metadata = {
   title: 'Carte des structures partenaires - pass Sport',
@@ -55,13 +56,15 @@ const TrouverUnClub = async () => {
           container: styles['page-header'],
         }}
       />
-      <Suspense>
-        <ClubFinder
-          regions={regions}
-          activities={activities}
-          departments={departments}
-          isProVersion
-        />
+      <Suspense fallback={<p>En cours de chargement</p>}>
+        <Geolocation>
+          <ClubFinder
+            regions={regions}
+            activities={activities}
+            departments={departments}
+            isProVersion
+          />
+        </Geolocation>
       </Suspense>
       <SocialMediaPanel isProVersion />
     </>

@@ -1,3 +1,6 @@
+'use client';
+
+import dynamic from 'next/dynamic';
 import cn from 'classnames';
 import { ActivityResponse } from 'types/Club';
 import { GeoGouvRegion } from 'types/Region';
@@ -19,12 +22,14 @@ interface Props {
   regions: GeoGouvRegion[];
   departments: GeoGouvDepartment[];
   activities: ActivityResponse;
+  isGeolocationFilterVisible: boolean;
   onTextSearch: (text: string) => void;
   onRegionChanged: (region?: string) => void;
   onDepartmentChanged: (department?: string) => void;
   onCityChanged: (cityOrPostalCode: { city?: string; postalCode?: string }) => void;
   onActivityChanged: (activity?: string) => void;
   onDisabilityChanged: (isActivated: boolean) => void;
+  onDistanceChanged: (distance: string) => void;
 }
 
 export const selectStyles = {
@@ -54,16 +59,22 @@ export const selectStyles = {
   }),
 };
 
+const GeolocationFilter = dynamic(() => import('./geolocation-filter/GeolocationFilter'), {
+  ssr: false,
+});
+
 const ClubFilters: React.FC<Props> = ({
   regions,
   activities,
   departments,
+  isGeolocationFilterVisible,
   onTextSearch,
   onRegionChanged,
   onDepartmentChanged,
   onCityChanged,
   onActivityChanged,
   onDisabilityChanged,
+  onDistanceChanged,
 }) => {
   return (
     <div className={cn('fr-pt-3w', 'fr-pb-2w', styles.container)}>
@@ -71,7 +82,7 @@ const ClubFilters: React.FC<Props> = ({
         <Search onTextSearch={onTextSearch} />
 
         <p className={cn('fr-text--sm', 'fr-py-2w', 'fr-mb-0', styles.title)}>Filtrer par :</p>
-        <div className={styles.filtersContainer}>
+        <div className={styles.firstLinefiltersContainer}>
           <div className={cn(styles.flex)}>
             <RegionFilter regions={regions} onRegionChanged={onRegionChanged} />
           </div>
@@ -95,7 +106,15 @@ const ClubFilters: React.FC<Props> = ({
           </div>
         </div>
 
-        <HandicapFilter onDisabilityChanged={onDisabilityChanged} />
+        <div className={styles.secondLinefilters}>
+          <div className="fr-pt-2w">
+            <div className={styles.secondLinefilters_separator} />
+          </div>
+          <div className={styles.secondLinefilters_container}>
+            {isGeolocationFilterVisible && <GeolocationFilter onChanged={onDistanceChanged} />}
+            <HandicapFilter onDisabilityChanged={onDisabilityChanged} />
+          </div>
+        </div>
       </div>
     </div>
   );

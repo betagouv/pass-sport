@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { LatLngLiteral } from 'leaflet';
 import styles from './styles.module.scss';
 import { Club } from 'types/Club';
+
 interface Props {
   club: Club;
 }

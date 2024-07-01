@@ -1,6 +1,15 @@
-export interface SportGouvJSONResponse {
+export interface SportGouvJSONRecordsResponse {
   results: Club[];
   total_count: number;
+}
+
+export interface SportGouvJSONExportsResponse {
+  results: ExportedClub[];
+  total_count: number;
+}
+
+export interface ClubsOnMapProvider extends SportGouvJSONExportsResponse {
+  isFetchingClubsOnMap: boolean;
 }
 
 type YesNo = 'Oui' | 'Non';
@@ -23,6 +32,11 @@ export interface Club {
     lon: number;
     lat: number;
   } | null;
+}
+
+export interface ExportedClub {
+  nom: Club['nom'];
+  geoloc_finale: Club['geoloc_finale'];
 }
 
 export interface Activity {

@@ -1,0 +1,13 @@
+@import '../../../../sassVariables.module.scss';
+
+.map {
+  height: 440px;
+  @media (min-width: $xl) {
+    height: 670px;
+    max-width: 1200px;
+  }
+}
+
+.map a {
+  background-image: none;
+}
