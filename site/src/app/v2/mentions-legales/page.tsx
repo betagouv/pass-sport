@@ -4,6 +4,7 @@ import styles from './style.module.scss';
 import EligibilityTestBanner from '@/components/eligibility-test-banner/EligibilityTestBanner';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Mentions légales - pass Sport',
@@ -61,33 +62,31 @@ export default function PolitiqueDeConfidentialite() {
           </p>
 
           <p className="fr-mb-2w">
-            95 avenue de France <br />
-            75 650 Paris CEDEX 13 <br />
-            France <br />
-            Tél : 01 40 45 90 00 <br />
+            <span className="display--block">95 avenue de France</span>
+            <span className="display--block">75 650 Paris CEDEX 13</span>
+            <span className="display--block">France</span>
+            <span className="display--block">Tél : 01 40 45 90 00</span>
           </p>
 
           <p>Responsable de publication : Fabienne BOURDAIS, Directrice des sports</p>
 
-          <p>
+          <p className="fr-mb-3w">
             Administrateur du portail : Jean-François HATTE - Sous-direction du pilotage et de
-            l&apos;évolution des politiques publiques du sport - DS.1. Contact :
-            passsport@sports.gouv.fr
-            <br />
-            <br />
+            l&apos;évolution des politiques publiques du sport - DS.1. Contact :{' '}
+            <Link href="mailto:passsport@sports.gouv.fr">passsport@sports.gouv.fr</Link>
           </p>
 
           <p>
-            Hébergement : <br />
-            Scalingo <br />
-            13 rue Jacques Peirotes <br />
-            67000 Strasbourg <br />
-            France <br />
+            <span className="display--block">Hébergement :</span>
+            <span className="display--block">Scalingo</span>
+            <span className="display--block">13 rue Jacques Peirotes</span>
+            <span className="display--block">67000 Strasbourg</span>
+            <span className="display--block">France</span>
           </p>
         </section>
 
         <section className="fr-mb-6w">
-          <h4 className="fr-mb-2w">Accès au site</h4>
+          <h2 className="fr-mb-2w fr-h4">Accès au site</h2>
 
           <p>
             L&apos;accès au site est libre et gratuit et ne nécessite pas la création d&apos;un
@@ -97,7 +96,7 @@ export default function PolitiqueDeConfidentialite() {
         </section>
 
         <section className="fr-mb-6w">
-          <h4 className="fr-mb-2w">Contenu du site</h4>
+          <h2 className="fr-mb-2w fr-h4">Contenu du site</h2>
 
           <p className="fr-mb-2w">
             Le ministère des Sports et des Jeux Olympiques et Paralympiques met à disposition des
