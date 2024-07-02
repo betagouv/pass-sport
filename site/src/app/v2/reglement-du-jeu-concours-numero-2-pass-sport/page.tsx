@@ -55,20 +55,11 @@ export default function Page() {
             France, 75013 – Paris est désigné ci-après comme : « l&apos;Organisateur »
           </p>
           <p>
-            La société DECATHLON, SASU sis 4 boulevard de Mons, 59650 – Villeneuve D&apos;Ascq 59650
-            est désignée ci-après comme : « l&apos;Organisateur ».
-          </p>
-          <p>
-            Le ministère des Sports et des Jeux Olympiques et Paralympiques et la société DECATHLON
-            étant ci-après désignés comme : « l&apos;Organisateur » ou « les sociétés organisatrices
-            ».
-          </p>
-          <p>
             Les participants au jeu-concours sont désignés ci-après comme « le/les Participant(s) »
           </p>
           <p>
             Le présent règlement définit les règles juridiques applicables au jeu-concours « pass
-            Sport x DECATHLON ».
+            Sport ».
           </p>
         </section>
 
