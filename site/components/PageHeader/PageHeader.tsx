@@ -16,6 +16,7 @@ export default function PageHeader({ title, subtitle, classes, isProVersion = fa
     <header
       // Mainly used as an anchor
       id="header"
+      role="banner"
       className={cn(styles.container, classes?.container, {
         [styles['container--pro']]: isProVersion,
       })}

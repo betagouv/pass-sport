@@ -6,7 +6,7 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 export default function WhereToUsePassSport() {
   return (
     <section>
-      <h4>Où l&apos;utiliser ?</h4>
+      <h2>Où l&apos;utiliser ?</h2>
 
       <p>
         <span className="display--block">

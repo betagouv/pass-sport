@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 const LegalTextReference = () => (
   <section>
-    <h4>Texte de référence</h4>
+    <h2>Texte de référence</h2>
     <Link
       className={styles['section__reference-link']}
       href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000049643030"

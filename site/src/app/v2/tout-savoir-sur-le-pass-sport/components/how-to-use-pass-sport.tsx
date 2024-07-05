@@ -8,7 +8,7 @@ import qrCodeImage from '../../../../../public/images/tout-savoir-sur-le-pass-sp
 export default function HowToUsePassSport() {
   return (
     <section>
-      <h4>Comment utiliser son pass Sport ?</h4>
+      <h2>Comment utiliser son pass Sport ?</h2>
 
       <p>
         <span className="display--block">
@@ -30,6 +30,7 @@ export default function HowToUsePassSport() {
         <Card
           background
           title="Nicolas Dupont"
+          titleAs="h2"
           horizontal
           imageAlt="Image du QR code"
           aria-label="Image de votre QR Code - votre pass Sport, à montrer à un club partenaire lors de votre inscription"
