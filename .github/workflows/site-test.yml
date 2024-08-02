@@ -48,8 +48,8 @@ jobs:
           CRISP_KEY: ${{ secrets.CRISP_KEY }}
           CRISP_WEBSITE: ${{ secrets.CRISP_WEBSITE }}
           OPENDATASOFT_API_KEY: ${{ secrets.OPENDATASOFT_API_KEY }}
-      # - name: Accessibility test
-      #   run: |
-      #     npm run dev & npx -y wait-on http://localhost:3000
-      #     npm install -g pa11y
-      #     pa11y http://localhost:3000
+      - name: Accessibility test
+        run: |
+          npm run dev & npx -y wait-on http://localhost:3000
+          npm install -g pa11y
+          pa11y http://localhost:3000
