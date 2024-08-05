@@ -18,4 +18,4 @@ jobs:
       - name: Build & test prod
         run: | 
           cd .ci
-          docker-compose run  --rm check-nginx-conf
+          docker compose run  --rm check-nginx-conf
