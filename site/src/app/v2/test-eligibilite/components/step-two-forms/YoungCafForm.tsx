@@ -53,10 +53,10 @@ const YoungCafForm = ({
       } else {
         if (typeof value === 'string') {
           if (fieldName === 'recipientCafNumber') {
-            if (!/^\d{1,7}$/.test(value)) {
+            if (!/^\d{7}$/.test(value)) {
               states[fieldName] = {
                 state: 'error',
-                errorMsg: 'Le numéro CAF doit être composé de 1 à 7 chiffres',
+                errorMsg: 'Le numéro CAF doit être composé de 7 chiffres',
               };
 
               isValid = false;
@@ -149,7 +149,7 @@ const YoungCafForm = ({
         <CustomInput
           inputProps={{
             label: 'Numéro de l’allocataire CAF*',
-            hintText: 'Format attendu : 1 à 7 chiffres',
+            hintText: 'Format attendu : 7 chiffres',
             nativeInputProps: {
               name: 'recipientCafNumber',
               placeholder: 'ex: 0000000',
