@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
   const cspHeader = `
     default-src 'self';
     script-src 'report-sample' ${scriptSrc} https://static.axept.io/sdk-slim.js https://stats.beta.gouv.fr/matomo.js;
-    style-src 'report-sample' 'unsafe-inline' 'self' https://unpkg.com;
+    style-src 'report-sample' 'self' https://unpkg.com;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
