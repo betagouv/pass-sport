@@ -2,10 +2,10 @@ import { SportGouvJSONRecordsResponse } from 'types/Club';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import Card from '@codegouvfr/react-dsfr/Card';
-import Button from '@codegouvfr/react-dsfr/Button';
 import { usePathname } from 'next/navigation';
 import ClubTags from '../club-tags/ClubTags';
 import rootStyles from '@/app/utilities.module.scss';
+import MoreClubsButton from './more-clubs-button/MoreClubsButton';
 
 interface Props {
   clubs: SportGouvJSONRecordsResponse;
@@ -39,21 +39,7 @@ const ClubListView = ({ clubs, onSeeMoreClubsClicked }: Props) => {
           ))}
         </ul>
 
-        {!isLastPage && (
-          <div className={cn('fr-mt-9w', styles['more-clubs-wrapper'])}>
-            <Button
-              priority="primary"
-              size="large"
-              onClick={onSeeMoreClubsClicked}
-              nativeButtonProps={{
-                'aria-label':
-                  'Voir plus de clubs. La liste des clubs sera augmentée des clubs suivants',
-              }}
-            >
-              Voir plus de clubs
-            </Button>
-          </div>
-        )}
+        <MoreClubsButton clubs={clubs} onClick={onSeeMoreClubsClicked} />
       </div>
     </>
   );

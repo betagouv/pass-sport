@@ -19,7 +19,7 @@ import ClubListView from '../club-list-view/ClubListView';
 import MissingClubInformationPanel from '../missing-club-information-panel/MissingClubInformationPanel';
 import { SegmentedControl } from '@codegouvfr/react-dsfr/SegmentedControl';
 import { GeolocationContext } from '@/store/geolocationContext';
-import { DEFAULT_DISTANCE } from 'utils/map';
+import { LIST_LIMIT, MAP_DEFAULT_DISTANCE } from 'utils/club-finder';
 import { push } from '@socialgouv/matomo-next';
 import { setFocusOn } from 'utils/dom';
 import dynamic from 'next/dynamic';
@@ -30,7 +30,7 @@ interface Props {
 }
 
 const ClubFinder = ({ activities, isProVersion }: Props) => {
-  const limit = 21;
+  const limit = LIST_LIMIT;
   const router = useRouter();
   const pathname = usePathname();
 
@@ -143,7 +143,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
   }, [offset, clubName, city, postalCode, activity, disability, distance, isGeolocationLoading]);
 
   const buildDistanceExpression = useCallback((): string | null | undefined => {
-    const distance = DEFAULT_DISTANCE.toString();
+    const distance = MAP_DEFAULT_DISTANCE.toString();
 
     if (!latitude && !longitude) {
       return null;

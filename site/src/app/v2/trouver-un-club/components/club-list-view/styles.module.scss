@@ -1,6 +1,5 @@
 @import '../../../../sassVariables.module';
 
-
 .container {
   display: flex;
   flex-wrap: wrap;
@@ -17,16 +16,4 @@
 
 .card {
   height: 100%;
-}
-
-.more-clubs-wrapper {
-  text-align: center;
-  button {
-    justify-content: center;
-    width: 100%;
-
-    @media screen and (min-width: $sm) {
-      width: 337px;
-    }
-  }
 }
