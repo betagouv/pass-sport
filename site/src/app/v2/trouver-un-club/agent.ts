@@ -5,7 +5,7 @@ import {
   SportGouvJSONRecordsResponse,
 } from 'types/Club';
 import * as Sentry from '@sentry/nextjs';
-import { LIMIT } from 'utils/map';
+import { MAP_LIMIT } from 'utils/club-finder';
 
 export interface SqlSearchParams {
   offset: number;
@@ -76,7 +76,7 @@ export const getClubsWithoutLimit = async (
   const params: URLSearchParams = new URLSearchParams();
 
   params.append('select', 'nom,geoloc_finale');
-  params.append('limit', LIMIT.toString());
+  params.append('limit', MAP_LIMIT.toString());
 
   let whereClause = buildWhereClause(param, []);
   params.append('where', whereClause);

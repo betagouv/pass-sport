@@ -1,0 +1,13 @@
+@import '../../../../../sassVariables.module';
+
+.more-clubs-wrapper {
+  text-align: center;
+  button {
+    justify-content: center;
+    width: 100%;
+
+    @media screen and (min-width: $sm) {
+      width: 337px;
+    }
+  }
+}

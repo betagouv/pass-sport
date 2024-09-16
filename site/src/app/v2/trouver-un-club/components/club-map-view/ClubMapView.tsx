@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { GeolocationContext } from '@/store/geolocationContext';
 import { useSearchParams } from 'next/navigation';
 import { SEARCH_QUERY_PARAMS } from '@/app/constants/search-query-params';
-import { DEFAULT_DISTANCE, LIMIT } from 'utils/map';
+import { MAP_DEFAULT_DISTANCE, MAP_LIMIT } from 'utils/club-finder';
 import { LatLngLiteral } from 'leaflet';
 import { getCenter } from 'geolib';
 import styles from './styles.module.scss';
@@ -44,7 +44,7 @@ const ClubMapView: React.FC<Props> = ({
   isSearchingAroundMe,
 }) => {
   const isFetching = clubsProvider.isFetchingClubsOnMap;
-  const areThereTooManyClubs = clubsProvider.total_count === LIMIT;
+  const areThereTooManyClubs = clubsProvider.total_count === MAP_LIMIT;
 
   const ClubsMap = useMemo(
     () =>
@@ -60,7 +60,7 @@ const ClubMapView: React.FC<Props> = ({
   const { longitude, latitude } = useContext(GeolocationContext);
 
   const getDistance = (): number => {
-    return DEFAULT_DISTANCE * 1000;
+    return MAP_DEFAULT_DISTANCE * 1000;
   };
 
   const buildMapCenterPosition = (): LatLngLiteral | undefined => {
