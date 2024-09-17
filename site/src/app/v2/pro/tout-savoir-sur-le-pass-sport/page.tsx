@@ -46,7 +46,7 @@ export default function ToutSavoirSurLePassSport() {
               Pour devenir partenaire du dispositif pass Sport, votre structure doit répondre à
               l&apos;une des trois conditions suivantes :
             </p>
-            <ul className={styles['section-container__list--numbering']}>
+            <ol>
               <li className="fr-mb-3w">
                 Affiliation : Être affiliée, quel que soit son statut, pour la saison 2024-2025 à
                 l&apos;une des 114 fédérations sportives agréées par le ministère des Sports et des
@@ -81,7 +81,7 @@ export default function ToutSavoirSurLePassSport() {
                   charte d’engagement loisir sportif marchand
                 </Link>
               </li>
-            </ul>
+            </ol>
           </section>
 
           <section className={styles['section-container']}>

@@ -10,7 +10,7 @@ export default function About() {
         <div>
           <Image
             src={mainLogo}
-            alt="Coup d’envoi pour le pass sport, 50% d’économies dès l’inscription à un club ou une salle de sport. Rendez-vous sur pass.sports.gouv.fr"
+            alt="Coup d’envoi pour le pass sport, 50€ d’économies dès l’inscription à un club ou une salle de sport. Rendez-vous sur pass.sports.gouv.fr"
             className={styles['about-container__highlight-image']}
           />
         </div>
