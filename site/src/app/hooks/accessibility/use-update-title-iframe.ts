@@ -10,15 +10,20 @@ export function useUpdateTitleIframe({
   targetSelector?: string;
 }) {
   useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
+    const updateTitle = (ref: MutableRefObject<HTMLDivElement | null>) => {
       const node = parentRef.current?.querySelector(targetSelector);
 
       if (node) {
         node.setAttribute('title', title);
       }
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      updateTitle(parentRef);
     });
 
     if (parentRef.current) {
+      updateTitle(parentRef);
       observer.observe(parentRef.current, { childList: true, subtree: true });
     }
 
