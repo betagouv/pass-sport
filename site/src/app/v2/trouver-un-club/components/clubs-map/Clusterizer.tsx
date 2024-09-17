@@ -24,7 +24,7 @@ const Clusterizer: React.FC<Props> = ({ clubs }) => {
   clubs.forEach((club) => {
     const { geoloc_finale, nom } = club;
     if (geoloc_finale) {
-      var marker = L.marker(new L.LatLng(geoloc_finale.lat, geoloc_finale.lon), { title: nom });
+      var marker = L.marker(new L.LatLng(geoloc_finale.lat, geoloc_finale.lon), { alt: nom });
 
       const popup = L.popup().setContent(`
         <div>
