@@ -363,7 +363,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
 
           <SegmentedControl
             hideLegend={true}
-            legend="Choisissez entre la vue liste et la vue cartographie pour voir les clubs; Utiliser les flèches droite et gauche pour changer de vue"
+            legend="Choisissez entre la vue liste et la vue cartographie pour voir les clubs"
             segments={[
               {
                 label: 'Vue liste',
