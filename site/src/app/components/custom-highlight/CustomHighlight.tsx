@@ -12,14 +12,14 @@ interface Props {
   originalLeftBorder?: boolean;
 }
 
-const CustomHighlight = ({
+const CustomHighlight: React.FC<Props> = ({
   children,
   classes,
   size = 'md',
   withIcon = true,
   boldText = true,
   originalLeftBorder = true,
-}: Props) => {
+}) => {
   return (
     <div
       className={cn('fr-highlight', styles['highlight--override'], ...(classes || []), {
