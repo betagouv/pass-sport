@@ -67,6 +67,8 @@ export function useEnhanceCookieManagerAccessibility() {
 
         if (contentDetails && sibling) {
           contentDetails.removeAttribute('class');
+          contentDetails.setAttribute('role', 'heading');
+          contentDetails.setAttribute('aria-level', '4');
           sibling.insertAdjacentElement('afterend', contentDetails);
         }
       }
@@ -84,6 +86,8 @@ export function useEnhanceCookieManagerAccessibility() {
 
         if (contentDetails && sibling) {
           contentDetails.removeAttribute('class');
+          contentDetails.setAttribute('role', 'heading');
+          contentDetails.setAttribute('aria-level', '4');
           sibling.insertAdjacentElement('afterend', contentDetails);
         }
       }
