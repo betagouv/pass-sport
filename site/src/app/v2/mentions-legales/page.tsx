@@ -6,6 +6,7 @@ import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Link from 'next/link';
 import Button from '@codegouvfr/react-dsfr/Button';
+import { CONTACT_PAGE_QUERYPARAMS } from '../../constants/search-query-params';
 
 export const metadata: Metadata = {
   title: 'Mentions légales - pass Sport',
@@ -86,7 +87,7 @@ export default function MentionsLegales() {
               priority="primary"
               size="large"
               linkProps={{
-                href: '/v2/une-question?modalOpened=1',
+                href: `/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`,
                 'aria-label': 'Naviguer vers la page de formulaire de contact du support',
               }}
             >
