@@ -5,6 +5,7 @@ import EligibilityTestBanner from '@/components/eligibility-test-banner/Eligibil
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Link from 'next/link';
+import Button from '@codegouvfr/react-dsfr/Button';
 
 export const metadata: Metadata = {
   title: 'Mentions légales - pass Sport',
@@ -75,10 +76,22 @@ export default function MentionsLegales() {
             <h3 className="fr-mb-2w">Signaler un dysfonctionnement</h3>
             <p className="fr-mb-2w">
               Si vous rencontrez un défaut d&apos;accessibilité vous empêchant d&apos;accéder à un
-              contenu ou une fonctionnalité du site, merci de nous en faire part. Si vous
-              n&apos;obtenez pas de réponse rapide de notre part, vous êtes en droit de faire
-              parvenir vos doléances ou une demande de saisine au Défenseur des droits.
+              contenu ou une fonctionnalité du site, merci de nous en faire part en contactant le
+              support. Si vous n&apos;obtenez pas de réponse rapide de notre part, vous êtes en
+              droit de faire parvenir vos doléances ou une demande de saisine au Défenseur des
+              droits.
             </p>
+            <Button
+              className="fr-mb-2w"
+              priority="primary"
+              size="large"
+              linkProps={{
+                href: '/v2/une-question?modalOpened=1',
+                'aria-label': 'Naviguer vers la page de formulaire de contact du support',
+              }}
+            >
+              Contacter le support
+            </Button>
 
             <h3 className="fr-mb-2w">En savoir plus</h3>
             <p>
