@@ -268,7 +268,7 @@ export default function PassSportFooter() {
           linkProps: {
             href: 'https://lecompteasso.associations.gouv.fr/carto/dashboard',
             target: '_blank',
-            'aria-label': 'Ouvrir une nouvelle fenêtre vers le tableau de bord de pass Sport',
+            title: 'Tableau de bord (nouvelle fenêtre)',
           },
         },
       ],
