@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import { useRouter } from 'next/navigation';
 import rootStyles from '@/app/utilities.module.scss';
@@ -18,6 +18,7 @@ const AllowancesStep = ({ isForChild }: Props) => {
   const [isValidated, setIsValidated] = useState(true);
 
   const router = useRouter();
+  const ref = useRef<HTMLDivElement>(null);
 
   const fieldsetId = 'allowancesStep-fieldset';
   useRemoveAttributeById(fieldsetId, 'aria-labelledby');
@@ -25,6 +26,12 @@ const AllowancesStep = ({ isForChild }: Props) => {
   const buttonClickedHandler = () => {
     setIsValidated(true);
   };
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.focus();
+    }
+  }, []);
 
   const successCallout = (
     <div>
@@ -59,8 +66,8 @@ const AllowancesStep = ({ isForChild }: Props) => {
     </VerdictPanel>
   );
 
-  return (
-    <>
+  const beforeQuestionText = (
+    <div tabIndex={-1} ref={ref}>
       <p className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
         L&apos;attribution du pass sport est conditionnée aux aides suivantes&nbsp;:
       </p>
@@ -82,12 +89,18 @@ const AllowancesStep = ({ isForChild }: Props) => {
           allocation d&apos;éducation de l&apos;enfant handicapé (<abbr>AEEH</abbr>)
         </li>
       </ul>
+    </div>
+  );
+
+  return (
+    <>
       <CustomRadioButtons
         id={fieldsetId}
         name="allowanceStep"
         legendLine1="Votre enfant (ou petit enfant) bénéficie-t-il d'une de ces aides ?"
         isOkButtonDisabled={isValidated}
         onOkButtonClicked={buttonClickedHandler}
+        legendDescription={beforeQuestionText}
         options={[
           {
             label: 'Oui',

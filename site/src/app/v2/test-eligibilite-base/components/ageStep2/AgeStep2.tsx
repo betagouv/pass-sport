@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AGE_RANGE } from '../types/types';
 import AeehStep from '../aeehStep/AeehStep';
 import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
@@ -17,7 +17,7 @@ interface AgeStep2Props {
 const AgeStep2 = ({ ageRange }: AgeStep2Props) => {
   const [confirmed, setConfirmed] = useState<boolean | null>(null);
   const [isValidated, setIsValidated] = useState(true);
-
+  const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const fieldsetId = 'ageStep2-fieldset';
@@ -26,6 +26,12 @@ const AgeStep2 = ({ ageRange }: AgeStep2Props) => {
   const buttonClickedHandler = () => {
     setIsValidated(true);
   };
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.focus();
+    }
+  }, []);
 
   if (ageRange === AGE_RANGE.GREATER_THAN_30) return null;
 
@@ -36,7 +42,7 @@ const AgeStep2 = ({ ageRange }: AgeStep2Props) => {
 
   const beforeQuestionText =
     ageRange === AGE_RANGE.BETWEEN_19_30 ? (
-      <div>
+      <div tabIndex={-1} ref={ref}>
         <p className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
           Vous avez entre 19 et 30 ans.
         </p>
@@ -76,7 +82,6 @@ const AgeStep2 = ({ ageRange }: AgeStep2Props) => {
 
   return (
     <div>
-      {ageRange === AGE_RANGE.BETWEEN_19_30 && beforeQuestionText}
       <CustomRadioButtons
         id={fieldsetId}
         name="ageStep2"
@@ -84,6 +89,7 @@ const AgeStep2 = ({ ageRange }: AgeStep2Props) => {
         legendLine1={legendLine1}
         isOkButtonDisabled={isValidated}
         onOkButtonClicked={buttonClickedHandler}
+        legendDescription={ageRange === AGE_RANGE.BETWEEN_19_30 && beforeQuestionText}
         options={[
           {
             label: 'Oui',
