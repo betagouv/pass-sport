@@ -29,6 +29,19 @@ export function useEnhanceCookieManagerAccessibility() {
         'button[data-cat="tarteaucitronDetailsvideo"]',
       );
 
+      const saveButton = body.querySelector<HTMLButtonElement>('button#tarteaucitronSaveButton');
+      const closeButton = body.querySelector<HTMLButtonElement>('button#tarteaucitronClosePanel');
+
+      if (saveButton) {
+        saveButton.classList.remove('tarteaucitronAllow');
+        saveButton.classList.add('fr-btn');
+      }
+
+      if (closeButton) {
+        closeButton.classList.add('fr-btn');
+        closeButton.classList.add('fr-btn--secondary');
+      }
+
       if (tacRoot && alertDialog) {
         tacRoot.removeAttribute('aria-labelledby');
         alertDialog.setAttribute('aria-labelledby', tacRoot.id);
