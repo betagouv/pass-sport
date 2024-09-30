@@ -19,12 +19,35 @@ const Clusterizer: React.FC<Props> = ({ clubs }) => {
   if (markers !== undefined) {
     map.removeLayer(markers);
   }
-  markers = L.markerClusterGroup();
+
+  markers = L.markerClusterGroup({
+    // This function is used within leaflet, do not remove because the IDE tells you so
+    iconCreateFunction: (cluster) => {
+      var childCount = cluster.getChildCount();
+
+      var markerCluster = ' marker-cluster-';
+      if (childCount < 10) {
+        markerCluster += 'small';
+      } else if (childCount < 100) {
+        markerCluster += 'medium';
+      } else {
+        markerCluster += 'large';
+      }
+
+      // aria-label for screen reader
+      return new L.DivIcon({
+        html: `<div><span aria-label="${childCount} clubs">${childCount}</span></div>`,
+        className: 'marker-cluster' + markerCluster,
+        iconSize: new L.Point(40, 40),
+      });
+    },
+    maxClusterRadius: 40,
+  });
 
   clubs.forEach((club) => {
     const { geoloc_finale, nom } = club;
     if (geoloc_finale) {
-      var marker = L.marker(new L.LatLng(geoloc_finale.lat, geoloc_finale.lon), { alt: nom });
+      let marker = L.marker(new L.LatLng(geoloc_finale.lat, geoloc_finale.lon), { alt: nom });
 
       const popup = L.popup().setContent(`
         <div>
@@ -34,6 +57,7 @@ const Clusterizer: React.FC<Props> = ({ clubs }) => {
           </a>
         </div>
         `);
+
       marker.bindPopup(popup);
       markers.addLayer(marker);
     }

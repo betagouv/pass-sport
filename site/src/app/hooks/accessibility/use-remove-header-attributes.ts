@@ -1,5 +1,6 @@
 import { MutableRefObject, useEffect } from 'react';
 
+// todo: remove if not used after accessibility audit
 // Accessibility workaround to remove certain attributes from header component
 export function useRemoveHeaderAttributes(headerRef: MutableRefObject<HTMLElement | null>) {
   useEffect(() => {
