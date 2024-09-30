@@ -7,6 +7,7 @@ interface Props {
   line1: string | ReactNode;
   line2?: string;
   line3?: string;
+  legendDescription?: ReactNode;
   wrapInParagraph?: boolean;
 }
 
@@ -37,19 +38,23 @@ const Legend: React.FC<Props> = (props) => {
     styles.span,
   );
 
+  const { legendDescription, ...remainingProps } = props;
+
   return (
     <>
-      {props.wrapInParagraph ? (
+      {remainingProps.wrapInParagraph ? (
         <>
           <p className={wrapperStyle}>
-            <Lines {...props} />
+            <Lines {...remainingProps} />
           </p>
+          {legendDescription}
         </>
       ) : (
         <>
           <span className={wrapperStyle}>
-            <Lines {...props} />
+            <Lines {...remainingProps} />
           </span>
+          {legendDescription}
         </>
       )}
     </>

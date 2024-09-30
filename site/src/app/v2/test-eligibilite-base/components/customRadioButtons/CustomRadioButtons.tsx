@@ -11,6 +11,7 @@ type Props = Omit<RadioButtonsProps, 'legend'> & {
   legendLine1: string | ReactNode;
   legendLine2?: string;
   legendLine3?: string;
+  legendDescription?: ReactNode;
   isOkButtonDisabled: boolean;
   onOkButtonClicked: () => void;
 };
@@ -22,6 +23,7 @@ const CustomRadioButtons: React.FC<Props> = (props) => {
     legendLine1,
     legendLine2,
     legendLine3,
+    legendDescription,
     ...onlyRadioButtonsProps
   } = props;
 
@@ -35,7 +37,12 @@ const CustomRadioButtons: React.FC<Props> = (props) => {
         {...onlyRadioButtonsProps}
         classes={{ legend: styles.legend }}
         legend={
-          <Legend line1={props.legendLine1} line2={props.legendLine2} line3={props.legendLine3} />
+          <Legend
+            line1={props.legendLine1}
+            line2={props.legendLine2}
+            line3={props.legendLine3}
+            legendDescription={props.legendDescription}
+          />
         }
       />
       <div className={styles['button-container']}>

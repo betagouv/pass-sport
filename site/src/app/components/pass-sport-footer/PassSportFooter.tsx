@@ -190,7 +190,7 @@ export default function PassSportFooter() {
   const operatorLogo: NonNullable<FooterProps['operatorLogo']> = {
     orientation: 'horizontal',
     imgUrl: passSportLogo.src,
-    alt: ``,
+    alt: `pass Sport`,
   };
 
   const bottomItems: FooterProps.BottomItem[] = [
@@ -268,6 +268,7 @@ export default function PassSportFooter() {
           linkProps: {
             href: 'https://lecompteasso.associations.gouv.fr/carto/dashboard',
             target: '_blank',
+            title: 'Tableau de bord (nouvelle fenêtre)',
           },
         },
       ],

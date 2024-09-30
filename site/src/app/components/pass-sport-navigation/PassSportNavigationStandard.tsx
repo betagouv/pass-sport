@@ -9,7 +9,6 @@ import { useUpdateList } from '@/app/hooks/accessibility/use-update-list';
 import { useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
-import { useRemoveHeaderAttributes } from '@/app/hooks/accessibility/use-remove-header-attributes';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
 
 export default function PassSportNavigation() {
@@ -42,7 +41,6 @@ export default function PassSportNavigation() {
     ],
   });
 
-  useRemoveHeaderAttributes(headerRef);
   useRemoveHeaderThemeControls(headerContainerRef);
 
   return (

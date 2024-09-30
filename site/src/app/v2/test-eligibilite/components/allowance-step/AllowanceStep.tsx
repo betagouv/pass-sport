@@ -32,6 +32,13 @@ const AllowanceStep = () => {
 
       if (tac && hasYetToGiveConsent) {
         tac?.userInterface?.openAlert();
+
+        const btn = document.querySelector<HTMLButtonElement>('#tarteaucitronPersonalize2');
+
+        if (btn) {
+          // Focus on the first button whenever the alert UI is displayed
+          btn.focus();
+        }
       }
     }, 2000);
   }, []);

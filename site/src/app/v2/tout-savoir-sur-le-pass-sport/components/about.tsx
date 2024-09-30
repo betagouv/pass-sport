@@ -32,7 +32,7 @@ export default function About() {
                 jeunes pendant l&apos;année sportive.
               </p>
 
-              <span className="display--block">Il est ouvert du 1er juin au 31 décembre 2024.</span>
+              <p className="display--block">Il est ouvert du 1er juin au 31 décembre 2024.</p>
             </CustomHighlight>
           </div>
         </div>

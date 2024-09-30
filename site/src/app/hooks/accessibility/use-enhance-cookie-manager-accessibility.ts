@@ -6,17 +6,33 @@ export function useEnhanceCookieManagerAccessibility() {
     const observer = new MutationObserver((mutations) => {
       const { body } = document;
 
-      const img = body.querySelector('img[title="Cookies (fenêtre modale)"]');
-      const button = body.querySelector('button[id="tarteaucitronManager"]');
-      const backButton = body.querySelector('button[id="tarteaucitronBack"]');
-      const info = body.querySelector('div[id="tarteaucitronInfo"]');
-      const othersSection = body.querySelector(
+      const tacRoot = body.querySelector<HTMLDivElement>('#tarteaucitronRoot');
+      const alertDialog = body.querySelector<HTMLDivElement>('div#tarteaucitronAlertBig');
+
+      const img = body.querySelector<HTMLImageElement>('img[title="Cookies (fenêtre modale)"]');
+      const button = body.querySelector<HTMLButtonElement>('button[id="tarteaucitronManager"]');
+      const backButton = body.querySelector<HTMLButtonElement>('button[id="tarteaucitronBack"]');
+      const info = body.querySelector<HTMLDivElement>('div[id="tarteaucitronInfo"]');
+      const othersSection = body.querySelector<HTMLDivElement>(
         'li[id="tarteaucitronServicesTitle_other"] > div[class="tarteaucitronTitle"]',
       );
 
-      const duplicatedPanelCookie = body.querySelector('div#tac_title.tac_visually-hidden');
-      const crispButtonInfo = body.querySelector('button[data-cat="tarteaucitronDetailssupport"]');
-      const vimeoButtonInfo = body.querySelector('button[data-cat="tarteaucitronDetailsvideo"]');
+      const duplicatedPanelCookie = body.querySelector<HTMLDivElement>(
+        'div#tac_title.tac_visually-hidden',
+      );
+
+      const crispButtonInfo = body.querySelector<HTMLButtonElement>(
+        'button[data-cat="tarteaucitronDetailssupport"]',
+      );
+
+      const vimeoButtonInfo = body.querySelector<HTMLButtonElement>(
+        'button[data-cat="tarteaucitronDetailsvideo"]',
+      );
+
+      if (tacRoot && alertDialog) {
+        tacRoot.removeAttribute('aria-labelledby');
+        alertDialog.setAttribute('aria-labelledby', tacRoot.id);
+      }
 
       if (img) {
         img.removeAttribute('title');

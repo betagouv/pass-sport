@@ -24,6 +24,7 @@ const MedicalCertificatePanel = () => {
               href="https://www.service-public.fr/simulateur/calcul/certificatMedical"
               target="_blank"
               className={cn('fr-text--lg', styles.blue, utilsStyles['text--medium'])}
+              title="faire le simulateur de certificat médical - nouvelle fenêtre"
             >
               Faire le simulateur de certificat médical
             </Link>
