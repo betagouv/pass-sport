@@ -294,7 +294,7 @@ export default function ToutSavoirSurLePassSport() {
               <Accordion label="Fédérations multisports et affinitaires">
                 <p className="fr-mb-2w">
                   <Link
-                    href="https://docs.google.com/document/d/1RZIulzFm9ueCm2lfJQhq6GVnzUkiE14L/edit"
+                    href="/assets/ressources/charte-lsm-pour-non-adherents-2024.docx"
                     target="_blank"
                     aria-label="Ouvrir une nouvelle fenêtre vers la charte d'engagement"
                   >
