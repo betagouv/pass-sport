@@ -1030,6 +1030,7 @@ ul[style="display: block;"] .tarteaucitronLine{
   padding: 6rem 0;
   justify-content: center;
   width: 100%;
+  height: inherit;
 }
 
 .tac_activate .tac_float {
@@ -1094,7 +1095,7 @@ ul[style="display: block;"] .tarteaucitronLine{
 }
 
 #tarteaucitronManager:hover{
-  background-color: transparent;
+  background-color: transparent !important;
 }
 
 #tarteaucitronDisclaimerAlert {
@@ -1102,4 +1103,10 @@ ul[style="display: block;"] .tarteaucitronLine{
   text-align: left !important;
   margin: 0;
   display: block;
+}
+
+button.tarteaucitronAllow {
+  &:hover {
+    background-color: var(--bf500) !important;
+  }
 }
