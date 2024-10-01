@@ -207,6 +207,18 @@ export default function PassSportFooter() {
       },
     },
     {
+      text: 'Gestion des cookies',
+      linkProps: {
+        href: '#',
+        'aria-label': 'Ouvrir le panneau de gestion des cookies',
+        onClick: () => {
+          if (window?.tarteaucitron) {
+            window?.tarteaucitron?.userInterface?.openPanel();
+          }
+        },
+      },
+    },
+    {
       text: 'Plan du site',
       linkProps: {
         href: isProVersion ? '/v2/pro/plan-du-site' : '/v2/plan-du-site',

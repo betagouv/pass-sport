@@ -166,7 +166,7 @@ button#tarteaucitronPrivacyUrl {
 
 /*** Affichage de l'icône TAC sous forme de bouton design system ***/
 #tarteaucitronIcon #tarteaucitronManager > img {
-  //display: none;
+  display: none;
 }
 
 #tarteaucitronIcon #tarteaucitronManager {
@@ -207,6 +207,7 @@ body #tarteaucitronRoot div#tarteaucitronAlertBig {
 }
 
 #tarteaucitronAlertBig {
+  display: flex;
   position: fixed;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -346,7 +347,7 @@ body #tarteaucitronRoot div#tarteaucitronAlertBig {
   margin-right: 0;
 }
 
-@media screen and (min-width: 36em) {
+@media screen and (min-width: $md) {
   #tarteaucitronRoot #tarteaucitronAlertBig #tarteaucitronCloseAlert,
   #tarteaucitronRoot #tarteaucitronAlertBig #tarteaucitronPersonalize,
   #tarteaucitronRoot #tarteaucitronAlertBig .tarteaucitronCTAButton {
@@ -861,7 +862,7 @@ ul[style="display: block;"] .tarteaucitronLine{
   display: block;
   float: left;
   height: 100%;
-  width: 0%;
+  width: 0;
 }
 
 #tarteaucitronAlertSmall #tarteaucitronManager #tarteaucitronDot #tarteaucitronDotGreen {
@@ -1094,4 +1095,11 @@ ul[style="display: block;"] .tarteaucitronLine{
 
 #tarteaucitronManager:hover{
   background-color: transparent;
+}
+
+#tarteaucitronDisclaimerAlert {
+  font-size: 1rem !important;
+  text-align: left !important;
+  margin: 0;
+  display: block;
 }
