@@ -292,7 +292,10 @@ export default function PassSportFooter() {
       bottomItems={bottomItems}
       linkList={linkList}
       brandTop={FOOTER_BRAND_TOP}
-      accessibility="non compliant"
+      accessibility="fully compliant"
+      accessibilityLinkProps={{
+        href: '/v2/accessibilite',
+      }}
       domains={domains}
     />
   );

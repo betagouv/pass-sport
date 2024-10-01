@@ -14,6 +14,7 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/pro/plan-du-site': 'Plan du site',
   '/v2/politique-de-confidentialite': 'Politique de confidentialité',
   '/v2/mentions-legales': 'Mentions légales',
+  '/v2/accessibilite': 'Accessibilité',
 };
 
 export default function PassSportBreadcrumbPro() {
