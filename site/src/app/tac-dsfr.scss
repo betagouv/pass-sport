@@ -1105,8 +1105,10 @@ ul[style="display: block;"] .tarteaucitronLine{
   display: block;
 }
 
-button.tarteaucitronAllow {
-  &:hover {
-    background-color: var(--bf500) !important;
+.tac_activate {
+  button.tarteaucitronAllow {
+    &:hover {
+      background-color: var(--bf500) !important;
+    }
   }
 }
