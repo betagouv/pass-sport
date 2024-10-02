@@ -165,21 +165,8 @@ button#tarteaucitronPrivacyUrl {
 }
 
 /*** Affichage de l'icône TAC sous forme de bouton design system ***/
-#tarteaucitronIcon #tarteaucitronManager > img {
-  display: none;
-}
-
 #tarteaucitronIcon #tarteaucitronManager {
-  //background: var(--bf500);
-  color: var(--w);
-  padding: 0.5rem 1.5rem;
-  line-height: 1.5rem;
-  min-height: 2.5rem;
-  font-size: inherit;
-}
-
-#tarteaucitronIcon #tarteaucitronManager::before {
-  //content: "Cookies";
+  display: none;
 }
 
 /*---------------------------------------------*/
