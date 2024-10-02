@@ -16,6 +16,10 @@ export interface YoungCafInputsState {
   recipientFirstname: InputState;
 }
 
+export interface CrousInputsState {
+  recipientIneNumber: InputState;
+}
+
 export interface YoungMsaInputsState {
   recipientLastname: InputState;
   recipientFirstname: InputState;
@@ -38,8 +42,8 @@ export interface SearchResponseBodyItem {
   nom: string;
   prenom: string;
   date_naissance: string;
-  situation: 'jeune' | 'AAH';
-  organisme: 'MSA' | 'CAF';
+  situation: 'jeune' | 'AAH' | 'boursier';
+  organisme: 'MSA' | 'CAF' | 'cnous';
   matricule: string;
 }
 
@@ -109,6 +113,7 @@ export interface ConfirmPayload {
   recipientLastname?: string;
   recipientFirstname?: string;
   recipientCafNumber?: string;
+  recipientIneNumber?: string;
   recipientBirthPlace?: string;
   recipientBirthDate?: string;
   recipientBirthCountry?: string;

@@ -32,9 +32,10 @@ export const buildLCAConfirmUrl = (data: ConfirmPayload): URL => {
     params.append('allocataireSurname', allocataireSurname);
   }
 
-  const matricule = data.recipientCafNumber;
-  if (matricule) {
-    params.append('matricule', matricule);
+  if (data.situation === 'boursier' && data.organisme === 'cnous' && data.recipientIneNumber) {
+    params.append('matricule', data.recipientIneNumber);
+  } else if (data.recipientCafNumber) {
+    params.append('matricule', data.recipientCafNumber);
   }
 
   const recipientBirthPlace = data.recipientBirthPlace;
@@ -141,7 +142,14 @@ export const fetchEligible = async (payload: SearchPayload) => {
       scope.setExtra('responseBody', responseBody);
       scope.captureMessage('Unexpected response on LCA POST api/eligibility-test/search');
     });
+
+    return responseBody;
   }
 
-  return responseBody;
+  return responseBody.map((item) => {
+    // Remove matricule from final output
+    const { matricule, ...remaining } = item;
+
+    return remaining;
+  });
 };
