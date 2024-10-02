@@ -210,6 +210,16 @@ export default function Accessibilite() {
           </section>
 
           <section className="fr-mb-6w">
+            <h2 className="fr-mb-3w">Schéma pluriannuel</h2>
+
+            <p>
+              <Link href="https://beta.gouv.fr/accessibilite/schema-pluriannuel">
+                https://beta.gouv.fr/accessibilite/schema-pluriannuel
+              </Link>
+            </p>
+          </section>
+
+          <section className="fr-mb-6w">
             <h2 className="fr-mb-3w">Retour d’information et contact</h2>
 
             <p>
