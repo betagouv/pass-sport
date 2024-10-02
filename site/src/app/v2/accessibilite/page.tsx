@@ -210,6 +210,16 @@ export default function Accessibilite() {
           </section>
 
           <section className="fr-mb-6w">
+            <h2 className="fr-mb-3w">Schéma pluriannuel</h2>
+
+            <p>
+              <Link href="https://beta.gouv.fr/accessibilite/schema-pluriannuel">
+                https://beta.gouv.fr/accessibilite/schema-pluriannuel
+              </Link>
+            </p>
+          </section>
+
+          <section className="fr-mb-6w">
             <h2 className="fr-mb-3w">Retour d’information et contact</h2>
 
             <p>
@@ -247,8 +257,23 @@ export default function Accessibilite() {
 
             <ul>
               <li>Écrire un message au Défenseur des droits</li>
-              <li> Contacter le délégué du Défenseur des droits dans votre région</li>
+              <li>
+                <Link href="https://www.defenseurdesdroits.fr/carte-des-delegues">
+                  Contacter le délégué du Défenseur des droits dans votre région
+                </Link>
+              </li>
             </ul>
+
+            <p className="fr-mb-1w">
+              Si vous constatez un défaut d’accessibilité vous empêchant d’accéder à un contenu ou
+              une fonctionnalité du site, que vous nous le signalez et que vous ne parvenez pas à
+              obtenir une réponse de notre part, vous êtes en droit de faire parvenir vos doléances
+              ou une{' '}
+              <Link href="https://formulaire.defenseurdesdroits.fr/formulaire_saisine/">
+                demande de saisine au Défenseur des droits
+              </Link>
+              .
+            </p>
 
             <p>
               Envoyer un courrier par la poste (gratuit, ne pas mettre de timbre) Défenseur des
