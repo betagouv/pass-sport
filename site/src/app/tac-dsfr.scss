@@ -166,7 +166,7 @@ button#tarteaucitronPrivacyUrl {
 
 /*** Affichage de l'icône TAC sous forme de bouton design system ***/
 #tarteaucitronIcon #tarteaucitronManager {
-  display: none;
+  display: initial;
 }
 
 /*---------------------------------------------*/
@@ -194,7 +194,7 @@ body #tarteaucitronRoot div#tarteaucitronAlertBig {
 }
 
 #tarteaucitronAlertBig {
-  display: flex;
+  display: none;
   position: fixed;
   flex-wrap: wrap;
   justify-content: flex-end;
