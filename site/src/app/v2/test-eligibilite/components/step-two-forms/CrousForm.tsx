@@ -213,6 +213,7 @@ const CrousForm = ({
             isBirthInputRequired={isBirthPlaceRequired()}
             onCountryChanged={onCountryChanged}
             onBirthPlaceChanged={onBirthPlaceChanged}
+            isDirectBeneficiary
           />
         )}
 

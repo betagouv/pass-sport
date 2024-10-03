@@ -36,6 +36,7 @@ const CrousEligibilityTestForms = () => {
             setpspCodeData(null);
           }}
           onEligibilityFailure={() => onEligibilityFailure('first step')}
+          isDirectBeneficiary
         />
       </fieldset>
 
