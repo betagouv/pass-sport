@@ -57,6 +57,7 @@ export const buildLCAConfirmUrl = (data: ConfirmPayload): URL => {
 
   const url = new URL(baseUrl);
   url.search = params.toString();
+
   return url;
 };
 
@@ -110,10 +111,13 @@ export const fetchQrCode = async (
     });
     return responseBody;
   }
+
   if (responseBody instanceof Array && responseBody.length === 0) {
     return responseBody;
   }
+
   const enhancedResponse = addQrCodeToConfirmResponse(responseBody);
+
   return enhancedResponse;
 };
 
@@ -150,6 +154,6 @@ export const fetchEligible = async (payload: SearchPayload) => {
     // Remove matricule from final output
     const { matricule, ...remaining } = item;
 
-    return remaining;
+    return { ...remaining, hasMatricule: !!matricule };
   });
 };

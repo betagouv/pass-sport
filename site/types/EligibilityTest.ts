@@ -17,7 +17,9 @@ export interface YoungCafInputsState {
 }
 
 export interface CrousInputsState {
-  recipientIneNumber: InputState;
+  recipientIneNumber?: InputState;
+  recipientBirthCountry?: InputState;
+  recipientBirthPlace?: InputState;
 }
 
 export interface YoungMsaInputsState {
@@ -45,6 +47,7 @@ export interface SearchResponseBodyItem {
   situation: 'jeune' | 'AAH' | 'boursier';
   organisme: 'MSA' | 'CAF' | 'cnous';
   matricule: string;
+  hasMatricule: boolean;
 }
 
 export type SearchResponseBody = SearchResponseBodyItem[];

@@ -7,9 +7,9 @@ import {
 } from 'types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
-import CommonMsaInputs from './common-msa-inputs/CommonMsaInputs';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchPspCode } from '../../agent';
+import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
 
 const initialInputsState: AahMsaInputsState = {
   recipientBirthCountry: { state: 'default' },
@@ -153,7 +153,7 @@ const AahMsaForm = ({
   return (
     <>
       <form ref={formRef} onSubmit={onSubmitHandler}>
-        <CommonMsaInputs
+        <CommonInputs
           birthCountryInputName="recipientBirthCountry"
           birthPlaceInputName="recipientBirthPlace"
           inputStates={inputStates}

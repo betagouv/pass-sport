@@ -1,6 +1,6 @@
 import Select from '@codegouvfr/react-dsfr/Select';
 import { ChangeEvent } from 'react';
-import { AahMsaInputsState } from 'types/EligibilityTest';
+import { AahMsaInputsState, CrousInputsState } from 'types/EligibilityTest';
 import { countries } from '../../../helpers/countries';
 import CityFinder from '../../city-finder/CityFinder';
 
@@ -9,12 +9,12 @@ interface Props {
   onBirthPlaceChanged: (text: string | null) => void;
   birthCountryInputName: string;
   birthPlaceInputName: string;
-  inputStates: AahMsaInputsState;
+  inputStates: AahMsaInputsState | CrousInputsState;
   areInputsDisabled: boolean;
   isBirthInputRequired: boolean;
 }
 
-const CommonMsaInputs = ({
+const CommonInputs = ({
   onCountryChanged,
   onBirthPlaceChanged,
   birthCountryInputName,
@@ -52,8 +52,8 @@ const CommonMsaInputs = ({
           'aria-label': "Saisir le pays de naissance de l'allocataire",
           autoFocus: true,
         }}
-        state={inputStates.recipientBirthCountry.state}
-        stateRelatedMessage={inputStates.recipientBirthCountry.errorMsg}
+        state={inputStates.recipientBirthCountry?.state}
+        stateRelatedMessage={inputStates.recipientBirthCountry?.errorMsg}
         disabled={areInputsDisabled}
       >
         <>
@@ -64,18 +64,20 @@ const CommonMsaInputs = ({
         </>
       </Select>
 
-      {isBirthInputRequired && (
-        <CityFinder
-          inputName={birthPlaceInputName}
-          inputState={inputStates['recipientBirthPlace']!}
-          legend="Commune de naissance de l'allocataire*"
-          isDisabled={areInputsDisabled}
-          onChanged={onBirthPlaceChanged}
-          required={isBirthInputRequired}
-        />
-      )}
+      <div role="alert">
+        {isBirthInputRequired && (
+          <CityFinder
+            inputName={birthPlaceInputName}
+            inputState={inputStates['recipientBirthPlace']!}
+            legend="Commune de naissance de l'allocataire*"
+            isDisabled={areInputsDisabled}
+            onChanged={onBirthPlaceChanged}
+            required={isBirthInputRequired}
+          />
+        )}
+      </div>
     </>
   );
 };
 
-export default CommonMsaInputs;
+export default CommonInputs;

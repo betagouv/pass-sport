@@ -11,9 +11,10 @@ import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchPspCode } from '../../agent';
 import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
 
 const initialInputsState: CrousInputsState = {
-  recipientIneNumber: { state: 'default' },
+  recipientBirthCountry: { state: 'default' },
 };
 
 interface Props {
@@ -30,17 +31,52 @@ const CrousForm = ({
   onEligibilityFailure,
 }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
-  const [inputStates, setInputStates] = useState<CrousInputsState>(initialInputsState);
-  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
+  const [inputStates, setInputStates] = useState<CrousInputsState>({
+    ...initialInputsState,
+    ...(eligibilityDataItem.hasMatricule ? { recipientIneNumber: { state: 'default' } } : {}),
+  });
 
+  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
+
+  const onCountryChanged = (e: ChangeEvent<HTMLSelectElement>) => {
+    const country = e.target.value;
+
+    if (country.toUpperCase() === 'FR') {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'default' },
+        recipientBirthCountry: { state: 'default' },
+      }));
+    } else {
+      setInputStates(initialInputsState);
+    }
+  };
+
+  const isBirthPlaceRequired = () => {
+    return !!Object.keys(inputStates).find((key) => key === 'recipientBirthPlace');
+  };
+
+  const onBirthPlaceChanged = (text: string | null) => {
+    if (!text) {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'error' },
+      }));
+    } else {
+      setInputStates((inputStates) => ({
+        ...inputStates,
+        recipientBirthPlace: { state: 'default' },
+      }));
+    }
+  };
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: CrousInputsState } => {
     let isValid = true;
 
-    const fieldNames = Object.keys(initialInputsState) as (keyof CrousInputsState)[];
+    const fieldNames = Object.keys(inputStates) as (keyof CrousInputsState)[];
 
-    const states = structuredClone(initialInputsState);
+    const states = structuredClone(inputStates);
 
     fieldNames.forEach((fieldName) => {
       const value = formData.get(fieldName);
@@ -64,7 +100,17 @@ const CrousForm = ({
     formData.append('situation', eligibilityDataItem.situation);
     formData.append('organisme', eligibilityDataItem.organisme);
 
-    formData.set('recipientIneNumber', formData.get('recipientIneNumber')!.toString().trim());
+    // Don't ask for ine if it doesn't exist
+    if (eligibilityDataItem.hasMatricule) {
+      formData.set('recipientIneNumber', formData.get('recipientIneNumber')!.toString().trim());
+    }
+
+    const birthCountry = formData.get('recipientBirthCountry') as string;
+
+    // If from france, we only need the birth place, birth country no longer needed
+    if (birthCountry === 'FR') {
+      formData.delete('recipientBirthCountry');
+    }
 
     return fetchPspCode(formData);
   };
@@ -131,30 +177,44 @@ const CrousForm = ({
   return (
     <div>
       <form ref={formRef} onSubmit={onSubmitHandler}>
-        <CustomInput
-          inputProps={{
-            label: (
-              <>
-                Numéro INE provenant du <CROUS />*
-              </>
-            ),
-            hintText: 'Format attendu : 9 chiffres et 2 lettres ou 10 chiffres et 1 lettre',
-            nativeInputProps: {
-              name: 'recipientIneNumber',
-              placeholder: 'ex: 00000000XX ou 0000000000X',
-              type: 'text',
-              required: true,
-              onChange: (e: ChangeEvent<HTMLInputElement>) =>
-                onInputChanged(e.target.value, 'recipientIneNumber'),
-              'aria-label': 'Saisir le numéro INE',
-              autoFocus: true,
-            },
-            state: inputStates.recipientIneNumber.state,
-            stateRelatedMessage: inputStates.recipientIneNumber.errorMsg,
-            disabled: isFormDisabled,
-          }}
-          secondHint={null}
-        />
+        {eligibilityDataItem.hasMatricule && inputStates.recipientIneNumber && (
+          <CustomInput
+            inputProps={{
+              label: (
+                <>
+                  Numéro INE provenant du <CROUS />*
+                </>
+              ),
+              hintText: 'Format attendu : 9 chiffres et 2 lettres ou 10 chiffres et 1 lettre',
+              nativeInputProps: {
+                name: 'recipientIneNumber',
+                placeholder: 'ex: 00000000XX ou 0000000000X',
+                type: 'text',
+                required: true,
+                onChange: (e: ChangeEvent<HTMLInputElement>) =>
+                  onInputChanged(e.target.value, 'recipientIneNumber'),
+                'aria-label': 'Saisir le numéro INE',
+                autoFocus: true,
+              },
+              state: inputStates.recipientIneNumber.state,
+              stateRelatedMessage: inputStates.recipientIneNumber.errorMsg,
+              disabled: isFormDisabled,
+            }}
+            secondHint={null}
+          />
+        )}
+
+        {!eligibilityDataItem.hasMatricule && (
+          <CommonInputs
+            birthCountryInputName="recipientBirthCountry"
+            birthPlaceInputName="recipientBirthPlace"
+            inputStates={inputStates}
+            areInputsDisabled={isFormDisabled}
+            isBirthInputRequired={isBirthPlaceRequired()}
+            onCountryChanged={onCountryChanged}
+            onBirthPlaceChanged={onBirthPlaceChanged}
+          />
+        )}
 
         <FormButton isDisabled={isFormDisabled} />
       </form>
