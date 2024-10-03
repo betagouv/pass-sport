@@ -4,6 +4,7 @@ exports[`POST /eligibility-test/search should return fetched data 1`] = `
 [
   {
     "date_naissance": "2011-01-01T23:00:00.000Z",
+    "hasMatricule": true,
     "id": 123,
     "matricule": "9999999999999",
     "nom": "DUPOND",
