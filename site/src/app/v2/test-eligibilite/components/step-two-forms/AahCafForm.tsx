@@ -84,7 +84,7 @@ const AahCafForm = ({
   };
 
   const notifyError = () => {
-    setError('Une erreur a eu lieu. Merci de rééessayer plus tard');
+    setError('Une erreur a eu lieu. Merci de réessayer plus tard');
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
