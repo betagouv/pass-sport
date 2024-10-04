@@ -22,6 +22,7 @@ const visitorReasons = {
   'club-wait-50': "Mon club attend d'être remboursé avant de me faire la déduction de 50 euros",
   'deja-paye-comment-rembourse':
     "j'ai déjà payé mon adhésion, comment me faire rembourser mon pass Sport ?",
+  boursier: 'Je suis boursier ou boursière',
   other: 'Autre',
 };
 
