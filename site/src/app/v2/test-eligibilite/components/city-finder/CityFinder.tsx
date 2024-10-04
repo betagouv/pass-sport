@@ -101,6 +101,7 @@ const CityFinder = ({
           onChange={birthPlaceChangedHandler}
           onInputChange={onInputChange}
           required={required}
+          autoFocus
           styles={{
             ...selectStyles,
             input: (_, state) => {
