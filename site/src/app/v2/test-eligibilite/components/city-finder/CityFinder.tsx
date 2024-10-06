@@ -32,6 +32,7 @@ interface Props {
   onChanged: (text: string | null) => void;
   required?: boolean;
   secondHintNeeded?: boolean;
+  shouldAutoFocus?: boolean;
 }
 
 const CustomInput = createCustomInput('Entrez le nom de commune');
@@ -44,6 +45,7 @@ const CityFinder = ({
   onChanged,
   required = false,
   secondHintNeeded = true,
+  shouldAutoFocus = false,
 }: Props) => {
   const [inputValue, setInputValue] = useState('');
   const [value, setValue] = useState<Option>({
@@ -101,7 +103,7 @@ const CityFinder = ({
           onChange={birthPlaceChangedHandler}
           onInputChange={onInputChange}
           required={required}
-          autoFocus
+          autoFocus={shouldAutoFocus}
           styles={{
             ...selectStyles,
             input: (_, state) => {

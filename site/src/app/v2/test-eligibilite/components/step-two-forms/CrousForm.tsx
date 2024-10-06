@@ -13,10 +13,6 @@ import { fetchPspCode } from '../../agent';
 import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
 
-const initialInputsState: CrousInputsState = {
-  recipientBirthCountry: { state: 'default' },
-};
-
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
   onDataReceived: (data: EnhancedConfirmResponseBody) => void;
@@ -32,7 +28,6 @@ const CrousForm = ({
 }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<CrousInputsState>({
-    ...initialInputsState,
     ...(eligibilityDataItem.hasMatricule ? { recipientIneNumber: { state: 'default' } } : {}),
   });
 
@@ -49,7 +44,7 @@ const CrousForm = ({
         recipientBirthCountry: { state: 'default' },
       }));
     } else {
-      setInputStates(initialInputsState);
+      setInputStates({});
     }
   };
 
@@ -103,13 +98,13 @@ const CrousForm = ({
     // Don't ask for ine if it doesn't exist
     if (eligibilityDataItem.hasMatricule) {
       formData.set('recipientIneNumber', formData.get('recipientIneNumber')!.toString().trim());
-    }
+    } else {
+      const birthCountry = formData.get('recipientBirthCountry') as string;
 
-    const birthCountry = formData.get('recipientBirthCountry') as string;
-
-    // If from france, we only need the birth place, birth country no longer needed
-    if (birthCountry === 'FR') {
-      formData.delete('recipientBirthCountry');
+      // If from france, we only need the birth place, birth country no longer needed
+      if (birthCountry === 'FR') {
+        formData.delete('recipientBirthCountry');
+      }
     }
 
     return fetchPspCode(formData);
@@ -214,6 +209,7 @@ const CrousForm = ({
             onCountryChanged={onCountryChanged}
             onBirthPlaceChanged={onBirthPlaceChanged}
             isDirectBeneficiary
+            shouldAutoFocus
           />
         )}
 

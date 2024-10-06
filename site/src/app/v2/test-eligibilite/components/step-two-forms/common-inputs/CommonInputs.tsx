@@ -13,6 +13,7 @@ interface Props {
   areInputsDisabled: boolean;
   isBirthInputRequired: boolean;
   isDirectBeneficiary?: boolean;
+  shouldAutoFocus?: boolean;
 }
 
 const CommonInputs = ({
@@ -24,6 +25,7 @@ const CommonInputs = ({
   areInputsDisabled,
   isBirthInputRequired,
   isDirectBeneficiary = false,
+  shouldAutoFocus = false,
 }: Props) => {
   const getCountryOptions = () =>
     countries
@@ -82,6 +84,7 @@ const CommonInputs = ({
             onChanged={onBirthPlaceChanged}
             required={isBirthInputRequired}
             secondHintNeeded={!isDirectBeneficiary}
+            shouldAutoFocus={shouldAutoFocus}
           />
         )}
       </div>
