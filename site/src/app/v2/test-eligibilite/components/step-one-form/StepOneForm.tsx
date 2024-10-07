@@ -131,6 +131,11 @@ const StepOneForm = ({
     formData.set('beneficiaryFirstname', formData.get('beneficiaryFirstname')!.toString().trim());
     formData.set('beneficiaryBirthDate', formData.get('beneficiaryBirthDate')!.toString().trim());
 
+    // Later used to know if we need to use a default address for people who don't have any address
+    if (isDirectBeneficiary) {
+      formData.set('isFromCrous', 'true');
+    }
+
     return fetchEligible(formData);
   };
 

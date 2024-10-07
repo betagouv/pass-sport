@@ -127,4 +127,5 @@ export interface SearchPayload {
   beneficiaryFirstname: string;
   beneficiaryBirthDate: string;
   recipientResidencePlace: string;
+  isFromCrous?: boolean;
 }
