@@ -31,6 +31,8 @@ interface Props {
   isDisabled: boolean;
   onChanged: (text: string | null) => void;
   required?: boolean;
+  secondHintNeeded?: boolean;
+  shouldAutoFocus?: boolean;
 }
 
 const CustomInput = createCustomInput('Entrez le nom de commune');
@@ -42,6 +44,8 @@ const CityFinder = ({
   isDisabled,
   onChanged,
   required = false,
+  secondHintNeeded = true,
+  shouldAutoFocus = false,
 }: Props) => {
   const [inputValue, setInputValue] = useState('');
   const [value, setValue] = useState<Option>({
@@ -99,6 +103,7 @@ const CityFinder = ({
           onChange={birthPlaceChangedHandler}
           onInputChange={onInputChange}
           required={required}
+          autoFocus={shouldAutoFocus}
           styles={{
             ...selectStyles,
             input: (_, state) => {
@@ -116,13 +121,15 @@ const CityFinder = ({
         />
       </div>
 
-      <div className={cn('fr-mt-2w', styles.secondHintBlock)}>
-        <span className={cn('fr-icon--sm', 'fr-icon-info-fill')} aria-hidden="true" />
-        <p className={cn('fr-mb-4w', 'fr-text--xs')}>
-          L’allocataire est la personne qui perçoit au moins une aide en regard de leur situation
-          familiale et/ou monétaire.
-        </p>
-      </div>
+      {secondHintNeeded && (
+        <div className={cn('fr-mt-2w', styles.secondHintBlock)}>
+          <span className={cn('fr-icon--sm', 'fr-icon-info-fill')} aria-hidden="true" />
+          <p className={cn('fr-mb-4w', 'fr-text--xs')}>
+            L’allocataire est la personne qui perçoit au moins une aide en regard de leur situation
+            familiale et/ou monétaire.
+          </p>
+        </div>
+      )}
 
       {inputState.state === 'error' && (
         <div className={cn('fr-pt-2w', styles.container)} role="status">

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import {
+  CrousInputsState,
   StepOneFormInputsState,
   YoungCafInputsState,
   YoungMsaInputsState,
@@ -7,7 +8,10 @@ import {
 import { CAF } from '../../accueil/components/acronymes/Acronymes';
 
 export const mapper: Record<
-  keyof StepOneFormInputsState | keyof YoungCafInputsState | keyof YoungMsaInputsState,
+  | keyof StepOneFormInputsState
+  | keyof YoungCafInputsState
+  | keyof YoungMsaInputsState
+  | keyof CrousInputsState,
   ReactNode
 > = {
   beneficiaryLastname: 'Le nom est requis',
@@ -19,6 +23,7 @@ export const mapper: Record<
   recipientBirthDate: 'La date de naissance est requise',
   recipientBirthPlace: 'La commune de naissance est requise',
   recipientBirthCountry: 'Le pays de naissance est requis',
+  recipientIneNumber: 'Le numéro de matricule INE est requis',
   recipientCafNumber: (
     <>
       Le matricule <CAF /> est requis

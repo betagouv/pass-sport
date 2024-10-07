@@ -5,13 +5,13 @@ import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
-import CrousStep from '../crous-step/CrousStep';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
 import { SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
 import CustomRadioButtons from '@/app/v2/test-eligibilite-base/components/customRadioButtons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import { AAH, AEEH, ARS, CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crous-eligibility-test-forms/CrousEligibilityTestForms';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
@@ -134,7 +134,7 @@ const AllowanceStep = () => {
 
           {allowance === ALLOWANCE.NONE && <FullNegativeVerdictPanel isLean />}
           {allowance === ALLOWANCE.ARS_AEEH_AAH && <EligibilityTestForms />}
-          {allowance === ALLOWANCE.CROUS && <CrousStep />}
+          {allowance === ALLOWANCE.CROUS && <CrousEligibilityTestForms />}
         </>
       )}
     </EligibilityTestContext.Provider>

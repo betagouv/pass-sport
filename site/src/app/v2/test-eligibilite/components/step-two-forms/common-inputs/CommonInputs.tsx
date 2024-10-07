@@ -1,6 +1,6 @@
 import Select from '@codegouvfr/react-dsfr/Select';
 import { ChangeEvent } from 'react';
-import { AahMsaInputsState } from 'types/EligibilityTest';
+import { AahMsaInputsState, CrousInputsState } from 'types/EligibilityTest';
 import { countries } from '../../../helpers/countries';
 import CityFinder from '../../city-finder/CityFinder';
 
@@ -9,12 +9,14 @@ interface Props {
   onBirthPlaceChanged: (text: string | null) => void;
   birthCountryInputName: string;
   birthPlaceInputName: string;
-  inputStates: AahMsaInputsState;
+  inputStates: AahMsaInputsState | CrousInputsState;
   areInputsDisabled: boolean;
   isBirthInputRequired: boolean;
+  isDirectBeneficiary?: boolean;
+  shouldAutoFocus?: boolean;
 }
 
-const CommonMsaInputs = ({
+const CommonInputs = ({
   onCountryChanged,
   onBirthPlaceChanged,
   birthCountryInputName,
@@ -22,6 +24,8 @@ const CommonMsaInputs = ({
   inputStates,
   areInputsDisabled,
   isBirthInputRequired,
+  isDirectBeneficiary = false,
+  shouldAutoFocus = false,
 }: Props) => {
   const getCountryOptions = () =>
     countries
@@ -43,17 +47,19 @@ const CommonMsaInputs = ({
   return (
     <>
       <Select
-        label="Pays de naissance de l’allocataire*"
+        label={isDirectBeneficiary ? `Pays de naissance*` : `Pays de naissance de l’allocataire*`}
         hint="Format attendu : Format attendu : Si le nom du pays est composé, veillez à saisir un tiret entre deux noms (ex : Pays-Bas)"
         nativeSelectProps={{
           name: birthCountryInputName,
           onChange: onCountryChanged,
           required: true,
-          'aria-label': "Saisir le pays de naissance de l'allocataire",
+          'aria-label': isDirectBeneficiary
+            ? `Saisir votre pays de naissance`
+            : `Saisir le pays de naissance de l'allocataire`,
           autoFocus: true,
         }}
-        state={inputStates.recipientBirthCountry.state}
-        stateRelatedMessage={inputStates.recipientBirthCountry.errorMsg}
+        state={inputStates.recipientBirthCountry?.state}
+        stateRelatedMessage={inputStates.recipientBirthCountry?.errorMsg}
         disabled={areInputsDisabled}
       >
         <>
@@ -64,18 +70,26 @@ const CommonMsaInputs = ({
         </>
       </Select>
 
-      {isBirthInputRequired && (
-        <CityFinder
-          inputName={birthPlaceInputName}
-          inputState={inputStates['recipientBirthPlace']!}
-          legend="Commune de naissance de l'allocataire*"
-          isDisabled={areInputsDisabled}
-          onChanged={onBirthPlaceChanged}
-          required={isBirthInputRequired}
-        />
-      )}
+      <div role="alert">
+        {isBirthInputRequired && (
+          <CityFinder
+            inputName={birthPlaceInputName}
+            inputState={inputStates['recipientBirthPlace']!}
+            legend={
+              isDirectBeneficiary
+                ? `Commune de naissance*`
+                : `Commune de naissance de l'allocataire*`
+            }
+            isDisabled={areInputsDisabled}
+            onChanged={onBirthPlaceChanged}
+            required={isBirthInputRequired}
+            secondHintNeeded={!isDirectBeneficiary}
+            shouldAutoFocus={shouldAutoFocus}
+          />
+        )}
+      </div>
     </>
   );
 };
 
-export default CommonMsaInputs;
+export default CommonInputs;

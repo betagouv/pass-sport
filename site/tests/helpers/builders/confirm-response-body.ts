@@ -16,6 +16,7 @@ export const buildSearchResponseBody = (): SearchResponseBody => {
       situation: 'jeune',
       organisme: 'MSA',
       matricule: '9999999999999',
+      hasMatricule: true,
     },
   ];
 };

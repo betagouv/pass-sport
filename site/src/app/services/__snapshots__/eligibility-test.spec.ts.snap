@@ -4,8 +4,8 @@ exports[`eligibility-test service fetchEligible should return eligible data when
 [
   {
     "date_naissance": "2011-01-01T23:00:00.000Z",
+    "hasMatricule": true,
     "id": 123,
-    "matricule": "9999999999999",
     "nom": "DUPOND",
     "organisme": "MSA",
     "prenom": "MANON",
@@ -55,4 +55,3 @@ exports[`eligibility-test service fetchQrCode should return eligible data enhanc
   },
 ]
 `;
-

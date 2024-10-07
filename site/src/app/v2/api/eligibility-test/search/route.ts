@@ -10,7 +10,10 @@ const schema = zfd.formData({
   beneficiaryFirstname: z.string(),
   beneficiaryBirthDate: z.string(),
   recipientResidencePlace: z.string(),
+  isFromCrous: z.coerce.boolean(),
 });
+
+const DEFAULT_INSEE_CODE = '75113';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -21,7 +24,20 @@ export async function POST(request: Request): Promise<Response> {
 
     // Means no one was found
     if (Array.isArray(data) && data.length <= 0) {
-      await handleSupportCookie(payload, 'search');
+      if (payload?.isFromCrous) {
+        const dataWithoutAddress = await fetchEligible({
+          ...payload,
+          recipientResidencePlace: DEFAULT_INSEE_CODE,
+        });
+
+        if (Array.isArray(dataWithoutAddress) && dataWithoutAddress.length <= 0) {
+          await handleSupportCookie(payload, 'search');
+        }
+
+        return Response.json(dataWithoutAddress);
+      } else {
+        await handleSupportCookie(payload, 'search');
+      }
     }
 
     return Response.json(data);

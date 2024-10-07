@@ -8,10 +8,10 @@ import {
 } from 'types/EligibilityTest';
 import { convertDate, mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
-import CommonMsaInputs from './common-msa-inputs/CommonMsaInputs';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchPspCode } from '../../agent';
 import { MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
 
 const initialInputsState: YoungMsaInputsState = {
   recipientLastname: { state: 'default' },
@@ -86,7 +86,7 @@ const YoungMsaForm = ({
   };
 
   const notifyError = () => {
-    setError('Une erreur a eu lieu. Merci de rééessayer plus tard');
+    setError('Une erreur a eu lieu. Merci de réessayer plus tard');
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -217,7 +217,7 @@ const YoungMsaForm = ({
           disabled={isFormDisabled}
         />
 
-        <CommonMsaInputs
+        <CommonInputs
           birthCountryInputName="recipientBirthCountry"
           birthPlaceInputName="recipientBirthPlace"
           inputStates={inputStates}

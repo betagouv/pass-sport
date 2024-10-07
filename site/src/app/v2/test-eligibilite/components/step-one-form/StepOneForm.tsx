@@ -12,11 +12,12 @@ import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchEligible } from '../../agent';
 import { push } from '@socialgouv/matomo-next';
 import Legend from '@/app/v2/test-eligibilite-base/components/customRadioButtons/legend/Legend';
-import { CAF, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 interface Props {
   onDataReceived: (data: SearchResponseBody) => void;
   onEligibilityFailure: () => void;
+  isDirectBeneficiary?: boolean;
 }
 
 const initialInputsState: StepOneFormInputsState = {
@@ -26,7 +27,11 @@ const initialInputsState: StepOneFormInputsState = {
   recipientResidencePlace: { state: 'default' },
 };
 
-const StepOneForm = ({ onDataReceived, onEligibilityFailure }: Props) => {
+const StepOneForm = ({
+  onDataReceived,
+  onEligibilityFailure,
+  isDirectBeneficiary = false,
+}: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
@@ -108,7 +113,7 @@ const StepOneForm = ({ onDataReceived, onEligibilityFailure }: Props) => {
     if (
       status === 400 &&
       body.message ===
-        "Aucun exercice en cours, vous n'êtes pas autorisé à vous inscrire au Pass'Sport pour le moment."
+        "Aucun exercice en cours, vous n'êtes pas autorisé à vous inscrire au pass Sport pour le moment."
     ) {
       setError('Le service est actuellement fermé');
     } else {
@@ -125,6 +130,11 @@ const StepOneForm = ({ onDataReceived, onEligibilityFailure }: Props) => {
     formData.set('beneficiaryLastname', formData.get('beneficiaryLastname')!.toString().trim());
     formData.set('beneficiaryFirstname', formData.get('beneficiaryFirstname')!.toString().trim());
     formData.set('beneficiaryBirthDate', formData.get('beneficiaryBirthDate')!.toString().trim());
+
+    // Later used to know if we need to use a default address for people who don't have any address
+    if (isDirectBeneficiary) {
+      formData.set('isFromCrous', 'true');
+    }
 
     return fetchEligible(formData);
   };
@@ -147,11 +157,15 @@ const StepOneForm = ({ onDataReceived, onEligibilityFailure }: Props) => {
     <>
       <Legend
         wrapInParagraph
-        line1="Veuillez rentrer les informations ci-dessous sur vous ou sur votre enfant :"
+        line1={
+          isDirectBeneficiary
+            ? `Veuillez rentrer les informations ci-dessous sur vous :`
+            : `Veuillez rentrer les informations ci-dessous sur vous ou sur votre enfant :`
+        }
       />
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
-          label="Nom du bénéficiaire*"
+          label={isDirectBeneficiary ? `Nom*` : `Nom du bénéficiaire*`}
           nativeInputProps={{
             name: 'beneficiaryLastname',
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -165,15 +179,21 @@ const StepOneForm = ({ onDataReceived, onEligibilityFailure }: Props) => {
           stateRelatedMessage={inputStates.beneficiaryLastname.errorMsg}
           disabled={isFormDisabled}
           hintText={
-            <>
-              Format attendu : Votre nom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
-              <MSA />
-            </>
+            isDirectBeneficiary ? (
+              <>
+                Format attendu : Votre nom tel qu’il est écrit sur vos papiers du <CROUS />
+              </>
+            ) : (
+              <>
+                Format attendu : Votre nom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
+                <MSA />
+              </>
+            )
           }
         />
 
         <Input
-          label="Prénom du bénéficiaire*"
+          label={isDirectBeneficiary ? `Prénom*` : `Prénom du bénéficiaire*`}
           nativeInputProps={{
             name: 'beneficiaryFirstname',
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -186,15 +206,21 @@ const StepOneForm = ({ onDataReceived, onEligibilityFailure }: Props) => {
           stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
           disabled={isFormDisabled}
           hintText={
-            <>
-              Format attendu : Votre prénom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
-              <MSA />
-            </>
+            isDirectBeneficiary ? (
+              <>
+                Format attendu : Votre prénom tel qu’il est écrit sur vos papiers du <CROUS />
+              </>
+            ) : (
+              <>
+                Format attendu : Votre prénom tel qu’il est écrit sur vos papiers de la <CAF /> ou
+                la <MSA />
+              </>
+            )
           }
         />
 
         <Input
-          label="Date de naissance du bénéficiaire*"
+          label={isDirectBeneficiary ? `Date de naissance*` : `Date de naissance du bénéficiaire*`}
           hintText="Format attendu: JJ/MM/AAAA"
           nativeInputProps={{
             name: 'beneficiaryBirthDate',
@@ -209,12 +235,15 @@ const StepOneForm = ({ onDataReceived, onEligibilityFailure }: Props) => {
         />
 
         <CityFinder
-          legend="Commune de résidence de l’allocataire*"
+          legend={
+            isDirectBeneficiary ? `Commune de résidence*` : `Commune de résidence de l’allocataire*`
+          }
           isDisabled={isFormDisabled}
           inputName="recipientResidencePlace"
           inputState={inputStates.recipientResidencePlace}
           onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
           required={true}
+          secondHintNeeded={!isDirectBeneficiary}
         />
 
         <Button

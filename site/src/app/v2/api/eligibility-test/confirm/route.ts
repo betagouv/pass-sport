@@ -7,10 +7,11 @@ import { handleSupportCookie } from '@/utils/cookie';
 
 const schema = zfd.formData({
   id: z.string(),
-  situation: z.enum(['AAH', 'jeune', 'Jeune']),
-  organisme: z.enum(['CAF', 'MSA']),
+  situation: z.enum(['AAH', 'jeune', 'Jeune', 'boursier']),
+  organisme: z.enum(['CAF', 'MSA', 'cnous']),
   recipientLastname: z.string().optional(),
   recipientFirstname: z.string().optional(),
+  recipientIneNumber: z.string().optional(),
   recipientCafNumber: z.string().optional(),
   recipientBirthPlace: z.string().optional(),
   recipientBirthDate: z.string().optional(),
