@@ -225,6 +225,7 @@ const YoungMsaForm = ({
           isBirthInputRequired={isBirthPlaceRequired()}
           onCountryChanged={onCountrySelectedHandler}
           onBirthPlaceChanged={onBirthPlaceChanged}
+          shouldAutoFocus={false}
         />
         <div className="fr-mt-3w">
           <FormButton isDisabled={isFormDisabled} />

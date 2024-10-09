@@ -13,7 +13,7 @@ interface Props {
   areInputsDisabled: boolean;
   isBirthInputRequired: boolean;
   isDirectBeneficiary?: boolean;
-  shouldAutoFocus?: boolean;
+  shouldAutoFocus: boolean;
 }
 
 const CommonInputs = ({
@@ -25,7 +25,7 @@ const CommonInputs = ({
   areInputsDisabled,
   isBirthInputRequired,
   isDirectBeneficiary = false,
-  shouldAutoFocus = false,
+  shouldAutoFocus,
 }: Props) => {
   const getCountryOptions = () =>
     countries
@@ -56,7 +56,7 @@ const CommonInputs = ({
           'aria-label': isDirectBeneficiary
             ? `Saisir votre pays de naissance`
             : `Saisir le pays de naissance de l'allocataire`,
-          autoFocus: true,
+          autoFocus: shouldAutoFocus,
         }}
         state={inputStates.recipientBirthCountry?.state}
         stateRelatedMessage={inputStates.recipientBirthCountry?.errorMsg}
