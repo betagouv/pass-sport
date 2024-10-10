@@ -8,6 +8,8 @@ import { push } from '@socialgouv/matomo-next';
 import { useCopyToClipboard } from '@uidotdev/usehooks';
 import { useCallback, useRef, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import Link from 'next/link';
+import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 
 interface Props {
   data: {
@@ -36,6 +38,12 @@ const QrCodeCard = ({ data, qrCodeValue }: Props) => {
   };
 
   const formatPspCode = (rawCode: string) => {
+    const codeRegex = /^24-[A-NP-Z]{4}-[A-NP-Z]{4}$/;
+
+    if (!codeRegex.test(rawCode)) {
+      return null;
+    }
+
     return `${rawCode.replaceAll('-', ' - ')}`;
   };
 
@@ -54,6 +62,8 @@ const QrCodeCard = ({ data, qrCodeValue }: Props) => {
 
     return copyToClipboard(data.code);
   }, [copyToClipboard, data.code]);
+
+  const formattedCode = formatPspCode(code);
 
   return (
     <div className={styles.wrapper}>
@@ -74,7 +84,18 @@ const QrCodeCard = ({ data, qrCodeValue }: Props) => {
 
           <p className="fr-mb-2w fr-text--md">{formatBirthDate(birthDate, gender)}</p>
           <p className="fr-text--md fr-text--bold fr-mb-0">Code:</p>
-          <p className="fr-text--md fr-text--bold fr-mb-2w">{formatPspCode(code)}</p>
+          <p className="fr-text--md fr-text--bold fr-mb-2w">
+            {formattedCode !== null ? (
+              formattedCode
+            ) : (
+              <Link
+                href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+                target="_blank"
+              >
+                Code invalide, veuillez contacter le support
+              </Link>
+            )}
+          </p>
 
           <Button
             priority="secondary"

@@ -161,6 +161,7 @@ const AahMsaForm = ({
           isBirthInputRequired={isBirthPlaceRequired()}
           onCountryChanged={onCountrySelected}
           onBirthPlaceChanged={onBirthPlaceChanged}
+          shouldAutoFocus
         />
 
         <FormButton isDisabled={isFormDisabled} />
