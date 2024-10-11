@@ -165,7 +165,7 @@ const StepOneForm = ({
       />
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
-          label={isDirectBeneficiary ? `Nom*` : `Nom du bénéficiaire*`}
+          label={isDirectBeneficiary ? `Nom*` : `Nom de l'enfant ou du jeune adulte bénéficiaire*`}
           nativeInputProps={{
             name: 'beneficiaryLastname',
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -193,7 +193,9 @@ const StepOneForm = ({
         />
 
         <Input
-          label={isDirectBeneficiary ? `Prénom*` : `Prénom du bénéficiaire*`}
+          label={
+            isDirectBeneficiary ? `Prénom*` : `Prénom de l'enfant ou du jeune adulte bénéficiaire*`
+          }
           nativeInputProps={{
             name: 'beneficiaryFirstname',
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -220,7 +222,11 @@ const StepOneForm = ({
         />
 
         <Input
-          label={isDirectBeneficiary ? `Date de naissance*` : `Date de naissance du bénéficiaire*`}
+          label={
+            isDirectBeneficiary
+              ? `Date de naissance*`
+              : `Date de naissance de l'enfant ou du jeune adulte bénéficiaire*`
+          }
           hintText="Format attendu: JJ/MM/AAAA"
           nativeInputProps={{
             name: 'beneficiaryBirthDate',
