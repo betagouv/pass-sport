@@ -12,6 +12,10 @@ import {
 } from '@/app/constants/cookie-manager';
 import { useEnhanceCookieManagerAccessibility } from '@/app/hooks/accessibility/use-enhance-cookie-manager-accessibility';
 
+// Temporary custom data attributes to apply css when using our own stylesheets
+export const EXTERNAL_SHEET_DATA_KEY = 'tac';
+export const EXTERNAL_SHEET_IDENTIFIER = 'external-sheet';
+
 export const TarteAuCitron = () => {
   const domain = process.env.NEXT_PUBLIC_TARTEAUCITRON_DOMAIN;
   const pathname = usePathname();
@@ -61,6 +65,12 @@ export const TarteAuCitron = () => {
 
           if (tac) {
             (tac.job = tac.job || []).push(SUPPORT_COOKIE_KEY);
+
+            // Condition check in order to not break
+            // stylesheet for people who don't have the latest version of the TAC CDN script
+            if (tac.parameters.useExternalCss) {
+              document.body.dataset[EXTERNAL_SHEET_DATA_KEY] = EXTERNAL_SHEET_IDENTIFIER;
+            }
           }
         });
       }}
