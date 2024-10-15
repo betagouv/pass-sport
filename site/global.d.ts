@@ -35,6 +35,10 @@ interface TarteAuCitronSDK {
   userInterface?: {
     openPanel: () => {};
     openAlert: () => {};
+    addClass: (id: string, className: string) => void;
+  };
+  parameters: {
+    useExternalCss: boolean;
   };
   job?: string[];
   user: Record<string, object>;

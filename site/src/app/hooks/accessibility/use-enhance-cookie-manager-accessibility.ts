@@ -1,4 +1,8 @@
 import { useEffect } from 'react';
+import {
+  EXTERNAL_SHEET_DATA_KEY,
+  EXTERNAL_SHEET_IDENTIFIER,
+} from '@/app/components/tarte-au-citron/tarte-au-citron';
 
 // todo: To refactor if time permits
 export function useEnhanceCookieManagerAccessibility() {
@@ -28,6 +32,21 @@ export function useEnhanceCookieManagerAccessibility() {
       const vimeoButtonInfo = body.querySelector<HTMLButtonElement>(
         'button[data-cat="tarteaucitronDetailsvideo"]',
       );
+
+      const saveButton = body.querySelector<HTMLButtonElement>('button#tarteaucitronSaveButton');
+      const closeButton = body.querySelector<HTMLButtonElement>('button#tarteaucitronClosePanel');
+
+      if (saveButton) {
+        saveButton.classList.remove('tarteaucitronAllow');
+        saveButton.classList.add('fr-btn');
+      }
+
+      // body.dataset condition check in order to not break
+      // stylesheet for people who don't have the latest version of the TAC CDN script
+      if (closeButton && body.dataset[EXTERNAL_SHEET_DATA_KEY] === EXTERNAL_SHEET_IDENTIFIER) {
+        closeButton.classList.add('fr-btn');
+        closeButton.classList.add('fr-btn--secondary');
+      }
 
       if (tacRoot && alertDialog) {
         tacRoot.removeAttribute('aria-labelledby');
