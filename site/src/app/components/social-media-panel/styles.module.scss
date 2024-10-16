@@ -10,9 +10,7 @@
 
   &--home-page-variant {
     background-color: var(--green-menthe-925-125-hover);
-    @media (min-width: $lg) {
       padding-top: 80px;
-    }
   }
 
   &--pro {

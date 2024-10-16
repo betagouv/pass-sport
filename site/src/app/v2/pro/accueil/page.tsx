@@ -19,14 +19,14 @@ export const metadata: Metadata = {
 export default function Accueil() {
   return (
     <>
-      <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
+      <main className={styles['main']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <PageTitle
           title={<>L&apos;État et le mouvement sportif se mobilisent pour vous accompagner</>}
           classes={{
             container: styles['page-header'],
           }}
         />
-        <div className={cn(styles['main-wrapper'], styles['root'])}>
+        <div className={cn(styles['main-wrapper'])}>
           <Card
             className={styles['main-card__highlight']}
             classes={{
