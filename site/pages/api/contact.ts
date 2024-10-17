@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { initCrispClient } from 'utils/crisp';
 import { decryptData } from '@/utils/decryption';
 import { AUTHORIZED_VENDORS_KEY, SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
+import { matchExactDrajes } from '@/utils/string';
 
 const { crispClient, envVars } = initCrispClient();
 const contactFormSchema = z
@@ -64,7 +65,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const byWhoSegment = isProRequest ? 'Pro' : 'Particulier';
   const failedAttemptSegment =
     hasGivenConsentForSupportCookie(req.cookies) && attempts !== null ? 'tentative-code' : null;
+  const drajesSegment = 'est-drajes';
 
+  const isFromDrajes = matchExactDrajes(message);
   await crispClient.website.updateConversationMetas(
     envVars.CRISP_WEBSITE,
     conversation.session_id,
@@ -72,9 +75,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nickname: `${firstname} ${lastname}`,
       email,
       data: { email, siret: siret || '', rna: rna || '' },
-      segments: [byWhoSegment, reason.slice(0, MAX_LENGTH_REASON), failedAttemptSegment].filter(
-        Boolean,
-      ),
+      segments: [
+        byWhoSegment,
+        reason.slice(0, MAX_LENGTH_REASON),
+        failedAttemptSegment,
+        isFromDrajes ? drajesSegment : null,
+      ].filter(Boolean),
     },
   );
 
