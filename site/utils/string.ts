@@ -9,3 +9,10 @@ export function unescapeSingleQuotes(value: string) {
 export function fromBase64ToString(base64: string): string {
   return Buffer.from(base64, 'base64').toString('utf-8');
 }
+
+// Business rule
+export function matchExactDrajes(input: string): boolean {
+  const regex = /\bDRAJES\b/i;
+
+  return regex.test(input);
+}
