@@ -8,6 +8,8 @@ describe('string tests suite', () => {
       expect(matchExactDrajes('drajes')).toBeTruthy();
       expect(matchExactDrajes('something drajes else')).toBeTruthy();
       expect(matchExactDrajes('je suis de la DRAJES')).toBeTruthy();
+      expect(matchExactDrajes('je suis de la DRAJES,')).toBeTruthy();
+      expect(matchExactDrajes('je suis de la DRAJES;')).toBeTruthy();
     });
 
     it('Should not match', () => {
