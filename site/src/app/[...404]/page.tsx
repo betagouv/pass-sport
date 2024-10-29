@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/v2/not-found');
+  return redirect('/v2/404');
 }
