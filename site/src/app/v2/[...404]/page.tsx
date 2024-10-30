@@ -28,14 +28,6 @@ export default function Page() {
                   Page d&apos;accueil
                 </a>
               </li>
-              <li>
-                <a
-                  className="fr-btn fr-btn--secondary"
-                  href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-                >
-                  Contactez-nous
-                </a>
-              </li>
             </ul>
           </div>
           <div className="fr-col-12 fr-col-md-3 fr-col-offset-md-1 fr-px-6w fr-px-md-0 fr-py-0">
