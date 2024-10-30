@@ -5,6 +5,7 @@ import styles from './styles.module.scss';
 import { Breadcrumb } from '@codegouvfr/react-dsfr/Breadcrumb';
 import { usePathname } from 'next/navigation';
 import cn from 'classnames';
+import { useIsNotFound } from '@/app/hooks/use-is-not-found';
 
 export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/pro/une-question': 'Une question ?',
@@ -20,8 +21,12 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
 export default function PassSportBreadcrumbPro() {
   const paths = usePathname();
   const internalRoutes = ['/', '/v2/pro/accueil'];
+  const notFound = useIsNotFound({
+    internalRoutes,
+    navigationItemsMap: Object.keys(NAVIGATION_ITEM_MAP),
+  });
 
-  if (!paths || internalRoutes.includes(paths)) {
+  if (!paths || internalRoutes.includes(paths) || notFound) {
     return null;
   }
 
