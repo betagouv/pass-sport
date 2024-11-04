@@ -12,7 +12,7 @@ const GetOrTestChoice = ({}: Props) => {
         <ButtonChoiceGroup />
       </div>
 
-      <MissionCards isUsingSuccessUrls={true} />
+      <MissionCards isUsingSuccessUrls />
     </>
   );
 };
