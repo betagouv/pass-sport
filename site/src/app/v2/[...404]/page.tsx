@@ -1,4 +1,3 @@
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import TechnicalError from '@codegouvfr/react-dsfr/dsfr/artwork/pictograms/system/technical-error.svg';
 import Ovoid from '@codegouvfr/react-dsfr/dsfr/artwork/background/ovoid.svg';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
