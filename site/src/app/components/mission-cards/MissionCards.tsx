@@ -143,7 +143,7 @@ const MissionCards = ({ isUsingSuccessUrls }: Props) => {
           imageUrl={spe.src}
           linkProps={{
             href: speUrl,
-            'aria-label': 'Ouvrir une nouvelle fenêtre vers le site Je santepsy.etudiant.gouv.fr',
+            'aria-label': 'Ouvrir une nouvelle fenêtre vers le site santepsy.etudiant.gouv.fr',
           }}
           size="medium"
           title="Sante Psy Etudiant"
