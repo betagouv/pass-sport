@@ -124,7 +124,7 @@ const MissionCards = ({ isUsingSuccessUrls }: Props) => {
       </div>
 
       <div className={styles.container}>
-        <h2 className="fr-h3 fr-mb-0">Pour prendre soin de votre santé mentale (ou autre) : </h2>
+        <h2 className="fr-h3 fr-mb-0">Pour prendre soin de votre santé mentale : </h2>
 
         <Card
           background
