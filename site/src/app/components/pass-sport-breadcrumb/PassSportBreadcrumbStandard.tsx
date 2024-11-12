@@ -16,6 +16,8 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/code/scan': 'Mon pass Sport',
   '/v2/plan-du-site': 'Plan du site',
   '/v2/accessibilite': 'Accessibilité',
+  '/v2/reglement-du-jeu-concours-numero-pass-sport-decathlon':
+    'jeu-concours pass Sport - Décathlon',
 };
 
 export default function PassSportBreadcrumbStandard() {
