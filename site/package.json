@@ -17,7 +17,9 @@
     "test": "jest --runInBand",
     "docker:run:dev": "docker-compose down && docker-compose up",
     "scripts:send-in-mass": "node -r dotenv/config ./scripts/send-in-mass.mjs dotenv_config_path=./.env.local",
-    "scripts:send-in-mass-march-2025": "node -r dotenv/config ./scripts/send-in-mass-march-2025.mjs dotenv_config_path=./.env.local"
+    "scripts:send-in-mass-march-2025": "node -r dotenv/config ./scripts/send-in-mass-march-2025.mjs dotenv_config_path=./.env.local",
+    "cy:test": "cypress run",
+    "cy:open": "cypress open"
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.13.6",
@@ -44,6 +46,8 @@
     "zod-form-data": "^2.0.2"
   },
   "devDependencies": {
+    "cypress": "^13.15.1",
+    "@testing-library/cypress": "^10.0.2",
     "@testing-library/jest-dom": "^6.4.8",
     "@testing-library/react": "^16.0.0",
     "@types/jest": "^29.5.12",
