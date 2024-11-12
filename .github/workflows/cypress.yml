@@ -1,0 +1,48 @@
+name: Cypress Tests
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  cypress-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Cypress
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/Cypress
+          key: ${{ runner.os }}-cypress-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-cypress-
+
+  cypress:
+    runs-on: ubuntu-latest
+    needs: cypress-dependencies
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cypress Tests
+        uses: cypress-io/github-action@v4
+        with:
+          browser: chrome
+          headed: true

@@ -15,7 +15,9 @@
     "format:check": "prettier --check --ignore-path .gitignore \"**/*.+(ts|tsx|json|mjs|scss)\"",
     "format:write": "npm run format:check -- --write",
     "test": "jest --runInBand",
-    "docker:run:dev": "docker-compose down && docker-compose up"
+    "docker:run:dev": "docker-compose down && docker-compose up",
+    "cy:test": "cypress run",
+    "cy:open": "cypress open"
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.13.6",
@@ -41,6 +43,8 @@
     "zod-form-data": "^2.0.2"
   },
   "devDependencies": {
+    "cypress": "^13.15.1",
+    "@testing-library/cypress": "^10.0.2",
     "@testing-library/jest-dom": "^6.4.8",
     "@testing-library/react": "^16.0.0",
     "@types/jest": "^29.5.12",
