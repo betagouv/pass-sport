@@ -1,7 +1,6 @@
-import Highlight from '@codegouvfr/react-dsfr/Highlight';
 import styles from '../styles.module.scss';
 import Image from 'next/image';
-import aboutImage from '@/images/tout-savoir-sur-le-pass-sport/about.png';
+import aboutImage from '@/images/tout-savoir-sur-le-pass-sport/about.webp';
 import cn from 'classnames';
 import CustomHighlight from '@/app/components/custom-highlight/CustomHighlight';
 
@@ -11,7 +10,13 @@ export default function About() {
       <section className={styles['about-container']}>
         <div className={styles['about-container__highlight']}>
           <div>
-            <Image src={aboutImage} alt="" className={styles['about-container__highlight-image']} />
+            <Image
+              src={aboutImage}
+              alt=""
+              className={styles['about-container__highlight-image']}
+              width={300}
+              height={300}
+            />
           </div>
 
           <div id="découvrir">

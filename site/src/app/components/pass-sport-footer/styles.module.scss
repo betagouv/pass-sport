@@ -17,19 +17,59 @@
     align-items: center;
   }
 
-  li img[alt="Le Compte Asso"],
   li img[alt="Hello asso"]{
     height: 40px !important;
-    width: auto;
+    width: 180px;
+  }
+
+  li img[alt="Cosmos sports"] {
+    height: 90px !important;
+    width: 160px;
+  }
+
+  li img[alt="France Paralympique"] {
+    height: 90px !important;
+    width: 80px;
+  }
+
+  li img[alt="MSA - La sécurité sociale agricole"] {
+    height: 90px !important;
+    width: 190px;
+  }
+
+  li img[alt="Le Compte Asso"]{
+    height: 40px !important;
+    width: 220px;
+  }
+
+  li img[alt="Fédération Nationale des Entreprises des Activités Physiques de Loisirs"] {
+    height: 90px !important;
+    width: 200px;
+  }
+
+  li img[alt="Union Sport & Cycle"],
+  li img[alt="les CROUS"],
+  li img[alt="Caisse nationale allocations familiales"] {
+    height: 90px !important;
+    width: 90px;
   }
 
   li img[alt="Intersport"]{
     height: 20px !important;
-    width: auto;
+    width: 190px;
   }
 
   li img[alt="Keepcool Neoness Metabolik"] {
     height: 60px !important;
-    width: auto;
+    width: 200px;
+  }
+
+  li img[alt="Decathlon"]{
+    height: 90px !important;
+    width: 160px;
+  }
+
+  li img[alt="Comité National Olympique et Sportif Français"] {
+    width: 90px;
   }
 }

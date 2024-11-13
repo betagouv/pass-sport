@@ -1,6 +1,6 @@
 import styles from './styles.module.scss';
 import Image from 'next/image';
-import heroImage from '@/images/homepage/hero.jpg';
+import heroImage from '@/images/homepage/hero.webp';
 import HeroPanel from '../hero-panel/HeroPanel';
 import cn from 'classnames';
 
