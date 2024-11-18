@@ -1,4 +1,3 @@
-import Highlight from '@codegouvfr/react-dsfr/Highlight';
 import cn from 'classnames';
 import styles from './styles.module.scss';
 import { ReactNode } from 'react';
