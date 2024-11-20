@@ -23,6 +23,7 @@ import { LIST_LIMIT, MAP_DEFAULT_DISTANCE } from 'utils/club-finder';
 import { push } from '@socialgouv/matomo-next';
 import { setFocusOn } from 'utils/dom';
 import dynamic from 'next/dynamic';
+import { getAdditionalCities } from '@/app/v2/trouver-un-club/components/club-finder/helpers/get-additional-cities.helper';
 
 interface Props {
   activities: ActivityResponse;
@@ -58,13 +59,22 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
     isFetchingClubsOnMap: true,
   });
 
+  const additionalCities = getAdditionalCities(searchParams?.get(SEARCH_QUERY_PARAMS.city));
+
+  // If array is of length 0,
+  // It means the query param related to the city is undefined, so we don't do anything
+  const cityQueryParam =
+    additionalCities.length === 0
+      ? undefined
+      : additionalCities.length === 1
+        ? `commune LIKE '${additionalCities[0]}%'`
+        : `commune LIKE '${additionalCities[0]}%' OR commune LIKE '${additionalCities[1]}%'`;
+
   const [clubParams, setClubParams] = useState<SqlSearchParams>({
     limit,
     offset: 0,
     ...(searchParams && {
-      [SEARCH_QUERY_PARAMS.city]: searchParams.get(SEARCH_QUERY_PARAMS.city)
-        ? `commune LIKE '${searchParams.get(SEARCH_QUERY_PARAMS.city)!.toUpperCase()}%'`
-        : undefined,
+      [SEARCH_QUERY_PARAMS.city]: cityQueryParam,
       [SEARCH_QUERY_PARAMS.postalCode]: searchParams.get(SEARCH_QUERY_PARAMS.postalCode)
         ? `cp='${searchParams.get(SEARCH_QUERY_PARAMS.postalCode)}'`
         : undefined,
@@ -218,6 +228,11 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
 
     if (postalCode && city) {
       const escapedSingleQuotesCity = escapeSingleQuotes(city);
+      const additionalCities = getAdditionalCities(city);
+      const cityQueryParam =
+        additionalCities.length === 1
+          ? `commune LIKE '${additionalCities[0]}%'`
+          : `commune LIKE '${additionalCities[0]}%' OR commune LIKE '${additionalCities[1]}%'`;
 
       setClubParams((clubParams) => ({
         ...clubParams,
@@ -225,7 +240,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
         postalCode: `cp='${postalCode}'`,
         // We add a wildcard at the end because the dataset isn't clean
         // For instance for PARIS (75002), we should have PARIS but we somtimes have PARIS 2 or PARIS 2E etc.
-        city: `commune LIKE '${escapedSingleQuotesCity.toUpperCase()}%'`,
+        city: cityQueryParam,
       }));
 
       queryParams.push({
