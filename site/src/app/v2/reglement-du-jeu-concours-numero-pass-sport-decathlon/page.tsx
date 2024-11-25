@@ -38,7 +38,7 @@ export default function Page() {
         </section>
 
         <section className="fr-mb-6w">
-          <h2 className="fr-mb-2w">Article 2 – Conditions relatives aux participans</h2>
+          <h2 className="fr-mb-2w">Article 2 – Conditions relatives aux participants</h2>
 
           <p className="fr-mb-2w">
             Le jeu est ouvert à toute personne physique majeure (État civil faisant foi) disposant
