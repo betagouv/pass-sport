@@ -15,7 +15,8 @@
     "format:check": "prettier --check --ignore-path .gitignore \"**/*.+(ts|tsx|json|mjs|scss)\"",
     "format:write": "npm run format:check -- --write",
     "test": "jest --runInBand",
-    "docker:run:dev": "docker-compose down && docker-compose up"
+    "docker:run:dev": "docker-compose down && docker-compose up",
+    "scripts:send-in-mass": "node -r dotenv/config ./scripts/send-in-mass.mjs dotenv_config_path=./.env.local"
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.13.6",
@@ -25,6 +26,7 @@
     "classnames": "^2.5.1",
     "crisp-api": "^8.5.0",
     "geolib": "^3.3.4",
+    "got": "^14.4.5",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "next": "^14.2.13",
