@@ -167,8 +167,6 @@ function isValidConversation(conversation) {
   // DRAJES => segment = est-drajes
   // LSM => email = lsm.pass.sport@sports.gouv.fr
   // RGPD => email = ds-rgpd@sports.gouv.fr
-  console.log(conversation);
-
   const meta = conversation.meta;
   const invalidSegments = ['est-drajes'];
   const invalidEmails = ['lsm.pass.sport@sports.gouv.fr', 'ds-rgpd@sports.gouv.fr'];
