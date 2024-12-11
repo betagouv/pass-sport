@@ -82,7 +82,11 @@ const AllowanceStep = () => {
             },
           },
           {
-            label: <CROUS />,
+            label: (
+              <>
+                <CROUS includeSanitairesEtSociaux />
+              </>
+            ),
             nativeInputProps: {
               onChange: () => {
                 setIsValidated(false);

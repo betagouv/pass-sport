@@ -4,6 +4,9 @@ import { zfd } from 'zod-form-data';
 import z, { ZodError } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 import { handleSupportCookie } from '@/utils/cookie';
+import { isSanitairesAndSociauxBoursiersBFC } from '@/app/v2/test-eligibilite-base/helpers/helpers';
+
+const DEFAULT_INSEE_CODE = '75113';
 
 const schema = zfd.formData({
   id: z.string(),
@@ -31,7 +34,26 @@ export async function POST(request: Request): Promise<Response> {
 
     // Means no one was found
     if (Array.isArray(data) && data.length <= 0) {
-      await handleSupportCookie(payload, 'confirm');
+      // Temporary
+      // Boursiers sanitaires sociaux BFC (Bourgogne France Comté)
+      if (
+        payload.situation.toLowerCase() === 'boursier' &&
+        payload.recipientIneNumber &&
+        isSanitairesAndSociauxBoursiersBFC(payload.recipientIneNumber)
+      ) {
+        const dataWithOverridenBirthPlace = await fetchQrCode({
+          ...payload,
+          recipientBirthPlace: DEFAULT_INSEE_CODE,
+        });
+
+        if (Array.isArray(dataWithOverridenBirthPlace) && dataWithOverridenBirthPlace.length <= 0) {
+          await handleSupportCookie(payload, 'confirm');
+        }
+
+        return Response.json(dataWithOverridenBirthPlace);
+      } else {
+        await handleSupportCookie(payload, 'confirm');
+      }
     }
 
     return Response.json(data);

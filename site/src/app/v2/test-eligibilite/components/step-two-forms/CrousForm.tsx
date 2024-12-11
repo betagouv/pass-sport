@@ -177,13 +177,15 @@ const CrousForm = ({
             inputProps={{
               label: (
                 <>
-                  Numéro INE provenant du <CROUS />*
+                  Numéro INE provenant du <CROUS /> ou bourse régionale pour les formations
+                  sanitaires et sociales*
                 </>
               ),
-              hintText: 'Format attendu : 9 chiffres et 2 lettres ou 10 chiffres et 1 lettre',
+              hintText:
+                'Format attendu : 9 chiffres et 2 lettres ou 10 chiffres et 1 lettre, "DD-" suivi de 6 chiffres',
               nativeInputProps: {
                 name: 'recipientIneNumber',
-                placeholder: 'ex: 00000000XX ou 0000000000X',
+                placeholder: 'ex: 00000000XX ou 0000000000X, DD-000000',
                 type: 'text',
                 required: true,
                 onChange: (e: ChangeEvent<HTMLInputElement>) =>
