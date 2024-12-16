@@ -77,11 +77,8 @@ const CityFinder = ({
       <label className={rootStyles['text--black']} htmlFor={inputName}>
         {legend}
         <p className={cn('fr-text--xs', styles.hint, 'fr-mb-1w', 'fr-mt-1v')}>
-          Format attendu : Si le nom de la commune est composé, veillez à saisir un tiret entre deux
-          noms (ex : Saint-Joseph), sauf si la commune débute par le, la, les, auxquels cas vous
-          devez séparer d’un caractère « espace » (ex : Le Havre). Si votre commune comporte moins
-          de 4 caractères il faut ajouter un espace à la fin (ex : Eus). Si vous avez déménagé dans
-          les 12 derniers mois, remplissez le champs avec le nom de votre ancienne ville
+          Si vous avez déménagé dans les 12 derniers mois, remplissez le champ avec le nom de votre
+          ancienne ville
         </p>
       </label>
 

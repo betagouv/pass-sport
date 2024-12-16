@@ -4,13 +4,14 @@ import Button from '@codegouvfr/react-dsfr/Button';
 import styles from './styles.module.scss';
 import { push } from '@socialgouv/matomo-next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import { isPasSportClosed } from '@/utils/date';
 
 const EligibilityTestBanner = () => {
   const eligibilityTestOnClick = () => {
     push(['trackEvent', 'Eligibility Test Button', 'Clicked', 'Banner test button']);
   };
 
-  return (
+  return !isPasSportClosed() ? (
     <aside
       className={`fr-py-6w fr-px-2w fr-p-md-11w fr-mx-auto ${styles.banner}`}
       id={SKIP_LINKS_ID.eligibilityTestButton}
@@ -35,7 +36,7 @@ const EligibilityTestBanner = () => {
         Je fais le test
       </Button>
     </aside>
-  );
+  ) : null;
 };
 
 export default EligibilityTestBanner;

@@ -5,12 +5,14 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import React from 'react';
 import { useIsProVersion } from '@/app/hooks/use-is-pro-version';
 import { usePathname } from 'next/navigation';
+import { isPasSportClosed } from '@/utils/date';
 
 const SkipLinksWrapper = () => {
   const isProVersion = useIsProVersion();
   const pathname = usePathname();
 
   const eligibilityTestSkipLink =
+    !isPasSportClosed() &&
     pathname &&
     [
       !isProVersion ? '/v2/accueil' : '',
