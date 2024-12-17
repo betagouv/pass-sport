@@ -207,6 +207,12 @@ export default function PassSportFooter() {
       },
     },
     {
+      text: 'Budget',
+      linkProps: {
+        href: '/v2/budget',
+      },
+    },
+    {
       text: 'Gestion des cookies',
       linkProps: {
         href: '#',
