@@ -92,7 +92,9 @@ function Page() {
                         <td className="fr-col-6 fr-col-md-4">483 538 €</td>
                       </tr>
                       <tr>
-                        <td className="fr-col-6 fr-col-md-8">Communication et envois</td>
+                        <td className="fr-col-6 fr-col-md-8">
+                          Communication & Campagnes d'email/sms
+                        </td>
                         <td className="fr-col-6 fr-col-md-4">2 010 948 €</td>
                       </tr>
                       <tr>
