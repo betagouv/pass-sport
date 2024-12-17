@@ -66,7 +66,7 @@ function Page() {
         </section>
 
         <section className="fr-mb-6w">
-          <div className="fr-table  fr-col-12 fr-table--bordered">
+          <div className="fr-table  fr-col-12">
             <div className="fr-table__wrapper">
               <div className="fr-table__container">
                 <div className="fr-table__content">
@@ -75,7 +75,7 @@ function Page() {
                     <thead className="fr-col-6">
                       <tr>
                         <th>Intitulé</th>
-                        <th>Total</th>
+                        <th>Somme</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -98,7 +98,9 @@ function Page() {
                       <tr>
                         <td className="fr-col-6 fr-col-md-8">
                           Subvention{' '}
-                          <abbr title="Le Comité national olympique sportif français">CNOSF</abbr>
+                          <abbr title="Comité national olympique et sportif français (CNOSF)">
+                            CNOSF
+                          </abbr>
                         </td>
                         <td className="fr-col-6 fr-col-md-4">250 000 €</td>
                       </tr>
