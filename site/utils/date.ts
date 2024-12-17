@@ -14,3 +14,10 @@ export const formatDate = (inputDate: string) => {
 export const getAnHourFromNow = () => {
   return new Date(Date.now() + 60 * 60 * 1000);
 };
+
+export const isPasSportClosed = () => {
+  const currentDate = new Date();
+  const cutOffDate = new Date(2025, 0, 1);
+
+  return currentDate >= cutOffDate;
+};

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Button from '@codegouvfr/react-dsfr/Button';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { CROUS } from '../../accueil/components/acronymes/Acronymes';
+import { isPasSportClosed } from '@/utils/date';
 
 export default function ObtainPassPort() {
   const router = useRouter();
@@ -40,17 +41,19 @@ export default function ObtainPassPort() {
         </li>
       </ul>
 
-      <Button
-        iconId="fr-icon-arrow-right-line"
-        iconPosition="right"
-        linkProps={{
-          href: '/v2/test-eligibilite-base',
-          'aria-label': "Visiter la page pour effectuer le test d'éligibilité",
-          onClick: eligibilityTestOnClick,
-        }}
-      >
-        Je fais le test
-      </Button>
+      {!isPasSportClosed() && (
+        <Button
+          iconId="fr-icon-arrow-right-line"
+          iconPosition="right"
+          linkProps={{
+            href: '/v2/test-eligibilite-base',
+            'aria-label': "Visiter la page pour effectuer le test d'éligibilité",
+            onClick: eligibilityTestOnClick,
+          }}
+        >
+          Je fais le test
+        </Button>
+      )}
     </section>
   );
 }

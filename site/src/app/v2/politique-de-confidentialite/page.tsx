@@ -124,8 +124,8 @@ export default function PolitiqueDeConfidentialite() {
               Direction des sports au sens des articles L. 100-1 et L. 100-2 du code du sport.
               <br />
               <br />
-              Cette mission d&apos;intérêt public se traduit en pratique par le décret n° 2023-741
-              du 8 août 2023 relatif au « pass Sport » 2023.
+              Cette mission d&apos;intérêt public se traduit en pratique par le décret n° 2024-500
+              du 31 mai 2024 relatif au « pass Sport » 2024.
             </p>
           </section>
 

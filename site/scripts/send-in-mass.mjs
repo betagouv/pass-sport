@@ -1,4 +1,4 @@
-// Script ran on the 9th december 2024
+// Script first ran on the 9th december 2024
 // Context: We needed to send a message to the remaining conversations that were
 // unresolved, unassigned, not from LSM, DRAJES, DSRGPD
 // in order to have fresh & relevant replies from people in need
@@ -9,6 +9,22 @@ import { z } from 'zod';
 import got from 'got';
 import * as fs from 'node:fs';
 import { execSync } from 'node:child_process';
+import path from 'node:path';
+
+function logError(sessionId, message) {
+  const timestamp = new Date().toISOString(); // Timestamp for logging
+  const logFilePath = path.join(__dirname, 'logs-crisp.txt');
+
+  // Format the log message
+  const logMessage = `[${timestamp}]${sessionId ?? `[${sessionId}]`}ERROR: ${message}\n`;
+
+  // Append to a log file
+  fs.appendFile(logFilePath, logMessage, (err) => {
+    if (err) {
+      console.error('Failed to write to log file:', err);
+    }
+  });
+}
 
 export function initCrispClient() {
   const envSchema = z.object({
@@ -47,11 +63,13 @@ async function main(totalPages) {
   for (let i = 1; i < totalPages; i++) {
     console.log(`processing batch ${i}...`);
 
+    execSync('sleep 1');
     const conversations = await getConversations({ pageNumber: i, pageSize: 50 });
+    execSync('sleep 1');
+
     totalImpacted += await processConversations(conversations, logs);
 
     console.log(`batch ${i} processed.`);
-    execSync('sleep 2');
   }
 
   console.log(`Total impacted ${totalImpacted}`);
@@ -63,9 +81,8 @@ async function main(totalPages) {
 
 async function getConversations({ pageNumber, pageSize } = { pageNumber: 1, pageSize: 50 }) {
   try {
-    // Take conversations from 21st september to 4th december
-    const dateStart = '2024-09-21T00:00:00.000Z';
-    const dateEnd = '2024-12-04T22:00:00.000Z';
+    const dateStart = '2024-12-06T00:00:00.000Z';
+    const dateEnd = '2024-12-12T22:00:00.000Z';
 
     const { data } = await got(
       `https://api.crisp.chat/v1/website/${envVars.CRISP_WEBSITE}/conversations/${pageNumber}?filter_not_resolved=1&filter_unassigned=1&per_page=${pageSize}&filter_date_start=${dateStart}&filter_date_end=${dateEnd}`,
@@ -74,7 +91,8 @@ async function getConversations({ pageNumber, pageSize } = { pageNumber: 1, page
 
     return data;
   } catch (err) {
-    console.log('Error ocurred while fetching conversations', err.code);
+    console.log('Error occurred while fetching conversations', err.code);
+    logError(null, err);
     return [];
   }
 }
@@ -90,8 +108,10 @@ async function processConversations(conversations = [], logs = []) {
 
       try {
         await sendMessageInConversation(sessionId);
+        execSync('sleep 1');
       } catch (err) {
         console.log(`Error while sending message to ${sessionId}`);
+        logError(sessionId, err);
         logs.push({
           sessionId,
           messageSent: false,
@@ -102,7 +122,8 @@ async function processConversations(conversations = [], logs = []) {
       try {
         await resolveConversation(sessionId);
       } catch (err) {
-        console.log(`Error while resolving message from ${sessionId}`);
+        console.log(`Error while resolving message from ${sessionId}`, err);
+        logError(sessionId, err);
         logs.push({
           sessionId,
           messageSent: true,

@@ -6,6 +6,7 @@ import { Breadcrumb } from '@codegouvfr/react-dsfr/Breadcrumb';
 import { usePathname } from 'next/navigation';
 import cn from 'classnames';
 import { useIsNotFound } from '@/app/hooks/use-is-not-found';
+import { isPasSportClosed } from '@/utils/date';
 
 export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/une-question': 'Une question ?',
@@ -22,14 +23,15 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
 
 export default function PassSportBreadcrumbStandard() {
   const paths = usePathname();
+  const passSportClosed = isPasSportClosed();
 
   const internalRoutes = [
     '/',
     '/v2/accueil',
-    '/v2/test-eligibilite-base',
-    '/v2/test-eligibilite',
-    '/v2/test-ou-code',
-  ];
+    !passSportClosed ? '/v2/test-eligibilite-base' : null,
+    !passSportClosed ? '/v2/test-eligibilite' : null,
+    !passSportClosed ? '/v2/test-ou-code' : null,
+  ].filter((route): route is string => route !== null);
 
   const notFound = useIsNotFound({
     internalRoutes,
