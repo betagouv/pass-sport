@@ -230,13 +230,6 @@ export default function PassSportFooter() {
         href: isProVersion ? '/v2/pro/plan-du-site' : '/v2/plan-du-site',
       },
     },
-    {
-      text: 'jeu-concours pass Sport - Décathlon',
-      linkProps: {
-        href: '/v2/reglement-du-jeu-concours-numero-pass-sport-decathlon',
-        'aria-label': 'Visiter la page du règlement du jeu-concours pass Sport - Décathlon',
-      },
-    },
   ];
 
   const linkList: FooterProps.LinkList.List = [
