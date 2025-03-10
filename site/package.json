@@ -16,7 +16,8 @@
     "format:write": "npm run format:check -- --write",
     "test": "jest --runInBand",
     "docker:run:dev": "docker-compose down && docker-compose up",
-    "scripts:send-in-mass": "node -r dotenv/config ./scripts/send-in-mass.mjs dotenv_config_path=./.env.local"
+    "scripts:send-in-mass": "node -r dotenv/config ./scripts/send-in-mass.mjs dotenv_config_path=./.env.local",
+    "scripts:send-in-mass-march-2025": "node -r dotenv/config ./scripts/send-in-mass-march-2025.mjs dotenv_config_path=./.env.local"
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.13.6",

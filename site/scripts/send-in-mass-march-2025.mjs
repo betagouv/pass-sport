@@ -1,6 +1,6 @@
-// Script first ran on the 9th december 2024
+// Script first ran on the 10th march 2025
 // Context: We needed to send a message to the remaining conversations that were
-// unresolved, unassigned, not from LSM, DRAJES, DSRGPD
+// unresolved, unassigned, not from LSM, DSRGPD
 // in order to have fresh & relevant replies from people in need
 // Once the message is sent, the conversation is resolved, and any time the conversation is resumed,
 // the conversation's state rolls back to "unresolved"
@@ -13,7 +13,7 @@ import path from 'node:path';
 
 function logError(sessionId, message) {
   const timestamp = new Date().toISOString(); // Timestamp for logging
-  const logFilePath = path.join(__dirname, 'logs-crisp.txt');
+  const logFilePath = path.join(__dirname, 'logs-crisp-march-2025.txt');
 
   // Format the log message
   const logMessage = `[${timestamp}]${sessionId ?? `[${sessionId}]`}ERROR: ${message}\n`;
@@ -60,7 +60,7 @@ async function main(totalPages) {
   const logs = [];
   let totalImpacted = 0;
 
-  for (let i = 1; i < totalPages; i++) {
+  for (let i = 1; i <= totalPages; i++) {
     console.log(`processing batch ${i}...`);
 
     execSync('sleep 1');
@@ -81,14 +81,13 @@ async function main(totalPages) {
 
 async function getConversations({ pageNumber, pageSize } = { pageNumber: 1, pageSize: 50 }) {
   try {
-    const dateStart = '2024-12-06T00:00:00.000Z';
-    const dateEnd = '2024-12-12T22:00:00.000Z';
-
+    console.log('getting data');
     const { data } = await got(
-      `https://api.crisp.chat/v1/website/${envVars.CRISP_WEBSITE}/conversations/${pageNumber}?filter_not_resolved=1&filter_unassigned=1&per_page=${pageSize}&filter_date_start=${dateStart}&filter_date_end=${dateEnd}`,
+      `https://api.crisp.chat/v1/website/${envVars.CRISP_WEBSITE}/conversations/${pageNumber}?filter_not_resolved=1&filter_unassigned=1&per_page=${pageSize}`,
       { ...options, responseType: 'json' },
     ).json();
 
+    console.log(data.length);
     return data;
   } catch (err) {
     console.log('Error occurred while fetching conversations', err.code);
@@ -108,7 +107,7 @@ async function processConversations(conversations = [], logs = []) {
 
       try {
         await sendMessageInConversation(sessionId);
-        execSync('sleep 1');
+        execSync('sleep 3');
 
         try {
           await resolveConversation(sessionId);
@@ -142,11 +141,25 @@ async function sendMessageInConversation(sessionId) {
   // https://docs.crisp.chat/references/rest-api/v1/#send-a-message-in-conversation
   // https://api.crisp.chat/v1/website/website_id/conversation/session_id/message
   const message = `Bonjour,
-Je vous remercie pour votre message, et vous prie de bien vouloir nous excuser pour le délai de réponse, dû à un fort volume de demandes reçues.
-Votre problématique est-elle toujours d'actualité ou a-t-elle été résolue entre-temps ?
-Je vous invite à revenir vers nous si cela est toujours le cas.
-Vous remerciant par avance pour votre retour, je vous souhaite une agréable journée.
-L'équipe pass Sport`;
+
+Nous vous remercions pour votre message et nous excusons pour le délai de réponse, dû à un volume élevé de demandes.
+
+Nous tenons à vous informer que le dispositif pass Sport 2024 est désormais clôturé depuis le 31 décembre 2024. Le dispositif 2025 ouvrira à partir du 1er juin 2025.
+
+Pour les bénéficiaires :
+
+Si votre club a enregistré votre pass Sport mais ne vous a pas encore remboursé les 50€ avancés, contactez-le directement pour régulariser la situation.
+
+Pour les structures sportives :
+
+Les remboursements sont en cours et se poursuivront jusqu'à mi-avril. Toutes les structures sportives seront remboursées d'ici cette date.
+
+Nous avons contacté toutes les structures sportives concernées par une anomalie. Si vous êtes dans cette situation, sachez que votre dossier est en cours d’instruction. Nous vous remercions pour votre patience et votre compréhension pendant ce traitement.
+
+Nous vous souhaitons une excellente journée.
+
+Cordialement,
+L’équipe Pass Sport`;
 
   await got(
     `https://api.crisp.chat/v1/website/${envVars.CRISP_WEBSITE}/conversation/${sessionId}/message`,
@@ -185,12 +198,15 @@ async function resolveConversation(sessionId) {
 
 function isValidConversation(conversation) {
   // Les filtres correspondants :
-  // DRAJES => segment = est-drajes
   // LSM => email = lsm.pass.sport@sports.gouv.fr
   // RGPD => email = ds-rgpd@sports.gouv.fr
   const meta = conversation.meta;
-  const invalidSegments = ['est-drajes'];
-  const invalidEmails = ['lsm.pass.sport@sports.gouv.fr', 'ds-rgpd@sports.gouv.fr'];
+  const invalidSegments = [];
+  const invalidEmails = [
+    'lsm.pass.sport@sports.gouv.fr',
+    'ds-rgpd@sports.gouv.fr',
+    'djepva.disi@jeunesse-sports.gouv.fr',
+  ];
 
   const hasValidSegment = !meta.segments.some((segment) =>
     invalidSegments.some((invalidSegment) => invalidSegment === segment),
@@ -203,3 +219,5 @@ function isValidConversation(conversation) {
 
 // Prior to executing the main script (main()), check the number of conversations from getConversations() manually
 // Execute here main()
+// await main(1);
+// await getConversations({ pageNumber: 1, pageSize: 50 });
