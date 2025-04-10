@@ -9,6 +9,7 @@ const LegalTextReference = () => (
       href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000049643030"
       target="_blank"
     >
+      {/* todo: to update */}
       Décret n° 2024-500 du 31 mai 2024 relatif au « pass Sport » 2024
     </Link>
   </section>
