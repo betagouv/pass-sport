@@ -3,7 +3,8 @@ import { isPasSportClosed } from '@/utils/date';
 
 const EndPassSportNotice = () =>
   isPasSportClosed() && (
-    <Notice title="Le dispositif pass Sport 2024 est clos depuis le 31 décembre 2024"></Notice>
+    // todo: to confirm wording
+    <Notice title="Le dispositif pass Sport rouvrira le 1er juin 2025"></Notice>
   );
 
 export default EndPassSportNotice;
