@@ -35,6 +35,7 @@ export default function TranscriptionRefundPassSport() {
       <p className="fr-mb-1w">N&apos;oubliez pas d’enregistrer !</p>
 
       <p className="fr-mb-1w">
+        {/* todo: update chart year if chart is different*/}
         Si votre structure est à un but lucratif et relève du champ du loisir sportif marchand,
         déposez la charte 2024 d’engagement des loisirs sportifs marchands.
       </p>
@@ -46,6 +47,7 @@ export default function TranscriptionRefundPassSport() {
       </p>
 
       <p className="fr-mb-1w">
+        {/* todo: update chart year if chart is different*/}
         Nouveauté 2024 : si vous êtes adhérent à l&apos;Union Sport et Cycle (USC), vous n&apos;avez
         plus besoin de déposer la charte 2024. Transmettez-la seulement à votre tête de réseau.
       </p>

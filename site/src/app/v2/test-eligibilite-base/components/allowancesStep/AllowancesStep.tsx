@@ -72,6 +72,7 @@ const AllowancesStep = ({ isForChild }: Props) => {
         L&apos;attribution du pass sport est conditionnée aux aides suivantes&nbsp;:
       </p>
       <ul className="fr-ml-2w">
+        {/* todo: update years and confirm */}
         <li className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
           bourse de l&apos;état de l&apos;enseignement supérieur sous conditions de ressources, aide
           annuelle du <CROUS /> ou bourse régionale pour les formations sanitaires et sociales pour

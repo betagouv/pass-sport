@@ -46,7 +46,7 @@ export default function ToutSavoirSurLePassSport() {
             </p>
             <ol>
               <li className="fr-mb-3w">
-                Affiliation : Être affiliée, quel que soit son statut, pour la saison 2024-2025 à
+                Affiliation : Être affiliée, quel que soit son statut, pour la saison 2025-2026 à
                 l&apos;une des 114 fédérations sportives agréées par le ministère des Sports et des
                 Jeux Olympiques et Paralympiques.
               </li>
@@ -74,6 +74,7 @@ export default function ToutSavoirSurLePassSport() {
                   <Link
                     href="/assets/ressources/charte-lsm-pour-non-adherents-2024.docx"
                     target="_blank"
+                    // todo: update label if chart is different
                     aria-label="Ouvrir une nouvelle fenêtre pour télécharger la charte LSM pour non adhérents de l'année 2024"
                   >
                     Télécharger la charte d’engagement loisir sportif marchand non adhérent
@@ -82,6 +83,7 @@ export default function ToutSavoirSurLePassSport() {
                 <Link
                   href="/assets/ressources/charte-lsm-pour-adherents-2024.docx"
                   target="_blank"
+                  // todo: update label if chart is different
                   aria-label="Ouvrir une nouvelle fenêtre pour télécharger la charte LSM pour adhérents de l'année 2024"
                 >
                   Télécharger la charte d’engagement loisir sportif marchand adhérent
@@ -122,7 +124,7 @@ export default function ToutSavoirSurLePassSport() {
 
             <CustomHighlight size="lg">
               <p className="display--block">
-                Les pass Sport sont valables du 1er juin au 31 décembre 2024. Après cette date,
+                Les pass Sport sont valables du 1er juin au 31 décembre 2025. Après cette date,
                 aucun pass Sport saisi ne pourra faire l&apos;objet d&apos;un remboursement.
               </p>
               <p className="display--block">Anticipez vos saisis !</p>
@@ -280,7 +282,7 @@ export default function ToutSavoirSurLePassSport() {
 
             <p className="fr-text--bold">
               Si votre club est affilié à l&apos;une des fédérations suivantes pour la saison
-              2024/2025 ou l&apos;année 2024 alors vous pouvez accepter des pass Sport qui vous
+              2025/2026 ou l&apos;année 2025 alors vous pouvez accepter des pass Sport qui vous
               seront intégralement remboursés par l&apos;État !
             </p>
 
@@ -293,6 +295,7 @@ export default function ToutSavoirSurLePassSport() {
               </Accordion>
               <Accordion label="Fédérations multisports et affinitaires">
                 <p className="fr-mb-2w">
+                  {/* todo: update link if chart is different */}
                   <Link
                     href="/assets/ressources/charte-lsm-pour-non-adherents-2024.docx"
                     target="_blank"
@@ -313,6 +316,7 @@ export default function ToutSavoirSurLePassSport() {
               target="_blank"
               className="align-self--baseline"
             >
+              {/* todo: to update */}
               Décret n° 2024-500 du 31 mai 2024 relatif au « pass Sport » 2024
             </Link>
           </section>
