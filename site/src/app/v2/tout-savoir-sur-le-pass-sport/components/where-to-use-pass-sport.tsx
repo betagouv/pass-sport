@@ -13,7 +13,7 @@ export default function WhereToUsePassSport() {
           Vous pouvez utiliser le pass Sport dans plus de 85 000 clubs et salles de sport, partout
           en en France.
         </span>
-        <span className="display--block">Il est valable du 1er juin au 31 décembre 2024</span>
+        <span className="display--block">Il est valable du 1er juin au 31 décembre 2025</span>
         <span className="display--block">
           La liste des établissements partenaires est disponible ici :
         </span>

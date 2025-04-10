@@ -712,8 +712,10 @@ export default function ToutSavoirSurLePassSport() {
             <Link
               href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000049643030"
               target="_blank"
-              aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2023-741 du 8 août 2023 relatif au « pass Sport » 2023"
+              // todo: to update
+              aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2023-741 du 8 août 2024 relatif au « pass Sport » 2024"
             >
+              {/* todo: to update */}
               Décret n° 2024-500 du 31 mai 2024 relatif au « Pass&apos;Sport » 2024
             </Link>
           </div>

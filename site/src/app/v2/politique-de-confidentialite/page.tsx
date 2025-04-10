@@ -17,7 +17,7 @@ export default function PolitiqueDeConfidentialite() {
       <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <PageTitle
           title="Politique de confidentialité"
-          subtitle="Politique de confidentialité relative au traitement de données personnelles réalisé dans le cadre de la délivrance du pass Sport 2024"
+          subtitle="Politique de confidentialité relative au traitement de données personnelles réalisé dans le cadre de la délivrance du pass Sport 2025"
           classes={{
             container: styles['page-header'],
           }}
@@ -60,7 +60,7 @@ export default function PolitiqueDeConfidentialite() {
               <span className="fr-text--bold">« la Direction des sports »</span>) est le responsable
               de traitement de vos données personnelles. Elle collecte et traite vos données dans le
               cadre du traitement de données personnelles opéré pour la délivrance du pass Sport
-              2024.
+              2025.
             </p>
 
             <p className="fr-mb-2w">
@@ -78,7 +78,7 @@ export default function PolitiqueDeConfidentialite() {
 
             <p>
               La Direction des sports s&apos;engage à ce que le traitement de vos données à
-              caractère personnel effectué dans le cadre de l&apos;envoi du pass Sport 2024 respecte
+              caractère personnel effectué dans le cadre de l&apos;envoi du pass Sport 2025 respecte
               la réglementation en vigueur applicable au traitement de données à caractère personnel
               et, en particulier,{' '}
               <a
@@ -107,7 +107,7 @@ export default function PolitiqueDeConfidentialite() {
               Article 3 - Pourquoi traitons-nous des données à caractère personnel ?
             </h2>
             <p>
-              Le présent traitement a pour finalité la délivrance du pass Sport 2024 aux
+              Le présent traitement a pour finalité la délivrance du pass Sport 2025 aux
               bénéficiaires âgés de 6 à 30 ans, dans le but de réduire le montant de l&apos;adhésion
               ou de la prise de licence proposée par les structures et associations sportives.
             </p>
@@ -124,6 +124,7 @@ export default function PolitiqueDeConfidentialite() {
               Direction des sports au sens des articles L. 100-1 et L. 100-2 du code du sport.
               <br />
               <br />
+              {/* todo: to update */}
               Cette mission d&apos;intérêt public se traduit en pratique par le décret n° 2024-500
               du 31 mai 2024 relatif au « pass Sport » 2024.
             </p>

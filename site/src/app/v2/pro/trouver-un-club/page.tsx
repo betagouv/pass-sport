@@ -36,6 +36,7 @@ const TrouverUnClub = async () => {
         </li>
 
         <li>
+          {/* todo: confirm if the chart ist still the one from 2024 */}
           les structures du loisir sportif marchand ayant signé la Charte d’engagement pass Sport
           2024.
         </li>
