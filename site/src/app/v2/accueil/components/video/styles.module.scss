@@ -25,8 +25,8 @@
 
 .vimeo_player,
 .vimeo_player > iframe {
-  width: 100%;
-  height: calc(100vh / 4);
+  height: 675px !important;
+  width: 100% !important;
 
   @media (min-width: $sm) {
     height: calc(100vh / 2);
