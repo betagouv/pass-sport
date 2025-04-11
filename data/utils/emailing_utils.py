@@ -65,9 +65,9 @@ def format_allocataire_benef_names_in_place(df: pd.DataFrame) -> None:
                      'beneficiaire_prenom', 'beneficiaire_nom'], df)
 
     df.loc[:,'allocataire_prenom'] = df['allocataire_prenom'].astype(str).str.capitalize()
-    df.loc[:, 'allocataire_nom'] = df['allocataire_nom'].astype(str).str.capitalize()
-    df.loc[:, 'beneficiaire_prenom'] = df['beneficiaire_prenom'].astype(str).str.capitalize()
-    df.loc[:, 'beneficiaire_nom'] = df['beneficiaire_nom'].astype(str).str.capitalize()
+    df.loc[:,'allocataire_nom'] = df['allocataire_nom'].astype(str).str.capitalize()
+    df.loc[:,'beneficiaire_prenom'] = df['beneficiaire_prenom'].astype(str).str.capitalize()
+    df.loc[:,'beneficiaire_nom'] = df['beneficiaire_nom'].astype(str).str.capitalize()
 
 
 def get_indirect_beneficiaries(df: pd.DataFrame) -> pd.DataFrame:
