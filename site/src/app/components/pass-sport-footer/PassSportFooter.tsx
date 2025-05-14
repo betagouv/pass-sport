@@ -281,14 +281,6 @@ export default function PassSportFooter() {
               },
             ]
           : []) as [FooterProps.LinkList.Link] | []),
-        {
-          text: 'Tableau de bord',
-          linkProps: {
-            href: 'https://lecompteasso.associations.gouv.fr/carto/dashboard',
-            target: '_blank',
-            title: 'Tableau de bord (nouvelle fenêtre)',
-          },
-        },
       ],
     },
   ];
