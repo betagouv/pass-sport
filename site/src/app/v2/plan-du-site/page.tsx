@@ -37,14 +37,6 @@ export default function PlanDuSite() {
               <Link href="/v2/budget">Budget</Link>
             </li>
             <li>
-              <Link
-                href="https://lecompteasso.associations.gouv.fr/carto/dashboard"
-                target="_blank"
-              >
-                Tableau de bord
-              </Link>
-            </li>
-            <li>
               <Link href="/v2/mentions-legales">Mentions légales</Link>
             </li>
             <li>

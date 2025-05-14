@@ -38,19 +38,6 @@ export const navigationItemStandard: NavigationItem[] = [
     link: '/v2/une-question',
     text: 'Une question ?',
   },
-  {
-    link: 'https://lecompteasso.associations.gouv.fr/carto/dashboard',
-    isExternal: true,
-    ariaLabel: `Ouvrir une nouvelle fenêtre vers le tableau de bord de pass Sport`,
-    text: (
-      <>
-        <div className={styles['menu-item-spacer']}>
-          <span aria-hidden />
-        </div>
-        Tableau de bord
-      </>
-    ),
-  },
 ];
 
 export const navigationItemPro: NavigationItem[] = [
@@ -92,11 +79,5 @@ export const navigationItemPro: NavigationItem[] = [
         Ressources
       </>
     ),
-  },
-  {
-    link: 'https://lecompteasso.associations.gouv.fr/carto/dashboard',
-    isExternal: true,
-    text: 'Tableau de bord',
-    ariaLabel: `Ouvrir une nouvelle fenêtre vers le tableau de bord de pass Sport`,
   },
 ];
