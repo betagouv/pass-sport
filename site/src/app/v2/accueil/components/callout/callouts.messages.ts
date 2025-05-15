@@ -7,22 +7,22 @@ export interface CalloutContent {
 export const calloutContents = [
   {
     id: 1,
-    title: '1 377 325 ',
+    title: '1 649 430 ',
     description: 'Jeunes inscrits',
   },
   {
     id: 2,
-    title: '80 266 ',
+    title: '59 392 ',
     description: 'Clubs labélisés',
   },
   {
     id: 3,
-    title: '842 870 ',
+    title: '1 005 847 ',
     description: 'Garçons',
   },
   {
     id: 4,
-    title: '534 455 ',
+    title: '643 583 ',
     description: 'Filles',
   },
 ];
