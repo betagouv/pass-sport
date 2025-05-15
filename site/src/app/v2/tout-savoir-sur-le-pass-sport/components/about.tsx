@@ -37,7 +37,7 @@ export default function About() {
                 jeunes pendant l&apos;année sportive.
               </p>
 
-              <p className="display--block">Il est ouvert du 1er juin au 31 décembre 2024.</p>
+              <p className="display--block">Il est ouvert du 1er juin au 31 décembre 2025.</p>
             </CustomHighlight>
           </div>
         </div>
@@ -55,11 +55,11 @@ export default function About() {
           <CustomHighlight originalLeftBorder={false}>
             <>
               <p className="fr-mb-1w display--block">
-                Le pass Sport est ouvert du 1er juin au 31 décembre 2024.
+                Le pass Sport est ouvert du 1er juin au 31 décembre 2025.
               </p>
 
               <p className="display--block">
-                Pensez-bien à présenter votre pass à votre club avant la fin décembre 2024 !
+                Pensez-bien à présenter votre pass à votre club avant la fin décembre 2025 !
               </p>
             </>
           </CustomHighlight>
