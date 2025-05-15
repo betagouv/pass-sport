@@ -47,8 +47,8 @@ export default function ToutSavoirSurLePassSport() {
             <ol>
               <li className="fr-mb-3w">
                 Affiliation : Être affiliée, quel que soit son statut, pour la saison 2024-2025 à
-                l&apos;une des 114 fédérations sportives agréées par le ministère des Sports et des
-                Jeux Olympiques et Paralympiques.
+                l&apos;une des 114 fédérations sportives agréées par le ministère des Sports, de la
+                Jeunesse et de la Vie associative.
               </li>
               <li className="fr-mb-3w">
                 Agrément : Être une association ayant un agrément Sport ou Jeunesse Éducation
@@ -56,8 +56,8 @@ export default function ToutSavoirSurLePassSport() {
               </li>
               <li>
                 Loisir sportif marchand : Être une structure de loisir sportif marchand éligible
-                ayant signé la charte d&apos;engagement proposée par le ministère des Sports et des
-                Jeux Olympiques et Paralympiques. Les entités doivent proposer ou organiser une
+                ayant signé la charte d&apos;engagement proposée par le ministère des Sports, de la
+                Jeunesse et de la Vie associative. Les entités doivent proposer ou organiser une
                 activité sportive, de loisir ou non, ayant un but lucratif et relevant de l&apos;un
                 des codes de la nomenclature des activités françaises (NAF) suivants :
                 <ol>
@@ -274,8 +274,8 @@ export default function ToutSavoirSurLePassSport() {
 
           <section className={styles['section-container']}>
             <h2 className="fr-h4">
-              Liste des fédérations agréées par le ministère des sports et des jeux Olympiques et
-              Paralympiques
+              Liste des fédérations agréées par le ministère des Sports, de la Jeunesse et de la Vie
+              associative
             </h2>
 
             <p className="fr-text--bold">

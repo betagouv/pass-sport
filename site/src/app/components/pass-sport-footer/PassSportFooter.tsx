@@ -298,7 +298,8 @@ export default function PassSportFooter() {
       }}
       homeLinkProps={homeLinkProps}
       operatorLogo={operatorLogo}
-      partnersLogos={partnersLogos}
+      // todo: To update later
+      // partnersLogos={partnersLogos}
       bottomItems={bottomItems}
       linkList={linkList}
       brandTop={FOOTER_BRAND_TOP}

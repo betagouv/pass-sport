@@ -32,8 +32,8 @@ export default function About() {
               </p>
 
               <p className="fr-mb-3w display--block">
-                Le dispositif est porté par l&apos;État et déployé par le ministère des Sports et
-                des Jeux Olympiques et Paralympiques et permet de soutenir la pratique sportive de
+                Le dispositif est porté par l&apos;État et déployé par le ministère des Sports, de
+                la Jeunesse et de la Vie associative et permet de soutenir la pratique sportive de
                 jeunes pendant l&apos;année sportive.
               </p>
 

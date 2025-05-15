@@ -96,7 +96,7 @@ export default function Accueil() {
             desc={
               <>
                 <span className="fr-text--md">
-                  Le ministère des sports et des jeux Olympiques et Paralympiques a élaboré tout un
+                  Le ministère des Sports, de la Jeunesse et de la Vie associative a élaboré tout un
                   ensemble d&apos;outils et supports de communication qui sont mis à dispositif de
                   l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
                   dispositif.

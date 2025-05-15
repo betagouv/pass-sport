@@ -35,7 +35,7 @@ export default function ToutSavoirSurLePassSport() {
 
             <p className="fr-mb-3w">
               Pour donner de la visibilité à ces aides existantes et permettre aux bénéficiaires d’y
-              recourir, le ministère des sports et des jeux olympiques et paralympiques a lancé un
+              recourir, le ministère des Sports, de la Jeunesse et de la Vie associative a lancé un
               recensement des aides possibles que vous retrouverez sur Aides-Territoires{' '}
               <Link
                 href="https://aides-territoires.beta.gouv.fr/portails/pass-sport/"
@@ -65,7 +65,7 @@ export default function ToutSavoirSurLePassSport() {
             </h2>
 
             <p className="fr-text--lg fr-text--bold fr-mb-0">
-              Le ministère des sports et des jeux Olympiques et Paralympiques a élaboré tout un
+              Le ministère des Sports, de la Jeunesse et de la Vie associative a élaboré tout un
               ensemble d&apos;outils et supports de communication qui sont mis à dispositif de
               l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
               dispositif.
