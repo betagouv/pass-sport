@@ -34,9 +34,9 @@ export default function Accueil() {
             </div>
           </section>
 
-          <section className={cn('fr-mx-auto', 'fr-pt-6w', styles['video-section'])}>
-            <Video videoFullUrl="https://vimeo.com/956531127" />
-          </section>
+          {/*<section className={cn('fr-mx-auto', 'fr-pt-6w', styles['video-section'])}>*/}
+          {/*  <Video videoFullUrl="https://vimeo.com/956531127" />*/}
+          {/*</section>*/}
 
           <section className="fr-pt-6w">
             <FindClubCard />
