@@ -18,18 +18,18 @@ export default function ToutSavoirSurLePassSport() {
   return (
     <>
       <main className={styles.container} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-        <PageTitle title="Tout savoir sur le pass Sport" subtitle="" />
-        <About />
+        <PageTitle title="Tout savoir sur le pass Sport" subtitle="En cours de construction" />
+        {/*<About />*/}
 
-        <div className={styles['section-container']}>
-          <ObtainPassPort />
-          <HowToUsePassSport />
-          <WhereToUsePassSport />
-          <LegalTextReference />
-        </div>
+        {/*<div className={styles['section-container']}>*/}
+        {/*  <ObtainPassPort />*/}
+        {/*  <HowToUsePassSport />*/}
+        {/*  <WhereToUsePassSport />*/}
+        {/*  <LegalTextReference />*/}
+        {/*</div>*/}
       </main>
 
-      <EligibilityTestBanner />
+      {/*<EligibilityTestBanner />*/}
       <SocialMediaPanel />
     </>
   );
