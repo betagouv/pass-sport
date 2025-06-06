@@ -4,6 +4,8 @@ import styles from './style.module.scss';
 import Link from 'next/link';
 import cn from 'classnames';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
+import { shouldDisplayChatbot } from '@/utils/date';
 
 export default function PlanDuSite() {
   return (
@@ -53,11 +55,19 @@ export default function PlanDuSite() {
             </Link>
           </p>
 
-          <p>
+          <p className="fr-mb-1w">
             <Link target="_blank" href="/v2/accueil">
               Site je suis un particulier
             </Link>
           </p>
+
+          {shouldDisplayChatbot() && (
+            <p>
+              <Link href={CHATBOT_EXTERNAL_URL} target="_blank">
+                {CHATBOT_EXTERNAL_URL_TITLE}
+              </Link>
+            </p>
+          )}
         </section>
       </main>
 

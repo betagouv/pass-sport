@@ -1,5 +1,7 @@
 import React from 'react';
 import styles from './styles.module.scss';
+import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
+import { shouldDisplayChatbot } from '@/utils/date';
 
 type NavigationItem = {
   link: string;
@@ -38,6 +40,23 @@ export const navigationItemStandard: NavigationItem[] = [
     link: '/v2/une-question',
     text: 'Une question ?',
   },
+  ...(shouldDisplayChatbot()
+    ? [
+        {
+          link: CHATBOT_EXTERNAL_URL,
+          isExternal: true,
+          ariaLabel: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
+          text: (
+            <>
+              <div className={styles['menu-item-spacer']}>
+                <span aria-hidden />
+              </div>
+              {CHATBOT_EXTERNAL_URL_TITLE}
+            </>
+          ),
+        },
+      ]
+    : []),
 ];
 
 export const navigationItemPro: NavigationItem[] = [
@@ -80,4 +99,14 @@ export const navigationItemPro: NavigationItem[] = [
       </>
     ),
   },
+  ...(shouldDisplayChatbot()
+    ? [
+        {
+          link: CHATBOT_EXTERNAL_URL,
+          isExternal: true,
+          text: CHATBOT_EXTERNAL_URL_TITLE,
+          ariaLabel: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
+        },
+      ]
+    : []),
 ];
