@@ -21,3 +21,11 @@ export const isPasSportClosed = () => {
 
   return currentDate >= cutOffDate;
 };
+
+export const shouldDisplayChatbot = () => {
+  // todo: Update the date once we have more information
+  const currentDate = new Date();
+  const openDate = new Date(2030, 5, 10);
+
+  return currentDate >= openDate;
+};

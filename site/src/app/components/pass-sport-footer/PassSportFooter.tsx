@@ -25,6 +25,8 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { useRef } from 'react';
 import { useUpdateHeadings } from '@/app/hooks/accessibility/use-update-headings';
 import { FOOTER_CLASSES } from '@/app/constants/dsfr-classes';
+import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
+import { shouldDisplayChatbot } from '@/utils/date';
 
 export default function PassSportFooter() {
   const isProVersion = useIsProVersion();
@@ -277,6 +279,18 @@ export default function PassSportFooter() {
                 text: 'Ressources',
                 linkProps: {
                   href: '/v2/pro/ressources',
+                },
+              },
+            ]
+          : []) as [FooterProps.LinkList.Link] | []),
+        ...((shouldDisplayChatbot()
+          ? [
+              {
+                text: CHATBOT_EXTERNAL_URL_TITLE,
+                linkProps: {
+                  href: CHATBOT_EXTERNAL_URL,
+                  target: '_blank',
+                  title: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
                 },
               },
             ]

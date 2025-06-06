@@ -16,7 +16,7 @@ const HeroPanel = () => {
     <div className={cn('fr-px-3w', styles.background, styles.sizer, styles.padder)}>
       <div className={styles.container}>
         <h1 className={cn(styles.title, 'fr-h2')}>
-          50 euros pour aider les 6-30 ans à faire du sport
+          Une aide financière pour encourager la pratique sportive des jeunes
         </h1>
       </div>
       {!isPasSportClosed() ? (

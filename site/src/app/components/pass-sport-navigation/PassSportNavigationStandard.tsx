@@ -60,7 +60,7 @@ export default function PassSportNavigation() {
           orientation: 'vertical',
         }}
         serviceTitle="pass Sport"
-        serviceTagline="50 euros pour aider les 6-30 ans à faire du sport"
+        serviceTagline="Une aide financière pour encourager la pratique sportive des jeunes"
         quickAccessItems={[
           {
             text: 'Je suis une structure partenaire',

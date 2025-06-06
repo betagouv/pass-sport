@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'pass Sport',
     short_name: 'pass Sport',
-    description: '50 euros pour aider les 6-30 ans à faire du sport',
+    description: 'Une aide financière pour encourager la pratique sportive des jeunes',
     start_url: '/',
     display: 'standalone',
     background_color: '#fff',
