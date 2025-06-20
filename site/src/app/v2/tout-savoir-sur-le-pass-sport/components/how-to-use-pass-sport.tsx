@@ -32,19 +32,18 @@ export default function HowToUsePassSport() {
           title="Nicolas Dupont"
           titleAs="h3"
           horizontal
-          imageAlt="Image du QR code"
           desc={
             <span className="fr-text--md">
               <span className="display--block">Né le 10/01/2015</span>
               <span className="display--block">Code: 24 - AAAA - AAAA</span>
             </span>
           }
-          imageUrl={qrCodeImage.src}
           classes={{
             root: styles['qr-root'],
             title: styles['qr-root__title'],
             header: styles['qr-root__header'],
             imgTag: styles['qr-root__img'],
+            end: styles['qr-root__end'],
           }}
         />
       </div>

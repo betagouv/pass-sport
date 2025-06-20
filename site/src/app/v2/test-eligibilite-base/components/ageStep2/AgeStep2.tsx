@@ -50,6 +50,7 @@ const AgeStep2 = ({ ageRange }: AgeStep2Props) => {
           L&apos;attribution du pass sport est conditionnée aux aides suivantes&nbsp;:
         </p>
         <ul className={`fr-text--lg fr-ml-2w ${rootStyles['text--medium']}`}>
+          {/* todo: update years and confirm */}
           <li>
             bourse de l&apos;état de l&apos;enseignement supérieur sous conditions de ressources,
             aide annuelle du <CROUS /> ou bourse régionale pour les formations sanitaires et
