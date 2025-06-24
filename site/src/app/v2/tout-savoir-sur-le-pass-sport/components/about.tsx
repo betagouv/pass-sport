@@ -36,11 +36,11 @@ export default function About() {
                 <ul>
                   <li>
                     Jeunes de 14 à 17 ans révolus bénéficiant de l’allocation de rentrée scolaire
-                    (ARS)
+                    (ARS) ;
                   </li>
                   <li>
                     Jeunes en situation de handicap jusqu’à 30 ans (6 à 19 ans AEEH, 16 à 30 ans
-                    AAH);
+                    AAH) ;
                   </li>
                   <li>
                     Etudiants boursiers et bénéficiaires d’une aide annuelle du CROUS de moins de 28
@@ -49,11 +49,11 @@ export default function About() {
                 </ul>
 
                 <p className="fr-mb-3w display--block">
-                  **Le type d’établissements éligibles demeure inchangé.** Pour rappel, le pass
-                  Sport peut être utilisé dans un club affilié aux fédérations sportives agréées par
-                  le ministère des Sports, de la Jeunesse et de la Vie associative ainsi que dans
-                  les associations agréées Jeunesse Education Populaire (JEP) ou Sport, ou encore
-                  les structures des loisirs sportifs marchands (salle d’escalade, salle de fitness,
+                  Le type d’établissements éligibles demeure inchangé. Pour rappel, le pass Sport
+                  peut être utilisé dans un club affilié aux fédérations sportives agréées par le
+                  ministère des Sports, de la Jeunesse et de la Vie associative ainsi que dans les
+                  associations agréées Jeunesse Education Populaire (JEP) ou Sport, ou encore les
+                  structures des loisirs sportifs marchands (salle d’escalade, salle de fitness,
                   etc.).
                 </p>
 
