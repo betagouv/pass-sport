@@ -88,17 +88,17 @@ export const navigationItemPro: NavigationItem[] = [
     link: '/v2/pro/une-question',
     text: 'Une question ?',
   },
-  {
-    link: '/v2/pro/ressources',
-    text: (
-      <>
-        <div className={styles['menu-item-spacer']}>
-          <span aria-hidden />
-        </div>
-        Ressources
-      </>
-    ),
-  },
+  // {
+  //   link: '/v2/pro/ressources',
+  //   text: (
+  //     <>
+  //       <div className={styles['menu-item-spacer']}>
+  //         <span aria-hidden />
+  //       </div>
+  //       Ressources
+  //     </>
+  //   ),
+  // },
   ...(shouldDisplayChatbot()
     ? [
         {

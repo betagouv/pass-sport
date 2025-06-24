@@ -87,7 +87,7 @@ export default function PassSportNavigation() {
           text: item.text,
         }))}
       />
-      <EndPassSportNotice />
+      {/*<EndPassSportNotice />*/}
     </div>
   );
 }

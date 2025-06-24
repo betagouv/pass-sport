@@ -38,8 +38,8 @@ export default function Accueil() {
             }}
             title="Clubs et structures sportives"
             titleAs="h2"
-            imageUrl={mainImage.src}
-            imageAlt=""
+            // imageUrl={mainImage.src}
+            // imageAlt=""
             horizontal
             border={false}
             desc={
@@ -47,7 +47,7 @@ export default function Accueil() {
                 <span>
                   Grâce au pass Sport contribuez à accueillir encore plus de jeunes dans vos clubs
                   et offrez leur la possibilité de bénéficier d&apos;une aide à la pratique sportive
-                  par une déduction de 50 € à l&apos;inscription qui vous sera intégralement
+                  par une déduction de 70 € à l&apos;inscription qui vous sera intégralement
                   remboursée par l&apos;Etat.
                 </span>
 
@@ -68,56 +68,56 @@ export default function Accueil() {
             }
           />
 
-          <section className={cn('fr-container', 'fr-px-0')}>
-            <div className="fr-grid-row fr-grid-row--gutters">
-              {presentationTiles.map((tile) => (
-                <div key={tile.id} className="fr-col-12 fr-col-lg-4">
-                  <PresentationTile {...tile} />
-                </div>
-              ))}
-            </div>
-          </section>
+          {/*<section className={cn('fr-container', 'fr-px-0')}>*/}
+          {/*  <div className="fr-grid-row fr-grid-row--gutters">*/}
+          {/*    {presentationTiles.map((tile) => (*/}
+          {/*      <div key={tile.id} className="fr-col-12 fr-col-lg-4">*/}
+          {/*        <PresentationTile {...tile} />*/}
+          {/*      </div>*/}
+          {/*    ))}*/}
+          {/*  </div>*/}
+          {/*</section>*/}
 
-          <Card
-            className={styles['secondary-card']}
-            classes={{
-              desc: styles['secondary-card__desc'],
-              title: styles['secondary-card__title'],
-              header: styles['secondary-card__header'],
-              content: styles['secondary-card__content'],
-              end: styles['secondary-card__end'],
-            }}
-            title="Faire la promotion du pass Sport"
-            titleAs="h2"
-            imageUrl={secondaryImage.src}
-            imageAlt=""
-            border={false}
-            horizontal
-            desc={
-              <>
-                <span className="fr-text--md">
-                  Le ministère des Sports, de la Jeunesse et de la Vie associative a élaboré tout un
-                  ensemble d&apos;outils et supports de communication qui sont mis à dispositif de
-                  l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
-                  dispositif.
-                </span>
+          {/*<Card*/}
+          {/*  className={styles['secondary-card']}*/}
+          {/*  classes={{*/}
+          {/*    desc: styles['secondary-card__desc'],*/}
+          {/*    title: styles['secondary-card__title'],*/}
+          {/*    header: styles['secondary-card__header'],*/}
+          {/*    content: styles['secondary-card__content'],*/}
+          {/*    end: styles['secondary-card__end'],*/}
+          {/*  }}*/}
+          {/*  title="Faire la promotion du pass Sport"*/}
+          {/*  titleAs="h2"*/}
+          {/*  imageUrl={secondaryImage.src}*/}
+          {/*  imageAlt=""*/}
+          {/*  border={false}*/}
+          {/*  horizontal*/}
+          {/*  desc={*/}
+          {/*    <>*/}
+          {/*      <span className="fr-text--md">*/}
+          {/*        Le ministère des Sports, de la Jeunesse et de la Vie associative a élaboré tout un*/}
+          {/*        ensemble d&apos;outils et supports de communication qui sont mis à dispositif de*/}
+          {/*        l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du*/}
+          {/*        dispositif.*/}
+          {/*      </span>*/}
 
-                <Button
-                  priority="secondary"
-                  size="large"
-                  className="fr-btn"
-                  iconId="fr-icon-arrow-right-line"
-                  iconPosition="right"
-                  linkProps={{
-                    href: '/v2/pro/ressources',
-                    'aria-label': 'Visiter la page des ressources',
-                  }}
-                >
-                  Ressources
-                </Button>
-              </>
-            }
-          />
+          {/*      <Button*/}
+          {/*        priority="secondary"*/}
+          {/*        size="large"*/}
+          {/*        className="fr-btn"*/}
+          {/*        iconId="fr-icon-arrow-right-line"*/}
+          {/*        iconPosition="right"*/}
+          {/*        linkProps={{*/}
+          {/*          href: '/v2/pro/ressources',*/}
+          {/*          'aria-label': 'Visiter la page des ressources',*/}
+          {/*        }}*/}
+          {/*      >*/}
+          {/*        Ressources*/}
+          {/*      </Button>*/}
+          {/*    </>*/}
+          {/*  }*/}
+          {/*/>*/}
         </div>
       </main>
 

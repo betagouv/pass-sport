@@ -18,9 +18,9 @@ export default function ToutSavoirSurLePassSport() {
   return (
     <>
       <main className={styles.container} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-        <PageTitle title="Tout savoir sur le pass Sport" subtitle="En cours de construction" />
-        {/*<About />*/}
-
+        <PageTitle title="Tout savoir sur le pass Sport" />
+        <About />
+        {/* todo: enable later */}
         {/*<div className={styles['section-container']}>*/}
         {/*  <ObtainPassPort />*/}
         {/*  <HowToUsePassSport />*/}

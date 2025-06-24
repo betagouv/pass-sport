@@ -273,16 +273,16 @@ export default function PassSportFooter() {
             href: isProVersion ? '/v2/accueil' : '/v2/pro/accueil',
           },
         },
-        ...((isProVersion
-          ? [
-              {
-                text: 'Ressources',
-                linkProps: {
-                  href: '/v2/pro/ressources',
-                },
-              },
-            ]
-          : []) as [FooterProps.LinkList.Link] | []),
+        // ...((isProVersion
+        //   ? [
+        //       {
+        //         text: 'Ressources',
+        //         linkProps: {
+        //           href: '/v2/pro/ressources',
+        //         },
+        //       },
+        //     ]
+        //   : []) as [FooterProps.LinkList.Link] | []),
         ...((shouldDisplayChatbot()
           ? [
               {

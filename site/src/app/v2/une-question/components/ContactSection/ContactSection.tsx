@@ -43,7 +43,7 @@ const ContactSection: React.FC<Props> = ({ isProVersion }) => {
   });
 
   return (
-    <section className={cn('fr-px-3w', styles.contact)}>
+    <section className={cn(styles.contact)}>
       <contactModal.Component
         title="Formulaire de contact"
         className="fr-mb-0"

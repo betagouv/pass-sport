@@ -91,7 +91,7 @@ export default function PassSportNavigationPro() {
           text: item.text,
         }))}
       />
-      <EndPassSportNotice />
+      {/*<EndPassSportNotice />*/}
     </div>
   );
 }

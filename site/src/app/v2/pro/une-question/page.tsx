@@ -26,13 +26,14 @@ export default async function Questions() {
       <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <PageTitle
           title="Vous avez une question ?"
-          subtitle="Consultez nos questions fréquentes, la réponse à votre question s’y trouve peut-être."
+          // subtitle="Consultez nos questions fréquentes, la réponse à votre question s’y trouve peut-être."
+          subtitle="En cours de construction."
           classes={{
             container: styles['page-header'],
           }}
           isProVersion
         />
-        <ContentSection categoriesWithArticles={categoriesWithArticles} />
+        {/*<ContentSection categoriesWithArticles={categoriesWithArticles} />*/}
       </main>
 
       <ContactSection isProVersion />
