@@ -160,12 +160,12 @@ export default function Accessibilite() {
                   </strong>
                 </Link>
               </li>
-              <li>
-                Ressources{' '}
-                <Link href="https://www.pass.sports.gouv.fr/v2/pro/ressources">
-                  <strong>https://www.pass.sports.gouv.fr/v2/pro/ressources</strong>
-                </Link>
-              </li>
+              {/*<li>*/}
+              {/*  Ressources{' '}*/}
+              {/*  <Link href="https://www.pass.sports.gouv.fr/v2/pro/ressources">*/}
+              {/*    <strong>https://www.pass.sports.gouv.fr/v2/pro/ressources</strong>*/}
+              {/*  </Link>*/}
+              {/*</li>*/}
               <li>
                 Accueil{' '}
                 <Link href="https://www.pass.sports.gouv.fr">

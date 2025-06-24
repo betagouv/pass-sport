@@ -16,7 +16,8 @@ const HeroPanel = () => {
     <div className={cn('fr-px-3w', styles.background, styles.sizer, styles.padder)}>
       <div className={styles.container}>
         <h1 className={cn(styles.title, 'fr-h2')}>
-          Une aide financière pour encourager la pratique sportive des jeunes
+          Le pass Sport évolue pour <br /> la campagne <br />
+          2025-2026
         </h1>
       </div>
       {!isPasSportClosed() ? (
@@ -45,7 +46,7 @@ const HeroPanel = () => {
               href: '/v2/tout-savoir-sur-le-pass-sport',
             }}
           >
-            Découvrir le pass Sport
+            Découvrir les conditions
             <span className="fr-icon fr-icon-arrow-right-line fr-ml-1w" aria-hidden />
           </Button>
         </div>
