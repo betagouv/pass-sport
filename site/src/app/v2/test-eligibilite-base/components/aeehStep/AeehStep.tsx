@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { AGE_RANGE } from '../types/types';
 import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
-import { useRouter } from 'next/navigation';
 import rootStyles from '@/app/utilities.module.scss';
 import cn from 'classnames';
 import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
-import { trackRedirectionToPassSportForm } from '@/app/v2/test-eligibilite-base/helpers/helpers';
 import CustomRadioButtons from '../customRadioButtons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
+import { PASS_SPORT_AMOUNT } from '@/app/constants/wordings';
 
 interface Props {
   ageRange: AGE_RANGE;
@@ -16,10 +15,8 @@ interface Props {
 const AeehStep = ({ ageRange }: Props) => {
   const [hasAeehAllocation, setHasAeehAllocation] = useState<boolean | null>(null);
   const [isValidated, setIsValidated] = useState(true);
-
-  const router = useRouter();
-
   const fieldsetId = 'aeehStep-fieldset';
+
   useRemoveAttributeById(fieldsetId, 'aria-labelledby');
 
   const buttonClickedHandler = () => {
@@ -28,12 +25,12 @@ const AeehStep = ({ ageRange }: Props) => {
 
   const displaySuccess = hasAeehAllocation;
   const displayFailure =
-    ageRange === AGE_RANGE.BETWEEN_19_30 ||
-    (ageRange === AGE_RANGE.BETWEEN_6_19 && hasAeehAllocation === false);
+    ageRange === AGE_RANGE.BETWEEN_14_30 ||
+    (ageRange === AGE_RANGE.BETWEEN_6_13 && hasAeehAllocation === false);
 
   return (
     <>
-      {ageRange !== AGE_RANGE.BETWEEN_19_30 && (
+      {ageRange !== AGE_RANGE.BETWEEN_14_30 && (
         <CustomRadioButtons
           id={fieldsetId}
           name="aeehStep"
@@ -74,17 +71,19 @@ const AeehStep = ({ ageRange }: Props) => {
           title="Bonne nouvelle ! D'après les informations que vous nous avez transmises, vous
           êtes éligible au pass Sport."
           isSuccess
-          buttonProps={{
-            children: "Accéder au formulaire d'obtention du pass Sport",
-            onClick: () => {
-              trackRedirectionToPassSportForm();
-              router.push('test-eligibilite');
-            },
-          }}
+          // todo: enable later in august
+          // buttonProps={{
+          //   children: "Accéder au formulaire d'obtention du pass Sport",
+          //   onClick: () => {
+          //     trackRedirectionToPassSportForm();
+          //     router.push('test-eligibilite');
+          //   },
+          // }}
         >
           <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
-            Il vous permettra de déduire 50 euros de votre adhésion sportif dans plus de 85 000
-            clubs et associations sportives partenaires dans toute la France.
+            Il vous permettra de déduire {PASS_SPORT_AMOUNT} euros sur l&apos;inscription prise
+            entre le 1er septembre et le 31 décembre 2025, parmi plus de 59 000 clubs, associations
+            sportives et salles de sport partenaire.
           </p>
         </VerdictPanel>
       )}

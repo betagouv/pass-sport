@@ -1,23 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
-import { useRouter } from 'next/navigation';
 import rootStyles from '@/app/utilities.module.scss';
-import EligibilityCriteriaList from '@/app/components/eligibility-criteria-list/EligibilityCriteriaList';
 import cn from 'classnames';
-import { trackRedirectionToPassSportForm } from '@/app/v2/test-eligibilite-base/helpers/helpers';
 import CustomRadioButtons from '../customRadioButtons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
+import { PASS_SPORT_AMOUNT } from '@/app/constants/wordings';
 
-interface Props {
-  isForChild: boolean;
-}
-
-const AllowancesStep = ({ isForChild }: Props) => {
+const AllowancesStep = () => {
   const [hasAllowances, setHasAllowances] = useState<boolean | null>(null);
   const [isValidated, setIsValidated] = useState(true);
-
-  const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
 
   const fieldsetId = 'allowancesStep-fieldset';
@@ -38,55 +31,44 @@ const AllowancesStep = ({ isForChild }: Props) => {
       <VerdictPanel
         title="Bonne nouvelle ! D'après les informations que vous nous avez transmises, vous êtes éligible au pass Sport."
         isSuccess
-        buttonProps={{
-          children: "Accéder au formulaire d'obtention du pass Sport",
-          onClick: () => {
-            trackRedirectionToPassSportForm();
-            router.push('test-eligibilite');
-          },
-        }}
+        // todo: Enable later in august
+        // buttonProps={{
+        //   children: "Accéder au formulaire d'obtention du pass Sport",
+        //   onClick: () => {
+        //     trackRedirectionToPassSportForm();
+        //     router.push('test-eligibilite');
+        //   },
+        // }}
       >
         <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
-          Il vous permettra de déduire 50 euros de votre adhésion sportif dans plus de 85 000 clubs
-          et associations sportives partenaires dans toute la France.
+          Il vous permettra de déduire {PASS_SPORT_AMOUNT} euros sur l&apos;inscription prise entre
+          le 1er septembre et le 31 décembre 2025, parmi plus de 59 000 clubs, associations
+          sportives et salles de sport partenaire.
         </p>
       </VerdictPanel>
     </div>
   );
 
-  const failureCallOut = (
-    <VerdictPanel
-      title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes pas éligible au pass Sport"
-      isSuccess={false}
-    >
-      <p className={cn('fr-text--lg', rootStyles['text--black'], rootStyles['text--medium'])}>
-        En effet, ce dispositif n&apos;est pas accessible à tous, il est ouvert aux:
-      </p>
-      <EligibilityCriteriaList />
-    </VerdictPanel>
-  );
+  const failureCallOut = <FullNegativeVerdictPanel isLean />;
 
   const beforeQuestionText = (
     <div tabIndex={-1} ref={ref}>
-      <p className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
-        L&apos;attribution du pass sport est conditionnée aux aides suivantes&nbsp;:
-      </p>
       <ul className="fr-ml-2w">
-        <li className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
-          bourse de l&apos;état de l&apos;enseignement supérieur sous conditions de ressources, aide
-          annuelle du <CROUS /> ou bourse régionale pour les formations sanitaires et sociales pour
-          l&apos;année universitaire 2023-2024 ou 2024-2025
+        <li className={`fr-mb-1w fr-mt-2w ${rootStyles['text--medium']}`}>
+          Allocation d&apos;éducation de l&apos;enfant handicapé (<abbr>AEEH</abbr>) ;
         </li>
-        <li className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
-          allocation aux adultes handicapées (<abbr>AAH</abbr>)
+        <li className={`fr-mb-1w ${rootStyles['text--medium']}`}>
+          Allocation de rentrée scolaire (<abbr>ARS</abbr>) ;
         </li>
-
-        <li className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
-          allocation de rentrée scolaire (<abbr>ARS</abbr>)
+        <li className={`fr-mb-1w ${rootStyles['text--medium']}`}>
+          Allocation aux adultes handicapés (<abbr>AAH</abbr>) ;
         </li>
-
-        <li className={`fr-text--lg fr-mb-0 ${rootStyles['text--medium']}`}>
-          allocation d&apos;éducation de l&apos;enfant handicapé (<abbr>AEEH</abbr>)
+        <li className={`fr-mb-1w ${rootStyles['text--medium']}`}>
+          Moins de 28 ans et bourse du <CROUS />
+          (y compris l’aide annuelle), attribuée avant le 15 octobre 2025 ;
+        </li>
+        <li className={`fr-mb-0w ${rootStyles['text--medium']}`}>
+          Moins de 28 ans et bourse régionale pour une formation sanitaire ou sociale.
         </li>
       </ul>
     </div>

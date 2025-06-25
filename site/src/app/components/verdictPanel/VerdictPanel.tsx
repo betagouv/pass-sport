@@ -45,11 +45,11 @@ const VerdictPanel = ({
 
         {qrCodeComponent}
 
-        {hasSocialLinks && <SocialMediaLinks />}
-      </div>
+        <div className="fr-mb-1w">
+          <Actions />
+        </div>
 
-      <div className="fr-mb-3w fr-mt-10v">
-        <Actions />
+        <div className="fr-mb-8w">{hasSocialLinks && <SocialMediaLinks />}</div>
       </div>
 
       <div className={cn(styles.background, { 'fr-p-2w': !isLean })}>

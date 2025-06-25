@@ -15,7 +15,6 @@ const Actions = () => {
             href: '/v2/accueil',
           },
         },
-
         {
           children: 'Refaire le test',
           onClick: () => {

@@ -13,11 +13,12 @@ const ButtonChoiceGroup = () => {
           onClick: () => router.push('test-eligibilite-base'),
           priority: 'secondary',
         },
-        {
-          children: 'Je souhaite récupérer mon pass Sport',
-          onClick: () => router.push('test-eligibilite'),
-          priority: 'secondary',
-        },
+        // todo: Enable later in august
+        // {
+        //   children: 'Je souhaite récupérer mon pass Sport',
+        //   onClick: () => router.push('test-eligibilite'),
+        //   priority: 'secondary',
+        // },
       ]}
       inlineLayoutWhen="sm and up"
       buttonsSize="large"

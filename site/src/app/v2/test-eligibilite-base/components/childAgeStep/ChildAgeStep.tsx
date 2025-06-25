@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import VerdictPanel from '../../../../components/verdictPanel/VerdictPanel';
 import AllowancesStep from '../allowancesStep/AllowancesStep';
-import { CHILD_AGE } from '../types/types';
-import rootStyles from '@/app/utilities.module.scss';
-import cn from 'classnames';
+import { AGE_RANGE, CHILD_AGE } from '../types/types';
 import CustomRadioButtons from '../customRadioButtons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
+import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
+import AgeStep2 from '@/app/v2/test-eligibilite-base/components/ageStep2/AgeStep2';
 
 const ChildAgeStep = () => {
   const [childAge, setChildAge] = useState<CHILD_AGE | null>(null);
@@ -17,35 +16,6 @@ const ChildAgeStep = () => {
   const buttonClickedHandler = () => {
     setIsValidated(true);
   };
-
-  const failureCallOut = (
-    <VerdictPanel
-      title="Nous sommes désolés, d'après les informations que vous nous avez transmises, vous n'êtes pas éligible au pass Sport"
-      isSuccess={false}
-    >
-      <p className={cn('fr-text--lg', rootStyles['text--black'], rootStyles['text--medium'])}>
-        En effet, ce dispositif est ouvert aux:
-      </p>
-
-      <ul
-        className={cn(
-          'fr-ml-2w',
-          'fr-text--lg',
-          rootStyles['text--black'],
-          rootStyles['text--medium'],
-        )}
-      >
-        <li className="fr-my-2w">
-          Personnes nées entre le 16 septembre 1993 et le 31 décembre 2018.
-        </li>
-      </ul>
-
-      <p className={cn('fr-text--lg', 'fr-text--bold', rootStyles['text--black'])}>
-        Pour autant, vous avez peut-être droit à d&apos;autres aides. N&apos;hésitez pas à vous
-        rapprocher de votre région, département ou commune de résidence.
-      </p>
-    </VerdictPanel>
-  );
 
   return (
     <>
@@ -61,16 +31,25 @@ const ChildAgeStep = () => {
             nativeInputProps: {
               onChange: () => {
                 setIsValidated(false);
-                setChildAge(CHILD_AGE.LESS_THAN_SIX);
+                setChildAge(CHILD_AGE.LESS_THAN_6);
               },
             },
           },
           {
-            label: 'Entre 6 et 30 ans',
+            label: 'Entre 6 et 13 ans',
             nativeInputProps: {
               onChange: () => {
                 setIsValidated(false);
-                setChildAge(CHILD_AGE.BTW_SIX_AND_THIRTY);
+                setChildAge(CHILD_AGE.BETWEEN_6_13);
+              },
+            },
+          },
+          {
+            label: 'Entre 14 et 30 ans',
+            nativeInputProps: {
+              onChange: () => {
+                setIsValidated(false);
+                setChildAge(CHILD_AGE.BTW_14_AND_30);
               },
             },
           },
@@ -79,16 +58,19 @@ const ChildAgeStep = () => {
             nativeInputProps: {
               onChange: () => {
                 setIsValidated(false);
-                setChildAge(CHILD_AGE.MORE_THAN_THIRTY);
+                setChildAge(CHILD_AGE.MORE_THAN_30);
               },
             },
           },
         ]}
       />
 
-      {isValidated && childAge === CHILD_AGE.LESS_THAN_SIX && failureCallOut}
-      {isValidated && childAge === CHILD_AGE.BTW_SIX_AND_THIRTY && <AllowancesStep isForChild />}
-      {isValidated && childAge === CHILD_AGE.MORE_THAN_THIRTY && failureCallOut}
+      {isValidated && childAge === CHILD_AGE.LESS_THAN_6 && <FullNegativeVerdictPanel isLean />}
+      {isValidated && childAge === CHILD_AGE.BETWEEN_6_13 && (
+        <AgeStep2 ageRange={AGE_RANGE.BETWEEN_6_13} key={childAge} />
+      )}
+      {isValidated && childAge === CHILD_AGE.BTW_14_AND_30 && <AllowancesStep />}
+      {isValidated && childAge === CHILD_AGE.MORE_THAN_30 && <FullNegativeVerdictPanel isLean />}
     </>
   );
 };
