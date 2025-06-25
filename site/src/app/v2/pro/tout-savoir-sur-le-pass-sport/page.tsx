@@ -60,14 +60,21 @@ export default function ToutSavoirSurLePassSport() {
                     (ARS) ;
                   </li>
                   <li>
-                    Jeunes en situation de handicap jusqu’à 30 ans (6 à 19 ans AEEH, 16 à 30 ans
-                    AAH) ;
+                    Jeunes en situation de handicap jusqu’à 30 ans (6 à 19 ans{' '}
+                    <abbr title="Allocation d’Education de l’Enfant Handicapé">AEEH</abbr>, 16 à 30
+                    ans <abbr title="Allocation aux Adultes Handicapés">AAH</abbr>) ;
                   </li>
                   <li>
-                    Etudiants boursiers et bénéficiaires d’une aide annuelle du CROUS de moins de 28
-                    ans.
+                    Étudiants boursiers ou bénéficiaires d’une aide annuelle du CROUS de moins de 28
+                    ans, étudiants percevant une bourse régionale pour les formations sanitaires et
+                    sociales pour l’année universitaire 2025- 2026.
                   </li>
                 </ul>
+
+                <p className="fr-mb-3w display--block">
+                  Pour augmenter l’effet incitatif de cette aide, son montant passe de 50 à 70
+                  euros.
+                </p>
 
                 <p className="fr-mb-3w display--block">
                   Le type d’établissements éligibles demeure inchangé. Pour rappel, le pass Sport
@@ -83,10 +90,17 @@ export default function ToutSavoirSurLePassSport() {
                   du mois d’août. Les parents des bénéficiaires du pass Sport et les jeunes
                   concernés recevront dans la seconde quinzaine d’août leur code unique, par voie
                   électronique, à présenter dès leur inscription dans la structure sportive de leur
-                  choix. Les modalités seront précisées dans les prochaines semaines.
+                  choix.
                 </p>
 
-                <p>Plus d’informations vous seront bientôt communiquées.</p>
+                <p>
+                  <a
+                    href="https://www.sports.gouv.fr/le-pass-sport-reconduit-pour-la-saison-2025-2026-9862"
+                    target="_blank"
+                  >
+                    Lire le communiqué de presse
+                  </a>
+                </p>
               </div>
             </CustomHighlight>
             {/*<p>*/}
