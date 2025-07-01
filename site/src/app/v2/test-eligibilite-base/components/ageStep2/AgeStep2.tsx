@@ -59,7 +59,8 @@ const AgeStep2 = ({ ageRange, isForMySelf = false }: AgeStep2Props) => {
             (y compris l’aide annuelle), attribuée avant le 15 octobre 2025 ;
           </li>
           <li className={`fr-mb-0w ${rootStyles['text--medium']}`}>
-            Moins de 28 ans et bourse régionale pour une formation sanitaire ou sociale.
+            Moins de 28 ans et bourse régionale pour une formation sanitaire ou sociale, attribuée
+            avant le 15 octobre 2025.
           </li>
         </ul>
       </div>
@@ -125,7 +126,7 @@ const AgeStep2 = ({ ageRange, isForMySelf = false }: AgeStep2Props) => {
           <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
             Il vous permettra de déduire {PASS_SPORT_AMOUNT} euros sur l&apos;inscription prise
             entre le 1er septembre et le 31 décembre 2025, parmi plus de 59 000 clubs, associations
-            sportives et salles de sport partenaire.
+            sportives et salles de sport partenaires.
           </p>
         </VerdictPanel>
       )}

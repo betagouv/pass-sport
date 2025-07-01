@@ -83,7 +83,7 @@ const AeehStep = ({ ageRange }: Props) => {
           <p className={cn('fr-text--lg', rootStyles['text--medium'], rootStyles['text--black'])}>
             Il vous permettra de déduire {PASS_SPORT_AMOUNT} euros sur l&apos;inscription prise
             entre le 1er septembre et le 31 décembre 2025, parmi plus de 59 000 clubs, associations
-            sportives et salles de sport partenaire.
+            sportives et salles de sport partenaires.
           </p>
         </VerdictPanel>
       )}
