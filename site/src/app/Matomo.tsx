@@ -7,17 +7,15 @@ export default function Matomo() {
   const isInitialLoad = useRef(true);
 
   const transformQrCodeUrl = (): string => {
-    const { pathname } = window.location;
-
-    let updatedPathName = pathname;
+    const { pathname, href } = window.location;
     let regex = /\/code\/scan.*/;
     const urlMatchRegex = regex.test(pathname);
 
     if (urlMatchRegex) {
-      updatedPathName = pathname.replace(regex, `/code/scan`);
+      return pathname.replace(regex, `/code/scan`);
     }
 
-    return updatedPathName;
+    return href;
   };
 
   // Initialize matomo. init() will also send the current page viewed to matomo server
