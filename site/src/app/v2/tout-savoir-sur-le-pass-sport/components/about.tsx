@@ -80,15 +80,6 @@ export default function About() {
                     Lire le communiqué de presse
                   </a>
                 </p>
-
-                <p>
-                  <a
-                    href="https://www.sports.gouv.fr/le-pass-sport-reconduit-pour-la-saison-2025-2026-9862"
-                    target="_blank"
-                  >
-                    Lire le communiqué de presse
-                  </a>
-                </p>
               </div>
             </CustomHighlight>
           </div>
