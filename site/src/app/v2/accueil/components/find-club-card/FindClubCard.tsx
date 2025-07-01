@@ -16,7 +16,7 @@ const FindClubCard = () => {
           <div className="fr-card__content ">
             <h2 className={`fr-card__title ${styles.title} fr-h4`}>Trouver un club partenaire</h2>
             <p className="fr-card__desc">
-              Choisis le club de ton choix parmi plus de 59&nbsp;000 clubs et salles de sport
+              Choisis le club de ton choix parmi plus de 85&nbsp;000 clubs et salles de sport
               partout en France !
             </p>
           </div>
