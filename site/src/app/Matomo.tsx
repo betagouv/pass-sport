@@ -6,16 +6,22 @@ import { useEffect, useRef, useState } from 'react';
 export default function Matomo() {
   const isInitialLoad = useRef(true);
 
-  const transformQrCodeUrl = (): string => {
+  const transformQrCodeUrl = (): { isCustom: boolean; url: string } => {
     const { pathname, href } = window.location;
     let regex = /\/code\/scan.*/;
     const urlMatchRegex = regex.test(pathname);
 
     if (urlMatchRegex) {
-      return pathname.replace(regex, `/code/scan`);
+      return {
+        isCustom: true,
+        url: pathname.replace(regex, `/code/scan`),
+      };
     }
 
-    return href;
+    return {
+      isCustom: false,
+      url: href,
+    };
   };
 
   // Initialize matomo. init() will also send the current page viewed to matomo server
@@ -24,7 +30,11 @@ export default function Matomo() {
       url: process.env.NEXT_PUBLIC_MATOMO_URL || '',
       siteId: process.env.NEXT_PUBLIC_MATOMO_SITE_ID || '',
       onInitialization: () => {
-        push(['setCustomUrl', transformQrCodeUrl()]);
+        const { isCustom, url } = transformQrCodeUrl();
+
+        if (isCustom) {
+          push(['setCustomUrl', url]);
+        }
       },
       disableCookies: true,
     });
@@ -42,11 +52,14 @@ export default function Matomo() {
         push(['setReferrerUrl', previousURL]);
       }
 
-      let updatedPathName = transformQrCodeUrl();
-      push(['setCustomUrl', updatedPathName]);
-      push(['trackPageView']);
+      const { isCustom, url } = transformQrCodeUrl();
 
-      setPreviousURL(updatedPathName);
+      if (isCustom) {
+        push(['setCustomUrl', url]);
+      }
+
+      push(['trackPageView']);
+      setPreviousURL(url);
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
