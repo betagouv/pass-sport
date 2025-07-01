@@ -17,7 +17,7 @@ export const getAnHourFromNow = () => {
 
 export const isPasSportClosed = () => {
   const currentDate = new Date();
-  const cutOffDate = new Date(2025, 0, 1);
+  const cutOffDate = new Date(2030, 0, 1);
 
   return currentDate >= cutOffDate;
 };

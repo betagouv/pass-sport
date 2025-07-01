@@ -1,3 +1,5 @@
+import { TOTAL_CLUBS_PARTNERS } from '@/app/constants/wordings';
+
 export interface CalloutContent {
   id: number;
   title: string;
@@ -12,7 +14,7 @@ export const calloutContents = [
   },
   {
     id: 2,
-    title: '59 392 ',
+    title: TOTAL_CLUBS_PARTNERS,
     description: 'Clubs labélisés',
   },
   {

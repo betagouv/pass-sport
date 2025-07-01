@@ -43,7 +43,7 @@ const ForWhoStep = () => {
           name="forWhoStep"
           options={[
             {
-              label: 'Pour moi même',
+              label: 'Pour moi-même',
               nativeInputProps: {
                 onChange: () => {
                   setIsForMyself(true);
@@ -52,7 +52,7 @@ const ForWhoStep = () => {
               },
             },
             {
-              label: 'Pour mon enfant ou petit enfant',
+              label: 'Pour mon enfant ou mon petit enfant',
               nativeInputProps: {
                 onChange: () => {
                   setIsForMyself(false);
