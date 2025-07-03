@@ -1,10 +1,10 @@
 'use client';
 
-import { startReactDsfr } from '@codegouvfr/react-dsfr/next-appdir';
-import { defaultColorScheme } from './defaultColorScheme';
+import { defaultColorScheme } from '../dsfr/defaultColorScheme';
 import Link from 'next/link';
+import { startReactDsfr } from '@codegouvfr/react-dsfr/spa';
 
-declare module '@codegouvfr/react-dsfr/next-appdir' {
+declare module '@codegouvfr/react-dsfr/next-app-router' {
   interface RegisterLink {
     Link: typeof Link;
   }
@@ -13,7 +13,6 @@ declare module '@codegouvfr/react-dsfr/next-appdir' {
 startReactDsfr({
   defaultColorScheme,
   Link,
-  doCheckNonce: true,
   trustedTypesPolicyName: 'react-dsfr',
 });
 
