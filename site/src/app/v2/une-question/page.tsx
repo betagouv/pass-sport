@@ -36,7 +36,7 @@ export default async function Questions() {
         <ContactSection />
       </main>
 
-      <EligibilityTestBanner />
+      {/*<EligibilityTestBanner />*/}
       <SocialMediaPanel />
     </>
   );
