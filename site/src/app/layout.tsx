@@ -1,9 +1,4 @@
-import { DsfrHead } from '@codegouvfr/react-dsfr/next-appdir/DsfrHead';
-import { DsfrProvider } from '@codegouvfr/react-dsfr/next-appdir/DsfrProvider';
-import { getHtmlAttributes } from '@codegouvfr/react-dsfr/next-appdir/getHtmlAttributes';
-import Link from 'next/link';
 import { StartDsfr } from './StartDsfr';
-import { defaultColorScheme } from './defaultColorScheme';
 import './globals.scss';
 
 import PassSportBreadcrumb from '@/app/components/pass-sport-breadcrumb/PassSportBreadCrumb';
@@ -15,6 +10,8 @@ import Matomo from './Matomo';
 import PassSportFooter from './components/pass-sport-footer/PassSportFooter';
 import PassSportNavigation from './components/pass-sport-navigation/PassSportNavigation';
 import TarteAuCitron from './components/tarte-au-citron/tarte-au-citron';
+import { DsfrHead, getHtmlAttributes } from '@/dsfr/DsfrHead';
+import { DsfrProvider } from '@/dsfr/DsfrProvider';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -31,14 +28,10 @@ export default function RootLayout({
   const nonce = headers().get('X-Nonce') ?? undefined;
 
   return (
-    <html {...getHtmlAttributes({ defaultColorScheme, lang })}>
+    <html {...getHtmlAttributes({ lang })}>
       <head>
+        <DsfrHead nonce={nonce} />
         <StartDsfr />
-        <DsfrHead
-          Link={Link}
-          nonce={nonce}
-          preloadFonts={['Marianne-Regular', 'Marianne-Medium', 'Marianne-Bold']}
-        />
         <link
           rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
