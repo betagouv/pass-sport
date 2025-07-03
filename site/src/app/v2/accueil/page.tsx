@@ -1,8 +1,5 @@
 import styles from './styles.module.scss';
-import Callouts from './components/callout/Callout';
 import SocialMediaPanel from '../../components/social-media-panel/SocialMediaPanel';
-import FindClubCard from './components/find-club-card/FindClubCard';
-import Hero from './components/hero/Hero';
 import cn from 'classnames';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
@@ -68,7 +65,10 @@ export default async function Accueil() {
               sein d’un environnement structurant, éducatif et sécurisé.
             </p>
 
-            {/*<ContentSection categoriesWithArticles={categoriesWithArticles} />*/}
+            {/*<ContentSection*/}
+            {/*  categoriesWithArticles={categoriesWithArticles}*/}
+            {/*  isFromMainPage={false}*/}
+            {/*/>*/}
           </div>
         </section>
 
@@ -82,9 +82,6 @@ export default async function Accueil() {
             >
               Trouver une structure
             </Link>
-            {/*<button className="fr-btn fr-btn--tertiary fr-btn--icon-right fr-icon-arrow-right-line">*/}
-            {/*  Trouver une structure*/}
-            {/*</button>*/}
           </div>
 
           <div>
@@ -123,7 +120,10 @@ export default async function Accueil() {
               l’inscription qui vous sera intégralement remboursée par l’État.
             </p>
 
-            {/*<ContentSection categoriesWithArticles={categoriesWithArticlesPro} />*/}
+            {/*<ContentSection*/}
+            {/*  categoriesWithArticles={categoriesWithArticlesPro}*/}
+            {/*  isFromMainPage={false}*/}
+            {/*/>*/}
           </div>
         </section>
 
