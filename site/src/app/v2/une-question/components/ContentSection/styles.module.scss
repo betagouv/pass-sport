@@ -2,11 +2,12 @@
 
 .faq {
   position: relative;
-  top: -100px;
+  //top: -100px;
   background-color: var(--color-white);
   display: flex;
   max-width: $layout-max-width;
-  margin: 24px 24px -80px;
+  //margin: 24px 24px -80px;
+  margin: 48px 0;
   padding-top: 24px;
   flex-direction: column;
 
@@ -22,8 +23,8 @@
   }
 
   @media (min-width: $md) {
-    top: -60px;
-    margin: 0 auto -64px;
+    //top: -60px;
+    //margin: 0 auto -64px;
   }
 
   &__markdown {

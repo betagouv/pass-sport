@@ -39,10 +39,8 @@ export default function ContentSection({ categoriesWithArticles }: Props) {
   return (
     <div className={styles['faq']}>
       {categoriesWithArticles.map((category: CategoryWithArticles) => (
-        <section key={category.id} className="fr-mb-8w">
-          <h2
-            className={cn('fr-h3', 'fr-m-0', 'fr-px-4w', 'fr-pb-2w', styles['faq__article-title'])}
-          >
+        <section key={category.id} className="fr-mb-5w">
+          <h2 className={cn('fr-h3', 'fr-m-0', 'fr-pb-2w', styles['faq__article-title'])}>
             {category.name}
           </h2>
 
