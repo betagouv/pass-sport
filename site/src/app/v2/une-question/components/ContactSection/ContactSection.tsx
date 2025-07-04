@@ -55,7 +55,7 @@ const ContactSection: React.FC<Props> = ({ isProVersion }) => {
         )}
       </contactModal.Component>
 
-      <div className="fr-mb-4w">
+      <div className="fr-mb-4w fr-px-2w">
         <h2 className="fr-mb-2w fr-h3">Vous ne trouvez pas de réponse satisfaisante.</h2>
         <p className="fr-mb-2w">
           Contactez-nous directement par e-mail pour que nous puissions trouver une solution.

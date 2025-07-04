@@ -20,7 +20,7 @@
     "scripts:send-in-mass-march-2025": "node -r dotenv/config ./scripts/send-in-mass-march-2025.mjs dotenv_config_path=./.env.local"
   },
   "dependencies": {
-    "@codegouvfr/react-dsfr": "^1.13.6",
+    "@codegouvfr/react-dsfr": "^1.25.3",
     "@sentry/nextjs": "^8.49.0",
     "@socialgouv/matomo-next": "^1.9.2",
     "@uidotdev/usehooks": "^2.4.1",
