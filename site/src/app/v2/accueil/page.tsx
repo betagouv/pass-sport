@@ -10,6 +10,7 @@ import wheelchairBasketball from '@/images/homepage/wheelchair-basketball.png';
 import Link from 'next/link';
 import { getCategoriesWithArticles } from '@/app/v2/une-question/server-agent';
 import ContentSection from '@/app/v2/une-question/components/ContentSection/ContentSection';
+import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -45,6 +46,14 @@ export default async function Accueil() {
                 de <span className={styles['amount']}>70€</span>
               </p>
               <p>dans les clubs partenaires</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className={styles['eligibility-section']}>
+            <div className="fr-container fr-grid-row fr-grid-row--center">
+              <SimplifiedEligibilityTest />
             </div>
           </div>
         </section>
@@ -159,20 +168,22 @@ export default async function Accueil() {
         {/*</section>*/}
         <section className={styles.indicators}>
           <div className="fr-container">
-            <p>
-              <span className={styles['indicators__main-number']}>1 649</span>
-              <span className={styles['indicators__description']}>pass Sports activés</span>
-            </p>
+            <div className={styles['indicators__content']}>
+              <p>
+                <span className={styles['indicators__main-number']}>1 649</span>
+                <span className={styles['indicators__description']}>pass Sports activés</span>
+              </p>
 
-            <p>
-              <span className={styles['indicators__main-number']}>85 000</span>
-              <span className={styles['indicators__description']}>clubs partenaires</span>
-            </p>
+              <p>
+                <span className={styles['indicators__main-number']}>85 000</span>
+                <span className={styles['indicators__description']}>clubs partenaires</span>
+              </p>
 
-            <p>
-              <span className={styles['indicators__main-number']}>4.6/5</span>
-              <span className={styles['indicators__description']}>évaluation du dispositif</span>
-            </p>
+              <p>
+                <span className={styles['indicators__main-number']}>4.6/5</span>
+                <span className={styles['indicators__description']}>évaluation du dispositif</span>
+              </p>
+            </div>
           </div>
         </section>
       </main>

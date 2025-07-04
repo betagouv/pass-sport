@@ -1,0 +1,34 @@
+@import '../../sassVariables.module.scss';
+.eligibility-test {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background-color: white;
+  padding: 40px;
+  max-width: 800px;
+
+  @media screen and (max-width: $lg) {
+    padding: 24px;
+  }
+
+  h2 {
+    white-space: break-spaces;
+  }
+
+  &__fields {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    margin-top: 24px;
+
+    @media screen and (max-width: $lg) {
+      flex-direction: column;
+    }
+
+    button {
+      align-self: end;
+      margin-bottom: 24px;
+    }
+  }
+}

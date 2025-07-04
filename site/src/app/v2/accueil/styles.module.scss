@@ -3,7 +3,6 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: 40px;
 }
 
 .top-section {
@@ -152,6 +151,20 @@
   background-color: var(--orange-terre-battue-main-645);
   padding: 100px 120px;
 
+  @media screen and (max-width: $lg) {
+    padding: 50px 24px;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: row;
+    gap: 80px;
+
+    @media screen and (max-width: $lg) {
+      flex-direction: column !important;
+    }
+  }
+
   &__main-number {
     font-size: 48px;
     font-weight: 800;
@@ -178,10 +191,23 @@
   }
 }
 
+.eligibility-section {
+  background-color: var(--blue-france-925-125);
+  padding: 100px;
+
+  @media screen and (max-width: $lg) {
+    padding: 24px;
+  }
+}
+
 .benef-faq {
   justify-self: center;
   width: 85%;
-  padding: 60px 40px 0 40px;
+  padding: 60px 40px;
+
+  @media screen and (max-width: $lg) {
+    padding: 24px;
+  }
 }
 
 .blue-background {
