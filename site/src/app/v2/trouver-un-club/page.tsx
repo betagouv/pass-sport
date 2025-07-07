@@ -34,7 +34,7 @@ const TrouverUnClub = async () => {
         </Suspense>
       </main>
 
-      <EligibilityTestBanner />
+      {/*<EligibilityTestBanner />*/}
       <SocialMediaPanel />
     </>
   );

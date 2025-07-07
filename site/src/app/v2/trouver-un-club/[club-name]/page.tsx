@@ -23,7 +23,7 @@ const ClubPage = ({ params }: { params: { 'club-name': string } }) => {
         <ClubDetails clubName={clubName} />
       </main>
 
-      <EligibilityTestBanner />
+      {/*<EligibilityTestBanner />*/}
       <SocialMediaPanel />
     </>
   );

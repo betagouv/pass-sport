@@ -7,8 +7,8 @@ interface Props {
 
 const ClubCount: React.FC<Props> = ({ totalClubCount }) => {
   const buildContent = () => {
-    if (totalClubCount > 80000) {
-      return 'Parmi plus de 80 000 clubs référencés';
+    if (totalClubCount > 85000) {
+      return 'Parmi plus de 85 000 clubs référencés';
     }
 
     return (
@@ -16,7 +16,7 @@ const ClubCount: React.FC<Props> = ({ totalClubCount }) => {
         <span>
           {totalClubCount} {totalClubCount === 1 ? 'club' : 'clubs'} près de chez vous
         </span>{' '}
-        sur 80 000 clubs référencés
+        sur 85 000 clubs référencés
       </>
     );
   };
