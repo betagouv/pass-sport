@@ -32,7 +32,7 @@ export default async function Questions() {
             container: styles['page-header'],
           }}
         />
-        <ContentSection categoriesWithArticles={categoriesWithArticles} />
+        <ContentSection categoriesWithArticles={categoriesWithArticles} isFromMainPage />
         <ContactSection />
       </main>
 

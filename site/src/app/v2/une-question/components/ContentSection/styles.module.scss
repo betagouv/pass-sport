@@ -2,16 +2,26 @@
 
 .faq {
   position: relative;
-  top: -100px;
   background-color: var(--color-white);
   display: flex;
   max-width: $layout-max-width;
-  margin: 24px 24px -80px;
+  margin: 48px 0;
   padding-top: 24px;
   flex-direction: column;
 
+  &--from-main-page {
+    top: -100px;
+    margin: 24px 24px -80px;
+
+    @media (min-width: $md) {
+      top: -60px;
+      margin: 0 auto -64px;
+    }
+  }
+
   &__article-title {
     color: var(--text-action-high-blue-france);
+    padding-left: 16px;
   }
 
   &__accordion-expanded-container {
@@ -19,11 +29,6 @@
     flex-direction:column;
     gap: 40px;
     background-color: #EEE;
-  }
-
-  @media (min-width: $md) {
-    top: -60px;
-    margin: 0 auto -64px;
   }
 
   &__markdown {

@@ -32,7 +32,7 @@ export default async function Questions() {
           }}
           isProVersion
         />
-        <ContentSection categoriesWithArticles={categoriesWithArticles} />
+        <ContentSection categoriesWithArticles={categoriesWithArticles} isFromMainPage />
       </main>
 
       <ContactSection isProVersion />
