@@ -1,29 +1,231 @@
 @import '../../sassVariables.module.scss';
 
-.blue-background {
-  background-color: var(--artwork-major-blue-france);
+.main {
+  display: flex;
+  flex-direction: column;
 }
 
-.tiles-section {
-  max-width: 894px;
-}
+.top-section {
+  &__wrapper {
+    position: relative;
+    background-color: var(--blue-france-sun-113-625);
+    padding: 0 120px;
+    display: flex;
+    justify-content: center;
 
-.video-section {
-  max-width: 1200px;
-}
-
-.callout-section {
-  background-color: var(--artwork-major-blue-france);
-
-  .sizer {
-    max-width: 989px;
-    padding-top: 24px;
-    padding-bottom: 48px;
-    @media (min-width: $lg) {
-      padding-top: 0px;
-      padding-bottom: 0px;
-      position: relative;
-      top: 48px;
+    @media screen and (max-width: $lg) {
+      padding: 0 24px;
     }
+
+    &-image {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+
+      @media screen and (max-width: $lg) {
+        height: 100%;
+      }
+    }
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 398px;
+    position: relative;
+
+    @media screen and (max-width: $lg) {
+      flex-direction: column;
+      gap: 60px;
+      height: 100%;
+      padding: 40px;
+    }
+
+    button {
+      background-color: white;
+    }
+
+    div {
+      text-align: center;
+    }
+
+    div:nth-child(1) {
+      text-align: left;
+      flex: 3;
+
+      @media screen and (max-width: $lg) {
+        text-align: center;
+      }
+
+      h1, h2 {
+        line-height: 140%;
+        color: white;
+      }
+
+      h1 {
+        font-size: 40px;
+      }
+    }
+
+    div:nth-child(2) {
+      flex: 4;
+
+      p {
+        font-size: 36px;
+        line-height: 140%;
+        color: white;
+        font-weight: 800;
+
+        .amount {
+          font-size: 96px;
+          font-weight: 800;
+          color: var(--yellow-moutarde-850-200);
+        }
+      }
+    }
+  }
+}
+
+.first-middle-section, .second-middle-section {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  align-items: center;
+
+  @media screen and (max-width: $lg) {
+    flex-direction: column-reverse;
+    height: auto;
+  }
+
+  h1 {
+    color: white;
+  }
+
+  &__description {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 80px;
+    color: white;
+    justify-content: center;
+    gap: 30px;
+    background-color: var(--blue-france-sun-113-625);
+    height: 362px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+
+    @media screen and (max-width: $lg) {
+      width: 100%;
+      border-radius: 0 0 8px 8px;
+      padding: 24px;
+      height: auto;
+      justify-content: initial;
+    }
+  }
+
+  &__image {
+    flex: 1;
+    border-radius: 8px;
+
+    @media screen and (max-width: $lg) {
+      width: 100%;
+      height: auto;
+      border-radius: 8px 8px 0 0;
+    }
+  }
+}
+
+.first-middle-section {
+  a {
+    background-color: white;
+  }
+}
+
+.second-middle-section {
+  flex-direction: row-reverse;
+  margin-bottom: 80px;
+
+  @media screen and (max-width: $lg) {
+    flex-direction: column-reverse;
+  }
+
+  h1 {
+    color: black;
+  }
+
+  &__description {
+    background-color: var(--yellow-tournesol-850-200);
+    color: black;
+    border-radius: 0 8px 8px 0;
+
+    @media screen and (max-width: $lg) {
+      border-radius: 0 0 8px 8px;
+    }
+  }
+}
+
+.indicators {
+  background-color: var(--orange-terre-battue-main-645);
+  padding: 100px 120px;
+
+  @media screen and (max-width: $lg) {
+    padding: 50px 24px;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: row;
+    gap: 80px;
+
+    @media screen and (max-width: $lg) {
+      flex-direction: column !important;
+    }
+  }
+
+  &__main-number {
+    font-size: 48px;
+    font-weight: 800;
+  }
+
+  &__description {
+    font-size: 24px;
+    font-weight: 700;
+    display: block;
+  }
+
+  span {
+    color: white;
+    line-height: 140%;
+  }
+
+  & > div {
+    display: flex;
+    flex-direction: row;
+    gap: 80px;
+    justify-content: center;
+    text-align: center;
+    color: white;
+  }
+}
+
+.eligibility-section {
+  background-color: var(--blue-france-925-125);
+  padding: 100px;
+
+  @media screen and (max-width: $lg) {
+    padding: 24px;
+  }
+}
+
+.benef-faq {
+  justify-self: center;
+  width: 85%;
+  padding: 100px 40px;
+
+  @media screen and (max-width: $lg) {
+    padding: 40px 8px;
+    width: 100%;
   }
 }
