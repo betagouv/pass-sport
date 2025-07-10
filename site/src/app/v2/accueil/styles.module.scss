@@ -1,5 +1,26 @@
 @import '../../sassVariables.module.scss';
 
+.eligibility-test {
+  &__container {
+    background-color: var(--artwork-major-blue-france);
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  &__content {
+    background-color: var(--blue-france-950-100);
+    padding: 40px;
+    border-radius: 8px;
+    margin: 40px 0 16px 0;
+    width: 60%;
+
+    @media screen and (max-width: $xl) {
+      width: 100%;
+    }
+  }
+}
+
 .blue-background {
   background-color: var(--artwork-major-blue-france);
 }
