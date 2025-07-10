@@ -12,6 +12,12 @@
   &--title-grey {
     color: var(--text-title-grey);
   }
+
+  &-align {
+    &--center {
+      text-align: center;
+    }
+  }
 }
 
 .cursor {
