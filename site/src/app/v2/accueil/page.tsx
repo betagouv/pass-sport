@@ -9,6 +9,7 @@ import Hero from './components/hero/Hero';
 import cn from 'classnames';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -23,22 +24,13 @@ export default function Accueil() {
           <Hero />
         </section>
 
+        <section className={cn(styles['eligibility-test__container'])}>
+          <div className={cn(styles['eligibility-test__content'])}>
+            <SimplifiedEligibilityTest buttonVariant="secondary" />
+          </div>
+        </section>
+
         <div className={cn('fr-px-2w', 'fr-pt-8w', styles['blue-background'])}>
-          {/* todo: to re-enable later */}
-          {/*<section className={cn('fr-container', 'fr-px-0', styles['tiles-section'])}>*/}
-          {/*  <div className="fr-grid-row fr-grid-row--gutters">*/}
-          {/*    {presentationTiles.map((tile) => (*/}
-          {/*      <div key={tile.id} className="fr-col-12 fr-col-lg-4">*/}
-          {/*        <PresentationTile {...tile} />*/}
-          {/*      </div>*/}
-          {/*    ))}*/}
-          {/*  </div>*/}
-          {/*</section>*/}
-
-          {/*<section className={cn('fr-mx-auto', 'fr-pt-6w', styles['video-section'])}>*/}
-          {/*  <Video videoFullUrl="https://vimeo.com/956531127" />*/}
-          {/*</section>*/}
-
           <section className="fr-pt-6w">
             <FindClubCard />
           </section>
