@@ -6,7 +6,6 @@ import { Breadcrumb } from '@codegouvfr/react-dsfr/Breadcrumb';
 import { usePathname } from 'next/navigation';
 import cn from 'classnames';
 import { useIsNotFound } from '@/app/hooks/use-is-not-found';
-import { isPasSportClosed } from '@/utils/date';
 
 export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/une-question': 'Une question ?',
@@ -19,11 +18,11 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/accessibilite': 'Accessibilité',
   '/v2/budget': 'Budget',
   '/v2/test-eligibilite-base': 'Puis-je bénéficier du pass Sport ?',
+  '/v2/jeune-et-parent': 'Jeune et parent',
 };
 
 export default function PassSportBreadcrumbStandard() {
   const paths = usePathname();
-  const passSportClosed = isPasSportClosed();
 
   const internalRoutes = [
     '/',

@@ -6,8 +6,13 @@
   --bullet-text-color: initial;
   --know-more-bg-color: initial;
   --know-more-title-color: initial;
+  --max-width: 470px;
 
-  max-width: 470px;
+  &--full-width {
+    max-width: 100%;
+  }
+
+  max-width: var(--max-width);
 
   &--purple {
     --main-color: var(--purple-glycine-main-494);
@@ -18,7 +23,6 @@
   }
 
   &--yellow {
-    //--main-color: var(--yellow-moutarde-main-679);
     --main-color: var(--yellow-moutarde-sun-348-moon-860);
     --bullet-bg-color: var(--yellow-moutarde-950-100);
     --bullet-text-color: var(--yellow-moutarde-sun-348-moon-860);
@@ -69,14 +73,6 @@
   }
 
   .knowMore {
-    padding: 12px;
-    background-color: var(--know-more-bg-color);
     margin-top: auto;
-    border-radius: 8px;
-
-    &__title {
-      color: var(--know-more-title-color);
-      margin: 0;
-    }
   }
 }

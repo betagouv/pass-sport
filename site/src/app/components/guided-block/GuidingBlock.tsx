@@ -1,9 +1,10 @@
 import styles from './styles.module.scss';
 import Link, { LinkProps } from 'next/link';
 import cn from 'classnames';
+import KnowMore from '@/app/components/know-more/KnowMore';
 
 export type GuidingBlockProps = {
-  title: string;
+  title?: string;
   description: string;
   variant: 'purple' | 'yellow';
   points: {
@@ -14,6 +15,7 @@ export type GuidingBlockProps = {
     title: string;
     description: string;
   };
+  fullWidth?: boolean;
 };
 
 export default function GuidingBlock({
@@ -22,11 +24,18 @@ export default function GuidingBlock({
   points,
   knowMore,
   variant,
+  fullWidth = false,
 }: GuidingBlockProps) {
   return (
-    <section className={cn(styles.container, styles[`container--${variant}`])}>
+    <section
+      className={cn(
+        styles.container,
+        styles[`container--${variant}`],
+        fullWidth ? styles['container--full-width'] : null,
+      )}
+    >
       <header>
-        <h1 className={cn('fr-h4', styles.title)}>{title}</h1>
+        {title && <h1 className={cn('fr-h4', styles.title)}>{title}</h1>}
         <p className={styles.description}>{description}</p>
       </header>
 
@@ -34,7 +43,7 @@ export default function GuidingBlock({
         <ul className={styles.list}>
           {points.map((point, index, i) => (
             <li className={styles['list__bullet']} key={point.title}>
-              <span className={styles['list__bullet-index']}>{index}</span>
+              <span className={styles['list__bullet-index']}>{index + 1}</span>
               <Link
                 href={point.linkProps.href}
                 className="fr-link--icon-right fr-icon-arrow-right-line"
@@ -47,8 +56,7 @@ export default function GuidingBlock({
       )}
 
       <footer className={styles.knowMore}>
-        <h2 className={cn('fr-text--md', styles['knowMore__title'])}>{knowMore?.title}</h2>
-        <p className="fr-text--md fr-mb-0">{knowMore?.description}</p>
+        <KnowMore knowMore={knowMore} variant={variant}></KnowMore>
       </footer>
     </section>
   );

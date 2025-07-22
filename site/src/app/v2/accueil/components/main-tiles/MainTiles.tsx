@@ -10,12 +10,12 @@ export default function MainTiles({ titleAs }: MainTilesProps) {
     <section className={styles.tiles}>
       <Tile
         title="Je suis un particulier"
-        desc="Jeune ou parent"
+        desc="Jeune et parent"
         orientation="horizontal"
         imageUrl="/images/homepage/avatar.svg"
         imageAlt=""
         linkProps={{
-          href: '/v2/jeune-ou-parent',
+          href: '/v2/jeune-et-parent',
         }}
         titleAs={titleAs}
       />

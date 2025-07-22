@@ -10,8 +10,6 @@ import { useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
-import Notice from '@codegouvfr/react-dsfr/Notice';
-import EndPassSportNotice from '@/app/components/end-pass-sport-notice/EndPassSportNotice';
 
 export default function PassSportNavigation() {
   const paths: string | null = usePathname();
@@ -72,7 +70,6 @@ export default function PassSportNavigation() {
           text: item.text,
         }))}
       />
-      {/*<EndPassSportNotice />*/}
     </div>
   );
 }

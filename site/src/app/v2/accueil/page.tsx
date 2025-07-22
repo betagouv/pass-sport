@@ -11,6 +11,8 @@ import Link from 'next/link';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import GuidingBlock, { GuidingBlockProps } from '@/app/components/guided-block/GuidingBlock';
 import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
+import { JEUNE_PARENT_PAGE_ANCHORS } from '@/app/v2/jeune-et-parent/constants/anchors';
+import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structure/constants/anchors';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -31,25 +33,25 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
       {
         title: 'Testez votre éligibilité en 1 min',
         linkProps: {
-          href: '/v2/jeune-ou-parent#',
+          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
         },
       },
       {
         title: 'Choisissez un club partenaire',
         linkProps: {
-          href: '/v2/jeune-ou-parent#',
+          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.FIND_CLUB}`,
         },
       },
       {
         title: 'Recevez ou demandez votre pass Sport',
         linkProps: {
-          href: '/v2/jeune-ou-parent#',
+          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.RECEIVE_CODE}`,
         },
       },
       {
         title: 'Activez votre code',
         linkProps: {
-          href: '/v2/jeune-ou-parent#',
+          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.ACTIVATE_CODE}`,
         },
       },
     ],
@@ -67,31 +69,31 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
       {
         title: 'Devenez partenaire du pass Sport',
         linkProps: {
-          href: '/v2/structure#',
+          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
         },
       },
       {
         title: 'Téléchargez votre kit de communication',
         linkProps: {
-          href: '/v2/structure#',
+          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
         },
       },
       {
         title: 'Créez votre Compte Asso',
         linkProps: {
-          href: '/v2/structure#',
+          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
         },
       },
       {
         title: 'Saisissez les codes des bénéficiaires',
         linkProps: {
-          href: '/v2/structure#',
+          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
         },
       },
       {
         title: 'Obtenez le remboursement de l’inscription',
         linkProps: {
-          href: '/v2/structure#',
+          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
         },
       },
     ],

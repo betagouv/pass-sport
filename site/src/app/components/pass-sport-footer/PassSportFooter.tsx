@@ -265,32 +265,28 @@ export default function PassSportFooter() {
         },
       ],
     },
-    {
-      links: [
-        // ...((isProVersion
-        //   ? [
-        //       {
-        //         text: 'Ressources',
-        //         linkProps: {
-        //           href: '/v2/pro/ressources',
-        //         },
-        //       },
-        //     ]
-        //   : []) as [FooterProps.LinkList.Link] | []),
-        ...((shouldDisplayChatbot()
-          ? [
-              {
-                text: CHATBOT_EXTERNAL_URL_TITLE,
-                linkProps: {
-                  href: CHATBOT_EXTERNAL_URL,
-                  target: '_blank',
-                  title: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
-                },
-              },
-            ]
-          : []) as [FooterProps.LinkList.Link] | []),
-      ],
-    },
+    // {
+    //   links: [
+    //     {
+    //       text: isProVersion ? 'Je suis un particulier' : 'Je suis une structure partenaire',
+    //       linkProps: {
+    //         href: isProVersion ? '/v2/accueil' : '/v2/pro/accueil',
+    //       },
+    //     },
+    //     ...((shouldDisplayChatbot()
+    //       ? [
+    //           {
+    //             text: CHATBOT_EXTERNAL_URL_TITLE,
+    //             linkProps: {
+    //               href: CHATBOT_EXTERNAL_URL,
+    //               target: '_blank',
+    //               title: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
+    //             },
+    //           },
+    //         ]
+    //       : []) as [FooterProps.LinkList.Link] | []),
+    //   ],
+    // },
   ];
 
   const domains = ['legifrance.gouv.fr', 'info.gouv.fr', 'service-public.fr', 'data.gouv.fr'];

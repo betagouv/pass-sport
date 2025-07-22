@@ -22,16 +22,24 @@ export const navigationItemStandard: NavigationItem[] = [
     ),
   },
   {
-    link: '/v2/tout-savoir-sur-le-pass-sport',
-    text: (
-      <>
-        <div className={styles['menu-item-spacer']}>
-          <span aria-hidden />
-        </div>
-        Tout savoir sur le pass Sport
-      </>
-    ),
+    link: '/v2/jeune-et-parent',
+    text: 'Jeune et parent',
   },
+  {
+    link: '/v2/structure',
+    text: 'Structure',
+  },
+  // {
+  //   link: '/v2/tout-savoir-sur-le-pass-sport',
+  //   text: (
+  //     <>
+  //       <div className={styles['menu-item-spacer']}>
+  //         <span aria-hidden />
+  //       </div>
+  //       Tout savoir sur le pass Sport
+  //     </>
+  //   ),
+  // },
   {
     link: '/v2/trouver-un-club',
     text: 'Trouver un club partenaire',
