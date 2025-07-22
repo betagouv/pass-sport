@@ -8,18 +8,19 @@
 .top-section {
   &__wrapper {
     position: relative;
-    background-color: var(--blue-france-sun-113-625);
+    background-color: var(--orange-terre-battue-main-645);
     padding: 0 120px;
     display: flex;
     justify-content: center;
+    overflow: hidden;
 
     @media screen and (max-width: $lg) {
       padding: 0 24px;
     }
 
-    &-image {
+    &-left-image, &-right-image {
       position: absolute;
-      right: 0;
+      left: 0;
       top: 0;
       bottom: 0;
 
@@ -27,20 +28,41 @@
         height: 100%;
       }
     }
+
+    &-right-image {
+      right: 0;
+      left: initial;
+    }
   }
 
   &__content {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
-    height: 398px;
+    height: auto;
     position: relative;
+    padding: 80px;
+    gap: 80px;
 
     @media screen and (max-width: $lg) {
       flex-direction: column;
       gap: 60px;
       height: 100%;
       padding: 40px;
+    }
+
+    &-title {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-direction: column;
+      text-align: center;
+
+      h1{
+        color: white;
+        line-height: 48px;
+        font-weight: 800;
+      }
     }
 
     button {
@@ -50,57 +72,24 @@
     div {
       text-align: center;
     }
-
-    div:nth-child(1) {
-      text-align: left;
-      flex: 3;
-
-      @media screen and (max-width: $lg) {
-        text-align: center;
-      }
-
-      h1, h2 {
-        line-height: 140%;
-        color: white;
-      }
-
-      h1 {
-        font-size: 40px;
-      }
-    }
-
-    div:nth-child(2) {
-      flex: 4;
-
-      p {
-        font-size: 36px;
-        line-height: 140%;
-        color: white;
-        font-weight: 800;
-
-        .amount {
-          font-size: 96px;
-          font-weight: 800;
-          color: var(--yellow-moutarde-850-200);
-        }
-      }
-    }
   }
 }
 
-.first-middle-section, .second-middle-section {
+.handiguide-section {
   display: flex;
-  flex-direction: row;
   position: relative;
   align-items: center;
+  flex-direction: row-reverse;
+  margin-bottom: 80px;
+
 
   @media screen and (max-width: $lg) {
     flex-direction: column-reverse;
     height: auto;
   }
 
-  h1 {
-    color: white;
+  @media screen and (max-width: $lg) {
+    flex-direction: column-reverse;
   }
 
   &__description {
@@ -108,13 +97,12 @@
     flex: 1;
     flex-direction: column;
     padding: 80px;
-    color: white;
     justify-content: center;
     gap: 30px;
-    background-color: var(--blue-france-sun-113-625);
     height: 362px;
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
+    background-color: var(--blue-france-950-100);
+    color: black;
+    border-radius: 0 8px 8px 0;
 
     @media screen and (max-width: $lg) {
       width: 100%;
@@ -137,95 +125,49 @@
   }
 }
 
-.first-middle-section {
-  a {
-    background-color: white;
-  }
-}
-
-.second-middle-section {
-  flex-direction: row-reverse;
-  margin-bottom: 80px;
-
-  @media screen and (max-width: $lg) {
-    flex-direction: column-reverse;
-  }
-
-  h1 {
-    color: black;
-  }
-
-  &__description {
-    background-color: var(--yellow-tournesol-850-200);
-    color: black;
-    border-radius: 0 8px 8px 0;
-
-    @media screen and (max-width: $lg) {
-      border-radius: 0 0 8px 8px;
-    }
-  }
-}
-
-.indicators {
-  background-color: var(--orange-terre-battue-main-645);
-  padding: 100px 120px;
-
-  @media screen and (max-width: $lg) {
-    padding: 50px 24px;
-  }
-
-  &__content {
-    display: flex;
-    flex-direction: row;
-    gap: 80px;
-
-    @media screen and (max-width: $lg) {
-      flex-direction: column !important;
-    }
-  }
-
-  &__main-number {
-    font-size: 48px;
-    font-weight: 800;
-  }
-
-  &__description {
-    font-size: 24px;
-    font-weight: 700;
-    display: block;
-  }
-
-  span {
-    color: white;
-    line-height: 140%;
-  }
-
-  & > div {
-    display: flex;
-    flex-direction: row;
-    gap: 80px;
-    justify-content: center;
-    text-align: center;
-    color: white;
-  }
-}
-
 .eligibility-section {
-  background-color: var(--blue-france-925-125);
+  background-color: var(--orange-terre-battue-950-100);
   padding: 100px;
+  width: 85%;
+  justify-self: center;
+
+  &__wrapper {
+    max-width: 840px;
+  }
 
   @media screen and (max-width: $lg) {
     padding: 24px;
+    width: 100%;
   }
 }
 
 .benef-faq {
   justify-self: center;
   width: 85%;
-  padding: 100px 40px;
+  padding: 40px;
 
   @media screen and (max-width: $lg) {
     padding: 40px 8px;
     width: 100%;
+  }
+}
+
+.guiding-blocks {
+  display: flex;
+  flex-direction: row;
+  gap: 48px;
+  padding: 100px 24px;
+  justify-content: center;
+  width: 85%;
+  margin: 0 auto;
+
+  & > section {
+    flex: 1;
+  }
+
+  @media screen and (max-width: $lg) {
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
   }
 }

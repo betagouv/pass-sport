@@ -1,57 +1,140 @@
 import styles from './styles.module.scss';
-import SocialMediaPanel from '../../components/social-media-panel/SocialMediaPanel';
 import cn from 'classnames';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Image from 'next/image';
-import passSportLines from '@/images/homepage/pass-sport-lines.webp';
-import runningTracks from '@/images/homepage/running-tracks.png';
+import passSportLogoWhite from '@/images/pass-sport-logo-white.svg';
+import leftLines from '@/images/homepage/left-lines.svg';
+import rightLines from '@/images/homepage/right-lines.svg';
 import wheelchairBasketball from '@/images/homepage/wheelchair-basketball.png';
 import Link from 'next/link';
-import { getCategoriesWithArticles } from '@/app/v2/une-question/server-agent';
-import ContentSection from '@/app/v2/une-question/components/ContentSection/ContentSection';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
+import GuidingBlock, { GuidingBlockProps } from '@/app/components/guided-block/GuidingBlock';
+import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
   description: "Page d'accueil du site pass.sports.gouv.fr pour les particuliers",
 };
 
-export default async function Accueil() {
-  const categoriesWithArticles = await getCategoriesWithArticles({ isProVersion: false });
-  const categoriesWithArticlesPro = await getCategoriesWithArticles({ isProVersion: true });
+const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
+  {
+    variant: 'purple',
+    title: 'Pour les jeunes',
+    description: 'Comment bénéficier du pass Sport pour votre inscription sportive ?',
+    knowMore: {
+      title: 'A savoir',
+      description:
+        'Vous pourrez recevoir ou demander le pass Sport à partir du 1er septembre 2025.',
+    },
+    points: [
+      {
+        title: 'Testez votre éligibilité en 1 min',
+        linkProps: {
+          href: '/v2/jeune-ou-parent#',
+        },
+      },
+      {
+        title: 'Choisissez un club partenaire',
+        linkProps: {
+          href: '/v2/jeune-ou-parent#',
+        },
+      },
+      {
+        title: 'Recevez ou demandez votre pass Sport',
+        linkProps: {
+          href: '/v2/jeune-ou-parent#',
+        },
+      },
+      {
+        title: 'Activez votre code',
+        linkProps: {
+          href: '/v2/jeune-ou-parent#',
+        },
+      },
+    ],
+  },
+  {
+    variant: 'yellow',
+    title: 'Pour les structures',
+    description: 'Comment devenir partenaire et accompagner vos adhérents ?',
+    knowMore: {
+      title: 'A savoir',
+      description:
+        'Vous pourrez récolter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
+    },
+    points: [
+      {
+        title: 'Devenez partenaire du pass Sport',
+        linkProps: {
+          href: '/v2/structure#',
+        },
+      },
+      {
+        title: 'Téléchargez votre kit de communication',
+        linkProps: {
+          href: '/v2/structure#',
+        },
+      },
+      {
+        title: 'Créez votre Compte Asso',
+        linkProps: {
+          href: '/v2/structure#',
+        },
+      },
+      {
+        title: 'Saisissez les codes des bénéficiaires',
+        linkProps: {
+          href: '/v2/structure#',
+        },
+      },
+      {
+        title: 'Obtenez le remboursement de l’inscription',
+        linkProps: {
+          href: '/v2/structure#',
+        },
+      },
+    ],
+  },
+];
 
+export default async function Accueil() {
   return (
     <>
       <main className={styles.main} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <section className={styles['top-section__wrapper']}>
           <div className="fr-container">
-            <Image src={passSportLines} className={styles['top-section__wrapper-image']} alt="" />
+            <Image src={leftLines} className={styles['top-section__wrapper-left-image']} alt="" />
+            <Image src={rightLines} className={styles['top-section__wrapper-right-image']} alt="" />
 
             <div className={styles['top-section__content']}>
-              <div>
-                <h1 className="fr-text--bold">Sportif entre 6 et 30 ans ?</h1>
-                <h2 className="fr-text--xl fr-text--regular">
-                  Bénéficiaire de l’AEEH, ARS, AAH, d’une bourse du CROUS ou d’une Bourse régionale
-                  pour une formation sanitaire ou sociale ?
-                </h2>
-              </div>
+              <section className={styles['top-section__content-title']}>
+                <Image src={passSportLogoWhite} alt="" />
+                <h1 className="fr-text--heavy">
+                  70 € de réduction immédiate
+                  <span className="display--block">sur l&apos;inscription sportive</span>
+                </h1>
+              </section>
 
-              <div>
-                <p className="fr-mb-2w">Réduction immédiate</p>
-                <p>
-                  de <span className={styles['amount']}>70€</span>
-                </p>
-                <p>dans les clubs partenaires</p>
-              </div>
+              <MainTiles titleAs="h2" />
             </div>
           </div>
         </section>
 
+        <section className={styles['guiding-blocks']}>
+          <GuidingBlock {...guidingBlocks1} />
+          <GuidingBlock {...guidingBlocks2} />
+        </section>
+
         <section>
           <div className={styles['eligibility-section']}>
-            <div className="fr-container fr-grid-row fr-grid-row--center">
-              <SimplifiedEligibilityTest />
+            <div
+              className={cn(
+                'fr-container fr-grid-row fr-grid-row--center',
+                styles['eligibility-section__wrapper'],
+              )}
+            >
+              <SimplifiedEligibilityTest display="row" buttonVariant="secondary" />
             </div>
           </div>
         </section>
@@ -60,63 +143,28 @@ export default async function Accueil() {
           <div className={styles['benef-faq']}>
             <h1 className="fr-mb-5w">Qu&apos;est-ce que le pass Sport ?</h1>
             <p className="fr-mb-2w">
-              Le pass Sport est une aide financière de 70 € par enfant pour couvrir tout ou partie
-              des frais d’inscription dans un club, association sportive ou salle de sport
-              partenaire.
+              Valable du 1er septembre au 31 décembre 2025, le pass Sport est une aide financière de
+              70€ par enfant pour couvrir tout ou partie des frais d’inscription dans un club,
+              association sportive ou salle de sport partenaire qui prend la forme d’une réduction
+              immédiate lors de l’inscription.
             </p>
 
             <p>
-              Cette aide s’adresse aux enfants et aux jeunes qui rencontrent des obstacles à la
-              pratique sportive – qu’ils soient d’ordre financier, social ou liés à un handicap.
-              L’objectif : leur permettre d’accéder durablement à une activité physique encadrée, au
-              sein d’un environnement structurant, éducatif et sécurisé.
+              Cette aide du ministère des Sports, de la Jeunesse et de la Vie associative s’adresse
+              aux enfants et aux jeunes qui rencontrent des obstacles à la pratique sportive –
+              qu’ils soient d’ordre financier, social ou liés à un handicap. L’objectif : leur
+              permettre d’accéder durablement à une activité physique encadrée, au sein d’un
+              environnement structurant, éducatif et sécurisé.
             </p>
 
-            <ContentSection
-              categoriesWithArticles={categoriesWithArticles}
-              isFromMainPage={false}
-            />
+            <div className="fr-my-5w">
+              <MainTiles titleAs="h2" />
+            </div>
           </div>
         </section>
 
-        <section className={cn('fr-container', styles['first-middle-section'])}>
-          <div className={styles['first-middle-section__description']}>
-            <h1>Où faire du sport ?</h1>
-            <p>Trouvez votre activité dans l’une de nos structures partenaires.</p>
-            <Link
-              href="/v2/trouver-un-club"
-              className="fr-btn fr-btn--tertiary fr-btn--icon-right fr-icon-arrow-right-line"
-            >
-              Trouver une structure
-            </Link>
-          </div>
-
-          <Image
-            src={runningTracks}
-            alt=""
-            className={cn('fr-responsive-img', styles['first-middle-section__image'])}
-          />
-        </section>
-
-        <section className="fr-container">
-          <div className={styles['benef-faq']}>
-            <h1 className="fr-mb-5w">Structures partenaires</h1>
-            <p className="fr-mb-2w">
-              Clubs, associations sportives ou salles de sport partenaires, grâce au dispositif pass
-              Sport, contribuez à accueillir encore plus de jeunes dans vos clubs et offrez leur la
-              possibilité de bénéficier d’une aide à la pratique par une déduction de 70€ à
-              l’inscription qui vous sera intégralement remboursée par l’État.
-            </p>
-
-            <ContentSection
-              categoriesWithArticles={categoriesWithArticlesPro}
-              isFromMainPage={false}
-            />
-          </div>
-        </section>
-
-        <section className={cn('fr-container', styles['second-middle-section'])}>
-          <div className={styles['second-middle-section__description']}>
+        <section className={cn('fr-container', styles['handiguide-section'])}>
+          <div className={styles['handiguide-section__description']}>
             <h1>Handiguide</h1>
             <p>
               Le guide des activités physiques et sportives pour les personnes en situation de
@@ -136,34 +184,11 @@ export default async function Accueil() {
 
           <Image
             src={wheelchairBasketball}
+            className={cn('fr-responsive-img', styles['handiguide-section__image'])}
             alt=""
-            className={cn('fr-responsive-img', styles['second-middle-section__image'])}
           />
         </section>
-
-        <section className={styles.indicators}>
-          <div className="fr-container">
-            <div className={styles['indicators__content']}>
-              <p>
-                <span className={styles['indicators__main-number']}>1 649</span>
-                <span className={styles['indicators__description']}>pass Sports activés</span>
-              </p>
-
-              <p>
-                <span className={styles['indicators__main-number']}>85 000</span>
-                <span className={styles['indicators__description']}>clubs partenaires</span>
-              </p>
-
-              <p>
-                <span className={styles['indicators__main-number']}>4.6/5</span>
-                <span className={styles['indicators__description']}>évaluation du dispositif</span>
-              </p>
-            </div>
-          </div>
-        </section>
       </main>
-
-      <SocialMediaPanel isHomePage />
     </>
   );
 }

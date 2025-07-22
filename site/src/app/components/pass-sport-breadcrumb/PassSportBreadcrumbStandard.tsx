@@ -18,6 +18,7 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/plan-du-site': 'Plan du site',
   '/v2/accessibilite': 'Accessibilité',
   '/v2/budget': 'Budget',
+  '/v2/test-eligibilite-base': 'Puis-je bénéficier du pass Sport ?',
 };
 
 export default function PassSportBreadcrumbStandard() {
@@ -27,9 +28,9 @@ export default function PassSportBreadcrumbStandard() {
   const internalRoutes = [
     '/',
     '/v2/accueil',
-    !passSportClosed ? '/v2/test-eligibilite-base' : null,
-    !passSportClosed ? '/v2/test-eligibilite' : null,
-    !passSportClosed ? '/v2/test-ou-code' : null,
+    // !passSportClosed ? '/v2/test-eligibilite-base' : null,
+    // !passSportClosed ? '/v2/test-eligibilite' : null,
+    // !passSportClosed ? '/v2/test-ou-code' : null,
   ].filter((route): route is string => route !== null);
 
   const notFound = useIsNotFound({

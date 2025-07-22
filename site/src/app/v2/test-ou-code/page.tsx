@@ -3,14 +3,13 @@ import cn from 'classnames';
 import styles from './styles.module.scss';
 import GetOrTestChoice from './components/get-or-test-step/GetOrTestStep';
 import { Metadata } from 'next';
-import { isPasSportClosed } from '@/utils/date';
 
 export const metadata: Metadata = {
   title: 'Je fais le test - pass Sport',
 };
 
 const TestOuCode = () => {
-  return !isPasSportClosed() ? (
+  return (
     <main
       className={cn('fr-pb-4w', styles.main)}
       tabIndex={-1}
@@ -26,7 +25,7 @@ const TestOuCode = () => {
         </div>
       </div>
     </main>
-  ) : null;
+  );
 };
 
 export default TestOuCode;

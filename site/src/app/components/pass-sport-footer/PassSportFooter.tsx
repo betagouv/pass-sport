@@ -267,12 +267,6 @@ export default function PassSportFooter() {
     },
     {
       links: [
-        {
-          text: isProVersion ? 'Je suis un particulier' : 'Je suis une structure partenaire',
-          linkProps: {
-            href: isProVersion ? '/v2/accueil' : '/v2/pro/accueil',
-          },
-        },
         // ...((isProVersion
         //   ? [
         //       {

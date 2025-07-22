@@ -56,16 +56,6 @@ export default function PassSportNavigation() {
         brandTop={FOOTER_BRAND_TOP}
         serviceTitle="pass Sport"
         serviceTagline="70 euros pour aider les 6 - 30 ans à faire du sport"
-        quickAccessItems={[
-          {
-            text: 'Je suis une structure partenaire',
-            iconId: 'fr-icon-arrow-right-line',
-            linkProps: {
-              href: '/v2/pro/accueil',
-              className: 'fr-btn--tertiary fr-btn--icon-right',
-            },
-          },
-        ]}
         // @ts-ignore
         homeLinkProps={{
           href: '/v2/accueil',

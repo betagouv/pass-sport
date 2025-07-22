@@ -4,10 +4,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
   background-color: white;
   padding: 40px;
-  max-width: 800px;
+  flex-direction: column;
+
+  form {
+    width: 100%;
+  }
 
   @media screen and (max-width: $lg) {
     padding: 24px;
@@ -19,10 +22,23 @@
 
   &__fields {
     display: flex;
-    flex-direction: row;
-    gap: 16px;
+    gap: 4px;
     margin-top: 24px;
     width: 100%;
+
+    &--row {
+      flex-direction: row;
+      align-items: flex-end;
+
+      @media screen and (max-width: $lg) {
+        align-items: initial;
+      }
+    }
+
+    &--column {
+      flex-direction: column;
+    }
+
 
     &-date {
       max-width: 200px;
@@ -34,11 +50,6 @@
 
     @media screen and (max-width: $lg) {
       flex-direction: column;
-    }
-
-    button {
-      align-self: end;
-      margin-bottom: 1rem;
     }
   }
 }
