@@ -22,12 +22,12 @@ export const navigationItemStandard: NavigationItem[] = [
     ),
   },
   {
-    link: '/v2/jeune-et-parent',
-    text: 'Jeune et parent',
+    link: '/v2/jeunes-et-parents',
+    text: 'Jeunes et parents',
   },
   {
-    link: '/v2/structure',
-    text: 'Structure',
+    link: '/v2/structures',
+    text: 'Structures',
   },
   // {
   //   link: '/v2/tout-savoir-sur-le-pass-sport',

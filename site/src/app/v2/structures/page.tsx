@@ -9,19 +9,19 @@ import Image from 'next/image';
 import horse from '@/images/jeune-et-parent/horse.png';
 import pool from '@/images/structure/pool.png';
 import KnowMore from '@/app/components/know-more/KnowMore';
-import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structure/constants/anchors';
+import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
 import Button from '@codegouvfr/react-dsfr/Button';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Structure',
+    title: 'Structures',
   };
 }
 
 export default function Page() {
   return (
     <main className={styles['container']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <PageTitle title="Structure" />
+      <PageTitle title="Structures" />
 
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>

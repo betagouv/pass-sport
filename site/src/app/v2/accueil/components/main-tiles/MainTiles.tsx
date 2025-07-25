@@ -15,7 +15,7 @@ export default function MainTiles({ titleAs }: MainTilesProps) {
         imageUrl="/images/homepage/avatar.svg"
         imageAlt=""
         linkProps={{
-          href: '/v2/jeune-et-parent',
+          href: '/v2/jeunes-et-parents',
         }}
         titleAs={titleAs}
       />

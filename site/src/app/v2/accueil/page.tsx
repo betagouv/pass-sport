@@ -11,8 +11,8 @@ import Link from 'next/link';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import GuidingBlock, { GuidingBlockProps } from '@/app/components/guided-block/GuidingBlock';
 import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
-import { JEUNE_PARENT_PAGE_ANCHORS } from '@/app/v2/jeune-et-parent/constants/anchors';
-import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structure/constants/anchors';
+import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
+import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -33,25 +33,25 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
       {
         title: 'Testez votre éligibilité en 1 min',
         linkProps: {
-          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
+          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
         },
       },
       {
         title: 'Choisissez un club partenaire',
         linkProps: {
-          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.FIND_CLUB}`,
+          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
         },
       },
       {
         title: 'Recevez ou demandez votre pass Sport',
         linkProps: {
-          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.RECEIVE_CODE}`,
+          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
         },
       },
       {
         title: 'Activez votre code',
         linkProps: {
-          href: `/v2/jeune-et-parent#${JEUNE_PARENT_PAGE_ANCHORS.ACTIVATE_CODE}`,
+          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
         },
       },
     ],
@@ -162,6 +162,15 @@ export default async function Accueil() {
             <div className="fr-my-5w">
               <MainTiles titleAs="h2" />
             </div>
+
+            <h1 className="fr-mb-5w">Une question ?</h1>
+            <p className="fr-mb-2w">
+              Vous avez consulté les différentes pages sans trouver l’information que vous cherchiez
+              ? Vous vous posez des questions sur le pass Sport ?
+            </p>
+            <Link href="/v2/une-question" className="fr-icon-arrow-right-line fr-link--icon-right">
+              Consulter la liste des questions fréquemment posées
+            </Link>
           </div>
         </section>
 

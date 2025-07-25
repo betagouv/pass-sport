@@ -8,7 +8,7 @@
 .top-section {
   &__wrapper {
     position: relative;
-    background-color: var(--orange-terre-battue-main-645);
+    background-color: var(--pink-tuile-main-556);
     padding: 0 120px;
     display: flex;
     justify-content: center;
@@ -126,7 +126,7 @@
 }
 
 .eligibility-section {
-  background-color: var(--orange-terre-battue-950-100);
+  background-color: var(--pink-tuile-950-100);
   padding: 100px;
   width: 85%;
   justify-self: center;
@@ -139,6 +139,7 @@
   @media screen and (max-width: $lg) {
     padding: 24px;
     width: 100%;
+    border-radius: 0;
   }
 }
 
@@ -146,10 +147,12 @@
   justify-self: center;
   width: 85%;
   padding: 40px;
+  margin-bottom: 24px;
 
   @media screen and (max-width: $lg) {
     padding: 40px 8px;
     width: 100%;
+    margin-bottom: 0;
   }
 }
 

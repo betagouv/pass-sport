@@ -18,8 +18,8 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/accessibilite': 'Accessibilité',
   '/v2/budget': 'Budget',
   '/v2/test-eligibilite-base': 'Puis-je bénéficier du pass Sport ?',
-  '/v2/jeune-et-parent': 'Jeune et parent',
-  '/v2/structure': 'Structure',
+  '/v2/jeunes-et-parents': 'Jeune et parents',
+  '/v2/structures': 'Structures',
 };
 
 export default function PassSportBreadcrumbStandard() {

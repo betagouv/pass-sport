@@ -10,18 +10,18 @@ import Image from 'next/image';
 import horse from '@/images/jeune-et-parent/horse.png';
 import code from '@/images/jeune-et-parent/code.svg';
 import KnowMore from '@/app/components/know-more/KnowMore';
-import { JEUNE_PARENT_PAGE_ANCHORS } from '@/app/v2/jeune-et-parent/constants/anchors';
+import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Jeune et parent',
+    title: 'Jeunes et parents',
   };
 }
 
 export default function Page() {
   return (
     <main className={styles['container']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <PageTitle title="Jeune et parent" />
+      <PageTitle title="Jeunes et parents" />
 
       <div className="fr-container">
         <section className={styles['guiding-block__container']}>
@@ -33,25 +33,25 @@ export default function Page() {
               {
                 title: 'Testez votre éligibilité en 1 min',
                 linkProps: {
-                  href: `#${JEUNE_PARENT_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
+                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
                 },
               },
               {
                 title: 'Choisissez un club partenaire',
                 linkProps: {
-                  href: `#${JEUNE_PARENT_PAGE_ANCHORS.FIND_CLUB}`,
+                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
                 },
               },
               {
                 title: 'Recevez ou demandez votre pass Sport',
                 linkProps: {
-                  href: `#${JEUNE_PARENT_PAGE_ANCHORS.RECEIVE_CODE}`,
+                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
                 },
               },
               {
                 title: 'Activez votre code',
                 linkProps: {
-                  href: `#${JEUNE_PARENT_PAGE_ANCHORS.ACTIVATE_CODE}`,
+                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
                 },
               },
             ]}
@@ -63,7 +63,7 @@ export default function Page() {
           />
         </section>
 
-        <section id={JEUNE_PARENT_PAGE_ANCHORS.ELIGIBILITY_TEST}>
+        <section id={JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}>
           <div className={styles['eligibility-section']}>
             <div
               className={cn(
@@ -76,7 +76,7 @@ export default function Page() {
           </div>
         </section>
 
-        <section id={JEUNE_PARENT_PAGE_ANCHORS.FIND_CLUB} className={styles['find-club-section']}>
+        <section id={JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB} className={styles['find-club-section']}>
           <Image
             src={horse}
             className={cn('fr-responsive-img', styles['find-club-section__image'])}
@@ -107,7 +107,7 @@ export default function Page() {
         </section>
 
         <section
-          id={JEUNE_PARENT_PAGE_ANCHORS.RECEIVE_CODE}
+          id={JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}
           className={styles['receive-code-section']}
         >
           <h1>Recevez votre pass Sport</h1>
@@ -125,7 +125,7 @@ export default function Page() {
             </p>
             <ol className="fr-ml-2w" start={1}>
               <li>
-                <span className="fr-text--bold">30-31 août</span> : pour environ{' '}
+                <span className="fr-text--bold">26-28 août</span> : pour environ{' '}
                 <span className="fr-text--bold">80% des bénéficiaires ;</span>
               </li>
               <li>
@@ -142,7 +142,7 @@ export default function Page() {
               <li>Vérifiez dans vos spams ou indésirables.</li>
               <li>
                 Vérifiez votre éligibilité à l&apos;aide du test. <br />
-                <Link href={`#${JEUNE_PARENT_PAGE_ANCHORS.ELIGIBILITY_TEST}`}>
+                <Link href={`#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`}>
                   Remonter vers le test.
                 </Link>
               </li>
@@ -156,7 +156,7 @@ export default function Page() {
         </section>
 
         <section
-          id={JEUNE_PARENT_PAGE_ANCHORS.ACTIVATE_CODE}
+          id={JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}
           className={styles['activate-code-section']}
         >
           <Image
