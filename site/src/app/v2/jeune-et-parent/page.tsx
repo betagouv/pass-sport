@@ -21,12 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function Page() {
   return (
     <main className={styles['container']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <PageTitle
-        title="Jeune et parent"
-        classes={{
-          container: styles['page-header'],
-        }}
-      />
+      <PageTitle title="Jeune et parent" />
 
       <div className="fr-container">
         <section className={styles['guiding-block__container']}>

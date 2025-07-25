@@ -1,0 +1,242 @@
+import { Metadata } from 'next';
+import styles from './styles.module.scss';
+import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import PageTitle from '@/components/PageTitle/PageTitle';
+import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
+import cn from 'classnames';
+import Link from 'next/link';
+import Image from 'next/image';
+import horse from '@/images/jeune-et-parent/horse.png';
+import pool from '@/images/structure/pool.png';
+import KnowMore from '@/app/components/know-more/KnowMore';
+import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structure/constants/anchors';
+import Button from '@codegouvfr/react-dsfr/Button';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: 'Structure',
+  };
+}
+
+export default function Page() {
+  return (
+    <main className={styles['container']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
+      <PageTitle title="Structure" />
+
+      <div className={cn(['fr-container', styles.container])}>
+        <section className={styles['guiding-block__container']}>
+          <GuidingBlock
+            description="Le pass Sport est une aide financière de 70€ par enfant pour couvrir tout ou partie des frais d’inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d’une réduction immédiate lors de l’inscription. Dispositif financé par le ministère des Sports, de la Jeunesse et de la Vie associative."
+            variant="yellow"
+            fullWidth
+            points={[
+              {
+                title: 'Devenez partenaire du pass Sport',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
+                },
+              },
+              {
+                title: 'Téléchargez votre kit de communication',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
+                },
+              },
+              {
+                title: 'Créez votre Compte Asso',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
+                },
+              },
+              {
+                title: 'Saisissez les codes des bénéficiaires',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
+                },
+              },
+              {
+                title: 'Recevez le remboursement',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
+                },
+              },
+            ]}
+            knowMore={{
+              title: 'A savoir',
+              description:
+                'Vous pourrez récolter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
+            }}
+          />
+        </section>
+
+        <section
+          id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
+          className={styles['communication-kit-section']}
+        >
+          <Image
+            src={horse}
+            className={cn('fr-responsive-img', styles['communication-kit-section__image'])}
+            alt=""
+          />
+
+          <div className={styles['communication-kit-section__description']}>
+            <h1>Kit de communication</h1>
+            <p>
+              Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré tout un
+              ensemble d&apos;outils et supports de communication qui sont mis à dispositif de
+              l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
+              dispositif.
+            </p>
+
+            <span>
+              {/* todo: update link */}
+              <Link href="#" className="fr-link fr-icon-download-fill fr-link--icon-left">
+                Téléchargez votre kit de communication
+              </Link>
+            </span>
+          </div>
+        </section>
+
+        <section
+          id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
+          className={styles['lca-section']}
+        >
+          <h1>Créez votre Compte Asso</h1>
+          <KnowMore
+            variant="yellow"
+            knowMore={{
+              title: 'A savoir',
+              description: `Vous pouvez suivre la procédure de création pas à pas en visionnant cette vidéo tutoriel.`,
+            }}
+          />
+          <p>
+            Sur Le Compte Asso, vous pourrez créer un compte pour devenir partenaire du dispositif,
+            entrer les codes pass Sports et suivre vos remboursements.
+          </p>
+          <p>
+            Rendez-vous sur le site Le Compte Asso, qui vous servira pour toutes les démarches
+            concernant le pass Sport :
+          </p>
+
+          <Button
+            priority="secondary"
+            linkProps={{
+              'aria-label': 'Ouvrir une nouvelle fenêtre vers Le Compte Asso',
+              href: 'https://lecompteasso.associations.gouv.fr/',
+              target: '_blank',
+            }}
+          >
+            Le Compte Asso
+          </Button>
+
+          <p>
+            Si vous avez déjà un compte sur Le Compte Asso, complétez votre profil en téléversant
+            votre justificatif d&apos;éligibilité au dispositif (un des trois suivants) dans la
+            section &laquo;affiliations et adhérents personnes morales&raquo; :
+          </p>
+
+          <ul className="fr-ml-2w">
+            <li>
+              Affiliée : attestation d&apos;affiliation à une fédération sportive agréée par le
+              Ministère des Sports, de la Jeunesse et de la Vie associative ;
+            </li>
+            <li>Association : agrément JEP ou Sport valide ;</li>
+            <li>
+              Structures privées (Loisirs Sportifs Marchands) : Charte d&apos;engagement 2025.
+            </li>
+          </ul>
+        </section>
+
+        <section id={STRUCTURE_PAGE_ANCHORS.INPUT_CODES} className={styles['input-codes-section']}>
+          <h1>Saisissez les codes des bénéficiaires</h1>
+
+          <ol className="fr-ml-2w" start={1}>
+            <li>Le bénéficiaire vous a présenté son code alphanumérique (25-XXXX-XXXX).</li>
+            <li>
+              Votre structure a accordé une réduction immédiate de 70€ sur l&apos;inscription du
+              bénéficiaire.
+            </li>
+            <li>
+              Sur votre compte Asso, allez dans la section &laquo;Gérer les inscriptions pass
+              Sport&raquo;, puis “Suivi des inscriptions pass Sport” pour ajouter un nouveau
+              bénéficiaire.
+            </li>
+          </ol>
+
+          <p>
+            Vous pourrez saisir les codes des bénéficiaires{' '}
+            <span className="fr-text--bold">
+              à partir du 1er septembre jusqu’au 31 décembre 2025.
+            </span>
+          </p>
+
+          <Button
+            priority="secondary"
+            linkProps={{
+              'aria-label': 'Ouvrir une nouvelle fenêtre vers Le Compte Asso',
+              href: 'https://lecompteasso.associations.gouv.fr/',
+              target: '_blank',
+            }}
+          >
+            Le Compte Asso
+          </Button>
+        </section>
+
+        <section id={STRUCTURE_PAGE_ANCHORS.GET_REFUNDS} className={styles['get-refunds-section']}>
+          <Image
+            src={pool}
+            className={cn('fr-responsive-img', styles['get-refunds-section__image'])}
+            alt=""
+          />
+
+          <div className={styles['get-refunds-section__description']}>
+            <h1>Recevez le remboursement</h1>
+            <KnowMore
+              variant="yellow"
+              knowMore={{
+                title: 'A savoir',
+                description:
+                  'Vous pourrez récolter les codes et demander les remboursements à partir du 1er septembre 2025.',
+              }}
+            />
+
+            <p>
+              Les remboursements arriveront dans le mois suivant la saisie des codes dans votre
+              compte Asso.
+            </p>
+
+            <p>
+              Vous pourrez saisir les codes des bénéficiaires{' '}
+              <span className="fr-text--bold">
+                à partir du 1er septembre jusqu’au 31 décembre 2025.
+              </span>
+            </p>
+
+            <Button
+              priority="secondary"
+              linkProps={{
+                'aria-label': 'Ouvrir une nouvelle fenêtre vers Le Compte Asso',
+                href: 'https://lecompteasso.associations.gouv.fr/',
+                target: '_blank',
+              }}
+            >
+              Le Compte Asso
+            </Button>
+          </div>
+        </section>
+
+        <section className={styles['decret-section']}>
+          <h1 className="fr-h4">Texte de référence</h1>
+          <Link
+            href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
+            target="_blank"
+            className="align-self--baseline"
+            aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"
+          >
+            Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025
+          </Link>
+        </section>
+      </div>
+    </main>
+  );
+}
