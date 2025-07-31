@@ -1,4 +1,5 @@
 import { isWithinInterval, parse, startOfDay } from 'date-fns';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 export enum ALLOCATION {
   NONE = 'none',
@@ -8,6 +9,14 @@ export enum ALLOCATION {
   CROUS = 'crous',
   FORMATIONS_SANITAIRES_SOCIAUX = 'formations-sanitaires-sociaux',
 }
+
+export const ALLOWANCE_MAPPING_TO_ALLOCATION: { [key in ALLOWANCE]: ALLOCATION } = {
+  [ALLOWANCE.NONE]: ALLOCATION.NONE,
+  [ALLOWANCE.AAH]: ALLOCATION.AAH,
+  [ALLOWANCE.AEEH]: ALLOCATION.AEEH,
+  [ALLOWANCE.ARS]: ALLOCATION.ARS,
+  [ALLOWANCE.CROUS]: ALLOCATION.CROUS,
+};
 
 const DATE_FORMAT = 'dd/MM/yyyy';
 

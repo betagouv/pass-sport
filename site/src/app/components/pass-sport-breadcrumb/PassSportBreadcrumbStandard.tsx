@@ -20,18 +20,13 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/test-eligibilite-base': 'Puis-je bénéficier du pass Sport ?',
   '/v2/jeunes-et-parents': 'Jeune et parents',
   '/v2/structures': 'Structures',
+  '/v2/test-eligibilite': 'Formulaire de demande',
 };
 
 export default function PassSportBreadcrumbStandard() {
   const paths = usePathname();
 
-  const internalRoutes = [
-    '/',
-    '/v2/accueil',
-    // !passSportClosed ? '/v2/test-eligibilite-base' : null,
-    // !passSportClosed ? '/v2/test-eligibilite' : null,
-    // !passSportClosed ? '/v2/test-ou-code' : null,
-  ].filter((route): route is string => route !== null);
+  const internalRoutes = ['/', '/v2/accueil'].filter((route): route is string => route !== null);
 
   const notFound = useIsNotFound({
     internalRoutes,

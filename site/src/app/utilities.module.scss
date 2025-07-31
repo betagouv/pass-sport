@@ -20,6 +20,10 @@
       text-align: center;
     }
   }
+
+  &--mention-grey {
+    color: var(--text-mention-grey);
+  }
 }
 
 .cursor {

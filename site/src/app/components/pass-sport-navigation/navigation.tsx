@@ -29,17 +29,6 @@ export const navigationItemStandard: NavigationItem[] = [
     link: '/v2/structures',
     text: 'Structures',
   },
-  // {
-  //   link: '/v2/tout-savoir-sur-le-pass-sport',
-  //   text: (
-  //     <>
-  //       <div className={styles['menu-item-spacer']}>
-  //         <span aria-hidden />
-  //       </div>
-  //       Tout savoir sur le pass Sport
-  //     </>
-  //   ),
-  // },
   {
     link: '/v2/trouver-un-club',
     text: 'Trouver un club partenaire',

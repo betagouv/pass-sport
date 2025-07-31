@@ -7,8 +7,8 @@ import cn from 'classnames';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import Link from 'next/link';
 import Image from 'next/image';
-import horse from '@/images/jeune-et-parent/horse.png';
-import code from '@/images/jeune-et-parent/code.svg';
+import basketball from '@/images/jeunes-et-parents/basketball.webp';
+import code from '@/images/code.svg';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 
@@ -78,7 +78,7 @@ export default function Page() {
 
         <section id={JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB} className={styles['find-club-section']}>
           <Image
-            src={horse}
+            src={basketball}
             className={cn('fr-responsive-img', styles['find-club-section__image'])}
             alt=""
           />

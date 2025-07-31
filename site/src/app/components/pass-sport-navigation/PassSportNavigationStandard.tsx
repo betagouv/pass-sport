@@ -53,7 +53,7 @@ export default function PassSportNavigation() {
         }}
         brandTop={FOOTER_BRAND_TOP}
         serviceTitle="pass Sport"
-        serviceTagline="70 euros pour aider les 6 - 30 ans à faire du sport"
+        serviceTagline="Une aide financière pour encourager la pratique des jeunes"
         // @ts-ignore
         homeLinkProps={{
           href: '/v2/accueil',

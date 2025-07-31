@@ -33,9 +33,6 @@ const Legend: React.FC<Props> = (props) => {
     rootStyles['text--black'],
     'fr-p-2w',
     'fr-mb-1w',
-    styles.panel,
-    styles.fit,
-    styles.span,
   );
 
   const { legendDescription, ...remainingProps } = props;

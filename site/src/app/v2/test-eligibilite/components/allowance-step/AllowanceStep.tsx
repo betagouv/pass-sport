@@ -1,146 +1,318 @@
 'use client';
 
-import styles from '@/app/v2/test-eligibilite/styles.module.scss';
-import cn from 'classnames';
-import { useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
-import FullNegativeVerdictPanel from '@/app/components/verdictPanel/FullNegativeVerdictPanel';
-import { SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
 import CustomRadioButtons from '@/app/v2/test-eligibilite-base/components/customRadioButtons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
-import { AAH, AEEH, ARS, CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crous-eligibility-test-forms/CrousEligibilityTestForms';
+import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
+import Link from 'next/link';
+import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
+import cn from 'classnames';
+import styles from './styles.module.scss';
+import { RadioButtonsProps } from '@codegouvfr/react-dsfr/RadioButtons';
+import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
+import { SearchResponseBody } from '@/types/EligibilityTest';
+import CorrectiveInfo from '@/app/v2/test-eligibilite/components/corrective-info/CorrectiveInfo';
+import Input, { InputProps } from '@codegouvfr/react-dsfr/Input';
+import { ALLOWANCE_MAPPING_TO_ALLOCATION, isEligible } from '@/utils/eligibility-test';
+import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
+const CROUS_CAN_OBTAIN_CODE = process.env.NEXT_PUBLIC_CODES_OBTAINABLE_FOR_CROUS === 'yes';
+
+const initialInputStates: Record<string, InputProps['state']> = {
+  allowance: 'default',
+  dob: 'default',
+};
+
+const inputStateRelatedMessages: Record<keyof typeof initialInputStates, string> = {
+  allowance: `Le choix de l'allocation est requise`,
+  dob: 'La date de naissance est requise',
+};
 
 const AllowanceStep = () => {
-  const fieldsetId = 'allowanceStep-fieldset';
-  useRemoveAttributeById(fieldsetId, 'aria-labelledby');
-
-  // Ask for consent for the cookie related to support once on the page
-  useEffect(() => {
-    // Timeout is necessary to wait for tarteaucitron modal to be rendered properly
-    setTimeout(() => {
-      const tac = window.tarteaucitron;
-
-      // "false" or "true" means the user has given or not given consent
-      // otherwise it means the user didn't explicitly set any consentment
-      const hasYetToGiveConsent = typeof tac?.state?.[SUPPORT_COOKIE_KEY] !== 'boolean';
-
-      if (tac && hasYetToGiveConsent) {
-        tac?.userInterface?.openAlert();
-
-        const btn = document.querySelector<HTMLButtonElement>('#tarteaucitronPersonalize2');
-
-        if (btn) {
-          // Focus on the first button whenever the alert UI is displayed
-          btn.focus();
-        }
-      }
-    }, 2000);
-  }, []);
-
+  const portalRef = useRef<HTMLDivElement>(null);
+  const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
-  const [isValidated, setIsValidated] = useState(true);
+  const [originalAllowance, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
+
+  // isValidated is a variable to know whether the user has clicked on the submit button
+  const [isValidated, setIsValidated] = useState<boolean | null>(null);
+
+  const [radioButtonsState, setRadioButtonsState] = useState<RadioButtonsProps['state']>('default');
+  const radioButtonsStateRelatedMessage =
+    radioButtonsState === 'error' ? `Le choix de l'allocation est requise` : '';
+
+  const [dobState, setDobState] = useState<InputProps['state']>('default');
+  const dobStateRelatedMessages = dobState === 'error' ? 'La date de naissance est requise' : '';
+
+  const [inputStates, setInputStates] = useState<typeof initialInputStates>(initialInputStates);
+  const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
+  const [dob, setDob] = useState<string | undefined>(undefined);
+  const fieldsetId = 'allowanceStep-fieldset';
+
+  useRemoveAttributeById(fieldsetId, 'aria-labelledby');
+  useAskConsentForSupport();
 
   const restartTest = () => {
     CustomButtonsGroupKey = Math.round(Math.random() * 1000);
     setAllowance(null);
+    setIsValidated(null);
+    setEligibilityData(null);
+    setDob(undefined);
   };
 
   const buttonClickedHandler = () => {
-    setIsValidated(true);
+    setRadioButtonsState(allowance === null ? 'error' : 'default');
+    setDobState(!dob ? 'error' : 'default');
+
+    if (dob && allowance) {
+      setIsValidated(true);
+    } else {
+      setIsValidated(false);
+    }
+
+    // Set benef eligibility
+    if (!dob || allowance === null) {
+      setBenefIsEligible(false);
+    } else {
+      setBenefIsEligible(
+        isEligible({
+          targetDate: dob,
+          allocationName: ALLOWANCE_MAPPING_TO_ALLOCATION[allowance],
+        }),
+      );
+    }
   };
 
+  const getStepCheckerName = useCallback(() => {
+    switch (allowance) {
+      case ALLOWANCE.AAH:
+        return 'Vous bénéficiez de l’AAH';
+      case ALLOWANCE.AEEH:
+        return 'Vous bénéficiez de l’AEEH';
+      case ALLOWANCE.ARS:
+        return 'Vous bénéficiez de l’ARS';
+      case ALLOWANCE.CROUS:
+        return 'Vous êtes étudiant boursier';
+      default:
+        return '';
+    }
+  }, [allowance]);
+
   return (
-    <EligibilityTestContext.Provider value={{ performNewTest: restartTest }}>
-      <p className={cn('fr-pb-2w', styles.paragraph)}>Les champs ci-dessous sont obligatoires*</p>
-
-      <CustomRadioButtons
-        id={fieldsetId}
-        name="radio"
-        key={CustomButtonsGroupKey}
-        legendLine1="Bonjour,"
-        legendLine2="Bénéficiez-vous d’une de ces allocations ?"
-        isOkButtonDisabled={isValidated}
-        onOkButtonClicked={buttonClickedHandler}
-        options={[
-          {
-            label: (
-              <span>
-                <AEEH />, <ARS />, <AAH />
-              </span>
-            ),
-            nativeInputProps: {
-              onChange: () => {
-                setIsValidated(false);
-                setAllowance(ALLOWANCE.ARS_AEEH_AAH);
-              },
-            },
-          },
-          {
-            label: (
-              <>
-                <CROUS includeSanitairesEtSociaux />
-              </>
-            ),
-            nativeInputProps: {
-              onChange: () => {
-                setIsValidated(false);
-                setAllowance(ALLOWANCE.CROUS);
-              },
-            },
-          },
-          {
-            label: 'Aucune',
-            nativeInputProps: {
-              onChange: () => {
-                setIsValidated(false);
-                setAllowance(ALLOWANCE.NONE);
-              },
-            },
-          },
-        ]}
-        hintText={
-          <>
-            <div>
-              <p className={cn('fr-text--xs', 'fr-mb-0')}>
-                <abbr>ARS</abbr> : Allocation de rentrée scolaire
-              </p>
-              <p className={cn('fr-text--xs', 'fr-mb-0')}>
-                <abbr>AEEH</abbr> : Allocation d’éducation de l’enfant handicapé
-              </p>
-              <p className={cn('fr-text--xs', 'fr-mb-0')}>
-                <abbr>AAH</abbr> : Allocation adulte handicapé
-              </p>
-              <p className={cn('fr-text--xs', 'fr-mb-0')}>
-                <abbr>CROUS</abbr> : Étudiant boursier. Centre régional des œuvres universitaires et
-                scolaires
-              </p>
-            </div>
-          </>
-        }
-      />
-
-      {isValidated && (
-        <>
-          {[ALLOWANCE.ARS_AEEH_AAH, ALLOWANCE.CROUS].includes(allowance as ALLOWANCE) && (
-            <legend
-              className="fr-fieldset__legend--regular fr-fieldset__legend fr-pt-1w fr-pb-2w"
-              id="second-step-form-legend"
-            >
-              Deuxième étape du formulaire
-            </legend>
+    <EligibilityTestContext.Provider
+      value={{
+        allowance,
+        benefIsEligible,
+        dob,
+        eligibilityData,
+        performNewTest: restartTest,
+        portalRef,
+        setAllowance,
+        setBenefIsEligible,
+        setEligibilityData,
+      }}
+    >
+      <div className={cn(styles.background)}>
+        <div className={styles.wrapper}>
+          <h2 className="fr-text--bold fr-mb-2w fr-text--xl">Quelle est votre situation ?</h2>
+          {(!isValidated || !benefIsEligible) && (
+            <h3 className="fr-mt-1w fr-mb-2w fr-text--md fr-text--regular">
+              Ces informations nous aideront à connaitre votre éligibilité.
+            </h3>
           )}
 
-          {allowance === ALLOWANCE.NONE && <FullNegativeVerdictPanel isLean />}
-          {allowance === ALLOWANCE.ARS_AEEH_AAH && <EligibilityTestForms />}
-          {allowance === ALLOWANCE.CROUS && <CrousEligibilityTestForms />}
-        </>
-      )}
+          {benefIsEligible && (
+            <CorrectiveInfo
+              situation={eligibilityData?.[0]?.situation}
+              originalAllowance={originalAllowance}
+            />
+          )}
+
+          {isValidated && allowance === ALLOWANCE.NONE && (
+            <StepChecker title={`Vous ne bénéficiez d'aucune aide`} onClick={restartTest} />
+          )}
+
+          {isValidated && benefIsEligible ? (
+            getStepCheckerName() ? (
+              <StepChecker title={getStepCheckerName()} onClick={restartTest} />
+            ) : null
+          ) : (
+            <div>
+              <Input
+                label="Date de naissance du bénéficiaire *"
+                nativeInputProps={{
+                  type: 'date',
+                  required: true,
+                  // value: dob,
+                  onChange: (e) => {
+                    setDob(e.target.value ?? undefined);
+                  },
+                }}
+                hintText="Personne à qui le pass est destiné."
+                state={dobState}
+                stateRelatedMessage={dobStateRelatedMessages}
+              />
+              <CustomRadioButtons
+                id={fieldsetId}
+                state={radioButtonsState}
+                stateRelatedMessage={radioButtonsStateRelatedMessage}
+                name="radio"
+                legend="Le bénéficiaire est-il concerné par l’une de ces allocations ?"
+                key={CustomButtonsGroupKey}
+                onOkButtonClicked={buttonClickedHandler}
+                options={[
+                  {
+                    label: (
+                      <p className="fr-text--bold">
+                        AAH
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                          Allocation Adulte Handicapé
+                        </span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      onChange: () => {
+                        setIsValidated(false);
+                        setAllowance(ALLOWANCE.AAH);
+                        setOriginalAllowance(ALLOWANCE.AAH);
+                      },
+                    },
+                  },
+                  {
+                    label: (
+                      <p className="fr-text--bold">
+                        AEEH
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                          Allocation d’Éducation de l’Enfant Handicapé
+                        </span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      onChange: () => {
+                        setIsValidated(false);
+                        setAllowance(ALLOWANCE.AEEH);
+                        setOriginalAllowance(ALLOWANCE.AEEH);
+                      },
+                    },
+                  },
+                  {
+                    label: (
+                      <p className="fr-text--bold">
+                        ARS
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                          Allocation de Rentrée Scolaire
+                        </span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      onChange: () => {
+                        setIsValidated(false);
+                        setAllowance(ALLOWANCE.ARS);
+                        setOriginalAllowance(ALLOWANCE.ARS);
+                      },
+                    },
+                  },
+                  {
+                    label: (
+                      <p className="fr-text--bold">
+                        Étudiant boursier
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                          Bourse du CROUS ou bourse régionale pour une formation sanitaire ou
+                          sociale
+                        </span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      onChange: () => {
+                        setIsValidated(false);
+                        setAllowance(ALLOWANCE.CROUS);
+                        setOriginalAllowance(ALLOWANCE.CROUS);
+                      },
+                    },
+                  },
+                  {
+                    label: (
+                      <p className="fr-text--bold">
+                        Aucune
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                          Aucune de ces propositions
+                        </span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      onChange: () => {
+                        setIsValidated(false);
+                        setAllowance(ALLOWANCE.NONE);
+                        setOriginalAllowance(ALLOWANCE.NONE);
+                      },
+                    },
+                  },
+                ]}
+              />
+            </div>
+          )}
+
+          {isValidated && benefIsEligible && (
+            <>
+              {allowance && [ALLOWANCE.ARS, ALLOWANCE.AAH].includes(allowance) && (
+                <EligibilityTestForms />
+              )}
+
+              {allowance === ALLOWANCE.AEEH && (
+                <div className="fr-mt-2w">
+                  <Link
+                    href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+                    className="fr-link fr-link--icon-left fr-icon-mail-line"
+                  >
+                    Contactez-nous pour obtenir votre code
+                  </Link>
+                  <p className="fr-mt-2w">Préparez votre pièce justificative</p>
+                </div>
+              )}
+
+              {allowance === ALLOWANCE.CROUS && CROUS_CAN_OBTAIN_CODE && (
+                <CrousEligibilityTestForms />
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div ref={portalRef}>
+        {isValidated &&
+          benefIsEligible &&
+          allowance === ALLOWANCE.CROUS &&
+          !CROUS_CAN_OBTAIN_CODE && (
+            <div
+              style={{
+                maxWidth: 792,
+                margin: '0 auto 24px auto',
+              }}
+            >
+              <Alert
+                severity="info"
+                title="Les étudiants boursiers ne pourront obtenir leur code qu’à partir du 1er novembre"
+                description="Nous nous excusons de la gêne occasionnée. "
+              />
+            </div>
+          )}
+
+        {isValidated && allowance && dob && !benefIsEligible && (
+          <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
+        )}
+      </div>
     </EligibilityTestContext.Provider>
   );
 };

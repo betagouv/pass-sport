@@ -6,7 +6,7 @@ export type FormStep = 'search' | 'confirm';
 export interface StepOneFormInputsState {
   beneficiaryLastname: InputState;
   beneficiaryFirstname: InputState;
-  beneficiaryBirthDate: InputState;
+  // beneficiaryBirthDate: InputState;
   recipientResidencePlace: InputState;
 }
 
@@ -39,13 +39,16 @@ export interface AahMsaInputsState {
   recipientBirthPlace?: InputState;
 }
 
+export type SituationType = 'jeune' | 'AAH' | 'boursier';
+export type OrganismType = 'MSA' | 'CAF' | 'cnous';
+
 export interface SearchResponseBodyItem {
   id: number;
   nom: string;
   prenom: string;
   date_naissance: string;
-  situation: 'jeune' | 'AAH' | 'boursier';
-  organisme: 'MSA' | 'CAF' | 'cnous';
+  situation: SituationType;
+  organisme: OrganismType;
   matricule: string;
   hasMatricule: boolean;
 }

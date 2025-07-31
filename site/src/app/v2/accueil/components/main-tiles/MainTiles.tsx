@@ -26,7 +26,7 @@ export default function MainTiles({ titleAs }: MainTilesProps) {
         imageUrl="/images/homepage/location-overseas-france.svg"
         imageAlt=""
         linkProps={{
-          href: '/v2/structure',
+          href: '/v2/structures',
         }}
         titleAs={titleAs}
       />

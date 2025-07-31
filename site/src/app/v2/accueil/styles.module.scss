@@ -68,10 +68,6 @@
     button {
       background-color: white;
     }
-
-    div {
-      text-align: center;
-    }
   }
 }
 
@@ -82,7 +78,6 @@
   flex-direction: row-reverse;
   margin-bottom: 80px;
 
-
   @media screen and (max-width: $lg) {
     flex-direction: column-reverse;
     height: auto;
@@ -90,6 +85,10 @@
 
   @media screen and (max-width: $lg) {
     flex-direction: column-reverse;
+  }
+
+  &__legend {
+    color: #3A3A3A;
   }
 
   &__description {
@@ -116,8 +115,10 @@
   &__image {
     flex: 1;
     border-radius: 8px;
+    max-width: 588px;
 
     @media screen and (max-width: $lg) {
+      max-width: 100%;
       width: 100%;
       height: auto;
       border-radius: 8px 8px 0 0;

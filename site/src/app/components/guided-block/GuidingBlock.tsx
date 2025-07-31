@@ -46,7 +46,7 @@ export default function GuidingBlock({
               <span className={styles['list__bullet-index']}>{index + 1}</span>
               <Link
                 href={point.linkProps.href}
-                className="fr-link--icon-right fr-icon-arrow-right-line"
+                className="fr-link fr-link--icon-right fr-icon-arrow-right-line"
               >
                 {point.title}
               </Link>

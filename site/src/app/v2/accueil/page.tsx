@@ -7,6 +7,7 @@ import passSportLogoWhite from '@/images/pass-sport-logo-white.svg';
 import leftLines from '@/images/homepage/left-lines.svg';
 import rightLines from '@/images/homepage/right-lines.svg';
 import wheelchairBasketball from '@/images/homepage/wheelchair-basketball.png';
+import lucie from '@/images/homepage/lucie.jpg';
 import Link from 'next/link';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import GuidingBlock, { GuidingBlockProps } from '@/app/components/guided-block/GuidingBlock';
@@ -191,10 +192,15 @@ export default async function Accueil() {
                 Consulter le site de l&apos;Handiguide
               </Link>
             </span>
+
+            <p className={cn(['fr-text--sm', styles['handiguide-section__legend']])}>
+              Sur la photo : Lucie Hautiere, médaillée d’or des championnats d’Europe en 2023 et
+              participation aux Jeux Paralympiques de Paris 2024 en para tennis de table.
+            </p>
           </div>
 
           <Image
-            src={wheelchairBasketball}
+            src={lucie}
             className={cn('fr-responsive-img', styles['handiguide-section__image'])}
             alt=""
           />

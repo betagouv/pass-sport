@@ -6,11 +6,10 @@ import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 import cn from 'classnames';
 import Link from 'next/link';
 import Image from 'next/image';
-import horse from '@/images/jeune-et-parent/horse.png';
-import pool from '@/images/structure/pool.png';
+import athletism from '@/images/structures/athletism.webp';
+import simonRunning from '@/images/structures/simon-running.webp';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
-import Button from '@codegouvfr/react-dsfr/Button';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -74,7 +73,7 @@ export default function Page() {
           className={styles['communication-kit-section']}
         >
           <Image
-            src={horse}
+            src={athletism}
             className={cn('fr-responsive-img', styles['communication-kit-section__image'])}
             alt=""
           />
@@ -118,21 +117,19 @@ export default function Page() {
             concernant le pass Sport :
           </p>
 
-          <Button
-            priority="secondary"
-            linkProps={{
-              'aria-label': 'Ouvrir une nouvelle fenêtre vers Le Compte Asso',
-              href: 'https://lecompteasso.associations.gouv.fr/',
-              target: '_blank',
-            }}
+          <Link
+            className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
+            target="_blank"
+            aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
+            href="https://lecompteasso.associations.gouv.fr/"
           >
             Le Compte Asso
-          </Button>
+          </Link>
 
           <p>
             Si vous avez déjà un compte sur Le Compte Asso, complétez votre profil en téléversant
             votre justificatif d&apos;éligibilité au dispositif (un des trois suivants) dans la
-            section &laquo;affiliations et adhérents personnes morales&raquo; :
+            section &laquo; affiliations et adhérents personnes morales &raquo; :
           </p>
 
           <ul className="fr-ml-2w">
@@ -157,9 +154,9 @@ export default function Page() {
               bénéficiaire.
             </li>
             <li>
-              Sur votre compte Asso, allez dans la section &laquo;Gérer les inscriptions pass
-              Sport&raquo;, puis “Suivi des inscriptions pass Sport” pour ajouter un nouveau
-              bénéficiaire.
+              Sur votre compte Asso, allez dans la section &laquo; Gérer les inscriptions pass Sport
+              &raquo;, puis &laquo; Suivi des inscriptions pass Sport &raquo; pour ajouter un
+              nouveau bénéficiaire.
             </li>
           </ol>
 
@@ -170,21 +167,19 @@ export default function Page() {
             </span>
           </p>
 
-          <Button
-            priority="secondary"
-            linkProps={{
-              'aria-label': 'Ouvrir une nouvelle fenêtre vers Le Compte Asso',
-              href: 'https://lecompteasso.associations.gouv.fr/',
-              target: '_blank',
-            }}
+          <Link
+            className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
+            target="_blank"
+            aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
+            href="https://lecompteasso.associations.gouv.fr/"
           >
             Le Compte Asso
-          </Button>
+          </Link>
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.GET_REFUNDS} className={styles['get-refunds-section']}>
           <Image
-            src={pool}
+            src={simonRunning}
             className={cn('fr-responsive-img', styles['get-refunds-section__image'])}
             alt=""
           />
@@ -212,16 +207,14 @@ export default function Page() {
               </span>
             </p>
 
-            <Button
-              priority="secondary"
-              linkProps={{
-                'aria-label': 'Ouvrir une nouvelle fenêtre vers Le Compte Asso',
-                href: 'https://lecompteasso.associations.gouv.fr/',
-                target: '_blank',
-              }}
+            <Link
+              className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
+              target="_blank"
+              aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
+              href="https://lecompteasso.associations.gouv.fr/"
             >
               Le Compte Asso
-            </Button>
+            </Link>
           </div>
         </section>
 

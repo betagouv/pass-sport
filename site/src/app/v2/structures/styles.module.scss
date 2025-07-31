@@ -10,7 +10,7 @@
 .guiding-block__container {
   position: relative;
   top: -148px;
-  margin-bottom: -70px;
+  margin-bottom: -120px;
 
   @media screen and (max-width: $lg) {
     margin-bottom: -220px;
@@ -42,15 +42,10 @@
   align-self: center;
   width: 95%;
 
-  @media screen and (max-width: $lg) {
-    flex-direction: column-reverse;
-    height: auto;
-    width: 100%;
-    margin: 24px auto;
-  }
-
   img {
     flex: 1;
+    max-width: 384px;
+    border-radius: 8px;
   }
 
   &__description {
@@ -62,13 +57,24 @@
     gap: 30px;
     color: black;
     border-radius: 0 8px 8px 0;
+  }
 
-    @media screen and (max-width: $lg) {
+  @media screen and (max-width: $lg) {
+    flex-direction: column-reverse;
+    height: auto;
+    width: 100%;
+    margin: 24px auto;
+
+    &__description {
       width: 100%;
       border-radius: 0 0 8px 8px;
       padding: 24px 0;
       height: auto;
       justify-content: initial;
+    }
+
+    img {
+      max-width: 100%;
     }
   }
 }
@@ -85,7 +91,7 @@
   }
 
   p {
-    margin-bottom: 0px;
+    margin-bottom: 0;
   }
 }
 
@@ -119,6 +125,7 @@
     max-width: 486px;
     align-self: center;
     justify-self: center;
+    border-radius: 8px;
   }
 
   &__description {
@@ -134,6 +141,10 @@
   @media screen and (max-width: $lg) {
     width: 100%;
     flex-direction: column;
+
+    img {
+      max-width: 100%;
+    }
   }
 }
 
