@@ -1,9 +1,9 @@
-import ForWhoStep from './components/forWhoStep/ForWhoStep';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { Metadata } from 'next';
 import { isPasSportClosed } from '@/utils/date';
+import EligibilityTestWwrapper from '@/app/v2/test-eligibilite-base/components/eligibilityTestWrapper/EligibilityTestWrapper';
 
 export const metadata: Metadata = {
   title: 'Puis-je bénéficier du pass Sport ? - pass Sport',
@@ -24,8 +24,8 @@ const EligibilityTest = () => {
           </h1>
 
           <div className={`fr-mb-8w fr-mx-auto fr-px-2w ${styles.background}`}>
-            <div className={`fr-py-7w fr-mx-auto ${styles.wrapper}`}>
-              <ForWhoStep />
+            <div className={`fr-py-1w fr-mx-auto ${styles.wrapper}`}>
+              <EligibilityTestWwrapper />
             </div>
           </div>
         </div>

@@ -1,9 +1,4 @@
 import { Metadata } from 'next';
-import AllowanceStep from './components/allowance-step/AllowanceStep';
-import styles from './styles.module.scss';
-import cn from 'classnames';
-import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
-import { isPasSportClosed } from '@/utils/date';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",

@@ -1,0 +1,26 @@
+@import '../../../app/sassVariables.module.scss';
+
+.container {
+  --know-more-bg-color: initial;
+  --know-more-title-color: initial;
+
+  &--purple {
+    --know-more-title-color: var(--purple-glycine-sun-319-moon-630);
+    --know-more-bg-color: var(--purple-glycine-975-75);
+  }
+  //light/accent/$purple-glycine-sun-319
+  &--yellow {
+    --know-more-title-color: var(--yellow-moutarde-sun-348-moon-860);
+    --know-more-bg-color: var(--yellow-moutarde-975-75);
+  }
+
+  padding: 12px;
+  margin-top: auto;
+  border-radius: 8px;
+  background-color: var(--know-more-bg-color);
+
+  &__title {
+    color: var(--know-more-title-color);
+    margin: 0;
+  }
+}

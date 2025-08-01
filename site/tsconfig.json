@@ -23,7 +23,8 @@
       "@/images/*": ["public/images/*"],
       "@/components/*": ["components/*"],
       "@/utils/*": ["./utils/*"],
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/types/*": ["./types/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "global.d.ts"],
