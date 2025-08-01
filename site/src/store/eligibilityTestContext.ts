@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { Dispatch, RefObject, SetStateAction } from 'react';
+import { SearchResponseBody } from '@/types/EligibilityTest';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
-/**
- * - parameter is the value present in the context initially. Can be an object, string, ...
- * - AuthContext is an object which contains components
- */
-const EligibilityTestContext = React.createContext({
+type EligibilityTestContextProps = {
+  performNewTest: VoidFunction;
+  portalRef: RefObject<Element | DocumentFragment> | null;
+  eligibilityData: SearchResponseBody | null;
+  setEligibilityData: Dispatch<SetStateAction<SearchResponseBody | null>>;
+  dob?: string;
+  benefIsEligible: boolean;
+  setBenefIsEligible: Dispatch<SetStateAction<boolean>>;
+  setAllowance: Dispatch<SetStateAction<ALLOWANCE | null>>;
+  allowance: ALLOWANCE | null;
+};
+
+const EligibilityTestContext = React.createContext<EligibilityTestContextProps>({
   performNewTest: () => {},
+  portalRef: null,
+  eligibilityData: null,
+  setEligibilityData: () => {},
+  dob: undefined,
+  benefIsEligible: false,
+  setBenefIsEligible: () => {},
+  setAllowance: () => {},
+  allowance: null,
 });
 
 export default EligibilityTestContext;

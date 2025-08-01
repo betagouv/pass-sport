@@ -6,7 +6,7 @@ import Checkbox from '@codegouvfr/react-dsfr/Checkbox';
 import Input from '@codegouvfr/react-dsfr/Input';
 import Select from '@codegouvfr/react-dsfr/Select';
 import React, { ChangeEvent, FormEvent, SyntheticEvent, useRef, useState } from 'react';
-import { InputsState } from '../../../../../../types/Contact';
+import { InputsState } from '@/types/Contact';
 import { postContact } from '../../client-agent';
 import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';

@@ -1,0 +1,16 @@
+.container {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: center;
+  margin-left: -8px;
+  margin-bottom: 16px;
+
+  span {
+    color: var(--blue-france-sun-113-625);
+  }
+
+  button {
+    margin-left: auto;
+  }
+}

@@ -77,8 +77,7 @@ const CityFinder = ({
       <label className={rootStyles['text--black']} htmlFor={inputName}>
         {legend}
         <p className={cn('fr-text--xs', styles.hint, 'fr-mb-1w', 'fr-mt-1v')}>
-          Si vous avez déménagé dans les 12 derniers mois, remplissez le champ avec le nom de votre
-          ancienne ville
+          Personne responsable du compte gérant l’allocation. Peut être la même personne.
         </p>
       </label>
 
@@ -118,15 +117,15 @@ const CityFinder = ({
         />
       </div>
 
-      {secondHintNeeded && (
-        <div className={cn('fr-mt-2w', styles.secondHintBlock)}>
-          <span className={cn('fr-icon--sm', 'fr-icon-info-fill')} aria-hidden="true" />
-          <p className={cn('fr-mb-4w', 'fr-text--xs')}>
-            L’allocataire est la personne qui perçoit au moins une aide en regard de leur situation
-            familiale et/ou monétaire.
-          </p>
-        </div>
-      )}
+      {/*{secondHintNeeded && (*/}
+      {/*  <div className={cn('fr-mt-2w', styles.secondHintBlock)}>*/}
+      {/*    <span className={cn('fr-icon--sm', 'fr-icon-info-fill')} aria-hidden="true" />*/}
+      {/*    <p className={cn('fr-mb-4w', 'fr-text--xs')}>*/}
+      {/*      L’allocataire est la personne qui perçoit au moins une aide en regard de leur situation*/}
+      {/*      familiale et/ou monétaire.*/}
+      {/*    </p>*/}
+      {/*  </div>*/}
+      {/*)}*/}
 
       {inputState.state === 'error' && (
         <div className={cn('fr-pt-2w', styles.container)} role="status">

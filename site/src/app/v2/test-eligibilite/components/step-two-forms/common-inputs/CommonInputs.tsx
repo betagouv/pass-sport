@@ -47,7 +47,7 @@ const CommonInputs = ({
   return (
     <>
       <Select
-        label={isDirectBeneficiary ? `Pays de naissance*` : `Pays de naissance de l’allocataire*`}
+        label={isDirectBeneficiary ? `Pays de naissance *` : `Pays de naissance de l’allocataire *`}
         hint="Format attendu : Format attendu : Si le nom du pays est composé, veillez à saisir un tiret entre deux noms (ex : Pays-Bas)"
         nativeSelectProps={{
           name: birthCountryInputName,
@@ -77,8 +77,8 @@ const CommonInputs = ({
             inputState={inputStates['recipientBirthPlace']!}
             legend={
               isDirectBeneficiary
-                ? `Commune de naissance*`
-                : `Commune de naissance de l'allocataire*`
+                ? `Commune de naissance *`
+                : `Commune de naissance de l'allocataire *`
             }
             isDisabled={areInputsDisabled}
             onChanged={onBirthPlaceChanged}

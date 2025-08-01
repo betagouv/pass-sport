@@ -3,14 +3,16 @@
 .container {
   display: flex;
   flex-direction: column;
-  background-color: var(--blue-ecume-925-125);
+  //background-color: var(--blue-ecume-925-125);
+  background-color: var(--orange-terre-battue-975-75);
   align-items: center;
 
   color: #0063cb;
 
   &--home-page-variant {
-    background-color: var(--green-menthe-925-125-hover);
-    padding-top: 80px;
+    background-color: var(--orange-terre-battue-975-75);
+    //background-color: var(--green-menthe-925-125-hover);
+    padding-top: 40px;
 
     @media screen and (max-width: $lg) {
       padding-top: 40px;

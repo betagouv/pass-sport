@@ -2,6 +2,7 @@
 import ButtonsGroup from '@codegouvfr/react-dsfr/ButtonsGroup';
 import { useRouter } from 'next/navigation';
 import React from 'react';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 const ButtonChoiceGroup = () => {
   const router = useRouter();
@@ -13,12 +14,15 @@ const ButtonChoiceGroup = () => {
           onClick: () => router.push('test-eligibilite-base'),
           priority: 'secondary',
         },
-        // todo: Enable later in august
-        // {
-        //   children: 'Je souhaite récupérer mon pass Sport',
-        //   onClick: () => router.push('test-eligibilite'),
-        //   priority: 'secondary',
-        // },
+        ...(CODES_OBTAINABLE
+          ? [
+              {
+                children: 'Je souhaite récupérer mon pass Sport',
+                onClick: () => router.push('test-eligibilite'),
+                priority: 'secondary' as const,
+              },
+            ]
+          : []),
       ]}
       inlineLayoutWhen="sm and up"
       buttonsSize="large"
