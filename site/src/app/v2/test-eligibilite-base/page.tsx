@@ -16,7 +16,7 @@ const EligibilityTest = () => {
       id={SKIP_LINKS_ID.mainContent}
       role="main"
     >
-      <div>
+      <section>
         <h1 className={`fr-pt-8w fr-mb-4w fr-px-2w ${styles.title}`}>
           Puis-je bénéficier du pass Sport?
         </h1>
@@ -26,7 +26,7 @@ const EligibilityTest = () => {
             <EligibilityTestWrapper />
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 };

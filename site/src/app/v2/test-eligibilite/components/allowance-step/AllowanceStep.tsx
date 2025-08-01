@@ -20,10 +20,10 @@ import Input, { InputProps } from '@codegouvfr/react-dsfr/Input';
 import { ALLOWANCE_MAPPING_TO_ALLOCATION, isEligible } from '@/utils/eligibility-test';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
-const CROUS_CAN_OBTAIN_CODE = process.env.NEXT_PUBLIC_CODES_OBTAINABLE_FOR_CROUS === 'yes';
 
 const initialInputStates: Record<string, InputProps['state']> = {
   allowance: 'default',
@@ -282,7 +282,7 @@ const AllowanceStep = () => {
                 </div>
               )}
 
-              {allowance === ALLOWANCE.CROUS && CROUS_CAN_OBTAIN_CODE && (
+              {allowance === ALLOWANCE.CROUS && CODES_OBTAINABLE_FOR_CROUS && (
                 <CrousEligibilityTestForms />
               )}
             </>
@@ -294,7 +294,7 @@ const AllowanceStep = () => {
         {isValidated &&
           benefIsEligible &&
           allowance === ALLOWANCE.CROUS &&
-          !CROUS_CAN_OBTAIN_CODE && (
+          !CODES_OBTAINABLE_FOR_CROUS && (
             <div
               style={{
                 maxWidth: 792,

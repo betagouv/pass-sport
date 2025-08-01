@@ -71,7 +71,7 @@ export default function Page() {
                 styles['eligibility-section__wrapper'],
               )}
             >
-              <SimplifiedEligibilityTest display="row" buttonVariant="primary" />
+              <SimplifiedEligibilityTest display="row" buttonVariant="primary" headingLevel="h1" />
             </div>
           </div>
         </section>
@@ -186,6 +186,18 @@ export default function Page() {
               <span className="fr-text--bold">valable du 1er septembre au 31 décembre 2025.</span>
             </p>
           </div>
+        </section>
+
+        <section className={styles['decret-section']}>
+          <h1 className="fr-h4">Texte de référence</h1>
+          <Link
+            href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
+            target="_blank"
+            className="align-self--baseline"
+            aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"
+          >
+            Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025
+          </Link>
         </section>
       </div>
     </main>

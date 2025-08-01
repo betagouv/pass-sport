@@ -9,124 +9,156 @@ import { useEffect, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
-import Link from 'next/link';
 import KnowMore from '@/app/components/know-more/KnowMore';
+import Link from 'next/link';
+import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
   buttonVariant?: ButtonProps['priority'];
   onCompletion?: (success: boolean) => void;
+  headingLevel: 'h1' | 'h2';
 };
-
-const CODES_OBTAINABLE = process.env.NEXT_PUBLIC_CODES_OBTAINABLE === 'yes';
 
 export default function SimplifiedEligibilityTest({
   display = 'row',
   buttonVariant = 'primary',
   onCompletion,
+  headingLevel,
 }: SimplifiedEligibilityTestProps) {
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [allocationName, setAllocationName] = useState<ALLOCATION | null>(null);
+  const [knowMoreMeta, setKnowMoreMeta] = useState<{ title: string; description: string } | null>(
+    null,
+  );
   const [alertMeta, setAlertMeta] = useState<{ title: string; description: string } | null>(null);
-  const [displayKnowMore, setDisplayKnowMore] = useState<boolean>(false);
   const eligibilityTestOnClick = () => {
     push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked']);
   };
 
-  // useEffect(() => {
-  //   if (!allocationName) return;
-  //
-  //   if (CODES_OBTAINABLE) {
-  //     setDisplayKnowMore(false);
-  //
-  //     if (
-  //       success &&
-  //       ![ALLOCATION.CROUS, ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX, ALLOCATION.AEEH].includes(
-  //         allocationName,
-  //       )
-  //     ) {
-  //       setAlertMeta({
-  //         title:
-  //           'Bonne nouvelle, d’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
-  //         description:
-  //           "Disponible à partir du 1er septembre jusqu’au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l’un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
-  //       });
-  //     } else if (CODES_OBTAINABLE && success && allocationName === ALLOCATION.AEEH) {
-  //       setAlertMeta({
-  //         title:
-  //           'Bonne nouvelle, d’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
-  //         description:
-  //           "Disponible à partir du 1er septembre jusqu’au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l’un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
-  //       });
-  //     } else if (
-  //       !success &&
-  //       ![ALLOCATION.CROUS, ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX].includes(allocationName)
-  //     ) {
-  //       setAlertMeta({
-  //         title:
-  //           'Nous sommes désolés, d’après les informations que vous nous avez fournies, vous n’êtes pas éligible au pass Sport.',
-  //         description: '',
-  //       });
-  //     } else if (
-  //       !success &&
-  //       [ALLOCATION.CROUS, ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX].includes(allocationName)
-  //     ) {
-  //       setAlertMeta({
-  //         title:
-  //           'D’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
-  //         description:
-  //           'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu de 1er septembre. Nous nous excusons pour la gêne occasionnée.',
-  //       });
-  //     }
-  //   } else {
-  //     setDisplayKnowMore(true);
-  //
-  //     if (
-  //       success &&
-  //       ![ALLOCATION.CROUS, ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX, ALLOCATION.AEEH].includes(
-  //         allocationName,
-  //       )
-  //     ) {
-  //       setAlertMeta({
-  //         title:
-  //           'Bonne nouvelle, d’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
-  //         description:
-  //           "Disponible à partir du 1er septembre jusqu’au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l’un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
-  //       });
-  //     } else if (CODES_OBTAINABLE && success && allocationName === ALLOCATION.AEEH) {
-  //       setAlertMeta({
-  //         title:
-  //           'Bonne nouvelle, d’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
-  //         description:
-  //           "Disponible à partir du 1er septembre jusqu’au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l’un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
-  //       });
-  //     } else if (
-  //       !success &&
-  //       ![ALLOCATION.CROUS, ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX].includes(allocationName)
-  //     ) {
-  //       setAlertMeta({
-  //         title:
-  //           'Nous sommes désolés, d’après les informations que vous nous avez fournies, vous n’êtes pas éligible au pass Sport.',
-  //         description: '',
-  //       });
-  //     } else if (
-  //       !success &&
-  //       [ALLOCATION.CROUS, ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX].includes(allocationName)
-  //     ) {
-  //       setAlertMeta({
-  //         title:
-  //           'D’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
-  //         description:
-  //           'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu de 1er septembre. Nous nous excusons pour la gêne occasionnée.',
-  //       });
-  //     }
-  //   }
-  // }, [success, allocationName]);
+  const [displayEligibilityLink, setDisplayEligibilityLink] = useState<boolean>(false);
+  const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
+  const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
+
+  function resetStates() {
+    setDisplayEligibilityLink(false);
+    setDisplayAeehLink(false);
+    setDisplayObtainCodeButton(false);
+    setSuccess(null);
+    setAlertMeta(null);
+    setKnowMoreMeta(null);
+  }
+
+  useEffect(() => {
+    if (!allocationName) return;
+
+    const successInitialMeta = {
+      title:
+        'Bonne nouvelle, d’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
+      description:
+        "Disponible à partir du 1er septembre jusqu’au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l’un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
+    };
+
+    const errorInitialMeta = {
+      title:
+        'Nous sommes désolés, d’après les informations que vous nous avez fournies, vous n’êtes pas éligible au pass Sport.',
+      description: '',
+    };
+
+    if (CODES_OBTAINABLE && success === true) {
+      switch (allocationName) {
+        case ALLOCATION.AAH:
+        case ALLOCATION.ARS:
+          setAlertMeta({
+            title: successInitialMeta.title,
+            description: successInitialMeta.description,
+          });
+          setDisplayObtainCodeButton(true);
+          break;
+        case ALLOCATION.AEEH:
+          setAlertMeta({
+            title: successInitialMeta.title,
+            description: successInitialMeta.description,
+          });
+          setDisplayAeehLink(true);
+          break;
+        case ALLOCATION.CROUS:
+        case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
+          if (!CODES_OBTAINABLE_FOR_CROUS) {
+            setAlertMeta({
+              title: successInitialMeta.title,
+              description:
+                'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu de 1er septembre. Nous nous excusons pour la gêne occasionnée.',
+            });
+          } else {
+            setAlertMeta({
+              title: successInitialMeta.title,
+              description: successInitialMeta.description,
+            });
+            setDisplayObtainCodeButton(true);
+          }
+          break;
+      }
+    }
+
+    if (CODES_OBTAINABLE && success === false) {
+      setAlertMeta({
+        title: errorInitialMeta.title,
+        description: errorInitialMeta.description,
+      });
+
+      setDisplayEligibilityLink(true);
+    }
+
+    if (!CODES_OBTAINABLE && success === true) {
+      switch (allocationName) {
+        case ALLOCATION.AAH:
+        case ALLOCATION.AEEH:
+        case ALLOCATION.ARS:
+          setAlertMeta({
+            title: successInitialMeta.title,
+            description: successInitialMeta.description,
+          });
+          setKnowMoreMeta({
+            title: 'A savoir',
+            description:
+              'Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n’avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.',
+          });
+          break;
+        case ALLOCATION.CROUS:
+        case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
+          setAlertMeta({
+            title: successInitialMeta.title,
+            description:
+              'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu de 1er septembre. Nous nous excusons pour la gêne occasionnée.',
+          });
+          setKnowMoreMeta({
+            title: 'A savoir',
+            description:
+              'Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er novembre. Si vous n’avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.',
+          });
+          break;
+      }
+    }
+
+    if (!CODES_OBTAINABLE && success === false) {
+      setAlertMeta({
+        title: errorInitialMeta.title,
+        description: errorInitialMeta.description,
+      });
+    }
+  }, [success, allocationName]);
 
   return (
     <div className={cn(styles['eligibility-test'])}>
-      <h1 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h1>
+      {headingLevel === 'h1' && (
+        <h1 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h1>
+      )}
+
+      {headingLevel === 'h2' && (
+        <h2 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h2>
+      )}
 
       <p className="fr-text--sm fr-text-default--grey fr-ml-1w fr-mt-1w fr-mb-0">
         Vérifiez votre éligibilité ou celle votre enfant. Ces informations ne sont pas conservées.
@@ -156,9 +188,7 @@ export default function SimplifiedEligibilityTest({
                   type: 'date',
                   onChange: (e) => {
                     setTargetDate(e.target.value);
-                    setSuccess(null);
-                    setAlertMeta(null);
-                    setDisplayKnowMore(false);
+                    resetStates();
                   },
                 }}
               />
@@ -172,9 +202,7 @@ export default function SimplifiedEligibilityTest({
                   required: true,
                   onChange: (e) => {
                     setAllocationName(e.target.value);
-                    setSuccess(null);
-                    setAlertMeta(null);
-                    setDisplayKnowMore(false);
+                    resetStates();
                   },
                 }}
                 options={[
@@ -210,10 +238,6 @@ export default function SimplifiedEligibilityTest({
             <div className="fr-fieldset__element flex--min-content">
               <Button
                 type="submit"
-                className={cn({
-                  // 'fr-ml-1w': display === 'row',
-                  // 'fr-ml-1w': display === 'column',
-                })}
                 priority={buttonVariant}
                 onClick={() => {
                   if (targetDate && allocationName) {
@@ -232,7 +256,7 @@ export default function SimplifiedEligibilityTest({
         </fieldset>
 
         <section id="eligibility-notification-message" role="alert">
-          {success !== null && alertMeta?.title && alertMeta?.description && (
+          {success !== null && alertMeta !== null && (
             <Alert
               severity={success ? 'success' : 'info'}
               className="fr-mt-2w"
@@ -243,24 +267,35 @@ export default function SimplifiedEligibilityTest({
           )}
         </section>
 
-        {displayKnowMore && !CODES_OBTAINABLE && (
+        {knowMoreMeta && (
           <section className="fr-mt-3w">
-            <KnowMore
-              variant="purple"
-              knowMore={{
-                title: 'A savoir',
-                description:
-                  'Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n’avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.',
-              }}
-            />
+            <KnowMore variant="purple" knowMore={knowMoreMeta} />
           </section>
         )}
 
-        {/*{!success && (*/}
-        {/*  <Link href="" className="fr-link">*/}
-        {/*    En savoir plus sur les conditions d’éligibilité*/}
-        {/*  </Link>*/}
-        {/*)}*/}
+        {displayObtainCodeButton && (
+          <p className="fr-mb-0 fr-mt-3w text-align--center">
+            <Link href="/v2/test-eligibilite" className="fr-btn fr-btn--secondary ">
+              Demander mon pass Sport
+            </Link>
+          </p>
+        )}
+
+        {displayAeehLink && (
+          <p className="fr-mb-0 fr-mt-3w text-align--center">
+            <Link href="/v2/une-question?modalOpened=1" className="fr-link">
+              Contactez-nous pour demander votre pass Sport
+            </Link>
+          </p>
+        )}
+
+        {displayEligibilityLink && (
+          <p className="fr-mb-0 fr-mt-3w text-align--center">
+            <Link href="/v2/une-question" className="fr-link">
+              En savoir plus sur les conditions d’éligibilité
+            </Link>
+          </p>
+        )}
       </form>
     </div>
   );

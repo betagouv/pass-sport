@@ -8,6 +8,7 @@ import breakdance from '@/images/eligibility-test/break-dance.webp';
 import cn from 'classnames';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",
@@ -81,7 +82,7 @@ const EligibilityTest = () => {
         </div>
       </section>
 
-      {process.env.NEXT_PUBLIC_CODES_OBTAINABLE === 'yes' ? (
+      {CODES_OBTAINABLE ? (
         <AllowanceStep />
       ) : (
         <div className={styles.background}>

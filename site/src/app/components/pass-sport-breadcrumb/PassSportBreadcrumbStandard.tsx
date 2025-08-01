@@ -21,6 +21,7 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/jeunes-et-parents': 'Jeune et parents',
   '/v2/structures': 'Structures',
   '/v2/test-eligibilite': 'Formulaire de demande',
+  '/v2/test-ou-code': 'Je fais le test',
 };
 
 export default function PassSportBreadcrumbStandard() {

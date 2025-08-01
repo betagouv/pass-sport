@@ -6,7 +6,6 @@ import Image from 'next/image';
 import passSportLogoWhite from '@/images/pass-sport-logo-white.svg';
 import leftLines from '@/images/homepage/left-lines.svg';
 import rightLines from '@/images/homepage/right-lines.svg';
-import wheelchairBasketball from '@/images/homepage/wheelchair-basketball.png';
 import lucie from '@/images/homepage/lucie.jpg';
 import Link from 'next/link';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
@@ -137,7 +136,7 @@ export default async function Accueil() {
                 styles['eligibility-section__wrapper'],
               )}
             >
-              <SimplifiedEligibilityTest display="row" buttonVariant="secondary" />
+              <SimplifiedEligibilityTest display="row" buttonVariant="primary" headingLevel="h1" />
             </div>
           </div>
         </section>
