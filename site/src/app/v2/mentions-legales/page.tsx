@@ -1,7 +1,6 @@
 import SocialMediaPanel from '@/app/components/social-media-panel/SocialMediaPanel';
 import PageTitle from '../../../../components/PageTitle/PageTitle';
 import styles from './style.module.scss';
-import EligibilityTestBanner from '@/components/eligibility-test-banner/EligibilityTestBanner';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Link from 'next/link';
@@ -120,7 +119,6 @@ export default function MentionsLegales() {
         </div>
       </main>
 
-      <EligibilityTestBanner />
       <SocialMediaPanel />
     </>
   );

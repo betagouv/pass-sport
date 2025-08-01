@@ -1,5 +1,4 @@
 import ClubDetails from '@/app/v2/trouver-un-club/[club-name]/components/clubDetails/ClubDetails';
-import EligibilityTestBanner from '../../../../../components/eligibility-test-banner/EligibilityTestBanner';
 import SocialMediaPanel from '../../../components/social-media-panel/SocialMediaPanel';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
@@ -23,7 +22,6 @@ const ClubPage = ({ params }: { params: { 'club-name': string } }) => {
         <ClubDetails clubName={clubName} />
       </main>
 
-      {/*<EligibilityTestBanner />*/}
       <SocialMediaPanel />
     </>
   );

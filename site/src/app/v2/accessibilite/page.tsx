@@ -283,7 +283,6 @@ export default function Accessibilite() {
         </div>
       </main>
 
-      <EligibilityTestBanner />
       <SocialMediaPanel />
     </>
   );
