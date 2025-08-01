@@ -9,6 +9,7 @@ import { headers } from 'next/headers';
 import SocialMediaPanel from '@/app/components/social-media-panel/SocialMediaPanel';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import { CATEGORY_IDENTIFIERS } from '@/types/Faq';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -19,7 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Questions() {
   headers();
 
-  const categoriesWithArticles = await getCategoriesWithArticles({ isProVersion: true });
+  const categoriesWithArticles = await getCategoriesWithArticles({
+    categoryIdentifier: CATEGORY_IDENTIFIERS.PRO_CATEGORY_IDENTIFIER,
+  });
 
   return (
     <>

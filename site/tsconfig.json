@@ -23,6 +23,7 @@
       "@/images/*": ["public/images/*"],
       "@/components/*": ["components/*"],
       "@/utils/*": ["./utils/*"],
+      "@/types/*": ["./types/*"],
       "@/*": ["./src/*"]
     }
   },

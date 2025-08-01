@@ -1,7 +1,6 @@
 'use server';
 
 import PageTitle from '@/components/PageTitle/PageTitle';
-import EligibilityTestBanner from '@/components/eligibility-test-banner/EligibilityTestBanner';
 import SocialMediaPanel from '../../components/social-media-panel/SocialMediaPanel';
 import styles from './styles.module.scss';
 import ContentSection from '@/app/v2/une-question/components/ContentSection/ContentSection';
@@ -10,6 +9,7 @@ import { getCategoriesWithArticles } from '@/app/v2/une-question/server-agent';
 import { headers } from 'next/headers';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import { CATEGORY_IDENTIFIERS } from '@/types/Faq';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -20,7 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Questions() {
   headers();
 
-  const categoriesWithArticles = await getCategoriesWithArticles({ isProVersion: false });
+  const categoriesWithArticles = await getCategoriesWithArticles({
+    categoryIdentifier: CATEGORY_IDENTIFIERS.USER_CATEGORY_IDENTIFIER,
+  });
 
   return (
     <>
