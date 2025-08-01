@@ -1,10 +1,8 @@
-import ForWhoStep from './components/forWhoStep/ForWhoStep';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { Metadata } from 'next';
 import { isPasSportClosed } from '@/utils/date';
-import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import EligibilityTestWwrapper from '@/app/v2/test-eligibilite-base/components/eligibilityTestWrapper/EligibilityTestWrapper';
 
 export const metadata: Metadata = {

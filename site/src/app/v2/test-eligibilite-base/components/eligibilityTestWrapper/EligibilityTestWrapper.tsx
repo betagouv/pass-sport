@@ -13,6 +13,7 @@ const EligibilityTestWwrapper = () => {
         display="column"
         buttonVariant="secondary"
         onCompletion={setSuccess}
+        headingLevel="h2"
       />
       {success !== null && (
         <section className="fr-px-5w fr-pt-0w fr-pb-5w">

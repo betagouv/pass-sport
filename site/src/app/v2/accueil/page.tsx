@@ -26,7 +26,7 @@ export default function Accueil() {
 
         <section className={cn(styles['eligibility-test__container'])}>
           <div className={cn(styles['eligibility-test__content'])}>
-            <SimplifiedEligibilityTest buttonVariant="secondary" />
+            <SimplifiedEligibilityTest buttonVariant="secondary" headingLevel="h2" />
           </div>
         </section>
 
