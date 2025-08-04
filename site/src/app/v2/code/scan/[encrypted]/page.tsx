@@ -92,7 +92,6 @@ function Page({ params: { encrypted } }: Props) {
               birthDate,
               code,
             }}
-            qrCodeValue={qrCodeValue}
           />
         </div>
       </div>

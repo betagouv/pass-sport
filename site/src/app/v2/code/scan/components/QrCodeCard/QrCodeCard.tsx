@@ -1,7 +1,6 @@
 'use client';
 
 import cn from 'classnames';
-import { QRCodeSVG } from 'qrcode.react';
 import styles from './styles.module.scss';
 import Button from '@codegouvfr/react-dsfr/Button';
 import { push } from '@socialgouv/matomo-next';
@@ -19,10 +18,9 @@ interface Props {
     code: string;
     birthDate: string;
   };
-  qrCodeValue: string;
 }
 
-const QrCodeCard = ({ data, qrCodeValue }: Props) => {
+const QrCodeCard = ({ data }: Props) => {
   const { firstname, lastname, gender, code, birthDate } = data;
   const notifRef = useRef<HTMLDivElement | null>(null);
   const [isNotificationDisplayed, setIsNotificationDisplayed] = useState(false);
@@ -68,14 +66,6 @@ const QrCodeCard = ({ data, qrCodeValue }: Props) => {
   return (
     <div className={styles.wrapper}>
       <div className={styles.container}>
-        <div>
-          <QRCodeSVG
-            value={qrCodeValue}
-            size={240}
-            aria-label="Image de votre QR Code - votre pass Sport, à montrer à un club partenaire lors de votre inscription"
-          />
-        </div>
-
         <div>
           <h2 className={cn('fr-mb-1w', 'fr-h6', styles.fullname)}>
             <span className={styles['text-casing']}>{firstname}</span>{' '}

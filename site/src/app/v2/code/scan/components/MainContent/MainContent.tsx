@@ -54,7 +54,6 @@ function MainContent() {
                 code: response.code,
                 birthDate: response.birthDate,
               }}
-              qrCodeValue={response.qrCodeValue}
             />
           </div>
         </div>

@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { getAnHourFromNow } from './date';
 import { decryptData, encrypt } from '@/utils/decryption';
 import { fromBase64ToString } from '@/utils/string';
-import { ConfirmPayload, FormStep, SearchPayload } from '../types/EligibilityTest';
+import { ConfirmPayload, FormStep, SearchPayload } from '@/types/EligibilityTest';
 import { AUTHORIZED_VENDORS_KEY } from '@/app/constants/cookie-manager';
 
 const COOKIE_SUPPORT_KEY = process.env.NEXT_PUBLIC_COOKIE_SUPPORT_KEY as string;

@@ -1,4 +1,3 @@
-import { StartDsfr } from './StartDsfr';
 import './globals.scss';
 import SkipLinksWrapper from '@/app/components/skip-links-wrapper/SkipLinksWrapper';
 import { Metadata } from 'next';
@@ -11,6 +10,7 @@ import { DsfrHead, getHtmlAttributes } from '@/dsfr/DsfrHead';
 import { DsfrProvider } from '@/dsfr/DsfrProvider';
 import PassSportNavigationStandard from './components/pass-sport-navigation/PassSportNavigationStandard';
 import PassSportBreadcrumbStandard from '@/app/components/pass-sport-breadcrumb/PassSportBreadcrumbStandard';
+import { StartDsfrOnHydration } from '@codegouvfr/react-dsfr/next-app-router';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -29,7 +29,6 @@ export default function RootLayout({
     <html {...getHtmlAttributes({ lang })}>
       <head>
         <DsfrHead nonce={nonce} />
-        <StartDsfr />
         <link
           rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -41,6 +40,7 @@ export default function RootLayout({
       </head>
 
       <body>
+        <StartDsfrOnHydration />
         <SkipLinksWrapper />
         <PassSportNavigationStandard />
         <PassSportBreadcrumbStandard />
