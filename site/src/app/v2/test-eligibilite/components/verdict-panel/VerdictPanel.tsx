@@ -24,7 +24,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   const { eligibilityData, pspCodeData } = useContext(EligibilityTestContext);
 
   const onDownloadLinkClicked = useCallback(() => {
-    push(['trackEvent', 'Eligibility Test', 'Download link clicked', 'Code pass Sport']);
+    push(['trackEvent', 'Eligibility Test', 'Link clicked', 'Download link clicked']);
   }, []);
 
   useEffect(() => {

@@ -4,7 +4,6 @@ import Footer, { type FooterProps } from '@codegouvfr/react-dsfr/Footer';
 import { FOOTER_BRAND_TOP } from '@/app/constants/footer-brand-top';
 import styles from './styles.module.scss';
 
-import { useIsProVersion } from '@/app/hooks/use-is-pro-version';
 import lcaLogo from '@/images/footer/logo-lca.webp';
 import menjLogo from '@/images/footer/menj-logo.svg';
 import passSportLogo from '@/images/pass-sport-logo.svg';
@@ -27,7 +26,6 @@ import { useUpdateHeadings } from '@/app/hooks/accessibility/use-update-headings
 import { FOOTER_CLASSES } from '@/app/constants/dsfr-classes';
 
 export default function PassSportFooter() {
-  const isProVersion = useIsProVersion();
   const footerRef = useRef<HTMLDivElement>(null);
 
   useUpdateHeadings({
@@ -227,7 +225,7 @@ export default function PassSportFooter() {
     {
       text: 'Plan du site',
       linkProps: {
-        href: isProVersion ? '/v2/pro/plan-du-site' : '/v2/plan-du-site',
+        href: '/v2/plan-du-site',
       },
     },
   ];
@@ -238,27 +236,25 @@ export default function PassSportFooter() {
         {
           text: 'Accueil',
           linkProps: {
-            href: isProVersion ? '/v2/pro/accueil' : '/v2/accueil',
+            href: '/v2/accueil',
           },
         },
         {
           text: 'Tout savoir sur le pass Sport',
           linkProps: {
-            href: isProVersion
-              ? '/v2/pro/tout-savoir-sur-le-pass-sport'
-              : '/v2/tout-savoir-sur-le-pass-sport',
+            href: '/v2/tout-savoir-sur-le-pass-sport',
           },
         },
         {
-          text: isProVersion ? 'Carte des structures partenaires' : 'Trouver un club partenaire',
+          text: 'Trouver un club partenaire',
           linkProps: {
-            href: isProVersion ? '/v2/pro/trouver-un-club' : '/v2/trouver-un-club',
+            href: '/v2/trouver-un-club',
           },
         },
         {
           text: 'Une question ?',
           linkProps: {
-            href: isProVersion ? '/v2/pro/une-question' : '/v2/une-question',
+            href: '/v2/une-question',
           },
         },
       ],

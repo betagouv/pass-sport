@@ -2,7 +2,6 @@ import SocialMediaPanel from '@/app/components/social-media-panel/SocialMediaPan
 import PageTitle from '../../../../components/PageTitle/PageTitle';
 import styles from './style.module.scss';
 import Link from 'next/link';
-import cn from 'classnames';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
 import { shouldDisplayChatbot } from '@/utils/date';
@@ -10,7 +9,7 @@ import { shouldDisplayChatbot } from '@/utils/date';
 export default function PlanDuSite() {
   return (
     <>
-      <main className={styles.wrapper} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
+      <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <PageTitle
           title="Plan du site"
           subtitle=""
@@ -18,17 +17,17 @@ export default function PlanDuSite() {
             container: styles['page-header'],
           }}
         />
-        <section
-          className={cn('fr-py-4w', 'fr-px-2w', 'fr-px-md-13w', 'fr-m-auto', styles.container)}
-        >
+        <section className="fr-container fr-my-4w">
           <ul>
             <li>
               <Link href="/v2/accueil">Accueil</Link>
             </li>
             <li>
-              <Link href="/v2/tout-savoir-sur-le-pass-sport">Tout savoir sur le pass Sport</Link>
+              <Link href="/v2/jeunes-et-parents">Jeunes et parents</Link>
             </li>
-
+            <li>
+              <Link href="/v2/structures">Structures</Link>
+            </li>
             <li>
               <Link href="/v2/trouver-un-club">Trouver un club partenaire</Link>
             </li>
@@ -45,12 +44,6 @@ export default function PlanDuSite() {
               <Link href="/v2/politique-de-confidentialite">Données personnelles</Link>
             </li>
           </ul>
-
-          <p className="fr-mb-1w">
-            <Link target="_blank" href="/v2/pro/accueil">
-              Site structure partenaire
-            </Link>
-          </p>
 
           {shouldDisplayChatbot() && (
             <p>
