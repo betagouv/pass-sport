@@ -10,10 +10,14 @@ import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/Ver
 import { useAutoCorrectAllowance } from '@/app/v2/test-eligibilite/hooks/use-auto-correct-allowance';
 
 const CrousEligibilityTestForms = () => {
-  const { portalRef, eligibilityData, setEligibilityData, benefIsEligible } =
-    useContext(EligibilityTestContext);
-
-  const [pspCodeData, setpspCodeData] = useState<EnhancedConfirmResponseBody | null>(null);
+  const {
+    portalRef,
+    eligibilityData,
+    setEligibilityData,
+    benefIsEligible,
+    pspCodeData,
+    setPspCodeData,
+  } = useContext(EligibilityTestContext);
 
   const onEligibilitySuccess = useCallback(() => {
     push([
@@ -42,7 +46,7 @@ const CrousEligibilityTestForms = () => {
           title="Vous êtes affilié à une bourse"
           onClick={() => {
             setEligibilityData(null);
-            setpspCodeData(null);
+            setPspCodeData(null);
           }}
           className="fr-mt-2w"
         />
@@ -53,7 +57,7 @@ const CrousEligibilityTestForms = () => {
           <StepOneForm
             onDataReceived={(data: SearchResponseBody) => {
               setEligibilityData(data);
-              setpspCodeData(null);
+              setPspCodeData(null);
             }}
             onEligibilityFailure={() => onEligibilityFailure('first step')}
             isDirectBeneficiary
@@ -67,7 +71,7 @@ const CrousEligibilityTestForms = () => {
             eligibilityData[0].organisme === 'cnous' && (
               <CrousForm
                 eligibilityDataItem={eligibilityData[0]}
-                onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+                onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
                 onEligibilitySuccess={onEligibilitySuccess}
                 onEligibilityFailure={onEligibilityFailure}
               />

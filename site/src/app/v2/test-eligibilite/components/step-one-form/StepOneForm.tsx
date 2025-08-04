@@ -195,7 +195,6 @@ const StepOneForm = ({
             'aria-autocomplete': 'none',
             required: true,
             autoFocus: true,
-            // value: dataset.JEUNE_CAF.name,
           }}
           hintText={
             isDirectBeneficiary ? (
@@ -225,7 +224,6 @@ const StepOneForm = ({
             autoComplete: 'given-name',
             'aria-autocomplete': 'none',
             required: true,
-            // value: dataset.JEUNE_CAF.firstname,
           }}
           hintText={
             isDirectBeneficiary ? (

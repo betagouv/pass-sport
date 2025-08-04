@@ -81,7 +81,7 @@ export interface ConfirmResponseBodyItem {
   };
 
   id: number;
-  genre: string; // 'F', 'M', else ?
+  genre: 'F' | 'M';
   nom: string;
   prenom: string;
   nom_complet: string;

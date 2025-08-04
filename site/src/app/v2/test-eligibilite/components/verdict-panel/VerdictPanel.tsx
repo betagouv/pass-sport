@@ -7,7 +7,11 @@ import Link from 'next/link';
 import Actions from '@/app/components/actions/Actions';
 import MissionCards from '@/app/components/mission-cards/MissionCards';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import { useEffect, useRef } from 'react';
+import { useCallback, useContext, useEffect, useRef } from 'react';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import PdfPassSport from '@/app/components/pdf-pass-sport/PdfPassSport';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { push } from '@socialgouv/matomo-next';
 
 interface Props {
   isSuccess: boolean;
@@ -17,6 +21,11 @@ interface Props {
 const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   const successRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  const { eligibilityData, pspCodeData } = useContext(EligibilityTestContext);
+
+  const onDownloadLinkClicked = useCallback(() => {
+    push(['trackEvent', 'Eligibility Test', 'Download link clicked', 'Code pass Sport']);
+  }, []);
 
   useEffect(() => {
     if (isSuccess && successRef.current) {
@@ -50,12 +59,39 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                 (strictement personnel)
               </p>
 
-              <div className={styles['download-section']}>
-                <Link href="#" className="fr-link fr-icon-download-line fr-link--icon-right">
-                  Mon pass Sport à télécharger
-                </Link>
-                <p className="fr-mt-1v fr-text--xs">PDF ~2 Mo</p>
-              </div>
+              {eligibilityData?.[0] && pspCodeData?.[0] && (
+                <div className={styles['download-section']}>
+                  <PDFDownloadLink
+                    document={
+                      <PdfPassSport
+                        benef={{
+                          firstname: eligibilityData[0].prenom,
+                          lastname: eligibilityData[0].nom,
+                          dob: eligibilityData[0].date_naissance,
+                          gender: pspCodeData[0].genre,
+                          code: pspCodeData[0].id_psp,
+                        }}
+                      />
+                    }
+                    fileName={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}
+                    className="fr-link fr-icon-download-line fr-link--icon-right"
+                    onClick={onDownloadLinkClicked}
+                  >
+                    {({ loading, error }) => {
+                      if (loading) {
+                        return 'Lien de téléchargement en préparation';
+                      }
+
+                      if (error) {
+                        return "Le lien de téléchargement n'a pas pû être crée";
+                      }
+
+                      return 'Mon pass Sport à télécharger';
+                    }}
+                  </PDFDownloadLink>
+                  <p className="fr-mt-1v fr-text--xs">PDF ~100 KB</p>
+                </div>
+              )}
             </div>
             <div className={styles['section-success__image']}>
               <Image src={code} className={cn('fr-responsive-img')} alt="" />

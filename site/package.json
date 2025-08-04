@@ -21,11 +21,13 @@
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.25.3",
+    "@react-pdf/renderer": "^4.3.0",
     "@sentry/nextjs": "^8.49.0",
     "@socialgouv/matomo-next": "^1.9.2",
     "@uidotdev/usehooks": "^2.4.1",
     "classnames": "^2.5.1",
     "crisp-api": "^8.5.0",
+    "date-fns": "^4.1.0",
     "geolib": "^3.3.4",
     "got": "^14.4.5",
     "leaflet": "^1.9.4",
@@ -41,7 +43,6 @@
     "remark-breaks": "^4.0.0",
     "sharp": "^0.33.4",
     "zod": "^3.23.8",
-    "date-fns": "^4.1.0",
     "zod-form-data": "^2.0.2"
   },
   "devDependencies": {

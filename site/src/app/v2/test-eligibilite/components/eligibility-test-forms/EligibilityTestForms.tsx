@@ -14,10 +14,15 @@ import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/Ver
 import { useAutoCorrectAllowance } from '@/app/v2/test-eligibilite/hooks/use-auto-correct-allowance';
 
 const EligibilityTestForms = () => {
-  const { allowance, portalRef, eligibilityData, setEligibilityData, benefIsEligible } =
-    useContext(EligibilityTestContext);
-
-  const [pspCodeData, setpspCodeData] = useState<EnhancedConfirmResponseBody | null>(null);
+  const {
+    allowance,
+    portalRef,
+    eligibilityData,
+    setEligibilityData,
+    pspCodeData,
+    setPspCodeData,
+    benefIsEligible,
+  } = useContext(EligibilityTestContext);
 
   const onEligibilitySuccess = useCallback(() => {
     push([
@@ -61,7 +66,7 @@ const EligibilityTestForms = () => {
           title={getStepCheckerName()}
           onClick={() => {
             setEligibilityData(null);
-            setpspCodeData(null);
+            setPspCodeData(null);
           }}
           className="fr-mt-2w"
         />
@@ -84,7 +89,7 @@ const EligibilityTestForms = () => {
           <StepOneForm
             onDataReceived={(data: SearchResponseBody) => {
               setEligibilityData(data);
-              setpspCodeData(null);
+              setPspCodeData(null);
             }}
             onEligibilityFailure={() => onEligibilityFailure('first step')}
           />
@@ -97,7 +102,7 @@ const EligibilityTestForms = () => {
             eligibilityData[0].organisme === 'CAF' && (
               <YoungCafForm
                 eligibilityDataItem={eligibilityData[0]}
-                onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+                onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
                 onEligibilitySuccess={onEligibilitySuccess}
                 onEligibilityFailure={onEligibilityFailure}
               />
@@ -107,7 +112,7 @@ const EligibilityTestForms = () => {
             eligibilityData[0].organisme === 'MSA' && (
               <YoungMsaForm
                 eligibilityDataItem={eligibilityData[0]}
-                onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+                onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
                 onEligibilitySuccess={onEligibilitySuccess}
                 onEligibilityFailure={onEligibilityFailure}
               />
@@ -116,7 +121,7 @@ const EligibilityTestForms = () => {
           {eligibilityData[0].situation === 'AAH' && eligibilityData[0].organisme === 'CAF' && (
             <AahCafForm
               eligibilityDataItem={eligibilityData[0]}
-              onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+              onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
               onEligibilitySuccess={onEligibilitySuccess}
               onEligibilityFailure={onEligibilityFailure}
             />
@@ -125,7 +130,7 @@ const EligibilityTestForms = () => {
           {eligibilityData[0].situation === 'AAH' && eligibilityData[0].organisme === 'MSA' && (
             <AahMsaForm
               eligibilityDataItem={eligibilityData[0]}
-              onDataReceived={(data: EnhancedConfirmResponseBody) => setpspCodeData(data)}
+              onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
               onEligibilitySuccess={onEligibilitySuccess}
               onEligibilityFailure={onEligibilityFailure}
             />

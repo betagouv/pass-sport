@@ -14,7 +14,7 @@ import cn from 'classnames';
 import styles from './styles.module.scss';
 import { RadioButtonsProps } from '@codegouvfr/react-dsfr/RadioButtons';
 import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
-import { SearchResponseBody } from '@/types/EligibilityTest';
+import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
 import CorrectiveInfo from '@/app/v2/test-eligibilite/components/corrective-info/CorrectiveInfo';
 import Input, { InputProps } from '@codegouvfr/react-dsfr/Input';
 import { ALLOWANCE_MAPPING_TO_ALLOCATION, isEligible } from '@/utils/eligibility-test';
@@ -25,19 +25,10 @@ import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
 
-const initialInputStates: Record<string, InputProps['state']> = {
-  allowance: 'default',
-  dob: 'default',
-};
-
-const inputStateRelatedMessages: Record<keyof typeof initialInputStates, string> = {
-  allowance: `Le choix de l'allocation est requise`,
-  dob: 'La date de naissance est requise',
-};
-
 const AllowanceStep = () => {
   const portalRef = useRef<HTMLDivElement>(null);
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
+  const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
   const [originalAllowance, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
 
@@ -51,7 +42,6 @@ const AllowanceStep = () => {
   const [dobState, setDobState] = useState<InputProps['state']>('default');
   const dobStateRelatedMessages = dobState === 'error' ? 'La date de naissance est requise' : '';
 
-  const [inputStates, setInputStates] = useState<typeof initialInputStates>(initialInputStates);
   const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
   const [dob, setDob] = useState<string | undefined>(undefined);
   const fieldsetId = 'allowanceStep-fieldset';
@@ -64,6 +54,7 @@ const AllowanceStep = () => {
     setAllowance(null);
     setIsValidated(null);
     setEligibilityData(null);
+    setPspCodeData(null);
     setDob(undefined);
   };
 
@@ -112,11 +103,13 @@ const AllowanceStep = () => {
         benefIsEligible,
         dob,
         eligibilityData,
+        pspCodeData,
         performNewTest: restartTest,
         portalRef,
         setAllowance,
         setBenefIsEligible,
         setEligibilityData,
+        setPspCodeData,
       }}
     >
       <div className={cn(styles.background)}>
@@ -139,7 +132,7 @@ const AllowanceStep = () => {
             <StepChecker title={`Vous ne bénéficiez d'aucune aide`} onClick={restartTest} />
           )}
 
-          {isValidated && benefIsEligible ? (
+          {(isValidated && benefIsEligible) || (ALLOWANCE.NONE && isValidated) ? (
             getStepCheckerName() ? (
               <StepChecker title={getStepCheckerName()} onClick={restartTest} />
             ) : null
@@ -150,7 +143,7 @@ const AllowanceStep = () => {
                 nativeInputProps={{
                   type: 'date',
                   required: true,
-                  // value: dob,
+                  value: dob,
                   onChange: (e) => {
                     setDob(e.target.value ?? undefined);
                   },

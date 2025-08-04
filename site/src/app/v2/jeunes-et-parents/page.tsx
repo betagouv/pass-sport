@@ -11,6 +11,8 @@ import basketball from '@/images/jeunes-et-parents/basketball.webp';
 import code from '@/images/code.svg';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
+import Button from '@codegouvfr/react-dsfr/Button';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -148,6 +150,16 @@ export default function Page() {
               </li>
               <li>Récupérer votre code sur ce site (après le 1er septembre).</li>
             </ol>
+            {CODES_OBTAINABLE && (
+              <Button
+                className="fr-my-2w"
+                linkProps={{
+                  href: '/v2/test-ou-code',
+                }}
+              >
+                Demander le pass Sport
+              </Button>
+            )}
             <p>
               Vous pourrez utiliser votre pass Sport{' '}
               <span className="fr-text--bold">jusqu&apos;au 31 décembre 2025.</span>
