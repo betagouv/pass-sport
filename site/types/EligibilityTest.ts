@@ -102,9 +102,7 @@ export interface ConfirmResponseBodyItem {
 
 export type ConfirmResponseBody = ConfirmResponseBodyItem[];
 
-export interface EnhancedConfirmResponseBodyItem extends ConfirmResponseBodyItem {
-  qrcodeUrl: string;
-}
+export interface EnhancedConfirmResponseBodyItem extends ConfirmResponseBodyItem {}
 
 export type EnhancedConfirmResponseBody = EnhancedConfirmResponseBodyItem[];
 

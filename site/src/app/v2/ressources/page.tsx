@@ -30,7 +30,7 @@ export default function Page() {
             className={cn(['fr-text--xl text--title-grey', styles['resources__main-section-text']])}
           >
             Fédération, collectivité locale, établissement scolaire, journaliste..., contribuez à la
-            promotion du pass Sport
+            promotion du pass Sport.
           </p>
         </section>
 
@@ -41,8 +41,8 @@ export default function Page() {
           </h2>
           <p className="fr-text--lg">
             Le ministère des Sports, de la Jeunesse et de la Vie associative a élaboré un ensemble
-            d&apos;outils et supports de communication qui sont mis à dispositif de l&apos;ensemble
-            des acteurs et peuvent être utilisés pour assurer la promotion du dispositif.
+            d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
+            peuvent être utilisés pour assurer la promotion du dispositif.
           </p>
         </section>
 

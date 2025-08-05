@@ -7,19 +7,17 @@ import {
 import {
   buildLCAConfirmUrl,
   buildLCASearchUrl,
+  fetchCode,
   fetchEligible,
-  fetchQrCode,
 } from './eligibility-test';
 import {
   ConfirmResponseBody,
   ConfirmResponseErrorBody,
   SearchResponseBody,
   SearchResponseErrorBody,
-} from '../../../types/EligibilityTest';
+} from '@/types/EligibilityTest';
 
 global.fetch = jest.fn() as jest.Mock;
-
-jest.mock('./qr-code');
 
 function mockFetch(
   status: number,
@@ -154,14 +152,14 @@ describe('eligibility-test service', () => {
     });
   });
 
-  describe('fetchQrCode', () => {
+  describe('fetchCode', () => {
     it('should return an error when remote LCA request is not a 200', async () => {
       const payload = buildConfirmPayload({});
 
       mockFetch(400, { message: 'error' });
 
       try {
-        await fetchQrCode(payload);
+        await fetchCode(payload);
       } catch (error) {
         expect(global.fetch as jest.Mock).toHaveBeenCalledTimes(1);
         expect((error as Error).message).toEqual(
@@ -175,16 +173,16 @@ describe('eligibility-test service', () => {
 
       mockFetch(200, []);
 
-      const data = await fetchQrCode(payload);
+      const data = await fetchCode(payload);
       expect(data).toEqual([]);
     });
 
-    it('should return eligible data enhanced with a qrcode url when eligible exists', async () => {
+    it('should return eligible data enhanced with a code when eligible exists', async () => {
       const payload = buildConfirmPayload({ recipientCafNumber: '1234567' });
 
       mockFetch(200, buildConfirmResponseBody({}));
 
-      const data = await fetchQrCode(payload);
+      const data = await fetchCode(payload);
       expect(data).toMatchSnapshot();
     });
   });

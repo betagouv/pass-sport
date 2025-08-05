@@ -1,9 +1,0 @@
-@import '../../../sassVariables.module';
-
-.container {
-  background-color: var(--artwork-major-blue-france);
-
-  @media print {
-    background-color: var(--white);
-  }
-}
