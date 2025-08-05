@@ -22,6 +22,7 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/structures': 'Structures',
   '/v2/test-eligibilite': 'Formulaire de demande',
   '/v2/test-ou-code': 'Je fais le test',
+  '/v2/ressources': 'Ressources',
 };
 
 export default function PassSportBreadcrumbStandard() {

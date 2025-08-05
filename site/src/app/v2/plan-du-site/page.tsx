@@ -29,6 +29,9 @@ export default function PlanDuSite() {
               <Link href="/v2/structures">Structures</Link>
             </li>
             <li>
+              <Link href="/v2/ressources">Ressources</Link>
+            </li>
+            <li>
               <Link href="/v2/trouver-un-club">Trouver un club partenaire</Link>
             </li>
             <li>

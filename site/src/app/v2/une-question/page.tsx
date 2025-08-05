@@ -1,7 +1,6 @@
 'use server';
 
 import PageTitle from '@/components/PageTitle/PageTitle';
-import EligibilityTestBanner from '@/components/eligibility-test-banner/EligibilityTestBanner';
 import SocialMediaPanel from '../../components/social-media-panel/SocialMediaPanel';
 import styles from './styles.module.scss';
 import ContentSection from '@/app/v2/une-question/components/ContentSection/ContentSection';
@@ -36,7 +35,6 @@ export default async function Questions() {
         <ContactSection />
       </main>
 
-      {/*<EligibilityTestBanner />*/}
       <SocialMediaPanel />
     </>
   );

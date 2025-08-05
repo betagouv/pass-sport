@@ -1,0 +1,55 @@
+@import '../../sassVariables.module';
+
+.resources {
+  &__main-section {
+    position: relative;
+    top: -100px;
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    background-color: var(--background-alt-orange-terre-battue);
+    margin-bottom: -30px;
+
+    &-image {
+      max-width: 384px;
+    }
+
+    &-text {
+      padding: 24px 24px 24px 0;
+    }
+
+    @media screen and (max-width: $lg) {
+      margin-bottom: -70px;
+      flex-direction: column;
+
+      gap: 0;
+
+      &-image {
+        max-width: 100%;
+      }
+
+      &-text {
+        padding: 12px;
+        margin: 0;
+      }
+    }
+  }
+
+  &__description-section {
+    max-width: 792px;
+    margin: -40px auto 0 auto;
+  }
+
+  &__accordions-section {
+    display: flex;
+    flex-direction: column;
+    max-width: 792px;
+    gap: 48px;
+    margin: 48px auto 72px auto;
+
+    @media screen and (max-width: $lg) {
+      margin-bottom: 48px;
+      margin-top: 24px;
+    }
+  }
+}

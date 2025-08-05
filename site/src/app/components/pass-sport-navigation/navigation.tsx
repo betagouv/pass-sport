@@ -30,8 +30,8 @@ export const navigationItemStandard: NavigationItem[] = [
     text: 'Structures',
   },
   {
-    link: '/v2/trouver-un-club',
-    text: 'Trouver un club partenaire',
+    link: '/v2/ressources',
+    text: 'Ressources',
   },
   {
     link: '/v2/une-question',
