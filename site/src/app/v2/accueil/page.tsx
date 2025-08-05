@@ -63,7 +63,7 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
     knowMore: {
       title: 'A savoir',
       description:
-        'Vous pourrez récolter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
+        'Vous pourrez collecter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
     },
     points: [
       {
@@ -146,9 +146,9 @@ export default async function Accueil() {
             <h1 className="fr-mb-5w">Qu&apos;est-ce que le pass Sport ?</h1>
             <p className="fr-mb-2w">
               Valable du 1er septembre au 31 décembre 2025, le pass Sport est une aide financière de
-              70€ par enfant pour couvrir tout ou partie des frais d’inscription dans un club,
-              association sportive ou salle de sport partenaire qui prend la forme d’une réduction
-              immédiate lors de l’inscription.
+              70€ par enfant éligible pour couvrir tout ou partie des frais d’inscription dans un
+              club, association sportive ou salle de sport partenaire qui prend la forme d’une
+              réduction immédiate lors de l’inscription.
             </p>
 
             <p>

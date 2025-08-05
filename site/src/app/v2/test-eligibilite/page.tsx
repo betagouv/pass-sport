@@ -33,7 +33,7 @@ const EligibilityTest = () => {
           />
           <div className={styles['top-section-tile__description']}>
             <p className="fr-text--xl fr-mb-1w">
-              Si vous êtes éligibles, vous recevrez un courriel ou un SMS avec votre pass Sport :
+              Si vous êtes éligible, vous recevrez un courriel ou un SMS avec votre pass Sport :
             </p>
             <ul className="fr-text--xl fr-ml-2w">
               <li>26-28 août : pour environ 80% des bénéficiaires ;</li>

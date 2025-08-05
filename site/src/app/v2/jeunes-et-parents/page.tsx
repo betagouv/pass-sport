@@ -27,7 +27,7 @@ export default function Page() {
       <div className="fr-container">
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport est une aide financière de 70 € par enfant pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d'une réduction immédiate lors de l'inscription. Dispositif financé par le ministère des Sports, de la Jeunesse et de la Vie associative."
+            description="Le pass Sport est une aide financière de 70 € par enfant éligible pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d'une réduction immédiate lors de l'inscription. Ce dispositif est financé par le ministère des Sports, de la Jeunesse et de la Vie associative."
             variant="purple"
             fullWidth
             points={[
@@ -121,7 +121,7 @@ export default function Page() {
           />
           <div>
             <p>
-              Si vous <span className="fr-text--bold">êtes éligibles</span>, vous recevrez un
+              Si vous <span className="fr-text--bold">êtes éligible</span>, vous recevrez un
               courriel ou un SMS avec votre pass Sport :
             </p>
             <ol className="fr-ml-2w" start={1}>

@@ -25,7 +25,7 @@ export default function Page() {
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport est une aide financière de 70€ par enfant pour couvrir tout ou partie des frais d’inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d’une réduction immédiate lors de l’inscription. Dispositif financé par le ministère des Sports, de la Jeunesse et de la Vie associative."
+            description="Le pass Sport est une aide financière de 70€ par enfant éligible pour couvrir tout ou partie des frais d’inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d’une réduction immédiate lors de l’inscription. Ce dispositif est financé par le ministère des Sports, de la Jeunesse et de la Vie associative."
             variant="yellow"
             fullWidth
             points={[
@@ -81,15 +81,17 @@ export default function Page() {
           <div className={styles['communication-kit-section__description']}>
             <h1>Kit de communication</h1>
             <p>
-              Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré tout un
-              ensemble d&apos;outils et supports de communication qui sont mis à dispositif de
+              Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré un ensemble
+              d&apos;outils et supports de communication qui sont mis à disposition de
               l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
               dispositif.
             </p>
 
             <span>
-              {/* todo: update link */}
-              <Link href="#" className="fr-link fr-icon-download-fill fr-link--icon-left">
+              <Link
+                href="/v2/ressources"
+                className="fr-link fr-icon-download-fill fr-link--icon-left"
+              >
                 Téléchargez votre kit de communication
               </Link>
             </span>
@@ -110,7 +112,7 @@ export default function Page() {
           />
           <p>
             Sur Le Compte Asso, vous pourrez créer un compte pour devenir partenaire du dispositif,
-            entrer les codes pass Sports et suivre vos remboursements.
+            entrer les codes pass Sport et suivre vos remboursements.
           </p>
           <p>
             Rendez-vous sur le site Le Compte Asso, qui vous servira pour toutes les démarches

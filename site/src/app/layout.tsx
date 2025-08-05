@@ -11,6 +11,8 @@ import { DsfrProvider } from '@/dsfr/DsfrProvider';
 import PassSportNavigationStandard from './components/pass-sport-navigation/PassSportNavigationStandard';
 import PassSportBreadcrumbStandard from '@/app/components/pass-sport-breadcrumb/PassSportBreadcrumbStandard';
 import { StartDsfrOnHydration } from '@codegouvfr/react-dsfr/next-app-router';
+import Notice from '@codegouvfr/react-dsfr/Notice';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -43,6 +45,9 @@ export default function RootLayout({
         <StartDsfrOnHydration />
         <SkipLinksWrapper />
         <PassSportNavigationStandard />
+        {!CODES_OBTAINABLE && (
+          <Notice severity="info" title="Le dispositif sera ouvert le 1er septembre." />
+        )}
         <PassSportBreadcrumbStandard />
         <DsfrProvider lang={lang}>{children}</DsfrProvider>
         <PassSportFooter />
