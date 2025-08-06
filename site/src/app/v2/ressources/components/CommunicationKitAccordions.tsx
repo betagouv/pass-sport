@@ -21,11 +21,20 @@ export default function CommunicationKitAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/affiches/a3_clubs.pdf"
+              href="/assets/ressources/affiches/%5BStructures%20sportives%5D%20Affiche%20destination%20des%20jeunes.pdf"
               className="fr-link"
               target="_blank"
             >
-              Affiches A3 pour les structures sportives acceptant le pass Sport
+              Affiches pour communiquer auprès des jeunes
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/assets/ressources/affiches/%5BStructures%20sportives%5D%20Affiche%20destination%20des%20parents.pdf"
+              className="fr-link"
+              target="_blank"
+            >
+              Affiches pour communiquer auprès des parents
             </Link>
           </li>
         </ul>
@@ -39,19 +48,33 @@ export default function CommunicationKitAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/affiches/a3_hors_salles_et_clubs.pdf"
+              href="/assets/ressources/affiches/%5BPartenaires%5D%20Affiche%20destination%20des%20jeunes.pdf"
               className="fr-link"
               target="_blank"
             >
-              Affiches A3 pour les partenaires
+              Affiche pour communiquer auprès des jeunes
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/assets/ressources/affiches/%5BPartenaires%5D%20Affiche%20destination%20des%20parents.pdf"
+              className="fr-link"
+              target="_blank"
+            >
+              Affiche pour communiquer auprès des parents
             </Link>
           </li>
         </ul>
       </Accordion>
+
       <Accordion label="Flyer à distribuer" expanded={false} onExpandedChange={() => {}}>
         <ul>
           <li>
-            <Link href="/assets/ressources/flyers/flyer.pdf" className="fr-link" target="_blank">
+            <Link
+              href="/assets/ressources/flyers/Flyer%20pass%20Sport%202025.pdf"
+              className="fr-link"
+              target="_blank"
+            >
               Flyer à distribuer
             </Link>
           </li>
@@ -61,7 +84,7 @@ export default function CommunicationKitAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/kakemono/kakemono.pdf"
+              href="/assets/ressources/kakemono/Kakemono%20pass%20Sport%202025.pdf"
               className="fr-link"
               target="_blank"
             >

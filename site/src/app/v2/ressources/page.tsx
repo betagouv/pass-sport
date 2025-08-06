@@ -29,8 +29,9 @@ export default function Page() {
           <p
             className={cn(['fr-text--xl text--title-grey', styles['resources__main-section-text']])}
           >
-            Fédération, collectivité locale, établissement scolaire, journaliste..., contribuez à la
-            promotion du pass Sport.
+            Fédération, structure sportive, collectivité locale, acteur de l&apos;accompagnement des
+            jeunes, établissement scolaire, journaliste..., vous pouvez contribuer à la promotion du
+            pass Sport.
           </p>
         </section>
 
