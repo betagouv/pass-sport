@@ -21,7 +21,7 @@ export default function ObtainCodeButton() {
           onClick: onObtainCodeClicked,
         }}
       >
-        Demander le pass Sport
+        Récupérez votre pass Sport
       </Button>
     )
   );

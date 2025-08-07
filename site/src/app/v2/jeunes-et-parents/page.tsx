@@ -29,7 +29,7 @@ export default function Page() {
       <div className="fr-container">
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport est une aide financière de 70 € par enfant éligible pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d'une réduction immédiate lors de l'inscription. Ce dispositif est financé par le ministère des Sports, de la Jeunesse et de la Vie associative."
+            description="Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire. Il prend la forme d'une réduction immédiate lors de l'inscription. C'est un dispositif du ministère des Sports, de la Jeunesse et de la Vie associative."
             variant="purple"
             fullWidth
             points={[
@@ -40,7 +40,7 @@ export default function Page() {
                 },
               },
               {
-                title: 'Choisissez un club partenaire',
+                title: 'Trouvez une structure sportive partenaire',
                 linkProps: {
                   href: `#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
                 },
@@ -52,7 +52,7 @@ export default function Page() {
                 },
               },
               {
-                title: 'Activez votre code',
+                title: 'Utilisez votre code',
                 linkProps: {
                   href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
                 },
@@ -67,6 +67,40 @@ export default function Page() {
         </section>
 
         <section id={JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}>
+          <div className={styles['eligibility-section__description']}>
+            <h1 className="fr-mb-2w">Testez votre éligibilité en 1 min</h1>
+
+            <section className="fr-mb-2w">
+              <p>Qui est concerné par le pass Sport ?</p>
+              <ul className="fr-mt-2w">
+                <li>
+                  Les jeunes de 14 à 17 ans bénéficiaires de l’Allocation de Rentrée Scolaire (ARS)
+                  ;
+                </li>
+                <li>
+                  Les jeunes en situation de handicap :
+                  <ul className="list-style-type--circle">
+                    <li>
+                      de 6 à 19 ans bénéficiaires de l’Allocation d’Éducation de l’Enfant Handicapé
+                      (AEEH) ;
+                    </li>
+                    <li>
+                      de 16 à 30 ans bénéficiaires de l’Allocation aux Adultes Handicapés (AAH) ;
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  Les étudiants boursiers de moins de 28 ans bénéficiaires d’une bourse attribuée
+                  avant le 15 octobre 2025 :
+                  <ul className="list-style-type--circle">
+                    <li>bourse du CROUS (y compris l’aide annuelle) ;</li>
+                    <li>bourse régionale pour une formation sanitaire ou sociale.</li>
+                  </ul>
+                </li>
+              </ul>
+            </section>
+          </div>
+
           <div className={styles['eligibility-section']}>
             <div
               className={cn(
@@ -74,7 +108,7 @@ export default function Page() {
                 styles['eligibility-section__wrapper'],
               )}
             >
-              <SimplifiedEligibilityTest display="row" buttonVariant="primary" headingLevel="h1" />
+              <SimplifiedEligibilityTest display="row" buttonVariant="primary" headingLevel="h2" />
             </div>
           </div>
         </section>
@@ -87,7 +121,7 @@ export default function Page() {
           />
 
           <div className={styles['find-club-section__description']}>
-            <h1>Choisissez un club partenaire</h1>
+            <h1>Trouvez une structure sportive partenaire</h1>
             <p>
               Vous pouvez utiliser le pass Sport dans plus de 85 000 clubs, associations sportives
               et salles de sport partenaires, partout en France.
@@ -98,14 +132,29 @@ export default function Page() {
               structures sportives partenaires disponibles ci-dessous.
             </p>
 
-            <span>
-              <Link
-                href="/v2/trouver-un-club"
-                className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
-              >
-                Liste des structures sportives partenaires
-              </Link>
-            </span>
+            <ul className="list-style-type--none fr-pl-0">
+              <li>
+                <span>
+                  <Link
+                    href="/v2/trouver-un-club"
+                    className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
+                  >
+                    Liste de structures sportives partenaires
+                  </Link>
+                </span>
+              </li>
+              <li>
+                <span>
+                  <Link
+                    href="https://www.handiguide.sports.gouv.fr/"
+                    className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
+                  >
+                    HandiGuide des sports pour une liste de structures sportives accueillant des
+                    personnes en situation de handicap
+                  </Link>
+                </span>
+              </li>
+            </ul>
           </div>
         </section>
 
@@ -128,19 +177,19 @@ export default function Page() {
             </p>
             <ol className="fr-ml-2w" start={1}>
               <li>
-                <span className="fr-text--bold">26-28 août</span> : pour environ{' '}
-                <span className="fr-text--bold">80% des bénéficiaires ;</span>
+                <span className="fr-text--bold">26-28 août</span> : pour les bénéficiaires de
+                l&apos;ARS, de l&apos;AEEH et de l&apos;AAH ;
               </li>
               <li>
-                <span className="fr-text--bold">Entre mi-octobre et mi-novembre</span> : pour les{' '}
-                <span className="fr-text--bold">étudiants boursiers.</span>
+                <span className="fr-text--bold">Entre fin octobre et fin novembre</span> : pour les
+                étudiants boursiers.
               </li>
             </ol>
             <section className="fr-mb-2w" id={SKIP_LINKS_ID.aeehContent}>
               <KnowMore
                 variant="yellow"
                 knowMore={{
-                  title: `Exception pour les bénéficiaires de l'AEEH`,
+                  title: `Exception pour les bénéficiaires de l'AEEH entre 6 et 13 ans`,
                   description: CODES_OBTAINABLE
                     ? 'Demandez votre pass Sport directement à partir de ce formulaire'
                     : `Demandez votre pass Sport directement sur notre site à partir du 1er septembre.`,
@@ -162,7 +211,7 @@ export default function Page() {
               <li>
                 Vérifiez votre éligibilité à l&apos;aide du test. <br />
                 <Link href={`#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`}>
-                  Remonter vers le test.
+                  Testez votre éligibilité.
                 </Link>
               </li>
               <li>Récupérer votre code sur ce site (après le 1er septembre).</li>
@@ -186,11 +235,7 @@ export default function Page() {
           />
 
           <div className={styles['activate-code-section__description']}>
-            <h1>Activez votre code</h1>
-            <p>
-              Le pass Sport prend la forme d&apos;un code composé de 10 caractères alphanumériques,
-              différents de ceux de 2024.
-            </p>
+            <h1>Utilisez votre code</h1>
 
             <p>
               Pour l&apos;utiliser, il suffira de{' '}

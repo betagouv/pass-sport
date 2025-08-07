@@ -27,11 +27,11 @@ export const navigationItemStandard: NavigationItem[] = [
   },
   {
     link: '/v2/structures',
-    text: 'Structures',
+    text: 'Structures sportives',
   },
   {
-    link: '/v2/ressources',
-    text: 'Ressources',
+    link: '/v2/partenaires',
+    text: 'Partenaires',
   },
   {
     link: '/v2/une-question',

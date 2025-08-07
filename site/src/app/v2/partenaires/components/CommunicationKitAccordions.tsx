@@ -21,7 +21,7 @@ export default function CommunicationKitAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/affiches/%5BStructures%20sportives%5D%20Affiche%20destination%20des%20jeunes.pdf"
+              href="/assets/partenaires/affiches/%5BStructures%20sportives%5D%20Affiche%20destination%20des%20jeunes.pdf"
               className="fr-link"
               target="_blank"
             >
@@ -30,7 +30,7 @@ export default function CommunicationKitAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/affiches/%5BStructures%20sportives%5D%20Affiche%20destination%20des%20parents.pdf"
+              href="/assets/partenaires/affiches/%5BStructures%20sportives%5D%20Affiche%20destination%20des%20parents.pdf"
               className="fr-link"
               target="_blank"
             >
@@ -48,7 +48,7 @@ export default function CommunicationKitAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/affiches/%5BPartenaires%5D%20Affiche%20destination%20des%20jeunes.pdf"
+              href="/assets/partenaires/affiches/%5BPartenaires%5D%20Affiche%20destination%20des%20jeunes.pdf"
               className="fr-link"
               target="_blank"
             >
@@ -57,7 +57,7 @@ export default function CommunicationKitAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/affiches/%5BPartenaires%5D%20Affiche%20destination%20des%20parents.pdf"
+              href="/assets/partenaires/affiches/%5BPartenaires%5D%20Affiche%20destination%20des%20parents.pdf"
               className="fr-link"
               target="_blank"
             >
@@ -71,7 +71,7 @@ export default function CommunicationKitAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/flyers/Flyer%20pass%20Sport%202025.pdf"
+              href="/assets/partenaires/flyers/Flyer%20pass%20Sport%202025.pdf"
               className="fr-link"
               target="_blank"
             >
@@ -84,7 +84,7 @@ export default function CommunicationKitAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/kakemono/Kakemono%20pass%20Sport%202025.pdf"
+              href="/assets/partenaires/kakemono/Kakemono%20pass%20Sport%202025.pdf"
               className="fr-link"
               target="_blank"
             >

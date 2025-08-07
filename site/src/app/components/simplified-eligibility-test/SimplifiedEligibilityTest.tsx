@@ -59,7 +59,7 @@ export default function SimplifiedEligibilityTest({
       title:
         'Bonne nouvelle, d’après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.',
       description:
-        "Disponible à partir du 1er septembre jusqu’au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l’un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
+        "Disponible à partir du 1er septembre et jusqu’au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l’un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
     };
 
     const errorInitialMeta = {
@@ -214,7 +214,7 @@ export default function SimplifiedEligibilityTest({
                   },
                   {
                     value: ALLOCATION.AEEH,
-                    label: `L'allocation d’éducation de l’enfant handicapé (AEEH)`,
+                    label: `Allocation d'éducation de l'enfant handicapé (AEEH)`,
                   },
                   {
                     value: ALLOCATION.ARS,
@@ -227,11 +227,11 @@ export default function SimplifiedEligibilityTest({
 
                   {
                     value: ALLOCATION.CROUS,
-                    label: 'CROUS',
+                    label: 'Bourse ou aide annuelle CROUS',
                   },
                   {
                     value: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
-                    label: 'Formations sanitaires et sociales',
+                    label: 'Aide annuelle formations sanitaires et sociales',
                   },
                 ]}
                 placeholder="Sélectionner une option"

@@ -10,21 +10,20 @@ const ButtonChoiceGroup = () => {
     <ButtonsGroup
       buttons={[
         {
-          children: `Je souhaite savoir si j'ai le droit au pass Sport`,
+          children: `Testez mon éligibilité en 1 min`,
           onClick: () => router.push('test-eligibilite-base'),
           priority: 'secondary',
         },
         ...(CODES_OBTAINABLE
           ? [
               {
-                children: 'Je souhaite récupérer mon pass Sport',
+                children: 'Récupérer mon code pass Sport',
                 onClick: () => router.push('test-eligibilite'),
                 priority: 'secondary' as const,
               },
             ]
           : []),
       ]}
-      inlineLayoutWhen="sm and up"
       buttonsSize="large"
     />
   );

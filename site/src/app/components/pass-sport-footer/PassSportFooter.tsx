@@ -263,9 +263,9 @@ export default function PassSportFooter() {
     {
       links: [
         {
-          text: 'Ressources',
+          text: 'Partenaires',
           linkProps: {
-            href: '/v2/ressources',
+            href: '/v2/partenaires',
           },
         },
         {

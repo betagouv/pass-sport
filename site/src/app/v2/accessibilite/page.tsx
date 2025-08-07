@@ -21,7 +21,7 @@ export default function Accessibilite() {
         />
         <div className={styles.wrapper}>
           <section className="fr-mb-6w">
-            <h1 className="fr-mb-1w">Déclaration d&apos;accessibilité</h1>
+            <h2 className="fr-mb-1w">Déclaration d&apos;accessibilité</h2>
             <p className="text--italic fr-mb-1w">Établie le 8 août 2025.</p>
             <p>
               La direction des sports du Ministères des Sports, de la Jeunesse et de la Vie
@@ -52,17 +52,14 @@ export default function Accessibilite() {
           </section>
 
           <section className="fr-mb-6w">
-            <h2 className="fr-mb-1w">État de conformité</h2>
+            <h3 className="fr-mb-1w">État de conformité</h3>
             <p>
               pass Sport est non conforme avec le{' '}
               <abbr title="Référentiel général d'amélioration de l'accessibilité">RGAA</abbr>. Le
               site n&apos;a pas été audité depuis sa refonte le 8 août 2025. L&apos;absence de
               résultats d&apos;audit en cours de validité entraîne une déclaration en
-              non-conformité.
-            </p>
-            <p>
-              Cependant, l&apos;équipe s&apos;efforce de créer un service accessible à tous en
-              suivant les recommandations du RGAA.
+              non-conformité. Cependant, l&apos;équipe s&apos;efforce de créer un service accessible
+              à tous en suivant les recommandations du RGAA.
             </p>
           </section>
 
@@ -97,7 +94,7 @@ export default function Accessibilite() {
           </section>
 
           <section className="fr-mb-6w">
-            <h2 className="fr-mb-3w">Voies de recours</h2>
+            <h3 className="fr-mb-3w">Voies de recours</h3>
 
             <p>
               Cette procédure est à utiliser dans le cas suivant : vous avez signalé au responsable

@@ -9,8 +9,6 @@ const GetOrTestChoice = ({}: Props) => {
       <div className="fr-pb-2w fr-pt-2w">
         <ButtonChoiceGroup />
       </div>
-
-      <MissionCards isUsingSuccessUrls />
     </>
   );
 };

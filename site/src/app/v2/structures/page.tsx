@@ -8,24 +8,23 @@ import Link from 'next/link';
 import Image from 'next/image';
 import athletism from '@/images/structures/athletism.webp';
 import simonRunning from '@/images/structures/simon-running.webp';
-import KnowMore from '@/app/components/know-more/KnowMore';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Structures',
+    title: 'Structures sportives',
   };
 }
 
 export default function Page() {
   return (
     <main className={styles['container']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <PageTitle title="Structures" />
+      <PageTitle title="Structures sportives" />
 
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport est une aide financière de 70€ par enfant éligible pour couvrir tout ou partie des frais d’inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d’une réduction immédiate lors de l’inscription. Ce dispositif est financé par le ministère des Sports, de la Jeunesse et de la Vie associative."
+            description="Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire. Il prend la forme d'une réduction immédiate lors de l'inscription. C'est un dispositif du ministère des Sports, de la Jeunesse et de la Vie associative."
             variant="yellow"
             fullWidth
             points={[
@@ -63,9 +62,21 @@ export default function Page() {
             knowMore={{
               title: 'A savoir',
               description:
-                'Vous pourrez récolter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
+                'Vous pourrez collecter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
             }}
           />
+        </section>
+
+        <section
+          id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}
+          className={styles['become-partner-section']}
+        >
+          <h1 className="fr-mb-1w">Devenez partenaire du pass Sport</h1>
+          <p>
+            En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
+            partenaire du dispositif. Des tutoriels seront bientôt à votre disposition sur cet
+            espace pour faciliter votre engagement dans le déploiement du pass Sport.
+          </p>
         </section>
 
         <section
@@ -79,7 +90,7 @@ export default function Page() {
           />
 
           <div className={styles['communication-kit-section__description']}>
-            <h1>Kit de communication</h1>
+            <h1>Téléchargez votre kit de communication</h1>
             <p>
               Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré un ensemble
               d&apos;outils et supports de communication qui sont mis à disposition de
@@ -88,11 +99,8 @@ export default function Page() {
             </p>
 
             <span>
-              <Link
-                href="/v2/ressources"
-                className="fr-link fr-icon-download-fill fr-link--icon-left"
-              >
-                Téléchargez votre kit de communication
+              <Link href="/v2/partenaires" className="fr-link ">
+                Accédez aux ressources
               </Link>
             </span>
           </div>
@@ -103,20 +111,16 @@ export default function Page() {
           className={styles['lca-section']}
         >
           <h1>Créez votre Compte Asso</h1>
-          <KnowMore
-            variant="yellow"
-            knowMore={{
-              title: 'A savoir',
-              description: `Vous pouvez suivre la procédure de création pas à pas en visionnant cette vidéo tutoriel.`,
-            }}
-          />
+          {/*<KnowMore*/}
+          {/*  variant="yellow"*/}
+          {/*  knowMore={{*/}
+          {/*    title: 'A savoir',*/}
+          {/*    description: `Vous pouvez suivre la procédure de création pas à pas en visionnant cette vidéo tutoriel.`,*/}
+          {/*  }}*/}
+          {/*/>*/}
           <p>
             Sur Le Compte Asso, vous pourrez créer un compte pour devenir partenaire du dispositif,
             entrer les codes pass Sport et suivre vos remboursements.
-          </p>
-          <p>
-            Rendez-vous sur le site Le Compte Asso, qui vous servira pour toutes les démarches
-            concernant le pass Sport :
           </p>
 
           <Link
@@ -129,20 +133,21 @@ export default function Page() {
           </Link>
 
           <p>
-            Si vous avez déjà un compte sur Le Compte Asso, complétez votre profil en téléversant
-            votre justificatif d&apos;éligibilité au dispositif (un des trois suivants) dans la
-            section &laquo; affiliations et adhérents personnes morales &raquo; :
+            Si vous avez déjà un compte sur Le Compte Asso, actualisez votre profil en téléversant
+            votre justificatif d&apos;éligibilité dans la section « affiliations et adhérents
+            personnes morales » :
           </p>
 
-          <ul className="fr-ml-2w">
+          <ul className="fr-ml-2w fr-mt-n3w">
             <li>
-              Affiliée : attestation d&apos;affiliation à une fédération sportive agréée par le
-              Ministère des Sports, de la Jeunesse et de la Vie associative ;
+              Clubs affiliés aux fédérations sportives agréées par le ministère des Sports, de la
+              Jeunesse et de la Vie associative : attestation d&apos;affiliation ;
             </li>
-            <li>Association : agrément JEP ou Sport valide ;</li>
             <li>
-              Structures privées (Loisirs Sportifs Marchands) : Charte d&apos;engagement 2025.
+              Associations agréées Jeunesse Education Populaire (JEP) ou Sport : agrément JEP ou
+              Sport valide ;
             </li>
+            <li>Structures des loisirs sportifs marchands : charte d&apos;engagement 2025.</li>
           </ul>
         </section>
 
@@ -150,9 +155,9 @@ export default function Page() {
           <h1>Saisissez les codes des bénéficiaires</h1>
 
           <ol className="fr-ml-2w" start={1}>
-            <li>Le bénéficiaire vous a présenté son code alphanumérique (25-XXXX-XXXX).</li>
+            <li>Le bénéficiaire vous présente son code alphanumérique (25-XXXX-XXXX).</li>
             <li>
-              Votre structure a accordé une réduction immédiate de 70€ sur l&apos;inscription du
+              Votre structure accorde une réduction immédiate de 70€ sur l&apos;inscription du
               bénéficiaire.
             </li>
             <li>
@@ -188,35 +193,18 @@ export default function Page() {
 
           <div className={styles['get-refunds-section__description']}>
             <h1>Recevez le remboursement</h1>
-            <KnowMore
-              variant="yellow"
-              knowMore={{
-                title: 'A savoir',
-                description:
-                  'Vous pourrez récolter les codes et demander les remboursements à partir du 1er septembre 2025.',
-              }}
-            />
 
             <p>
-              Les remboursements arriveront dans le mois suivant la saisie des codes dans votre
-              compte Asso.
+              Des informations seront régulièrement mises à jour sur cette page pour vous informer
+              des échéances de paiement.
             </p>
 
             <p>
               Vous pourrez saisir les codes des bénéficiaires{' '}
               <span className="fr-text--bold">
-                à partir du 1er septembre jusqu’au 31 décembre 2025.
+                à partir du 1er septembre et jusqu’au 31 décembre 2025.
               </span>
             </p>
-
-            <Link
-              className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
-              target="_blank"
-              aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
-              href="https://lecompteasso.associations.gouv.fr/"
-            >
-              Le Compte Asso
-            </Link>
           </div>
         </section>
 

@@ -37,7 +37,7 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
         },
       },
       {
-        title: 'Choisissez un club partenaire',
+        title: 'Trouvez une structure sportive partenaire',
         linkProps: {
           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
         },
@@ -69,31 +69,31 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
       {
         title: 'Devenez partenaire du pass Sport',
         linkProps: {
-          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
+          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
         },
       },
       {
         title: 'Téléchargez votre kit de communication',
         linkProps: {
-          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
+          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
         },
       },
       {
         title: 'Créez votre Compte Asso',
         linkProps: {
-          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
+          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
         },
       },
       {
         title: 'Saisissez les codes des bénéficiaires',
         linkProps: {
-          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
+          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
         },
       },
       {
-        title: 'Obtenez le remboursement de l’inscription',
+        title: 'Obtenez le remboursement',
         linkProps: {
-          href: `/v2/structure#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
+          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
         },
       },
     ],
@@ -145,10 +145,10 @@ export default async function Accueil() {
           <div className={styles['benef-faq']}>
             <h1 className="fr-mb-5w">Qu&apos;est-ce que le pass Sport ?</h1>
             <p className="fr-mb-2w">
-              Valable du 1er septembre au 31 décembre 2025, le pass Sport est une aide financière de
-              70€ par enfant éligible pour couvrir tout ou partie des frais d’inscription dans un
-              club, association sportive ou salle de sport partenaire qui prend la forme d’une
-              réduction immédiate lors de l’inscription.
+              Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou
+              partie des frais d&apos;inscription dans un club, association sportive ou salle de
+              sport partenaire. Il prend la forme d&apos;une réduction immédiate lors de
+              l&apos;inscription.
             </p>
 
             <p>

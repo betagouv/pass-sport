@@ -77,6 +77,14 @@
       height: 0;
     }
   }
+  &-style-type {
+    &--circle {
+      list-style-type: circle;
+    }
+    &--none {
+      list-style-type: none;
+    }
+  }
 }
 
 .span {

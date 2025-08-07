@@ -5,19 +5,19 @@ import PageTitle from '@/components/PageTitle/PageTitle';
 import Image from 'next/image';
 import athletism from '@/images/structures/athletism.webp';
 import cn from 'classnames';
-import CommunicationKitAccordions from '@/app/v2/ressources/components/CommunicationKitAccordions';
-import SocialMediasVisualsAccordions from '@/app/v2/ressources/components/SocialMediasVisualsAccordions';
+import CommunicationKitAccordions from '@/app/v2/partenaires/components/CommunicationKitAccordions';
+import SocialMediasVisualsAccordions from '@/app/v2/partenaires/components/SocialMediasVisualsAccordions';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Ressources',
+    title: 'Partenaires',
   };
 }
 
 export default function Page() {
   return (
     <main className={styles['container']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <PageTitle title="Ressources" />
+      <PageTitle title="Partenaires" />
 
       <div className="fr-container">
         <section className={styles['resources__main-section']}>
@@ -36,15 +36,12 @@ export default function Page() {
         </section>
 
         <section className={styles['resources__description-section']}>
-          <h2 className="fr-h3">
-            Les outils de communication mis à disposition par le ministère des Sports, de la
-            Jeunesse et de la Vie associative
-          </h2>
           <p className="fr-text--lg">
             Le ministère des Sports, de la Jeunesse et de la Vie associative a élaboré un ensemble
             d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
             peuvent être utilisés pour assurer la promotion du dispositif.
           </p>
+          <p>Cette page sera complétée progressivement d&apos;ici le 1er septembre.</p>
         </section>
 
         <section className={styles['resources__accordions-section']}>

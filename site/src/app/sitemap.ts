@@ -39,7 +39,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: 'https://pass.sports.gouv.fr/v2/ressources',
+      url: 'https://pass.sports.gouv.fr/v2/partenaires',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,

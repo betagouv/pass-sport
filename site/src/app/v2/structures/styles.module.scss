@@ -13,14 +13,14 @@
   margin-bottom: -120px;
 
   @media screen and (max-width: $lg) {
-    margin-bottom: -220px;
+    margin-bottom: -150px;
   }
 }
 
 .eligibility-section {
   background-color: var(--purple-glycine-950-100);
   padding: 100px;
-  width: 95%;
+  width: 100%;
   justify-self: center;
   border-radius: 8px;
 
@@ -30,7 +30,6 @@
 
   @media screen and (max-width: $lg) {
     padding: 24px;
-    width: 100%;
   }
 }
 
@@ -40,7 +39,7 @@
   flex-direction: row;
   align-items: center;
   align-self: center;
-  width: 95%;
+  width: 100%;
 
   img {
     flex: 1;
@@ -83,12 +82,8 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 80%;
+  width: 100%;
   align-self: center;
-
-  @media screen and (max-width: $lg) {
-    width: 100%;
-  }
 
   p {
     margin-bottom: 0;
@@ -99,12 +94,8 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 80%;
+  width: 100%;
   align-self: center;
-
-  @media screen and (max-width: $lg) {
-    width: 100%;
-  }
 
   p, h1 {
     margin-bottom: 0;
@@ -116,7 +107,7 @@
   display: flex;
   flex-direction: row-reverse;
   gap: 32px;
-  width: 95%;
+  width: 100%;
   align-items: center;
   justify-self: center;
 
@@ -139,7 +130,6 @@
   }
 
   @media screen and (max-width: $lg) {
-    width: 100%;
     flex-direction: column;
 
     img {
@@ -149,6 +139,6 @@
 }
 
 .decret-section {
-  width: 80%;
+  width: 100%;
   align-self: center;
 }

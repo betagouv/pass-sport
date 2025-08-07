@@ -36,8 +36,10 @@ const EligibilityTest = () => {
               Si vous êtes éligible, vous recevrez un courriel ou un SMS avec votre pass Sport :
             </p>
             <ul className="fr-text--xl fr-ml-2w">
-              <li>26-28 août : pour environ 80% des bénéficiaires ;</li>
-              <li>Entre mi-octobre et mi-novembre : pour les étudiants boursiers.</li>
+              <li>
+                26-28 août : pour les bénéficiaires de l&apos;ARS, de l&apos;AEEH et de l&apos;AAH ;
+              </li>
+              <li>Entre fin octobre et fin novembre : pour les étudiants boursiers.</li>
             </ul>
             <p className="fr-text--xl">
               Exception pour les bénéficiaires de l’
@@ -66,20 +68,9 @@ const EligibilityTest = () => {
                 courriel ou un SMS avec votre pass Sport :
               </p>
 
-              <ul className="fr-ml-2w">
-                <li>
-                  <span className="fr-text--bold">30-31 août</span> : pour environ{' '}
-                  <span className="fr-text--bold">80% des bénéficiaires ;</span>
-                </li>
-                <li>
-                  <span className="fr-text--bold">Entre mi-octobre et mi-novembre</span> : pour les{' '}
-                  <span className="fr-text--bold">étudiants boursiers.</span>
-                </li>
-              </ul>
-
               <p>
                 <span className="fr-text--bold">
-                  Exception pour les bénéficiaires de l&apos;AEEH
+                  Exception pour les bénéficiaires de l&apos;AEEH entre 6 et 13 ans
                 </span>{' '}
                 : demandez votre pass Sport directement sur notre site à partir du 1er septembre.
               </p>

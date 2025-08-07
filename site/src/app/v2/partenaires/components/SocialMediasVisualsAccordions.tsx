@@ -16,7 +16,7 @@ export default function SocialMediasVisualsAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/logos/Charte%20d'utilisation%20des%20logos%20pass%20Sport.pdf"
+              href="/assets/partenaires/logos/Charte%20d'utilisation%20des%20logos%20pass%20Sport.pdf"
               className="fr-link"
               target="_blank"
             >
@@ -25,7 +25,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/logos/Logo%20bleu%20(principal).png"
+              href="/assets/partenaires/logos/Logo%20bleu%20(principal).png"
               className="fr-link"
               target="_blank"
             >
@@ -34,7 +34,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/logos/Logo%20blanc%20(secondaire).png"
+              href="/assets/partenaires/logos/Logo%20blanc%20(secondaire).png"
               className="fr-link"
               target="_blank"
             >
@@ -48,7 +48,7 @@ export default function SocialMediasVisualsAccordions() {
         <ul>
           <li>
             <Link
-              href="/assets/ressources/reseaux-sociaux/%5BStructures%20sportives%5D%20Visuel%20pour%20communiquer%20aupres%20des%20jeunes.jpg"
+              href="/assets/partenaires/reseaux-sociaux/%5BStructures%20sportives%5D%20Visuel%20pour%20communiquer%20aupres%20des%20jeunes.jpg"
               className="fr-link"
               target="_blank"
             >
@@ -57,7 +57,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/reseaux-sociaux/%5BStructures%20sportives%5D%20Visuel%20pour%20communiquer%20aupres%20des%20parents.jpg"
+              href="/assets/partenaires/reseaux-sociaux/%5BStructures%20sportives%5D%20Visuel%20pour%20communiquer%20aupres%20des%20parents.jpg"
               className="fr-link"
               target="_blank"
             >
@@ -66,7 +66,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/reseaux-sociaux/Visuel%20pour%20communiquer%20aupres%20des%20jeunes.jpg"
+              href="/assets/partenaires/reseaux-sociaux/Visuel%20pour%20communiquer%20aupres%20des%20jeunes.jpg"
               className="fr-link"
               target="_blank"
             >
@@ -75,7 +75,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/reseaux-sociaux/Visuel%20pour%20communiquer%20aupres%20des%20parents.jpg"
+              href="/assets/partenaires/reseaux-sociaux/Visuel%20pour%20communiquer%20aupres%20des%20parents.jpg"
               className="fr-link"
               target="_blank"
             >
@@ -84,7 +84,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/reseaux-sociaux/Visuel%20pour%20communiquer%20aupres%20des%20etudiants%20boursiers.jpg"
+              href="/assets/partenaires/reseaux-sociaux/Visuel%20pour%20communiquer%20aupres%20des%20etudiants%20boursiers.jpg"
               className="fr-link"
               target="_blank"
             >
@@ -93,7 +93,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/reseaux-sociaux/Visuel%20pour%20les%20beneficiaires%20AAH.jpg"
+              href="/assets/partenaires/reseaux-sociaux/Visuel%20pour%20les%20beneficiaires%20AAH.jpg"
               className="fr-link"
               target="_blank"
             >
@@ -102,7 +102,7 @@ export default function SocialMediasVisualsAccordions() {
           </li>
           <li>
             <Link
-              href="/assets/ressources/reseaux-sociaux/Visuel%20pour%20les%20parents%20de%20beneficiaires%20AEEH.jpg"
+              href="/assets/partenaires/reseaux-sociaux/Visuel%20pour%20les%20parents%20de%20beneficiaires%20AEEH.jpg"
               className="fr-link"
               target="_blank"
             >

@@ -26,10 +26,10 @@ export default function PlanDuSite() {
               <Link href="/v2/jeunes-et-parents">Jeunes et parents</Link>
             </li>
             <li>
-              <Link href="/v2/structures">Structures</Link>
+              <Link href="/v2/structures">Structures sportives</Link>
             </li>
             <li>
-              <Link href="/v2/ressources">Ressources</Link>
+              <Link href="/v2/partenaires">Partenaires</Link>
             </li>
             <li>
               <Link href="/v2/trouver-un-club">Trouver un club partenaire</Link>

@@ -44,7 +44,7 @@ export default async function Questions({
       <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <PageTitle
           title="Vous avez une question ?"
-          subtitle="Consultez nos questions fréquentes, la réponse à votre question s’y trouve peut-être."
+          subtitle="Questions fréquemment posées"
           classes={{
             container: styles['page-header'],
           }}
