@@ -9,9 +9,8 @@
   flex-direction: column;
   gap: 48px;
 
-  max-width: 1200px;
   margin: auto;
-  padding-top: 24px;
+  background-color: var(--background-alt-blue-france);
 }
 
 // Raise the specificity by adding twice the classname

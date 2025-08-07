@@ -12,6 +12,8 @@ import { push } from '@socialgouv/matomo-next';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
+import { JEUNES_PARENTS_PAGE_AEEH_PARAMS } from '@/app/constants/search-query-params';
+import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -275,7 +277,7 @@ export default function SimplifiedEligibilityTest({
 
         {displayObtainCodeButton && (
           <p className="fr-mb-0 fr-mt-3w text-align--center">
-            <Link href="/v2/test-eligibilite" className="fr-btn fr-btn--secondary ">
+            <Link href="/v2/test-eligibilite" className="fr-btn fr-btn--secondary">
               Demander mon pass Sport
             </Link>
           </p>
@@ -283,7 +285,10 @@ export default function SimplifiedEligibilityTest({
 
         {displayAeehLink && (
           <p className="fr-mb-0 fr-mt-3w text-align--center">
-            <Link href="/v2/une-question?modalOpened=1" className="fr-link">
+            <Link
+              href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
+              className="fr-link"
+            >
               Contactez-nous pour demander votre pass Sport
             </Link>
           </p>

@@ -15,7 +15,8 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/mentions-legales': 'Mentions légales',
   '/v2/plan-du-site': 'Plan du site',
   '/v2/accessibilite': 'Accessibilité',
-  '/v2/budget': 'Budget',
+  // todo: enable later
+  // '/v2/budget': 'Budget',
   '/v2/test-eligibilite-base': 'Puis-je bénéficier du pass Sport ?',
   '/v2/jeunes-et-parents': 'Jeune et parents',
   '/v2/structures': 'Structures',

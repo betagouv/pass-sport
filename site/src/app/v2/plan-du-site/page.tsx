@@ -37,9 +37,10 @@ export default function PlanDuSite() {
             <li>
               <Link href="/v2/une-question">Une question ?</Link>
             </li>
-            <li>
-              <Link href="/v2/budget">Budget</Link>
-            </li>
+            {/* todo: enable later */}
+            {/*<li>*/}
+            {/*  <Link href="/v2/budget">Budget</Link>*/}
+            {/*</li>*/}
             <li>
               <Link href="/v2/mentions-legales">Mentions légales</Link>
             </li>

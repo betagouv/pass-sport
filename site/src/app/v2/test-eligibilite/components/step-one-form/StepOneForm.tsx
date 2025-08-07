@@ -160,22 +160,46 @@ const StepOneForm = ({
   const getNameLabel = useCallback(() => {
     switch (allowance) {
       case ALLOWANCE.AAH:
-        return 'Nom de famille du bénéficiaire *';
+        return (
+          <>
+            Nom de famille du bénéficiaire <span className="text--required">*</span>
+          </>
+        );
       case ALLOWANCE.ARS:
-        return 'Nom de famille de votre enfant *';
+        return (
+          <>
+            Nom de famille de votre enfant <span className="text--required">*</span>
+          </>
+        );
       default:
-        return 'Nom de famille *';
+        return (
+          <>
+            Nom de famille <span className="text--required">*</span>
+          </>
+        );
     }
   }, [allowance]);
 
   const getRecipientResidencePlace = useCallback(() => {
     switch (allowance) {
       case ALLOWANCE.AAH:
-        return 'Commune de résidence de l’allocataire *';
+        return (
+          <>
+            Commune de résidence de l’allocataire <span className="text--required">*</span>
+          </>
+        );
       case ALLOWANCE.ARS:
-        return 'Commune de résidence de l’allocataire *';
+        return (
+          <>
+            Commune de résidence de l’allocataire <span className="text--required">*</span>
+          </>
+        );
       default:
-        return 'Commune de résidence *';
+        return (
+          <>
+            Commune de résidence <span className="text--required">*</span>
+          </>
+        );
     }
   }, [allowance]);
 
@@ -215,7 +239,16 @@ const StepOneForm = ({
           stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
           disabled={isFormDisabled}
           label={
-            isDirectBeneficiary ? `Prénom*` : `Prénom de l'enfant ou du jeune adulte bénéficiaire *`
+            isDirectBeneficiary ? (
+              <>
+                Prénom <span className="text--required">*</span>
+              </>
+            ) : (
+              <>
+                Prénom de l&apos;enfant ou du jeune adulte bénéficiaire{' '}
+                <span className="text--required">*</span>
+              </>
+            )
           }
           nativeInputProps={{
             name: 'beneficiaryFirstname',
@@ -245,7 +278,6 @@ const StepOneForm = ({
           inputName="recipientResidencePlace"
           inputState={inputStates.recipientResidencePlace}
           onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
-          secondHintNeeded={!isDirectBeneficiary}
           required
         />
 

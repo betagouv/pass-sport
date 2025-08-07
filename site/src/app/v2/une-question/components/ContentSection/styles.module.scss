@@ -1,68 +1,68 @@
-@import '../../../../sassVariables.module.scss';
-
-.faq {
-  position: relative;
-  background-color: var(--color-white);
-  display: flex;
-  max-width: $layout-max-width;
-  margin: 48px 0;
-  padding-top: 24px;
-  flex-direction: column;
-
-  &--from-main-page {
-    top: -100px;
-    margin: 24px 24px -80px;
-
-    @media (min-width: $md) {
-      top: -60px;
-      margin: 0 auto -64px;
-    }
-  }
-
-  &__article-title {
-    color: var(--text-action-high-blue-france);
-    padding-left: 16px;
-  }
-
-  &__accordion-expanded-container {
-    display: flex;
-    flex-direction:column;
-    gap: 40px;
-    background-color: #EEE;
-  }
-
-  &__markdown {
-    p {
-      margin-bottom: 1rem;
-
-      &:first-child {
-        margin-top: 1rem;
-      }
-    }
-
-    img {
-      max-width: 100%;
-    }
-  }
-
-  &__feedback {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 24px;
-
-    & button {
-      margin: 0 !important;
-    }
-
-    &-date {
-      color: #666666;
-      padding: 16px 0;
-      text-align: center;
-      border-top: 1px solid var(--border-default-grey);
-      border-bottom: 1px solid var(--border-default-grey);
-      margin-top: 24px;
-    }
-  }
-}
+//@import '../../../../sassVariables.module.scss';
+//
+//.faq {
+//  position: relative;
+//  background-color: var(--color-white);
+//  display: flex;
+//  max-width: $layout-max-width;
+//  margin: 48px 0;
+//  padding-top: 24px;
+//  flex-direction: column;
+//
+//  &--from-main-page {
+//    top: -100px;
+//    margin: 24px 24px -80px;
+//
+//    @media (min-width: $md) {
+//      top: -60px;
+//      margin: 0 auto -64px;
+//    }
+//  }
+//
+//  &__article-title {
+//    color: var(--text-action-high-blue-france);
+//    padding-left: 16px;
+//  }
+//
+//  &__accordion-expanded-container {
+//    display: flex;
+//    flex-direction:column;
+//    gap: 40px;
+//    background-color: #EEE;
+//  }
+//
+//  &__markdown {
+//    p {
+//      margin-bottom: 1rem;
+//
+//      &:first-child {
+//        margin-top: 1rem;
+//      }
+//    }
+//
+//    img {
+//      max-width: 100%;
+//    }
+//  }
+//
+//  &__feedback {
+//    display: flex;
+//    justify-content: center;
+//    align-items: center;
+//    gap: 1rem;
+//    margin-top: 24px;
+//
+//    & button {
+//      margin: 0 !important;
+//    }
+//
+//    &-date {
+//      color: #666666;
+//      padding: 16px 0;
+//      text-align: center;
+//      border-top: 1px solid var(--border-default-grey);
+//      border-bottom: 1px solid var(--border-default-grey);
+//      margin-top: 24px;
+//    }
+//  }
+//}

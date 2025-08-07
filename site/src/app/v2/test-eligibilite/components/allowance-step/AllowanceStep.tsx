@@ -9,7 +9,7 @@ import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crous-eligibility-test-forms/CrousEligibilityTestForms';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
 import Link from 'next/link';
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
+import { JEUNES_PARENTS_PAGE_AEEH_PARAMS } from '@/app/constants/search-query-params';
 import cn from 'classnames';
 import styles from './styles.module.scss';
 import { RadioButtonsProps } from '@codegouvfr/react-dsfr/RadioButtons';
@@ -21,6 +21,7 @@ import { ALLOWANCE_MAPPING_TO_ALLOCATION, isEligible } from '@/utils/eligibility
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
+import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
@@ -116,9 +117,12 @@ const AllowanceStep = () => {
         <div className={styles.wrapper}>
           <h2 className="fr-text--bold fr-mb-2w fr-text--xl">Quelle est votre situation ?</h2>
           {(!isValidated || !benefIsEligible) && (
-            <h3 className="fr-mt-1w fr-mb-2w fr-text--md fr-text--regular">
-              Ces informations nous aideront à connaitre votre éligibilité.
-            </h3>
+            <>
+              <span className="text--italic">Tous les champs ci-dessous sont obligatoires*</span>
+              <h3 className="fr-mt-1w fr-mb-2w fr-text--md fr-text--regular">
+                Ces informations nous aideront à connaitre votre éligibilité.
+              </h3>
+            </>
           )}
 
           {benefIsEligible && (
@@ -139,7 +143,11 @@ const AllowanceStep = () => {
           ) : (
             <div>
               <Input
-                label="Date de naissance du bénéficiaire *"
+                label={
+                  <>
+                    Date de naissance du bénéficiaire <span className="text--required">*</span>
+                  </>
+                }
                 nativeInputProps={{
                   type: 'date',
                   required: true,
@@ -157,7 +165,12 @@ const AllowanceStep = () => {
                 state={radioButtonsState}
                 stateRelatedMessage={radioButtonsStateRelatedMessage}
                 name="radio"
-                legend="Le bénéficiaire est-il concerné par l’une de ces allocations ?"
+                legend={
+                  <>
+                    Le bénéficiaire est-il concerné par l’une de ces allocations ?{' '}
+                    <span className="text--required">*</span>
+                  </>
+                }
                 key={CustomButtonsGroupKey}
                 onOkButtonClicked={buttonClickedHandler}
                 options={[
@@ -266,7 +279,7 @@ const AllowanceStep = () => {
               {allowance === ALLOWANCE.AEEH && (
                 <div className="fr-mt-2w">
                   <Link
-                    href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+                    href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
                     className="fr-link fr-link--icon-left fr-icon-mail-line"
                   >
                     Contactez-nous pour obtenir votre code

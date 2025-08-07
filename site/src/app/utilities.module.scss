@@ -15,6 +15,10 @@
     color: var(--text-title-grey);
   }
 
+  &--required {
+    color: var(--red-marianne-425-625);
+  }
+
   &-align {
     &--center {
       text-align: center;
@@ -70,7 +74,7 @@
     & li::before {
       content: '\200B'; // workaround for voiceover, see https://developer.mozilla.org/fr/docs/Web/CSS/list-style-type#accessibilit%C3%A9
       display: block;
-      height: 0px;
+      height: 0;
     }
   }
 }

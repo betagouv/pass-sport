@@ -1,0 +1,41 @@
+@import '../../../../sassVariables.module';
+
+.error {
+  margin-bottom: 60px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 35px;
+  flex-grow: 1;
+
+  @media (min-width: $xl) {
+    gap: 16px;
+  }
+}
+
+.names-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  @media (min-width: $xl) {
+    flex-direction: row;
+  }
+
+  div {
+    flex-grow: 1;
+  }
+}
+
+.textarea-wrapper {
+  textarea {
+    height: 202px;
+  }
+}
+
+.paragraph {
+  color: var(--border-plain-grey);
+  font-style: italic;
+}

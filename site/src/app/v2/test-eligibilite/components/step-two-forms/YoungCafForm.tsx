@@ -4,7 +4,6 @@ import {
   ConfirmResponseErrorBody,
   EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
-  SituationType,
   YoungCafInputsState,
 } from 'types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
@@ -156,7 +155,7 @@ const YoungCafForm = ({
           inputProps={{
             label: (
               <>
-                Numéro de l’allocataire <CAF />*
+                Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
             hintText:
@@ -187,7 +186,7 @@ const YoungCafForm = ({
         <Input
           label={
             <>
-              Nom de l’allocataire <CAF />*
+              Nom de l’allocataire <CAF /> <span className="text--required">*</span>
             </>
           }
           nativeInputProps={{
@@ -212,7 +211,7 @@ const YoungCafForm = ({
         <Input
           label={
             <>
-              Prénom de l’allocataire <CAF />*
+              Prénom de l’allocataire <CAF /> <span className="text--required">*</span>
             </>
           }
           nativeInputProps={{

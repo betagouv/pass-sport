@@ -76,14 +76,20 @@ const CommonInputs = ({
             inputName={birthPlaceInputName}
             inputState={inputStates['recipientBirthPlace']!}
             legend={
-              isDirectBeneficiary
-                ? `Commune de naissance *`
-                : `Commune de naissance de l'allocataire *`
+              isDirectBeneficiary ? (
+                <>
+                  Commune de naissance <span className="text--required">*</span>
+                </>
+              ) : (
+                <>
+                  Commune de naissance de l&apos;allocataire{' '}
+                  <span className="text--required">*</span>
+                </>
+              )
             }
             isDisabled={areInputsDisabled}
             onChanged={onBirthPlaceChanged}
             required={isBirthInputRequired}
-            secondHintNeeded={!isDirectBeneficiary}
             shouldAutoFocus={shouldAutoFocus}
           />
         )}

@@ -12,6 +12,8 @@ import code from '@/images/code.svg';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 import ObtainCodeButton from '@/app/v2/jeunes-et-parents/components/ObtainCodeButton';
+import ContactAeehSection from '@/app/v2/jeunes-et-parents/components/ContactAeehSection';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -134,10 +136,26 @@ export default function Page() {
                 <span className="fr-text--bold">étudiants boursiers.</span>
               </li>
             </ol>
-            <p>
-              <span className="fr-text--bold">Exception pour les bénéficiaires de l&apos;AEEH</span>{' '}
-              : demandez votre pass Sport directement sur notre site à partir du 1er septembre.
-            </p>
+            <section className="fr-mb-2w" id={SKIP_LINKS_ID.aeehContent}>
+              <KnowMore
+                variant="yellow"
+                knowMore={{
+                  title: `Exception pour les bénéficiaires de l'AEEH`,
+                  description: CODES_OBTAINABLE
+                    ? 'Demandez votre pass Sport directement à partir de ce formulaire'
+                    : `Demandez votre pass Sport directement sur notre site à partir du 1er septembre.`,
+                }}
+              >
+                {CODES_OBTAINABLE && <ContactAeehSection />}
+              </KnowMore>
+              {/* todo: confirm with Julianne */}
+              {/*<p>*/}
+              {/*  <span className="fr-text--bold">*/}
+              {/*    Exception pour les bénéficiaires de l&apos;AEEH*/}
+              {/*  </span>{' '}*/}
+              {/*  : demandez votre pass Sport directement sur notre site à partir du 1er septembre.*/}
+              {/*</p>*/}
+            </section>
             Si, après cette date vous n&apos;avez pas reçu votre pass Sport :
             <ol className="fr-ml-2w" start={1}>
               <li>Vérifiez dans vos spams ou indésirables.</li>

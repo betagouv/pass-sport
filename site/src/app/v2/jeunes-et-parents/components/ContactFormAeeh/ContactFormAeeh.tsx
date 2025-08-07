@@ -4,89 +4,56 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import Checkbox from '@codegouvfr/react-dsfr/Checkbox';
 import Input from '@codegouvfr/react-dsfr/Input';
-import Select from '@codegouvfr/react-dsfr/Select';
-import React, { ChangeEvent, FormEvent, SyntheticEvent, useRef, useState } from 'react';
-import { InputsState } from '@/types/Contact';
-import { postContact } from '../../client-agent';
+import React, { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { InputsStateBenef } from '@/types/Contact';
+import { postContact } from '../../../une-question/client-agent';
 import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
 
-const visitorReasons = {
-  'aije-droit': 'Ai-je droit au pass Sport ?',
-  'eligibility-test-fail': 'Mon test me dit que je ne suis pas éligible',
-  'code-pas-reçu': "Je n'ai pas reçu mon code pass Sport",
-  'obtenir-pass': "J'ai supprimé mon code par erreur",
-  'code-fails': 'Mon code ne fonctionne pas',
-  'club-pas-trouvé': 'Je ne trouve pas mon club',
-  'refus-code-club': 'Mon club refuse de prendre le pass Sport',
-  'club-wait-50': "Mon club attend d'être remboursé avant de me faire la déduction de 50 euros",
-  'deja-paye-comment-rembourse':
-    "j'ai déjà payé mon adhésion, comment me faire rembourser mon pass Sport ?",
-  boursier: 'Je suis boursier ou boursière',
-  other: 'Autre',
+const aeehReasons = {
+  'demande-code-aeeh': `demande-code-aeeh`,
 };
 
-const proReasons = {
-  'what-pass': "Qu'est-ce que le pass Sport ?",
-  'devenir-partenaire': 'Comment devenir partenaire ?',
-  'club-code-not-working': 'Le code ne fonctionne pas',
-  'cant-get-refund': 'Je ne parviens pas à me faire rembourser',
-  'integrer-supprimer-pass': 'Comment intégrer ou supprimer des pass Sport dans LCA ?',
-  'club-problème-lca': 'Je rencontre un problème sur mon compte LCA',
-  other: 'Autre',
-};
-
-const initialInputsState: InputsState = {
+const initialInputsState: InputsStateBenef = {
   firstname: { state: 'default' },
   lastname: { state: 'default' },
   email: { state: 'default' },
   reason: { state: 'default' },
   message: { state: 'default' },
   consent: { state: 'default' },
-  siret: { state: 'default' },
-  rna: { state: 'default' },
 };
 
-export const mapper: Record<keyof InputsState, string> = {
+export const mapper: Record<keyof InputsStateBenef, string> = {
   firstname: 'Le prénom est requis',
   lastname: 'Le nom de famille est requis',
   email: "L'email est requis",
   reason: "L'objet du message est requis",
   message: 'Le message est requis',
   consent: 'Veuiller cocher cette case',
-  siret: 'Le SIRET est requis',
-  rna: '',
 };
 
 interface Props {
   closeFn: VoidFunction;
-  isProVersion: boolean;
 }
 
-const ContactForm = ({ closeFn, isProVersion }: Props) => {
+const ContactFormAeeh = ({ closeFn }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
-  const [inputStates, setInputStates] = useState<InputsState>(initialInputsState);
+  const [inputStates, setInputStates] = useState<InputsStateBenef>(initialInputsState);
   const [apiError, setApiError] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
   const [isOk, setIsOk] = useState<boolean>(false);
 
-  const isFormValid = (formData: FormData): { isValid: boolean; states: InputsState } => {
+  const isFormValid = (formData: FormData): { isValid: boolean; states: InputsStateBenef } => {
     let isValid = true;
 
-    const fieldNames: { name: keyof InputsState; isMandatory: boolean }[] = [
+    const fieldNames: { name: keyof InputsStateBenef; isMandatory: boolean }[] = [
       { name: 'firstname', isMandatory: true },
       { name: 'lastname', isMandatory: true },
       { name: 'email', isMandatory: true },
       { name: 'reason', isMandatory: true },
       { name: 'message', isMandatory: true },
       { name: 'consent', isMandatory: true },
-      { name: 'rna', isMandatory: false },
     ];
-
-    if (isProVersion) {
-      fieldNames.push({ name: 'siret', isMandatory: true });
-      fieldNames.push({ name: 'rna', isMandatory: false });
-    }
 
     const states = structuredClone(initialInputsState);
 
@@ -108,30 +75,10 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
       isValid = false;
     }
 
-    if (isProVersion) {
-      const siretInput = formData.get('siret') as string;
-      const regExp = new RegExp('\\d{14}');
-      if (states.siret.state !== 'error' && !regExp.test(siretInput)) {
-        states.siret.state = 'error';
-        states.siret.errorMsg = 'Le SIRET doit contenir 14 chiffres';
-        isValid = false;
-      }
-    }
-
-    if (isProVersion) {
-      const rnaInput = formData.get('rna') as string;
-      const regExp = new RegExp('W\\d{9}');
-      if (rnaInput && states.rna.state !== 'error' && !regExp.test(rnaInput)) {
-        states.rna.state = 'error';
-        states.rna.errorMsg = "Le RNA doit être composé d'un W suivi de 9 chiffres";
-        isValid = false;
-      }
-    }
-
     return { isValid, states };
   };
 
-  const onInputChanged = (text: string | null, field: keyof InputsState) => {
+  const onInputChanged = (text: string | null, field: keyof InputsStateBenef) => {
     if (!text) {
       setInputStates((inputStates) => ({
         ...inputStates,
@@ -149,6 +96,8 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
     e.preventDefault();
 
     const formData = new FormData(formRef.current!);
+
+    formData.set('reason', aeehReasons['demande-code-aeeh']);
 
     const { isValid, states } = isFormValid(formData);
 
@@ -172,7 +121,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
     }
 
     try {
-      const response = await postContact(formData, isProVersion);
+      const response = await postContact(formData, false);
 
       if (!response.ok) {
         setApiError(true);
@@ -191,32 +140,13 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
     }
   };
 
-  const reasons = isProVersion ? proReasons : visitorReasons;
   return (
     <>
       <form ref={formRef} onSubmit={onSubmitHandler}>
-        <div>
-          <h2 className="fr-text--bold fr-my-2w fr-h6">
-            Avez-vous d&apos;abord consulté notre foire aux questions ?
-          </h2>
-          <p className="fr-mb-2w">
-            La réponse à votre question s&apos;y trouve peut-être. Si tel est le cas, vous gagnerez
-            certainement du temps grâce à elle.
-          </p>
-
-          <p className="fr-mb-2w">
-            <Button
-              type="button"
-              onClick={() => {
-                closeFn();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              priority="secondary"
-            >
-              Lire les questions fréquentes
-            </Button>
-          </p>
-        </div>
+        <p className="fr-my-2w">
+          Si votre enfant a moins de 13 ans et bénéficie de l’AEEH, il vous faut compléter et
+          envoyer le formulaire ci-dessous pour que son code pass Sport vous soit transmis.
+        </p>
         <div>
           <div className={styles.form}>
             <div>
@@ -261,41 +191,6 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 />
               </div>
             </div>
-            {isProVersion && (
-              <>
-                <div>
-                  <Input
-                    label={
-                      <>
-                        Siret <span className="text--required">*</span>
-                      </>
-                    }
-                    nativeInputProps={{
-                      name: 'siret',
-                      onChange: (e: ChangeEvent<HTMLInputElement>) =>
-                        onInputChanged(e.target.value, 'siret'),
-                      required: true,
-                    }}
-                    state={inputStates.siret.state}
-                    stateRelatedMessage={inputStates.siret.errorMsg}
-                  />
-                </div>
-
-                <div>
-                  <Input
-                    label="RNA"
-                    hintText="Le numéro RNA est le numéro d'identification du Répertoire National des Associations"
-                    nativeInputProps={{
-                      name: 'rna',
-                      onChange: (e: ChangeEvent<HTMLInputElement>) =>
-                        onInputChanged(e.target.value, 'rna'),
-                    }}
-                    state={inputStates.rna.state}
-                    stateRelatedMessage={inputStates.rna.errorMsg}
-                  />
-                </div>
-              </>
-            )}
 
             <div>
               <Input
@@ -315,37 +210,6 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 stateRelatedMessage={inputStates.email.errorMsg}
                 hintText="Format attendu : nom@domaine.fr"
               />
-            </div>
-
-            <div>
-              <Select
-                label={
-                  <>
-                    Objet de la demande <span className="text--required">*</span>
-                  </>
-                }
-                nativeSelectProps={{
-                  name: 'reason',
-                  onChange: (e: SyntheticEvent<HTMLSelectElement>) =>
-                    onInputChanged(e.currentTarget.value, 'reason'),
-                  defaultValue: '',
-                  required: true,
-                }}
-                state={inputStates.reason.state}
-                stateRelatedMessage={inputStates.reason.errorMsg}
-              >
-                <React.Fragment key=".0">
-                  <option disabled hidden value="">
-                    Veuillez sélectionner un objet
-                  </option>
-
-                  {Object.entries(reasons).map(([key, value]) => (
-                    <option value={key} key={`${isProVersion ? 'pro' : 'visitor'}_${key}`}>
-                      {value}
-                    </option>
-                  ))}
-                </React.Fragment>
-              </Select>
             </div>
 
             <Input
@@ -424,4 +288,4 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
   );
 };
 
-export default ContactForm;
+export default ContactFormAeeh;

@@ -204,12 +204,13 @@ export default function PassSportFooter() {
         href: '/v2/politique-de-confidentialite',
       },
     },
-    {
-      text: 'Budget',
-      linkProps: {
-        href: '/v2/budget',
-      },
-    },
+    // todo: enable later
+    // {
+    //   text: 'Budget',
+    //   linkProps: {
+    //     href: '/v2/budget',
+    //   },
+    // },
     {
       text: 'Gestion des cookies',
       linkProps: {
@@ -240,15 +241,31 @@ export default function PassSportFooter() {
           },
         },
         {
-          text: 'Tout savoir sur le pass Sport',
+          text: 'Jeunes et parents',
           linkProps: {
-            href: '/v2/tout-savoir-sur-le-pass-sport',
+            href: '/v2/jeunes-et-parents',
+          },
+        },
+        {
+          text: 'Structures',
+          linkProps: {
+            href: '/v2/structures',
           },
         },
         {
           text: 'Trouver un club partenaire',
           linkProps: {
             href: '/v2/trouver-un-club',
+          },
+        },
+      ],
+    },
+    {
+      links: [
+        {
+          text: 'Ressources',
+          linkProps: {
+            href: '/v2/ressources',
           },
         },
         {

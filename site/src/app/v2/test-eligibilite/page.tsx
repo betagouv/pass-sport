@@ -59,26 +59,32 @@ const EligibilityTest = () => {
             }}
           />
 
-          <p>
-            Si vous <span className="fr-text--bold">êtes éligibles</span>, vous recevrez un courriel
-            ou un SMS avec votre pass Sport :
-          </p>
+          {!CODES_OBTAINABLE && (
+            <>
+              <p>
+                Si vous <span className="fr-text--bold">êtes éligibles</span>, vous recevrez un
+                courriel ou un SMS avec votre pass Sport :
+              </p>
 
-          <ul className="fr-ml-2w">
-            <li>
-              <span className="fr-text--bold">30-31 août</span> : pour environ{' '}
-              <span className="fr-text--bold">80% des bénéficiaires ;</span>
-            </li>
-            <li>
-              <span className="fr-text--bold">Entre mi-octobre et mi-novembre</span> : pour les{' '}
-              <span className="fr-text--bold">étudiants boursiers.</span>
-            </li>
-          </ul>
+              <ul className="fr-ml-2w">
+                <li>
+                  <span className="fr-text--bold">30-31 août</span> : pour environ{' '}
+                  <span className="fr-text--bold">80% des bénéficiaires ;</span>
+                </li>
+                <li>
+                  <span className="fr-text--bold">Entre mi-octobre et mi-novembre</span> : pour les{' '}
+                  <span className="fr-text--bold">étudiants boursiers.</span>
+                </li>
+              </ul>
 
-          <p>
-            <span className="fr-text--bold">Exception pour les bénéficiaires de l&apos;AEEH</span> :
-            demandez votre pass Sport directement sur notre site à partir du 1er septembre.
-          </p>
+              <p>
+                <span className="fr-text--bold">
+                  Exception pour les bénéficiaires de l&apos;AEEH
+                </span>{' '}
+                : demandez votre pass Sport directement sur notre site à partir du 1er septembre.
+              </p>
+            </>
+          )}
         </div>
       </section>
 

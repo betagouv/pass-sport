@@ -6,7 +6,7 @@ import { setFocusOn } from '@/utils/dom';
 
 type Props = Omit<RadioButtonsProps, 'legend'> & {
   id: string;
-  legend: string;
+  legend: string | ReactNode;
   legendDescription?: ReactNode;
   onOkButtonClicked: () => void;
 };
@@ -24,9 +24,13 @@ const CustomRadioButtons: React.FC<Props> = (props) => {
         {...onlyRadioButtonsProps}
         classes={{ legend: styles.legend, inputGroup: 'fr-radio-rich' }}
         legend={
-          <>
-            <p className="fr-mb-2w">{legend}</p>
-          </>
+          typeof legend === 'string' ? (
+            <>
+              <p className="fr-mb-2w">{legend}</p>
+            </>
+          ) : (
+            legend
+          )
         }
       />
       <div className={styles['button-container']}>

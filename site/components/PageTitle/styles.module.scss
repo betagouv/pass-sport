@@ -1,13 +1,9 @@
 @import '../../src/app/sassVariables.module.scss';
 
 .container {
-  background-color: var(--orange-terre-battue-925-125);
+  background-color: var(--background-action-low-orange-terre-battue);
   height: 180px;
   padding: 0 1rem;
-
-  &--pro {
-    background-color: var(--brown-caramel-950-100);
-  }
 }
 
 .titlewrapper {

@@ -149,7 +149,7 @@ const AahCafForm = ({
           inputProps={{
             label: (
               <>
-                Numéro de l’allocataire <CAF />*
+                Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
             hintText:

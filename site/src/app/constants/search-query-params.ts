@@ -15,3 +15,11 @@ export type UrlQueryParameters = (typeof SEARCH_QUERY_PARAMS)[keyof typeof SEARC
 export const CONTACT_PAGE_QUERYPARAMS = {
   modalOpened: 'modalOpened',
 };
+
+export const FAQ_PAGE_QUERY_PARAMS = {
+  displayType: 'displayType',
+};
+
+export const JEUNES_PARENTS_PAGE_AEEH_PARAMS = {
+  aeehModalOpened: 'aeehModalOpened',
+};

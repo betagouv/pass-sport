@@ -178,7 +178,7 @@ const CrousForm = ({
               label: (
                 <>
                   Numéro INE provenant du <CROUS /> ou bourse régionale pour les formations
-                  sanitaires et sociales*
+                  sanitaires et sociales <span className="text--required">*</span>
                 </>
               ),
               hintText:
