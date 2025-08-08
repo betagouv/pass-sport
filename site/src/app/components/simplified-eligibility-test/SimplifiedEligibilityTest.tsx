@@ -10,7 +10,7 @@ import {
   getAeehCodeObtentionType,
   isEligible,
 } from '@/utils/eligibility-test';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
@@ -40,9 +40,27 @@ export default function SimplifiedEligibilityTest({
     null,
   );
   const [alertMeta, setAlertMeta] = useState<{ title: string; description: string } | null>(null);
-  const eligibilityTestOnClick = () => {
-    push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked']);
-  };
+
+  const eligibilityTestOnClick = useCallback(() => {
+    push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked', 'Submission button']);
+  }, []);
+
+  const onAeehLinkClick = useCallback(() => {
+    push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked', 'AEEH link']);
+  }, []);
+
+  const onCodeObtentionLinkClick = useCallback(() => {
+    push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked', 'Code obtention link']);
+  }, []);
+
+  const onKnowMoreLinkClick = useCallback(() => {
+    push([
+      'trackEvent',
+      'Simplified Eligibility Test',
+      'Button clicked',
+      'Know more about conditions link',
+    ]);
+  }, []);
 
   const [displayEligibilityLink, setDisplayEligibilityLink] = useState<boolean>(false);
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
@@ -289,7 +307,11 @@ export default function SimplifiedEligibilityTest({
 
         {displayObtainCodeButton && (
           <p className="fr-mb-0 fr-mt-3w text-align--center">
-            <Link href="/v2/test-eligibilite" className="fr-btn fr-btn--secondary">
+            <Link
+              href="/v2/test-eligibilite"
+              className="fr-btn fr-btn--secondary"
+              onClick={onCodeObtentionLinkClick}
+            >
               Demander mon pass Sport
             </Link>
           </p>
@@ -300,6 +322,7 @@ export default function SimplifiedEligibilityTest({
             <Link
               href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
               className="fr-link"
+              onClick={onAeehLinkClick}
             >
               Contactez-nous pour demander votre pass Sport
             </Link>
@@ -308,7 +331,7 @@ export default function SimplifiedEligibilityTest({
 
         {displayEligibilityLink && (
           <p className="fr-mb-0 fr-mt-3w text-align--center">
-            <Link href="/v2/une-question" className="fr-link">
+            <Link href="/v2/une-question" className="fr-link" onClick={onKnowMoreLinkClick}>
               En savoir plus sur les conditions d’éligibilité
             </Link>
           </p>
