@@ -12,6 +12,8 @@ type CorrectiveInfoProps = {
 // is correct but the allowance is incorrect, we display an alert information saying that
 // The allowance has been automatically corrected as to not interrupt the beneficiary's flow
 export default function CorrectiveInfo({ situation, originalAllowance }: CorrectiveInfoProps) {
+  if (originalAllowance === null) return;
+
   return (
     <div id="corrective-info" aria-live="polite" aria-atomic>
       {situation === 'boursier' && originalAllowance !== ALLOWANCE.CROUS && (
@@ -24,7 +26,8 @@ export default function CorrectiveInfo({ situation, originalAllowance }: Correct
         </div>
       )}
 
-      {situation === 'jeune' && originalAllowance !== ALLOWANCE.ARS && (
+      {/* Since we cannot differentiate ARS and AEEH, we display the same message for both */}
+      {situation === 'jeune' && ![ALLOWANCE.ARS, ALLOWANCE.AEEH].includes(originalAllowance) && (
         <div className="fr-mb-3w fr-ml-n1v">
           <Alert
             severity="info"

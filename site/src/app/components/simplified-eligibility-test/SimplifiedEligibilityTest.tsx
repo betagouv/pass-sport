@@ -4,7 +4,12 @@ import styles from './styles.module.scss';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Select } from '@codegouvfr/react-dsfr/SelectNext';
 import Button, { ButtonProps } from '@codegouvfr/react-dsfr/Button';
-import { ALLOCATION, isEligible } from '@/utils/eligibility-test';
+import {
+  AEEH_CODE_OBTENTION_TYPE,
+  ALLOCATION,
+  getAeehCodeObtentionType,
+  isEligible,
+} from '@/utils/eligibility-test';
 import { useEffect, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
@@ -68,7 +73,7 @@ export default function SimplifiedEligibilityTest({
       description: '',
     };
 
-    if (CODES_OBTAINABLE && success === true) {
+    if (CODES_OBTAINABLE && success === true && targetDate) {
       switch (allocationName) {
         case ALLOCATION.AAH:
         case ALLOCATION.ARS:
@@ -79,11 +84,18 @@ export default function SimplifiedEligibilityTest({
           setDisplayObtainCodeButton(true);
           break;
         case ALLOCATION.AEEH:
+          const { displayType } = getAeehCodeObtentionType(targetDate);
+
           setAlertMeta({
             title: successInitialMeta.title,
             description: successInitialMeta.description,
           });
-          setDisplayAeehLink(true);
+
+          if (displayType === AEEH_CODE_OBTENTION_TYPE.LINK) {
+            setDisplayAeehLink(true);
+          } else if (displayType === AEEH_CODE_OBTENTION_TYPE.FORM) {
+            setDisplayObtainCodeButton(true);
+          }
           break;
         case ALLOCATION.CROUS:
         case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:

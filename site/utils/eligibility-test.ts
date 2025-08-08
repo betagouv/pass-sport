@@ -10,6 +10,11 @@ export enum ALLOCATION {
   FORMATIONS_SANITAIRES_SOCIAUX = 'formations-sanitaires-sociaux',
 }
 
+export enum AEEH_CODE_OBTENTION_TYPE {
+  FORM = 'form',
+  LINK = 'link',
+}
+
 export const ALLOWANCE_MAPPING_TO_ALLOCATION: { [key in ALLOWANCE]: ALLOCATION } = {
   [ALLOWANCE.NONE]: ALLOCATION.NONE,
   [ALLOWANCE.AAH]: ALLOCATION.AAH,
@@ -37,6 +42,36 @@ function isBetween({
     start: startDate,
     end: endDate,
   });
+}
+
+/**
+ * Get the way to obtain code for AEEH
+ * <ul>
+ * <li>For 6 to 13 years old, it should display the link (01/01/2012 to 31/12/2019)</li>
+ * <li>For 14 to 19 years old, it should display the form (01/01/2006 to 31/12/2011)</li>
+ * </ul>
+ * @param targetDate
+ */
+export function getAeehCodeObtentionType(targetDate: string): {
+  isEligible: boolean;
+  displayType: AEEH_CODE_OBTENTION_TYPE;
+} {
+  const displayType = isBetween({
+    inputDates: {
+      targetDate,
+      startDate: '01/01/2012',
+      endDate: '31/12/2019',
+    },
+  })
+    ? AEEH_CODE_OBTENTION_TYPE.LINK
+    : AEEH_CODE_OBTENTION_TYPE.FORM;
+
+  const _isEligible = isEligible({ targetDate, allocationName: ALLOCATION.AEEH });
+
+  return {
+    isEligible: _isEligible,
+    displayType,
+  };
 }
 
 export function isEligible({

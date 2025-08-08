@@ -17,7 +17,12 @@ import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/Ver
 import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
 import CorrectiveInfo from '@/app/v2/test-eligibilite/components/corrective-info/CorrectiveInfo';
 import Input, { InputProps } from '@codegouvfr/react-dsfr/Input';
-import { ALLOWANCE_MAPPING_TO_ALLOCATION, isEligible } from '@/utils/eligibility-test';
+import {
+  AEEH_CODE_OBTENTION_TYPE,
+  ALLOWANCE_MAPPING_TO_ALLOCATION,
+  getAeehCodeObtentionType,
+  isEligible,
+} from '@/utils/eligibility-test';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
@@ -276,17 +281,25 @@ const AllowanceStep = () => {
                 <EligibilityTestForms />
               )}
 
-              {allowance === ALLOWANCE.AEEH && (
-                <div className="fr-mt-2w">
-                  <Link
-                    href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
-                    className="fr-link fr-link--icon-left fr-icon-mail-line"
-                  >
-                    Contactez-nous pour obtenir votre code
-                  </Link>
-                  <p className="fr-mt-2w">Préparez votre pièce justificative</p>
-                </div>
-              )}
+              {allowance === ALLOWANCE.AEEH &&
+                dob &&
+                getAeehCodeObtentionType(dob).displayType === AEEH_CODE_OBTENTION_TYPE.FORM && (
+                  <EligibilityTestForms />
+                )}
+
+              {allowance === ALLOWANCE.AEEH &&
+                dob &&
+                getAeehCodeObtentionType(dob).displayType === AEEH_CODE_OBTENTION_TYPE.LINK && (
+                  <div className="fr-mt-2w">
+                    <Link
+                      href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
+                      className="fr-link fr-link--icon-left fr-icon-mail-line"
+                    >
+                      Contactez-nous pour obtenir votre code
+                    </Link>
+                    <p className="fr-mt-2w">Préparez votre pièce justificative</p>
+                  </div>
+                )}
 
               {allowance === ALLOWANCE.CROUS && CODES_OBTAINABLE_FOR_CROUS && (
                 <CrousEligibilityTestForms />

@@ -138,6 +138,7 @@ export default function Page() {
                   <Link
                     href="/v2/trouver-un-club"
                     className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
+                    target="_blank"
                   >
                     Liste de structures sportives partenaires
                   </Link>
@@ -148,6 +149,8 @@ export default function Page() {
                   <Link
                     href="https://www.handiguide.sports.gouv.fr/"
                     className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
+                    target="_blank"
+                    aria-label="Ouvrir une nouvelle fenêtre vers le site HandiGuide"
                   >
                     HandiGuide des sports pour une liste de structures sportives accueillant des
                     personnes en situation de handicap

@@ -2,11 +2,16 @@
 // nés entre le 1er janvier 2008 et le 31 décembre 2011 et bénéficient de l'allocation de rentrée scolaire
 // nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
 
-import { ALLOCATION, isEligible } from './eligibility-test';
+import {
+  AEEH_CODE_OBTENTION_TYPE,
+  ALLOCATION,
+  getAeehCodeObtentionType,
+  isEligible,
+} from './eligibility-test';
 
 // nés entre le 1er janvier 1995 et le 31 décembre 2009 et bénéficient de l'allocation aux adultes handicapés
 describe('Eligibility tests suite', () => {
-  describe('isEligible() tests cases', () => {
+  describe('isEligible() tests suite', () => {
     describe('Should be eligible for', () => {
       it('AAH', () => {
         // nés entre le 1er janvier 1995 et le 31 décembre 2009 et bénéficient de l'allocation aux adultes handicapés
@@ -112,6 +117,34 @@ describe('Eligibility tests suite', () => {
             allocationName: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
           }),
         ).toBeFalsy();
+      });
+    });
+  });
+
+  // <li>For 6 to 13 years old, it should display the link (01/01/2012 to 31/12/2019)</li>
+  // <li>For 14 to 19 years old, it should display the form (01/01/2006 to 31/12/2011)</li>
+  describe('getAeehCodeObtentionType() tests suite', () => {
+    it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.LINK}`, () => {
+      expect(getAeehCodeObtentionType('2012-01-01')).toEqual({
+        isEligible: true,
+        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+      });
+
+      expect(getAeehCodeObtentionType('2019-12-31')).toEqual({
+        isEligible: true,
+        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+      });
+    });
+
+    it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.FORM}`, () => {
+      expect(getAeehCodeObtentionType('2006-01-01')).toEqual({
+        isEligible: true,
+        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
+      });
+
+      expect(getAeehCodeObtentionType('2011-12-31')).toEqual({
+        isEligible: true,
+        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
     });
   });
