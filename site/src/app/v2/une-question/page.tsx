@@ -7,7 +7,7 @@ import ContactSection from '@/app/v2/une-question/components/ContactSection/Cont
 import { headers } from 'next/headers';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
-import { CATEGORY_IDENTIFIERS } from '@/types/Faq';
+import { CATEGORY_IDENTIFIERS, CategoryWithArticles } from '@/types/Faq';
 import SegmentedFaq from '@/app/v2/une-question/components/SegmentedFaq/SegmentedFaq';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
 import { getCategoriesWithArticles } from '@/app/v2/une-question/server-agent';
