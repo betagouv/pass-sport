@@ -5,20 +5,17 @@ import { ReactNode } from 'react';
 interface IProps {
   title: string | ReactNode;
   subtitle?: string | ReactNode;
-  isProVersion?: boolean;
   classes?: {
     container?: string;
   };
 }
 
-export default function PageTitle({ title, subtitle, classes, isProVersion = false }: IProps) {
+export default function PageTitle({ title, subtitle, classes }: IProps) {
   return (
     <div
       // Mainly used as an anchor
       id="header"
-      className={cn(styles.container, classes?.container, {
-        [styles['container--pro']]: isProVersion,
-      })}
+      className={cn(styles.container, classes?.container)}
     >
       <div className={styles.titlewrapper}>
         <h1 className={styles.title}>{title}</h1>

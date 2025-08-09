@@ -165,7 +165,11 @@ const YoungMsaForm = ({
     <>
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
-          label="Nom de l’allocataire*"
+          label={
+            <>
+              Nom de l&apos;allocataire <span className="text--required">*</span>
+            </>
+          }
           nativeInputProps={{
             name: 'recipientLastname',
             placeholder: 'ex: Dupont',
@@ -185,7 +189,11 @@ const YoungMsaForm = ({
         />
 
         <Input
-          label="Prénom de l’allocataire*"
+          label={
+            <>
+              Prénom de l’allocataire <span className="text--required">*</span>
+            </>
+          }
           nativeInputProps={{
             name: 'recipientFirstname',
             placeholder: 'ex: Marie',
@@ -204,7 +212,11 @@ const YoungMsaForm = ({
         />
 
         <Input
-          label="Date de naissance de l’allocataire*"
+          label={
+            <>
+              Date de naissance de l’allocataire <span className="text--required">*</span>
+            </>
+          }
           hintText="Format attendu JJ/MM/AAAA"
           nativeInputProps={{
             name: 'recipientBirthDate',

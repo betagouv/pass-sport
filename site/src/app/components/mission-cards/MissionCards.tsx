@@ -33,7 +33,8 @@ const MissionCards = ({ isUsingSuccessUrls }: Props) => {
 
         <Card
           background
-          border
+          border={false}
+          grey
           desc={
             <>
               <span className="display--block fr-text--sm fr-mb-0">
@@ -63,7 +64,8 @@ const MissionCards = ({ isUsingSuccessUrls }: Props) => {
 
         <Card
           background
-          border
+          border={false}
+          grey
           desc={
             <>
               <span className="display--block fr-text--sm fr-mb-0">
@@ -94,7 +96,8 @@ const MissionCards = ({ isUsingSuccessUrls }: Props) => {
 
         <Card
           background
-          border
+          border={false}
+          grey
           desc={
             <>
               <span className="display--block fr-text--sm fr-mb-0">

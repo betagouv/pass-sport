@@ -1,13 +1,10 @@
 import Crisp from 'crisp-api';
-import { CrispArticle, CrispCategory, CrispFullArticle } from '../types/Crisp';
-import { Article, CategoryWithArticles } from '../types/Faq';
+import { CrispArticle, CrispCategory, CrispFullArticle } from '@/types/Crisp';
+import { Article, CATEGORY_IDENTIFIER_TYPE, CategoryWithArticles } from '@/types/Faq';
 import NodeCache from 'node-cache';
 
 type Locale = 'fr' | 'en';
 const LOCALE = 'fr';
-
-const PRO_CATEGORY_IDENTIFIER = 'pro -';
-const USER_CATEGORY_IDENTIFIER = 'bénéficiaire -';
 
 const CACHE_DURATION = 7_200; // 2 hours in seconds
 const CHECK_PERIOD = 3_600; // 1 hour in seconds
@@ -28,17 +25,17 @@ export async function getFormattedCategories({
   crispClient,
   articles,
   crispIdentifier,
-  isProVersion,
+  categoryIdentifier,
 }: {
   crispClient: Crisp;
   articles: CrispArticle[];
   crispIdentifier: string;
-  isProVersion: boolean;
+  categoryIdentifier: CATEGORY_IDENTIFIER_TYPE;
 }): Promise<CategoryWithArticles[]> {
   const categories = new Map<string, CategoryWithArticles>();
   const fullArticlePromises = articles
     .filter((article) => article.category?.category_id)
-    .map((article, index) =>
+    .map((article, _) =>
       getCrispFullArticle({
         crispClient,
         articleId: article.article_id,
@@ -49,9 +46,7 @@ export async function getFormattedCategories({
           article,
           fullArticle,
         }))
-        .catch((err) => {
-          console.error(`Error occured while fetching article id: ${article.article_id}`);
-
+        .catch(() => {
           return {
             article: null,
             fullArticle: null,
@@ -71,10 +66,9 @@ export async function getFormattedCategories({
       // Type narrowing despite filter above
       if (!article || !fullArticle || !article.category) return;
 
-      const isProCategory = article.category?.name.toLowerCase().includes(PRO_CATEGORY_IDENTIFIER);
+      const isWithinCategory = article.category?.name.toLowerCase().includes(categoryIdentifier);
 
-      if (isProVersion && !isProCategory) return;
-      if (!isProVersion && isProCategory) return;
+      if (!isWithinCategory) return;
 
       // category cannot be null with the code above that does the filtering
       const categoryId = article.category.category_id;
@@ -91,7 +85,7 @@ export async function getFormattedCategories({
             fullListOfCategories.find((category) => category.category_id === categoryId)?.order ||
             HIGHEST_ORDER,
           // category cannot be null with the code above that does the filtering
-          name: stripCategoryIdentifier(article.category.name),
+          name: stripCategoryIdentifier(article.category.name, categoryIdentifier),
           articles: [formattedArticle],
         });
       }
@@ -193,15 +187,9 @@ export function getFormattedArticleWithContent(article: CrispArticle, content: s
   };
 }
 
-function stripCategoryIdentifier(title: string) {
-  if (title.toLowerCase().startsWith(USER_CATEGORY_IDENTIFIER)) {
-    const regex = new RegExp(USER_CATEGORY_IDENTIFIER, 'gi');
-
-    return title.replace(regex, '').trim();
-  }
-
-  if (title.toLowerCase().startsWith(PRO_CATEGORY_IDENTIFIER)) {
-    const regex = new RegExp(PRO_CATEGORY_IDENTIFIER, 'gi');
+function stripCategoryIdentifier(title: string, categoryIdentifier: CATEGORY_IDENTIFIER_TYPE) {
+  if (title.toLowerCase().startsWith(categoryIdentifier)) {
+    const regex = new RegExp(categoryIdentifier, 'gi');
 
     return title.replace(regex, '').trim();
   }

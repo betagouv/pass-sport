@@ -1,15 +1,14 @@
 .main {
-  background-color: #ececfe;
+  background-color: var(--orange-terre-battue-925-125);
 }
 
 .wrapper {
-  max-width: 588px;
+  max-width: 688px;
 }
 
 .background {
   background-color: var(--color-white);
   max-width: 1200px;
-  min-height: 740px;
 }
 
 .title {

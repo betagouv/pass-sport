@@ -8,7 +8,6 @@ import {
 } from 'types/EligibilityTest';
 
 import * as Sentry from '@sentry/nextjs';
-import { addQrCodeToConfirmResponse } from './qr-code';
 
 export const buildLCAConfirmUrl = (data: ConfirmPayload): URL => {
   const domain = process.env.LCA_API_URL;
@@ -82,7 +81,7 @@ export const buildLCASearchUrl = (data: SearchPayload): URL => {
   return url;
 };
 
-export const fetchQrCode = async (
+export const fetchCode = async (
   payload: ConfirmPayload,
 ): Promise<ConfirmResponseBody | ConfirmResponseErrorBody> => {
   const authenticationKey = process.env.LCA_API_KEY;
@@ -116,9 +115,7 @@ export const fetchQrCode = async (
     return responseBody;
   }
 
-  const enhancedResponse = addQrCodeToConfirmResponse(responseBody);
-
-  return enhancedResponse;
+  return responseBody;
 };
 
 export const fetchEligible = async (payload: SearchPayload) => {

@@ -2,15 +2,31 @@
   &--italic {
     font-style: italic;
   }
+
   &--medium {
     font-weight: 500;
   }
+
   &--black {
     color: var(--color-black);
   }
 
   &--title-grey {
     color: var(--text-title-grey);
+  }
+
+  &--required {
+    color: var(--red-marianne-425-625);
+  }
+
+  &-align {
+    &--center {
+      text-align: center;
+    }
+  }
+
+  &--mention-grey {
+    color: var(--text-mention-grey);
   }
 }
 
@@ -26,10 +42,24 @@
   }
 }
 
+.flex {
+  &--min-content {
+    flex: min-content;
+  }
+}
+
 .align {
   &-self {
     &--baseline {
       align-self: baseline;
+    }
+  }
+}
+
+.justify {
+  &-self {
+    &--center {
+      justify-self: center;
     }
   }
 }
@@ -44,7 +74,15 @@
     & li::before {
       content: '\200B'; // workaround for voiceover, see https://developer.mozilla.org/fr/docs/Web/CSS/list-style-type#accessibilit%C3%A9
       display: block;
-      height: 0px;
+      height: 0;
+    }
+  }
+  &-style-type {
+    &--circle {
+      list-style-type: circle;
+    }
+    &--none {
+      list-style-type: none;
     }
   }
 }
@@ -56,4 +94,8 @@
       white-space: pre;
     }
   }
+}
+
+.fr-text-default--grey  {
+  color: #3A3A3A;
 }

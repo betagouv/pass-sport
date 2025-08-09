@@ -1,5 +1,16 @@
+@import '../../sassVariables.module.scss';
+
 .main {
-  background-color: #ececfe;
+  background-color: white;
+
+  form {
+    width: 100%;
+  }
+
+  //fieldset {
+  //  padding: 16px;
+  //  margin-bottom: 0;
+  //}
 }
 
 .title {
@@ -7,16 +18,67 @@
 }
 
 .background {
-  background-color: var(--color-white);
-  max-width: 1200px;
-  min-height: 740px;
+  background-color: var(--pink-tuile-950-100);
+  border-radius: 8px;
+  margin: 48px auto;
+  padding: 40px;
+  max-width: 792px;
 }
 
 .wrapper {
-  max-width: 588px;
+  background-color: white;
+  padding: 40px;
+  margin: 0 auto;
+  border-radius: 8px;
 }
 
 .paragraph {
   color: var(--border-plain-grey);
   font-style: italic;
+}
+
+.top-section-tile {
+  display: flex;
+  flex-direction: row;
+  background-color: white;
+  position: relative;
+  top: -100px;
+  margin-bottom: -80px;
+  align-items: center;
+
+  &__image {
+    max-width: 384px;
+    align-self: baseline;
+  }
+
+  &__description {
+    padding: 24px;
+  }
+
+  &__description p {
+    line-height: 38px;
+    margin-bottom: 0;
+    white-space: break-spaces;
+  }
+
+  @media screen and (max-width: $lg) {
+    flex-direction: column;
+    top: -60px;
+
+    &__image {
+      max-width: 100%;
+    }
+
+    &__description p, &__description ul {
+      margin: 0;
+    }
+  }
+}
+
+.top-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 792px;
+  margin: 24px auto 0 auto;
 }

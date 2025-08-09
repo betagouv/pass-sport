@@ -1,11 +1,7 @@
 export enum ALLOWANCE {
   NONE = 'NONE',
-  ARS_AEEH_AAH = 'ARS_AEEH_AAH',
+  AAH = 'AAH',
+  AEEH = 'AEEH',
+  ARS = 'ARS',
   CROUS = 'CROUS',
-}
-
-export enum CROUS_AGE_RANGE {
-  LESS_THAN_28 = 'LESS_THAN_28',
-  MORE_THAN_28 = 'MORE_THAN_28',
-  MORE_THAN_29 = 'MORE_THAN_29',
 }

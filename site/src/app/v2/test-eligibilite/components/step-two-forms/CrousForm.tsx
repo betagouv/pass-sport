@@ -101,7 +101,7 @@ const CrousForm = ({
     } else {
       const birthCountry = formData.get('recipientBirthCountry') as string;
 
-      // If from france, we only need the birth place, birth country no longer needed
+      // If from france, we only need the birthplace, birth country no longer needed
       if (birthCountry === 'FR') {
         formData.delete('recipientBirthCountry');
       }
@@ -178,7 +178,7 @@ const CrousForm = ({
               label: (
                 <>
                   Numéro INE provenant du <CROUS /> ou bourse régionale pour les formations
-                  sanitaires et sociales*
+                  sanitaires et sociales <span className="text--required">*</span>
                 </>
               ),
               hintText:

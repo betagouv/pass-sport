@@ -2,16 +2,16 @@
  * @jest-environment node
  */
 
-import { fetchQrCode } from '@/app/services/eligibility-test';
+import { fetchCode } from '@/app/services/eligibility-test';
 import { POST } from '@/app/v2/api/eligibility-test/confirm/route';
-import { buildConfirmResponseBody } from '../../../../tests/helpers/builders/confirm-response-body';
+import { buildConfirmResponseBody } from '../../../helpers/builders/confirm-response-body';
 import { EnhancedConfirmResponseBody } from 'types/EligibilityTest';
 
 jest.mock('../../../../src/app/services/eligibility-test', () => {
   const original = jest.requireActual('../../../../src/app/services/eligibility-test');
   return {
     ...original,
-    fetchQrCode: jest.fn(),
+    fetchCode: jest.fn(),
   };
 });
 
@@ -82,11 +82,9 @@ describe('POST /eligibility-test/confirm', () => {
       body: payload,
     });
 
-    const mockedFetchQrCode = fetchQrCode as jest.Mock;
-    const mockedResponse: EnhancedConfirmResponseBody = [
-      { ...buildConfirmResponseBody({})[0], qrcodeUrl: 'fake-qr-code-url' },
-    ];
-    mockedFetchQrCode.mockResolvedValueOnce(mockedResponse);
+    const mockedFetchCode = fetchCode as jest.Mock;
+    const mockedResponse: EnhancedConfirmResponseBody = [{ ...buildConfirmResponseBody({})[0] }];
+    mockedFetchCode.mockResolvedValueOnce(mockedResponse);
 
     const response = await POST(request);
     expect(response.status).toEqual(200);
@@ -105,8 +103,8 @@ describe('POST /eligibility-test/confirm', () => {
       body: payload,
     });
 
-    const mockedFetchQrCode = fetchQrCode as jest.Mock;
-    mockedFetchQrCode.mockImplementationOnce(() => {
+    const mockedFetchCode = fetchCode as jest.Mock;
+    mockedFetchCode.mockImplementationOnce(() => {
       throw new Error();
     });
 

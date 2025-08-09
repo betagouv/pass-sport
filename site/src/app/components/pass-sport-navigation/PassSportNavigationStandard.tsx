@@ -10,8 +10,6 @@ import { useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
-import Notice from '@codegouvfr/react-dsfr/Notice';
-import EndPassSportNotice from '@/app/components/end-pass-sport-notice/EndPassSportNotice';
 
 export default function PassSportNavigation() {
   const paths: string | null = usePathname();
@@ -54,23 +52,8 @@ export default function PassSportNavigation() {
           service: styles.service,
         }}
         brandTop={FOOTER_BRAND_TOP}
-        operatorLogo={{
-          alt: `Logo du pass Sport`,
-          imgUrl: '/images/pass-sport-logo.svg',
-          orientation: 'vertical',
-        }}
         serviceTitle="pass Sport"
-        serviceTagline="Une aide financière pour encourager la pratique sportive des jeunes"
-        quickAccessItems={[
-          {
-            text: 'Je suis une structure partenaire',
-            iconId: 'fr-icon-arrow-right-line',
-            linkProps: {
-              href: '/v2/pro/accueil',
-              className: 'fr-btn--tertiary fr-btn--icon-right',
-            },
-          },
-        ]}
+        serviceTagline="Une aide financière pour encourager la pratique des jeunes"
         // @ts-ignore
         homeLinkProps={{
           href: '/v2/accueil',
@@ -87,7 +70,6 @@ export default function PassSportNavigation() {
           text: item.text,
         }))}
       />
-      {/*<EndPassSportNotice />*/}
     </div>
   );
 }

@@ -1,0 +1,30 @@
+@import '../../../../sassVariables.module.scss';
+
+.main {
+  display: flex;
+  flex-direction: column;
+  max-width: $layout-max-width;
+  margin: -56px auto 56px auto;
+  padding: 48px 180px;
+  gap: 48px;
+  background-color: white;
+
+  @media screen and (max-width: $lg) {
+    max-width: 100%;
+    padding: 24px;
+    gap: 24px;
+  }
+}
+
+.elements {
+  flex: 1;
+}
+
+.element-each {
+  flex: 1;
+  justify-content: center;
+}
+
+.element-each__label {
+  justify-content: center;
+}

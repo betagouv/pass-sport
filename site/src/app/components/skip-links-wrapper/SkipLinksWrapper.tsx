@@ -3,19 +3,17 @@
 import SkipLinks from '@codegouvfr/react-dsfr/SkipLinks';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import React from 'react';
-import { useIsProVersion } from '@/app/hooks/use-is-pro-version';
 import { usePathname } from 'next/navigation';
 import { isPasSportClosed } from '@/utils/date';
 
 const SkipLinksWrapper = () => {
-  const isProVersion = useIsProVersion();
   const pathname = usePathname();
 
   const eligibilityTestSkipLink =
     !isPasSportClosed() &&
     pathname &&
     [
-      !isProVersion ? '/v2/accueil' : '',
+      '/v2/accueil',
       '/v2/tout-savoir-sur-le-pass-sport',
       '/v2/trouver-un-club',
       '/v2/une-question',

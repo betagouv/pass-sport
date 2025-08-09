@@ -16,7 +16,6 @@ export const mapper: Record<
 > = {
   beneficiaryLastname: 'Le nom est requis',
   beneficiaryFirstname: 'Le prénom est requis',
-  beneficiaryBirthDate: 'La date de naissance est requise',
   recipientResidencePlace: 'La commune de résidence est requise',
   recipientLastname: 'Le nom est requis',
   recipientFirstname: 'Le prénom est requis',

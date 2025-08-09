@@ -6,7 +6,7 @@ import Checkbox from '@codegouvfr/react-dsfr/Checkbox';
 import Input from '@codegouvfr/react-dsfr/Input';
 import Select from '@codegouvfr/react-dsfr/Select';
 import React, { ChangeEvent, FormEvent, SyntheticEvent, useRef, useState } from 'react';
-import { InputsState } from '../../../../../../types/Contact';
+import { InputsState } from '@/types/Contact';
 import { postContact } from '../../client-agent';
 import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
@@ -132,8 +132,6 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
   };
 
   const onInputChanged = (text: string | null, field: keyof InputsState) => {
-    const form = formRef.current!;
-
     if (!text) {
       setInputStates((inputStates) => ({
         ...inputStates,
@@ -227,7 +225,11 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
             <div className={styles['names-input-container']}>
               <div>
                 <Input
-                  label="Prénom*"
+                  label={
+                    <>
+                      Prénom <span className="text--required">*</span>
+                    </>
+                  }
                   nativeInputProps={{
                     name: 'firstname',
                     onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -242,7 +244,11 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
 
               <div>
                 <Input
-                  label="Nom de famille*"
+                  label={
+                    <>
+                      Nom de famille <span className="text--required">*</span>
+                    </>
+                  }
                   nativeInputProps={{
                     name: 'lastname',
                     onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -259,7 +265,11 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
               <>
                 <div>
                   <Input
-                    label="Siret*"
+                    label={
+                      <>
+                        Siret <span className="text--required">*</span>
+                      </>
+                    }
                     nativeInputProps={{
                       name: 'siret',
                       onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -289,7 +299,11 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
 
             <div>
               <Input
-                label="Adresse e-mail*"
+                label={
+                  <>
+                    Adresse e-mail <span className="text--required">*</span>
+                  </>
+                }
                 nativeInputProps={{
                   name: 'email',
                   onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -305,7 +319,11 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
 
             <div>
               <Select
-                label="Objet de la demande*"
+                label={
+                  <>
+                    Objet de la demande <span className="text--required">*</span>
+                  </>
+                }
                 nativeSelectProps={{
                   name: 'reason',
                   onChange: (e: SyntheticEvent<HTMLSelectElement>) =>
@@ -333,7 +351,11 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
             <Input
               className={styles['textarea-wrapper']}
               textArea
-              label="Message*"
+              label={
+                <>
+                  Message <span className="text--required">*</span>
+                </>
+              }
               nativeTextAreaProps={{
                 placeholder: 'Message*',
                 name: 'message',
@@ -351,7 +373,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
             options={[
               {
                 label:
-                  'En cochant cette case, vous comprenez que les données personnelles entrées, adresse IP comprise, pourront être utilisées afin de vous contacter dans le cadre de votre intérêt légitime.*',
+                  'En cochant cette case, vous comprenez que les données personnelles entrées, adresse IP comprise, pourront être utilisées afin de vous contacter dans le cadre de votre intérêt légitime. *',
                 nativeInputProps: {
                   name: 'consent',
                   required: true,

@@ -4,7 +4,7 @@
 
 import { fetchEligible } from '@/app/services/eligibility-test';
 import { POST } from '@/app/v2/api/eligibility-test/search/route';
-import { buildSearchResponseBody } from '../../../../tests/helpers/builders/confirm-response-body';
+import { buildSearchResponseBody } from '../../../helpers/builders/confirm-response-body';
 import { SearchResponseBody } from 'types/EligibilityTest';
 
 jest.mock('../../../../src/app/services/eligibility-test', () => {
@@ -98,11 +98,6 @@ describe('POST /eligibility-test/search', () => {
     const request = new Request('http://localhost/api/eligibility-test/search', {
       method: 'POST',
       body: payload,
-    });
-
-    const mockedFetchQrCode = fetchEligible as jest.Mock;
-    mockedFetchQrCode.mockImplementationOnce(() => {
-      throw new Error();
     });
 
     const response = await POST(request);

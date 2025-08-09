@@ -27,3 +27,12 @@ p {
 @page {
   margin: 0;
 }
+
+// DSFR Modal
+// It adds a right margin to the icon, there is no initial spacing and is not configurable either through the
+// react component ...
+.fr-modal {
+  h1 > span[aria-hidden="true"] {
+    margin-right: 8px;
+  }
+}
