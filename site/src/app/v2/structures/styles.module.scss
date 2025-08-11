@@ -20,7 +20,7 @@
 .eligibility-section {
   background-color: var(--purple-glycine-950-100);
   padding: 100px;
-  width: 100%;
+  width: 95%;
   justify-self: center;
   border-radius: 8px;
 
@@ -30,6 +30,7 @@
 
   @media screen and (max-width: $lg) {
     padding: 24px;
+    width: 100%;
   }
 }
 
@@ -39,7 +40,7 @@
   flex-direction: row;
   align-items: center;
   align-self: center;
-  width: 100%;
+  width: 95%;
 
   img {
     flex: 1;
@@ -82,11 +83,15 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 100%;
+  width: 80%;
   align-self: center;
 
   p {
     margin-bottom: 0;
+  }
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
   }
 }
 
@@ -94,11 +99,15 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 100%;
+  width: 80%;
   align-self: center;
 
   p, h1 {
     margin-bottom: 0;
+  }
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
   }
 }
 
@@ -107,7 +116,7 @@
   display: flex;
   flex-direction: row-reverse;
   gap: 32px;
-  width: 100%;
+  width: 95%;
   align-items: center;
   justify-self: center;
 
@@ -130,6 +139,7 @@
   }
 
   @media screen and (max-width: $lg) {
+    width: 100%;
     flex-direction: column;
 
     img {
@@ -139,6 +149,10 @@
 }
 
 .decret-section {
-  width: 100%;
+  width: 80%;
   align-self: center;
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
 }

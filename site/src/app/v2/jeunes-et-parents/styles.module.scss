@@ -13,12 +13,13 @@
 .eligibility-section {
   background-color: var(--purple-glycine-950-100);
   padding: 100px;
-  width: 95%;
+  width: 90%;
   justify-self: center;
   border-radius: 8px;
 
   &__description {
-    width: 100%;
+    width: 90%;
+    justify-self: center;
   }
 
   &__wrapper {
@@ -28,6 +29,10 @@
   @media screen and (max-width: $lg) {
     padding: 24px;
     width: 100%;
+
+    &__description {
+      width: 100%;
+    }
   }
 }
 
@@ -38,7 +43,7 @@
   flex-direction: row;
   margin-bottom: 80px;
   margin-top: 40px;
-  width: 100%;
+  width: 90%;
   justify-self: center;
 
   @media screen and (max-width: $lg) {
@@ -84,7 +89,7 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 100%;
+  width: 80%;
   justify-self: center;
 
   @media screen and (max-width: $lg) {
@@ -100,7 +105,7 @@
   display: flex;
   flex-direction: row-reverse;
   gap: 32px;
-  width: 100%;
+  width: 95%;
   align-items: center;
   justify-self: center;
   margin: 72px 0;
@@ -117,6 +122,10 @@
 }
 
 .decret-section {
-  width: 100%;
+  width: 80%;
   margin: 0 auto 48px auto;
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
 }
