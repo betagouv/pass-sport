@@ -6,6 +6,17 @@ const nextConfig = {
     // The instrumentation hook is required for Sentry to work on the serverside
     instrumentationHook: true,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'jedonnemonavis.numerique.gouv.fr',
+        port: '',
+        pathname: '/static/**',
+        search: '',
+      },
+    ],
+  },
   webpack: (config) => {
     config.module.rules.push({
       test: /\.woff2$/,

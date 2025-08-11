@@ -1,5 +1,7 @@
+@import '../../sassVariables.module.scss';
+
 .main {
-  background-color: var(--orange-terre-battue-925-125);
+  background-color: var(--background-action-low-pink-tuile);
 }
 
 .wrapper {
@@ -18,4 +20,9 @@
 .description {
   max-width: 688px;
   margin: 0 auto;
+}
+
+.section {
+  background-color: var(--background-action-low-pink-tuile);
+  padding-bottom: 80px;
 }

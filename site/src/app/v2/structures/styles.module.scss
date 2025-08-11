@@ -40,7 +40,7 @@
   flex-direction: row;
   align-items: center;
   align-self: center;
-  width: 95%;
+  width: 83.33%;
 
   img {
     flex: 1;
@@ -54,7 +54,7 @@
     flex-direction: column;
     padding: 40px;
     justify-content: center;
-    gap: 30px;
+    gap: 24px;
     color: black;
     border-radius: 0 8px 8px 0;
   }
@@ -79,11 +79,23 @@
   }
 }
 
+.become-partner-section {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 66.67%;
+  align-self: center;
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
+}
+
 .lca-section {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 80%;
+  width: 66.67%;
   align-self: center;
 
   p {
@@ -99,7 +111,7 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 80%;
+  width: 66.67%;
   align-self: center;
 
   p, h1 {
@@ -116,7 +128,8 @@
   display: flex;
   flex-direction: row-reverse;
   gap: 32px;
-  width: 95%;
+  width: 83.33%;
+  margin: 0 auto;
   align-items: center;
   justify-self: center;
 
@@ -149,7 +162,7 @@
 }
 
 .decret-section {
-  width: 80%;
+  width: 66.67%;
   align-self: center;
 
   @media screen and (max-width: $lg) {

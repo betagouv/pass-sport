@@ -12,6 +12,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import PdfPassSport from '@/app/components/pdf-pass-sport/PdfPassSport';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { push } from '@socialgouv/matomo-next';
+import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 
 interface Props {
   isSuccess: boolean;
@@ -106,6 +107,11 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
             <Actions displayHomeBackBtn={false} newTestBtnVariant="tertiary" />
           </section>
 
+          <section className={styles['section-je-donne-mon-avis']}>
+            <hr className="fr-mb-2w" />
+            <JeDonneMonAvisBtn isSuccess />
+          </section>
+
           <section className={styles['section-missions']}>
             <hr />
             <MissionCards isUsingSuccessUrls />
@@ -141,6 +147,11 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
             </Link>
 
             <Actions displayHomeBackBtn newTestBtnVariant="tertiary" />
+          </section>
+
+          <section className={styles['section-je-donne-mon-avis']}>
+            <hr className="fr-mb-2w" />
+            <JeDonneMonAvisBtn isSuccess={false} />
           </section>
 
           <section className={styles['section-missions']}>

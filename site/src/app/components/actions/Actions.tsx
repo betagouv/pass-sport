@@ -12,16 +12,9 @@ const Actions = ({ displayHomeBackBtn = true, newTestBtnVariant = 'secondary' }:
 
   return (
     <ButtonsGroup
+      // Ignore because the spread has to be last but we cant in our case
+      // @ts-ignore
       buttons={[
-        {
-          children: 'Refaire le test',
-          onClick: () => {
-            context.performNewTest();
-            // window.scrollTo({ top: 0, behavior: 'smooth' });
-          },
-          priority: 'tertiary no outline',
-          iconId: 'fr-icon-arrow-left-line',
-        },
         ...(displayHomeBackBtn
           ? [
               {
@@ -33,6 +26,15 @@ const Actions = ({ displayHomeBackBtn = true, newTestBtnVariant = 'secondary' }:
               },
             ]
           : []),
+        {
+          children: 'Refaire le test',
+          onClick: () => {
+            context.performNewTest();
+            // window.scrollTo({ top: 0, behavior: 'smooth' });
+          },
+          priority: 'tertiary no outline',
+          iconId: 'fr-icon-arrow-left-line',
+        },
       ]}
       inlineLayoutWhen="sm and up"
       buttonsSize="large"

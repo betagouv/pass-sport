@@ -14,9 +14,10 @@ const EligibilityTestWrapper = () => {
         buttonVariant="primary"
         onCompletion={setSuccess}
         headingLevel="h2"
+        jeDonneMonAvisBtnPadding
       />
       {success !== null && (
-        <section className="fr-px-5w fr-pt-0w fr-pb-5w">
+        <section className="fr-px-5w fr-pt-0w fr-pb-5w fr-mt-5w">
           <MissionCards isUsingSuccessUrls={success} />
         </section>
       )}

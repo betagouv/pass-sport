@@ -3,7 +3,6 @@ import cn from 'classnames';
 import styles from './styles.module.scss';
 import GetOrTestChoice from './components/get-or-test-step/GetOrTestStep';
 import { Metadata } from 'next';
-import EligibilityTestWrapper from '@/app/v2/test-eligibilite-base/components/eligibilityTestWrapper/EligibilityTestWrapper';
 
 export const metadata: Metadata = {
   title: 'Je fais le test - pass Sport',
@@ -12,7 +11,7 @@ export const metadata: Metadata = {
 const TestOuCode = () => {
   return (
     <main className={styles.main} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <section>
+      <section className={styles.section}>
         <h1 className={`fr-pt-8w fr-mb-4w fr-px-2w ${styles.title}`}>
           Puis-je bénéficier du pass Sport?
         </h1>
@@ -20,7 +19,7 @@ const TestOuCode = () => {
         <div className={`fr-pb-2w fr-mx-auto fr-px-2w fr-pt-4w ${styles.background}`}>
           <section className={cn('fr-mb-2w', styles.description)}>
             <h2 className="fr-h4">Qui est concerné par le pass Sport ?</h2>
-            <ul className="fr-mt-2w">
+            <ul className="fr-mt-2w fr-pl-4w">
               <li>
                 Les jeunes de 14 à 17 ans bénéficiaires de l’Allocation de Rentrée Scolaire (ARS) ;
               </li>

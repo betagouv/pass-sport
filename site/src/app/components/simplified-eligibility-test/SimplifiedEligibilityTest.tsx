@@ -19,12 +19,14 @@ import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JEUNES_PARENTS_PAGE_AEEH_PARAMS } from '@/app/constants/search-query-params';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
   buttonVariant?: ButtonProps['priority'];
   onCompletion?: (success: boolean) => void;
   headingLevel: 'h1' | 'h2';
+  jeDonneMonAvisBtnPadding: boolean;
 };
 
 export default function SimplifiedEligibilityTest({
@@ -32,6 +34,7 @@ export default function SimplifiedEligibilityTest({
   buttonVariant = 'primary',
   onCompletion,
   headingLevel,
+  jeDonneMonAvisBtnPadding,
 }: SimplifiedEligibilityTestProps) {
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
@@ -180,163 +183,177 @@ export default function SimplifiedEligibilityTest({
         description: errorInitialMeta.description,
       });
     }
-  }, [success, allocationName]);
+  }, [success, allocationName, targetDate]);
 
   return (
-    <div className={cn(styles['eligibility-test'])}>
-      {headingLevel === 'h1' && (
-        <h1 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h1>
-      )}
+    <>
+      <div className={styles['eligibility-test']}>
+        {headingLevel === 'h1' && (
+          <h1 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h1>
+        )}
 
-      {headingLevel === 'h2' && (
-        <h2 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h2>
-      )}
+        {headingLevel === 'h2' && (
+          <h2 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h2>
+        )}
 
-      <p className="fr-text--sm fr-text-default--grey fr-ml-1w fr-mt-1w fr-mb-0">
-        Vérifiez votre éligibilité ou celle votre enfant. Ces informations ne sont pas conservées.
-      </p>
+        <p className="fr-text--sm fr-text-default--grey fr-ml-1w fr-mt-1w fr-mb-0">
+          Vérifiez votre éligibilité ou celle votre enfant. Ces informations ne sont pas conservées.
+        </p>
 
-      <form
-        onSubmit={(e) => {
-          // Prevent submission for required fields to work as intended
-          e.preventDefault();
-        }}
-      >
-        <fieldset className="fr-fieldset" aria-describedby="eligibility-notification-message">
-          <div
-            className={cn(
-              styles['eligibility-test__fields'],
-              display === 'row'
-                ? styles['eligibility-test__fields--row']
-                : styles['eligibility-test__fields--column'],
+        <form
+          onSubmit={(e) => {
+            // Prevent submission for required fields to work as intended
+            e.preventDefault();
+          }}
+        >
+          <fieldset className="fr-fieldset" aria-describedby="eligibility-notification-message">
+            <div
+              className={cn(
+                styles['eligibility-test__fields'],
+                display === 'row'
+                  ? styles['eligibility-test__fields--row']
+                  : styles['eligibility-test__fields--column'],
+              )}
+            >
+              <div className={cn('fr-fieldset__element', styles['eligibility-test__fields-date'])}>
+                <Input
+                  label="Date de naissance"
+                  stateRelatedMessage="Veuillez sélectionnez votre date de naissance"
+                  nativeInputProps={{
+                    required: true,
+                    type: 'date',
+                    onChange: (e) => {
+                      setTargetDate(e.target.value);
+                      resetStates();
+                    },
+                  }}
+                />
+              </div>
+
+              <div className="fr-fieldset__element">
+                <Select
+                  label="Êtes-vous bénéficiaire d’une aide ?"
+                  nativeSelectProps={{
+                    name: 'my-select',
+                    required: true,
+                    onChange: (e) => {
+                      setAllocationName(e.target.value);
+                      resetStates();
+                    },
+                  }}
+                  options={[
+                    {
+                      value: ALLOCATION.NONE,
+                      label: 'Aucune',
+                    },
+                    {
+                      value: ALLOCATION.AEEH,
+                      label: `Allocation d'éducation de l'enfant handicapé (AEEH)`,
+                    },
+                    {
+                      value: ALLOCATION.ARS,
+                      label: 'Allocation de rentrée scolaire (ARS)',
+                    },
+                    {
+                      value: ALLOCATION.AAH,
+                      label: 'Allocation aux adultes handicapés (AAH)',
+                    },
+
+                    {
+                      value: ALLOCATION.CROUS,
+                      label: 'Bourse ou aide annuelle CROUS',
+                    },
+                    {
+                      value: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
+                      label: 'Aide annuelle formations sanitaires et sociales',
+                    },
+                  ]}
+                  placeholder="Sélectionner une option"
+                />
+              </div>
+              <div className="fr-fieldset__element flex--min-content">
+                <Button
+                  type="submit"
+                  priority={buttonVariant}
+                  onClick={() => {
+                    if (targetDate && allocationName) {
+                      const result = isEligible({ targetDate, allocationName });
+
+                      setSuccess(result);
+                      eligibilityTestOnClick();
+                      onCompletion?.(result);
+                    }
+                  }}
+                >
+                  Vérifier
+                </Button>
+              </div>
+            </div>
+          </fieldset>
+
+          <section id="eligibility-notification-message" role="alert">
+            {success !== null && alertMeta !== null && (
+              <Alert
+                severity={success ? 'success' : 'info'}
+                className="fr-mt-2w"
+                key={`${allocationName}-success`}
+                title={alertMeta.title}
+                description={alertMeta.description}
+              />
             )}
-          >
-            <div className={cn('fr-fieldset__element', styles['eligibility-test__fields-date'])}>
-              <Input
-                label="Date de naissance"
-                stateRelatedMessage="Veuillez sélectionnez votre date de naissance"
-                nativeInputProps={{
-                  required: true,
-                  type: 'date',
-                  onChange: (e) => {
-                    setTargetDate(e.target.value);
-                    resetStates();
-                  },
-                }}
-              />
-            </div>
-
-            <div className="fr-fieldset__element">
-              <Select
-                label="Êtes-vous bénéficiaire d’une aide ?"
-                nativeSelectProps={{
-                  name: 'my-select',
-                  required: true,
-                  onChange: (e) => {
-                    setAllocationName(e.target.value);
-                    resetStates();
-                  },
-                }}
-                options={[
-                  {
-                    value: ALLOCATION.NONE,
-                    label: 'Aucune',
-                  },
-                  {
-                    value: ALLOCATION.AEEH,
-                    label: `Allocation d'éducation de l'enfant handicapé (AEEH)`,
-                  },
-                  {
-                    value: ALLOCATION.ARS,
-                    label: 'Allocation de rentrée scolaire (ARS)',
-                  },
-                  {
-                    value: ALLOCATION.AAH,
-                    label: 'Allocation aux adultes handicapés (AAH)',
-                  },
-
-                  {
-                    value: ALLOCATION.CROUS,
-                    label: 'Bourse ou aide annuelle CROUS',
-                  },
-                  {
-                    value: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
-                    label: 'Aide annuelle formations sanitaires et sociales',
-                  },
-                ]}
-                placeholder="Sélectionner une option"
-              />
-            </div>
-            <div className="fr-fieldset__element flex--min-content">
-              <Button
-                type="submit"
-                priority={buttonVariant}
-                onClick={() => {
-                  if (targetDate && allocationName) {
-                    const result = isEligible({ targetDate, allocationName });
-
-                    setSuccess(result);
-                    eligibilityTestOnClick();
-                    onCompletion?.(result);
-                  }
-                }}
-              >
-                Vérifier
-              </Button>
-            </div>
-          </div>
-        </fieldset>
-
-        <section id="eligibility-notification-message" role="alert">
-          {success !== null && alertMeta !== null && (
-            <Alert
-              severity={success ? 'success' : 'info'}
-              className="fr-mt-2w"
-              key={`${allocationName}-success`}
-              title={alertMeta.title}
-              description={alertMeta.description}
-            />
-          )}
-        </section>
-
-        {knowMoreMeta && (
-          <section className="fr-mt-3w">
-            <KnowMore variant="purple" knowMore={knowMoreMeta} />
           </section>
-        )}
 
-        {displayObtainCodeButton && (
-          <p className="fr-mb-0 fr-mt-3w text-align--center">
-            <Link
-              href="/v2/test-eligibilite"
-              className="fr-btn fr-btn--secondary"
-              onClick={onCodeObtentionLinkClick}
-            >
-              Demander mon pass Sport
-            </Link>
-          </p>
-        )}
+          {knowMoreMeta && (
+            <section className="fr-mt-3w">
+              <KnowMore variant="purple" knowMore={knowMoreMeta} />
+            </section>
+          )}
 
-        {displayAeehLink && (
-          <p className="fr-mb-0 fr-mt-3w text-align--center">
-            <Link
-              href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
-              className="fr-link"
-              onClick={onAeehLinkClick}
-            >
-              Contactez-nous pour demander votre pass Sport
-            </Link>
-          </p>
-        )}
+          {displayObtainCodeButton && (
+            <p className="fr-mb-0 fr-mt-3w text-align--center">
+              <Link
+                href="/v2/test-eligibilite"
+                className="fr-btn fr-btn--secondary"
+                onClick={onCodeObtentionLinkClick}
+              >
+                Demander mon pass Sport
+              </Link>
+            </p>
+          )}
 
-        {displayEligibilityLink && (
-          <p className="fr-mb-0 fr-mt-3w text-align--center">
-            <Link href="/v2/une-question" className="fr-link" onClick={onKnowMoreLinkClick}>
-              En savoir plus sur les conditions d’éligibilité
-            </Link>
-          </p>
-        )}
-      </form>
-    </div>
+          {displayAeehLink && (
+            <p className="fr-mb-0 fr-mt-3w text-align--center">
+              <Link
+                href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
+                className="fr-link"
+                onClick={onAeehLinkClick}
+              >
+                Contactez-nous pour demander votre pass Sport
+              </Link>
+            </p>
+          )}
+
+          {displayEligibilityLink && (
+            <p className="fr-mb-0 fr-mt-3w text-align--center">
+              <Link href="/v2/une-question" className="fr-link" onClick={onKnowMoreLinkClick}>
+                En savoir plus sur les conditions d’éligibilité
+              </Link>
+            </p>
+          )}
+        </form>
+      </div>
+      {success !== null && (
+        <section
+          className={cn({
+            [styles['je-donne-mon-avis-section']]: true,
+            [styles['je-donne-mon-avis-section--padding']]: jeDonneMonAvisBtnPadding,
+          })}
+        >
+          <hr className="fr-mb-2w" />
+          <JeDonneMonAvisBtn isSuccess={success} />
+          <hr className="fr-mt-3w fr-pb-1w" />
+        </section>
+      )}
+    </>
   );
 }

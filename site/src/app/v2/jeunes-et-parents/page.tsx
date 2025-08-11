@@ -72,7 +72,7 @@ export default function Page() {
 
             <section className="fr-mb-2w">
               <p>Qui est concerné par le pass Sport ?</p>
-              <ul className="fr-mt-2w">
+              <ul className="fr-mt-2w fr-pl-4w">
                 <li>
                   Les jeunes de 14 à 17 ans bénéficiaires de l’Allocation de Rentrée Scolaire (ARS)
                   ;
@@ -102,13 +102,13 @@ export default function Page() {
           </div>
 
           <div className={styles['eligibility-section']}>
-            <div
-              className={cn(
-                'fr-container fr-grid-row fr-grid-row--center',
-                styles['eligibility-section__wrapper'],
-              )}
-            >
-              <SimplifiedEligibilityTest display="row" buttonVariant="primary" headingLevel="h2" />
+            <div className={cn('fr-container', styles['eligibility-section__wrapper'])}>
+              <SimplifiedEligibilityTest
+                display="row"
+                buttonVariant="primary"
+                headingLevel="h2"
+                jeDonneMonAvisBtnPadding={false}
+              />
             </div>
           </div>
         </section>
@@ -188,7 +188,7 @@ export default function Page() {
                 étudiants boursiers.
               </li>
             </ol>
-            <section className="fr-mb-2w" id={SKIP_LINKS_ID.aeehContent}>
+            <section className="fr-my-4w" id={SKIP_LINKS_ID.aeehContent}>
               <KnowMore
                 variant="yellow"
                 knowMore={{

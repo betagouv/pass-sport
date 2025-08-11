@@ -1,5 +1,8 @@
 @import '../../sassVariables.module';
 
+//width: 66.67%;
+//width: 83.33%;
+
 .guiding-block__container {
   position: relative;
   top: -100px;
@@ -12,14 +15,14 @@
 
 .eligibility-section {
   background-color: var(--purple-glycine-950-100);
-  padding: 100px;
-  width: 90%;
+  padding: 40px;
+  width: 83.33%;
   justify-self: center;
   border-radius: 8px;
 
   &__description {
-    width: 90%;
-    justify-self: center;
+    width: 66.67%;
+    margin: 0 auto;
   }
 
   &__wrapper {
@@ -43,7 +46,7 @@
   flex-direction: row;
   margin-bottom: 80px;
   margin-top: 40px;
-  width: 90%;
+  width: 83.33%;
   justify-self: center;
 
   @media screen and (max-width: $lg) {
@@ -57,7 +60,7 @@
     display: flex;
     flex: 1;
     flex-direction: column;
-    padding: 40px;
+    padding: 40px 0 40px 40px;
     justify-content: center;
     gap: 30px;
     color: black;
@@ -89,7 +92,7 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 80%;
+  width: 66.67%;
   justify-self: center;
 
   @media screen and (max-width: $lg) {
@@ -105,7 +108,7 @@
   display: flex;
   flex-direction: row-reverse;
   gap: 32px;
-  width: 95%;
+  width: 83.33%;
   align-items: center;
   justify-self: center;
   margin: 72px 0;
@@ -122,7 +125,7 @@
 }
 
 .decret-section {
-  width: 80%;
+  width: 66.67%;
   margin: 0 auto 48px auto;
 
   @media screen and (max-width: $lg) {

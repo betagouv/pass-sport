@@ -54,3 +54,13 @@
     }
   }
 }
+
+.je-donne-mon-avis-section {
+  flex: 1;
+  text-align: right;
+  padding-top: 40px;
+
+  &--padding {
+    padding: 0 40px;
+  }
+}
