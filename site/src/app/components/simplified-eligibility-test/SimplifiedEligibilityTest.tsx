@@ -27,6 +27,7 @@ type SimplifiedEligibilityTestProps = {
   onCompletion?: (success: boolean) => void;
   headingLevel: 'h1' | 'h2';
   jeDonneMonAvisBtnPadding: boolean;
+  displaySeparator: boolean;
 };
 
 export default function SimplifiedEligibilityTest({
@@ -35,6 +36,7 @@ export default function SimplifiedEligibilityTest({
   onCompletion,
   headingLevel,
   jeDonneMonAvisBtnPadding,
+  displaySeparator,
 }: SimplifiedEligibilityTestProps) {
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
@@ -349,9 +351,9 @@ export default function SimplifiedEligibilityTest({
             [styles['je-donne-mon-avis-section--padding']]: jeDonneMonAvisBtnPadding,
           })}
         >
-          <hr className="fr-mb-2w" />
+          {displaySeparator && <hr className="fr-mb-2w" />}
+
           <JeDonneMonAvisBtn isSuccess={success} />
-          <hr className="fr-mt-3w fr-pb-1w" />
         </section>
       )}
     </>

@@ -13,7 +13,7 @@ export default function SocialMediasVisualsAccordions() {
       </p>
 
       <Accordion label="Logos" expanded={false} onExpandedChange={() => {}}>
-        <ul>
+        <ul className="fr-pl-4w">
           <li>
             <Link
               href="/assets/partenaires/logos/Charte%20d'utilisation%20des%20logos%20pass%20Sport.pdf"
@@ -45,7 +45,7 @@ export default function SocialMediasVisualsAccordions() {
       </Accordion>
 
       <Accordion label="Visuels" expanded={false} onExpandedChange={() => {}}>
-        <ul>
+        <ul className="fr-pl-4w">
           <li>
             <Link
               href="/assets/partenaires/reseaux-sociaux/%5BStructures%20sportives%5D%20Visuel%20pour%20communiquer%20aupres%20des%20jeunes.jpg"

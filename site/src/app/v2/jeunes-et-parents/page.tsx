@@ -108,6 +108,7 @@ export default function Page() {
                 buttonVariant="primary"
                 headingLevel="h2"
                 jeDonneMonAvisBtnPadding={false}
+                displaySeparator={false}
               />
             </div>
           </div>

@@ -136,7 +136,13 @@ export default async function Accueil() {
                 styles['eligibility-section__wrapper'],
               )}
             >
-              <SimplifiedEligibilityTest display="row" buttonVariant="primary" headingLevel="h1" />
+              <SimplifiedEligibilityTest
+                display="row"
+                buttonVariant="primary"
+                headingLevel="h1"
+                jeDonneMonAvisBtnPadding={false}
+                displaySeparator={false}
+              />
             </div>
           </div>
         </section>

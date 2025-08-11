@@ -18,7 +18,7 @@ export default function CommunicationKitAccordions() {
         expanded={false}
         onExpandedChange={() => {}}
       >
-        <ul>
+        <ul className="fr-pl-4w">
           <li>
             <Link
               href="/assets/partenaires/affiches/%5BStructures%20sportives%5D%20Affiche%20destination%20des%20jeunes.pdf"
@@ -45,7 +45,7 @@ export default function CommunicationKitAccordions() {
         expanded={false}
         onExpandedChange={() => {}}
       >
-        <ul>
+        <ul className="fr-pl-4w">
           <li>
             <Link
               href="/assets/partenaires/affiches/%5BPartenaires%5D%20Affiche%20destination%20des%20jeunes.pdf"
@@ -68,7 +68,7 @@ export default function CommunicationKitAccordions() {
       </Accordion>
 
       <Accordion label="Flyer à distribuer" expanded={false} onExpandedChange={() => {}}>
-        <ul>
+        <ul className="fr-pl-4w">
           <li>
             <Link
               href="/assets/partenaires/flyers/Flyer%20pass%20Sport%202025.pdf"
@@ -81,7 +81,7 @@ export default function CommunicationKitAccordions() {
         </ul>
       </Accordion>
       <Accordion label="Kakémono" expanded={false} onExpandedChange={() => {}}>
-        <ul>
+        <ul className="fr-pl-4w">
           <li>
             <Link
               href="/assets/partenaires/kakemono/Kakemono%20pass%20Sport%202025.pdf"
