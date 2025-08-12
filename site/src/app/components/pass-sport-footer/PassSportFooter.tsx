@@ -4,7 +4,6 @@ import Footer, { type FooterProps } from '@codegouvfr/react-dsfr/Footer';
 import { FOOTER_BRAND_TOP } from '@/app/constants/footer-brand-top';
 import styles from './styles.module.scss';
 
-import { useIsProVersion } from '@/app/hooks/use-is-pro-version';
 import lcaLogo from '@/images/footer/logo-lca.webp';
 import menjLogo from '@/images/footer/menj-logo.svg';
 import passSportLogo from '@/images/pass-sport-logo.svg';
@@ -25,11 +24,8 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { useRef } from 'react';
 import { useUpdateHeadings } from '@/app/hooks/accessibility/use-update-headings';
 import { FOOTER_CLASSES } from '@/app/constants/dsfr-classes';
-import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
-import { shouldDisplayChatbot } from '@/utils/date';
 
 export default function PassSportFooter() {
-  const isProVersion = useIsProVersion();
   const footerRef = useRef<HTMLDivElement>(null);
 
   useUpdateHeadings({
@@ -208,12 +204,13 @@ export default function PassSportFooter() {
         href: '/v2/politique-de-confidentialite',
       },
     },
-    {
-      text: 'Budget',
-      linkProps: {
-        href: '/v2/budget',
-      },
-    },
+    // todo: enable later
+    // {
+    //   text: 'Budget',
+    //   linkProps: {
+    //     href: '/v2/budget',
+    //   },
+    // },
     {
       text: 'Gestion des cookies',
       linkProps: {
@@ -229,7 +226,7 @@ export default function PassSportFooter() {
     {
       text: 'Plan du site',
       linkProps: {
-        href: isProVersion ? '/v2/pro/plan-du-site' : '/v2/plan-du-site',
+        href: '/v2/plan-du-site',
       },
     },
   ];
@@ -240,27 +237,25 @@ export default function PassSportFooter() {
         {
           text: 'Accueil',
           linkProps: {
-            href: isProVersion ? '/v2/pro/accueil' : '/v2/accueil',
+            href: '/v2/accueil',
           },
         },
         {
-          text: 'Tout savoir sur le pass Sport',
+          text: 'Jeunes et parents',
           linkProps: {
-            href: isProVersion
-              ? '/v2/pro/tout-savoir-sur-le-pass-sport'
-              : '/v2/tout-savoir-sur-le-pass-sport',
+            href: '/v2/jeunes-et-parents',
           },
         },
         {
-          text: isProVersion ? 'Carte des structures partenaires' : 'Trouver un club partenaire',
+          text: 'Structures',
           linkProps: {
-            href: isProVersion ? '/v2/pro/trouver-un-club' : '/v2/trouver-un-club',
+            href: '/v2/structures',
           },
         },
         {
-          text: 'Une question ?',
+          text: 'Trouver un club partenaire',
           linkProps: {
-            href: isProVersion ? '/v2/pro/une-question' : '/v2/une-question',
+            href: '/v2/trouver-un-club',
           },
         },
       ],
@@ -268,35 +263,41 @@ export default function PassSportFooter() {
     {
       links: [
         {
-          text: isProVersion ? 'Je suis un particulier' : 'Je suis une structure partenaire',
+          text: 'Partenaires',
           linkProps: {
-            href: isProVersion ? '/v2/accueil' : '/v2/pro/accueil',
+            href: '/v2/partenaires',
           },
         },
-        // ...((isProVersion
-        //   ? [
-        //       {
-        //         text: 'Ressources',
-        //         linkProps: {
-        //           href: '/v2/pro/ressources',
-        //         },
-        //       },
-        //     ]
-        //   : []) as [FooterProps.LinkList.Link] | []),
-        ...((shouldDisplayChatbot()
-          ? [
-              {
-                text: CHATBOT_EXTERNAL_URL_TITLE,
-                linkProps: {
-                  href: CHATBOT_EXTERNAL_URL,
-                  target: '_blank',
-                  title: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
-                },
-              },
-            ]
-          : []) as [FooterProps.LinkList.Link] | []),
+        {
+          text: 'Une question ?',
+          linkProps: {
+            href: '/v2/une-question',
+          },
+        },
       ],
     },
+    // {
+    //   links: [
+    //     {
+    //       text: isProVersion ? 'Je suis un particulier' : 'Je suis une structure partenaire',
+    //       linkProps: {
+    //         href: isProVersion ? '/v2/accueil' : '/v2/pro/accueil',
+    //       },
+    //     },
+    //     ...((shouldDisplayChatbot()
+    //       ? [
+    //           {
+    //             text: CHATBOT_EXTERNAL_URL_TITLE,
+    //             linkProps: {
+    //               href: CHATBOT_EXTERNAL_URL,
+    //               target: '_blank',
+    //               title: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
+    //             },
+    //           },
+    //         ]
+    //       : []) as [FooterProps.LinkList.Link] | []),
+    //   ],
+    // },
   ];
 
   const domains = ['legifrance.gouv.fr', 'info.gouv.fr', 'service-public.fr', 'data.gouv.fr'];
@@ -317,7 +318,7 @@ export default function PassSportFooter() {
       bottomItems={bottomItems}
       linkList={linkList}
       brandTop={FOOTER_BRAND_TOP}
-      accessibility="fully compliant"
+      accessibility="non compliant"
       accessibilityLinkProps={{
         href: '/v2/accessibilite',
       }}

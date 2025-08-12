@@ -6,7 +6,6 @@ import { Breadcrumb } from '@codegouvfr/react-dsfr/Breadcrumb';
 import { usePathname } from 'next/navigation';
 import cn from 'classnames';
 import { useIsNotFound } from '@/app/hooks/use-is-not-found';
-import { isPasSportClosed } from '@/utils/date';
 
 export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/une-question': 'Une question ?',
@@ -14,23 +13,22 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/trouver-un-club': 'Trouver un club partenaire',
   '/v2/politique-de-confidentialite': 'Politique de confidentialité',
   '/v2/mentions-legales': 'Mentions légales',
-  '/v2/code/scan': 'Mon pass Sport',
   '/v2/plan-du-site': 'Plan du site',
   '/v2/accessibilite': 'Accessibilité',
-  '/v2/budget': 'Budget',
+  // todo: enable later
+  // '/v2/budget': 'Budget',
+  '/v2/test-eligibilite-base': 'Puis-je bénéficier du pass Sport ?',
+  '/v2/jeunes-et-parents': 'Jeune et parents',
+  '/v2/structures': 'Structures sportives',
+  '/v2/test-eligibilite': 'Formulaire de demande',
+  '/v2/test-ou-code': 'Je fais le test',
+  '/v2/partenaires': 'Partenaires',
 };
 
 export default function PassSportBreadcrumbStandard() {
   const paths = usePathname();
-  const passSportClosed = isPasSportClosed();
 
-  const internalRoutes = [
-    '/',
-    '/v2/accueil',
-    !passSportClosed ? '/v2/test-eligibilite-base' : null,
-    !passSportClosed ? '/v2/test-eligibilite' : null,
-    !passSportClosed ? '/v2/test-ou-code' : null,
-  ].filter((route): route is string => route !== null);
+  const internalRoutes = ['/', '/v2/accueil'].filter((route): route is string => route !== null);
 
   const notFound = useIsNotFound({
     internalRoutes,

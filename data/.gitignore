@@ -6,3 +6,4 @@
 ignored/
 backup/
 statiscs/*.pdf
+__pycache__

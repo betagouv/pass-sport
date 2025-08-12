@@ -1,6 +1,6 @@
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useContext, useRef, useState } from 'react';
 import {
   SearchResponseBody,
   SearchResponseErrorBody,
@@ -11,8 +11,9 @@ import { mapper } from '../../helpers/helper';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchEligible } from '../../agent';
 import { push } from '@socialgouv/matomo-next';
-import Legend from '@/app/v2/test-eligibilite-base/components/customRadioButtons/legend/Legend';
 import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
 
 interface Props {
   onDataReceived: (data: SearchResponseBody) => void;
@@ -23,7 +24,6 @@ interface Props {
 const initialInputsState: StepOneFormInputsState = {
   beneficiaryLastname: { state: 'default' },
   beneficiaryFirstname: { state: 'default' },
-  beneficiaryBirthDate: { state: 'default' },
   recipientResidencePlace: { state: 'default' },
 };
 
@@ -33,6 +33,7 @@ const StepOneForm = ({
   isDirectBeneficiary = false,
 }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
+  const { allowance, dob } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
@@ -129,7 +130,10 @@ const StepOneForm = ({
 
     formData.set('beneficiaryLastname', formData.get('beneficiaryLastname')!.toString().trim());
     formData.set('beneficiaryFirstname', formData.get('beneficiaryFirstname')!.toString().trim());
-    formData.set('beneficiaryBirthDate', formData.get('beneficiaryBirthDate')!.toString().trim());
+
+    if (dob) {
+      formData.set('beneficiaryBirthDate', dob);
+    }
 
     // Later used to know if we need to use a default address for people who don't have any address
     if (isDirectBeneficiary) {
@@ -153,19 +157,60 @@ const StepOneForm = ({
     }
   };
 
+  const getNameLabel = useCallback(() => {
+    switch (allowance) {
+      case ALLOWANCE.AAH:
+        return (
+          <>
+            Nom de famille du bénéficiaire <span className="text--required">*</span>
+          </>
+        );
+      case ALLOWANCE.ARS:
+        return (
+          <>
+            Nom de famille de votre enfant <span className="text--required">*</span>
+          </>
+        );
+      default:
+        return (
+          <>
+            Nom de famille <span className="text--required">*</span>
+          </>
+        );
+    }
+  }, [allowance]);
+
+  const getRecipientResidencePlace = useCallback(() => {
+    switch (allowance) {
+      case ALLOWANCE.AAH:
+        return (
+          <>
+            Commune de résidence de l’allocataire <span className="text--required">*</span>
+          </>
+        );
+      case ALLOWANCE.ARS:
+        return (
+          <>
+            Commune de résidence de l’allocataire <span className="text--required">*</span>
+          </>
+        );
+      default:
+        return (
+          <>
+            Commune de résidence <span className="text--required">*</span>
+          </>
+        );
+    }
+  }, [allowance]);
+
   return (
     <>
-      <Legend
-        wrapInParagraph
-        line1={
-          isDirectBeneficiary
-            ? `Veuillez rentrer les informations ci-dessous sur vous :`
-            : `Veuillez rentrer les informations ci-dessous sur vous ou sur votre enfant :`
-        }
-      />
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
-          label={isDirectBeneficiary ? `Nom*` : `Nom de l'enfant ou du jeune adulte bénéficiaire*`}
+          label={getNameLabel()}
+          state={inputStates.beneficiaryLastname.state}
+          stateRelatedMessage={inputStates.beneficiaryLastname.errorMsg}
+          disabled={isFormDisabled}
           nativeInputProps={{
             name: 'beneficiaryLastname',
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -175,9 +220,6 @@ const StepOneForm = ({
             required: true,
             autoFocus: true,
           }}
-          state={inputStates.beneficiaryLastname.state}
-          stateRelatedMessage={inputStates.beneficiaryLastname.errorMsg}
-          disabled={isFormDisabled}
           hintText={
             isDirectBeneficiary ? (
               <>
@@ -193,8 +235,20 @@ const StepOneForm = ({
         />
 
         <Input
+          state={inputStates.beneficiaryFirstname.state}
+          stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
+          disabled={isFormDisabled}
           label={
-            isDirectBeneficiary ? `Prénom*` : `Prénom de l'enfant ou du jeune adulte bénéficiaire*`
+            isDirectBeneficiary ? (
+              <>
+                Prénom <span className="text--required">*</span>
+              </>
+            ) : (
+              <>
+                Prénom de l&apos;enfant ou du jeune adulte bénéficiaire{' '}
+                <span className="text--required">*</span>
+              </>
+            )
           }
           nativeInputProps={{
             name: 'beneficiaryFirstname',
@@ -204,9 +258,6 @@ const StepOneForm = ({
             'aria-autocomplete': 'none',
             required: true,
           }}
-          state={inputStates.beneficiaryFirstname.state}
-          stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
-          disabled={isFormDisabled}
           hintText={
             isDirectBeneficiary ? (
               <>
@@ -221,35 +272,13 @@ const StepOneForm = ({
           }
         />
 
-        <Input
-          label={
-            isDirectBeneficiary
-              ? `Date de naissance*`
-              : `Date de naissance de l'enfant ou du jeune adulte bénéficiaire*`
-          }
-          hintText="Format attendu: JJ/MM/AAAA"
-          nativeInputProps={{
-            name: 'beneficiaryBirthDate',
-            type: 'date',
-            required: true,
-            onChange: (e: ChangeEvent<HTMLInputElement>) =>
-              onInputChanged(e.target.value, 'beneficiaryBirthDate'),
-          }}
-          state={inputStates.beneficiaryBirthDate.state}
-          stateRelatedMessage={inputStates.beneficiaryBirthDate.errorMsg}
-          disabled={isFormDisabled}
-        />
-
         <CityFinder
-          legend={
-            isDirectBeneficiary ? `Commune de résidence*` : `Commune de résidence de l’allocataire*`
-          }
+          legend={getRecipientResidencePlace()}
           isDisabled={isFormDisabled}
           inputName="recipientResidencePlace"
           inputState={inputStates.recipientResidencePlace}
           onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
-          required={true}
-          secondHintNeeded={!isDirectBeneficiary}
+          required
         />
 
         <Button
@@ -258,9 +287,8 @@ const StepOneForm = ({
           disabled={isFormDisabled}
           iconId={isFormDisabled ? 'fr-icon-success-line' : 'fr-icon-arrow-right-line'}
           iconPosition="right"
-          className="fr-mb-6w fr-mt-3w"
         >
-          Je valide les informations
+          Valider les informations
         </Button>
       </form>
 

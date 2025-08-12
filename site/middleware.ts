@@ -15,10 +15,10 @@ export function middleware(request: NextRequest) {
     object-src 'none';
     base-uri 'self';
     form-action 'self';
-    connect-src 'self' https://client.crisp.chat/ wss://client.relay.crisp.chat/ https://sports-sgsocialgouv.opendatasoft.com https://stats.beta.gouv.fr https://geo.api.gouv.fr;
+    connect-src 'self' https://client.crisp.chat/ wss://client.relay.crisp.chat/ https://sports-sgsocialgouv.opendatasoft.com https://stats.beta.gouv.fr https://geo.api.gouv.fr blob:;
     font-src 'self' https://client.crisp.chat/;
-    frame-src 'self' https://player.vimeo.com https://pass-sport.crisp.help/;
-    img-src 'self' data: https://image.crisp.chat/ https://client.crisp.chat/ https://storage.crisp.chat/ https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://i.vimeocdn.com https://unpkg.com https://tarteaucitron.io;
+    frame-src 'self' https://player.vimeo.com https://pass-sport.crisp.help/ blob:;
+    img-src 'self' data: https://image.crisp.chat/ https://client.crisp.chat/ https://storage.crisp.chat/ https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://i.vimeocdn.com https://unpkg.com https://tarteaucitron.io https://jedonnemonavis.numerique.gouv.fr/static/bouton-bleu-clair.svg;
     manifest-src 'self';
     media-src 'self';
     report-uri https://66ab4d8ba05c71ef29160216.endpoint.csper.io/?v=1;

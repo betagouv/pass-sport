@@ -1,0 +1,134 @@
+@import '../../../../sassVariables.module.scss';
+
+.container {
+  flex-direction: column;
+  align-items: center;
+
+  display: flex;
+  gap: 16px;
+  justify-content: space-around;
+
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+
+  @media (min-width: $sm) {
+    flex-direction: row;
+  }
+
+  @media print {
+    print-color-adjust: exact;
+  }
+}
+
+.blue {
+  color: var(--artwork-major-blue-france);
+}
+
+.center {
+  text-align: center;
+
+  @media (min-width: $sm) {
+    text-align: left;
+  }
+}
+
+.text-casing {
+  text-transform: lowercase;
+  display: inline-block;
+  &::first-letter {
+    text-transform: uppercase;
+  }
+}
+
+.centered-text {
+  text-align: center;
+}
+
+
+.section-success {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  max-width: 792px;
+  margin: 0 auto;
+  gap: 24px;
+
+  &__description {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__image {
+    align-self: center;
+  }
+
+  a {
+    align-self: baseline;
+  }
+}
+
+
+.section-cta,
+.section-missions,
+.section-success,
+.section-failure {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 792px;
+
+  @media (max-width: $md) {
+    padding: 0 36px
+  }
+}
+
+.section-success {
+  flex-direction: row;
+
+  &__image {
+    max-width: 288px;
+  }
+
+  @media (max-width: $md) {
+    flex-direction: column;
+
+    &__image {
+      max-width: 100%;
+    }
+  }
+}
+
+.section-cta {
+  margin: 24px auto 0 auto;
+  gap: 24px;
+
+  &__link {
+    align-self: center;
+  }
+}
+
+.section-missions {
+  margin: 0 auto 72px auto;
+
+  hr {
+    margin-top: 24px;
+  }
+}
+
+.section-failure {
+  margin: 0 auto;
+}
+
+
+.download-section {
+  p {
+    color: var(--text-mention-grey);
+  }
+}
+
+.section-je-donne-mon-avis {
+  max-width: 792px;
+  margin: 0 auto;
+  text-align: right;
+  padding-top: 24px;
+}

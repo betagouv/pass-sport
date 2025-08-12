@@ -1,9 +1,9 @@
 'use server';
 
-import { CategoryWithArticles } from '../../../../types/Faq';
-import { getCrispArticles, getFormattedCategories } from '../../../../utils/faq';
-import { initCrispClient } from '../../../../utils/crisp';
+import { getCrispArticles, getFormattedCategories } from '@/utils/faq';
+import { initCrispClient } from '@/utils/crisp';
 import * as Sentry from '@sentry/nextjs';
+import { CATEGORY_IDENTIFIER_TYPE, CategoryWithArticles } from '@/types/Faq';
 
 const {
   envVars: { CRISP_WEBSITE },
@@ -11,9 +11,9 @@ const {
 } = initCrispClient();
 
 export const getCategoriesWithArticles = async ({
-  isProVersion,
+  categoryIdentifier,
 }: {
-  isProVersion: boolean;
+  categoryIdentifier: CATEGORY_IDENTIFIER_TYPE;
 }): Promise<CategoryWithArticles[]> => {
   try {
     const articles = await getCrispArticles({
@@ -25,7 +25,7 @@ export const getCategoriesWithArticles = async ({
       crispClient,
       crispIdentifier: CRISP_WEBSITE,
       articles,
-      isProVersion,
+      categoryIdentifier,
     });
   } catch (err) {
     Sentry.withScope((scope) => {

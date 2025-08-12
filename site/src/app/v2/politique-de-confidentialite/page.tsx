@@ -16,7 +16,7 @@ export default function PolitiqueDeConfidentialite() {
       <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <PageTitle
           title="Politique de confidentialité"
-          subtitle="Politique de confidentialité relative au traitement de données personnelles réalisé dans le cadre de la délivrance du pass Sport 2024"
+          subtitle="Politique de confidentialité relative au traitement de données personnelles réalisé dans le cadre de la délivrance du pass Sport 2025"
           classes={{
             container: styles['page-header'],
           }}
@@ -54,12 +54,12 @@ export default function PolitiqueDeConfidentialite() {
           <section className="fr-mb-6w">
             <h2 className="fr-mb-2w">Article 2 - Qui est responsable ?</h2>
             <p className="fr-mb-2w">
-              La Direction des sports du ministère des sports et des jeux olympiques et
-              paralympiques (ci-après{' '}
+              La Direction des sports du ministère des Sports, de la Jeunesse et de la Vie
+              associative (ci-après{' '}
               <span className="fr-text--bold">« la Direction des sports »</span>) est le responsable
               de traitement de vos données personnelles. Elle collecte et traite vos données dans le
               cadre du traitement de données personnelles opéré pour la délivrance du pass Sport
-              2024.
+              2025.
             </p>
 
             <p className="fr-mb-2w">
@@ -77,7 +77,7 @@ export default function PolitiqueDeConfidentialite() {
 
             <p>
               La Direction des sports s&apos;engage à ce que le traitement de vos données à
-              caractère personnel effectué dans le cadre de l&apos;envoi du pass Sport 2024 respecte
+              caractère personnel effectué dans le cadre de l&apos;envoi du pass Sport 2025 respecte
               la réglementation en vigueur applicable au traitement de données à caractère personnel
               et, en particulier,{' '}
               <a
@@ -106,7 +106,7 @@ export default function PolitiqueDeConfidentialite() {
               Article 3 - Pourquoi traitons-nous des données à caractère personnel ?
             </h2>
             <p>
-              Le présent traitement a pour finalité la délivrance du pass Sport 2024 aux
+              Le présent traitement a pour finalité la délivrance du pass Sport 2025 aux
               bénéficiaires âgés de 6 à 30 ans, dans le but de réduire le montant de l&apos;adhésion
               ou de la prise de licence proposée par les structures et associations sportives.
             </p>
@@ -123,8 +123,8 @@ export default function PolitiqueDeConfidentialite() {
               Direction des sports au sens des articles L. 100-1 et L. 100-2 du code du sport.
               <br />
               <br />
-              Cette mission d&apos;intérêt public se traduit en pratique par le décret n° 2024-500
-              du 31 mai 2024 relatif au « pass Sport » 2024.
+              Cette mission d&apos;intérêt public se traduit en pratique par le décret n°2025-630 du
+              8 juillet 2025 relatif au « Pass&apos;Sport » 2025.
             </p>
           </section>
 
@@ -147,10 +147,10 @@ export default function PolitiqueDeConfidentialite() {
             <ul className="fr-pl-4w">
               <li>Données relatives à l&apos;identité : civilité, nom, prénom ;</li>
               <li>Coordonnées : courriel, téléphone ;</li>
-              <li>Données relatives à la vie professionnelle : fonction dans la structure.</li>
+              <li>Données relatives à la vie professionnelle : fonction dans la structure ;</li>
               <li>
                 Données relatives au formulaire de contact : prénom, nom, adresse e-mail, champs
-                libres
+                libres.
               </li>
             </ul>
           </section>
@@ -159,7 +159,7 @@ export default function PolitiqueDeConfidentialite() {
             <h2 className="fr-mb-2w">Article 6 - Combien de temps sont conservées vos données ?</h2>
             <p className="fr-mb-2w">
               Les données à caractère personnel des bénéficiaires éligibles au dispositif pass Sport
-              seront effacées au bout de 12 mois à compter de leur réception par la direction des
+              seront effacées au bout de 12 mois à compter de leur réception par la Direction des
               sports.
             </p>
 
@@ -302,14 +302,14 @@ export default function PolitiqueDeConfidentialite() {
               <li className="fr-text--bold">Sauvegarde ;</li>
               <li className="fr-text--bold">
                 Mesures restrictives limitant l&apos;accès physique aux données à caractère
-                personnel
+                personnel.
               </li>
             </ul>
 
             <p className="fr-mb-2w">
               Conformément à la réglementation applicable, à savoir le RGPD et la loi Informatique
               et libertés, vous disposez d&apos;un droit d&apos;information, d&apos;accès, de
-              rectification,, de limitation et d&apos;opposition des données qui vous concernent.
+              rectification, de limitation et d&apos;opposition des données qui vous concernent.
             </p>
 
             <h3 className="fr-mb-2w">

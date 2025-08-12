@@ -1,0 +1,66 @@
+@import '../../sassVariables.module.scss';
+
+.eligibility-test {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  padding: 40px;
+  flex-direction: column;
+  border-radius: 8px;
+
+  form {
+    width: 100%;
+  }
+
+  @media screen and (max-width: $lg) {
+    padding: 24px;
+  }
+
+  h2 {
+    white-space: break-spaces;
+  }
+
+  &__fields {
+    display: flex;
+    gap: 4px;
+    margin-top: 24px;
+    width: 100%;
+
+    &--row {
+      flex-direction: row;
+      align-items: flex-end;
+
+      @media screen and (max-width: $lg) {
+        align-items: initial;
+      }
+    }
+
+    &--column {
+      flex-direction: column;
+    }
+
+
+    &-date {
+      max-width: 200px;
+
+      @media screen and (max-width: $lg) {
+        max-width: 100%;
+      }
+    }
+
+    @media screen and (max-width: $lg) {
+      flex-direction: column;
+    }
+  }
+}
+
+.je-donne-mon-avis-section {
+  flex: 1;
+  text-align: right;
+  padding: 40px 0;
+
+  &--padding {
+    padding: 0 40px 40px 40px;
+  }
+}

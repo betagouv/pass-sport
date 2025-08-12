@@ -1,20 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`eligibility-test service fetchEligible should return eligible data when eligible exists 1`] = `
-[
-  {
-    "date_naissance": "2011-01-01T23:00:00.000Z",
-    "hasMatricule": true,
-    "id": 123,
-    "nom": "DUPOND",
-    "organisme": "MSA",
-    "prenom": "MANON",
-    "situation": "jeune",
-  },
-]
-`;
-
-exports[`eligibility-test service fetchQrCode should return eligible data enhanced with a qrcode url when eligible exists 1`] = `
+exports[`eligibility-test service fetchCode should return eligible data enhanced with a code when eligible exists 1`] = `
 [
   {
     "a_valider": false,
@@ -47,11 +33,24 @@ exports[`eligibility-test service fetchQrCode should return eligible data enhanc
     "nom_complet": "MANON DUPOND",
     "organisme": "MSA",
     "prenom": "MANON",
-    "qrcodeUrl": "fake-qrcode-url",
     "refuser": false,
     "situation": "jeune",
     "updated_at": "2023-08-31T12:05:34.000+02:00",
     "uuid_doc": null,
+  },
+]
+`;
+
+exports[`eligibility-test service fetchEligible should return eligible data when eligible exists 1`] = `
+[
+  {
+    "date_naissance": "2011-01-01T23:00:00.000Z",
+    "hasMatricule": true,
+    "id": 123,
+    "nom": "DUPOND",
+    "organisme": "MSA",
+    "prenom": "MANON",
+    "situation": "jeune",
   },
 ]
 `;

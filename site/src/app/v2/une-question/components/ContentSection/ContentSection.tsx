@@ -1,6 +1,6 @@
 'use client';
 
-import { Article, CategoryWithArticles } from '../../../../../../types/Faq';
+import { Article, CategoryWithArticles } from '@/types/Faq';
 import styles from './styles.module.scss';
 import React from 'react';
 import cn from 'classnames';
@@ -38,7 +38,10 @@ export default function ContentSection({ categoriesWithArticles, isFromMainPage 
   }
 
   return (
-    <div className={cn(styles['faq'], isFromMainPage ? styles['faq--from-main-page'] : '')}>
+    <div
+      className={cn(styles['faq'], isFromMainPage ? styles['faq--from-main-page'] : '')}
+      aria-live="polite"
+    >
       {categoriesWithArticles.map((category: CategoryWithArticles) => (
         <section key={category.id} className="fr-mb-5w">
           <h2 className={cn('fr-h3', 'fr-m-0', 'fr-pb-2w', styles['faq__article-title'])}>

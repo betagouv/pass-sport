@@ -1,4 +1,4 @@
-import { fetchQrCode } from '@/app/services/eligibility-test';
+import { fetchCode } from '@/app/services/eligibility-test';
 import { ConfirmPayload } from 'types/EligibilityTest';
 import { zfd } from 'zod-form-data';
 import z, { ZodError } from 'zod';
@@ -30,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
       payload.situation = 'jeune';
     }
 
-    const data = await fetchQrCode(payload);
+    const data = await fetchCode(payload);
 
     // Means no one was found
     if (Array.isArray(data) && data.length <= 0) {
@@ -41,7 +41,7 @@ export async function POST(request: Request): Promise<Response> {
         payload.recipientIneNumber &&
         isSanitairesAndSociauxBoursiersBFC(payload.recipientIneNumber)
       ) {
-        const dataWithOverridenBirthPlace = await fetchQrCode({
+        const dataWithOverridenBirthPlace = await fetchCode({
           ...payload,
           recipientBirthPlace: DEFAULT_INSEE_CODE,
         });

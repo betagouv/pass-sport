@@ -1,0 +1,171 @@
+@import '../../sassVariables.module';
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  margin-bottom: 24px;
+}
+
+.guiding-block__container {
+  position: relative;
+  top: -148px;
+  margin-bottom: -120px;
+
+  @media screen and (max-width: $lg) {
+    margin-bottom: -150px;
+  }
+}
+
+.eligibility-section {
+  background-color: var(--purple-glycine-950-100);
+  padding: 100px;
+  width: 95%;
+  justify-self: center;
+  border-radius: 8px;
+
+  &__wrapper {
+    max-width: 840px;
+  }
+
+  @media screen and (max-width: $lg) {
+    padding: 24px;
+    width: 100%;
+  }
+}
+
+.communication-kit-section {
+  display: flex;
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+  align-self: center;
+  width: 83.33%;
+
+  img {
+    flex: 1;
+    max-width: 384px;
+    border-radius: 8px;
+  }
+
+  &__description {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 40px;
+    justify-content: center;
+    gap: 24px;
+    color: black;
+    border-radius: 0 8px 8px 0;
+  }
+
+  @media screen and (max-width: $lg) {
+    flex-direction: column-reverse;
+    height: auto;
+    width: 100%;
+    margin: 24px auto;
+
+    &__description {
+      width: 100%;
+      border-radius: 0 0 8px 8px;
+      padding: 24px 0;
+      height: auto;
+      justify-content: initial;
+    }
+
+    img {
+      max-width: 100%;
+    }
+  }
+}
+
+.become-partner-section {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 66.67%;
+  align-self: center;
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
+}
+
+.lca-section {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 66.67%;
+  align-self: center;
+
+  p {
+    margin-bottom: 0;
+  }
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
+}
+
+.input-codes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 66.67%;
+  align-self: center;
+
+  p, h1 {
+    margin-bottom: 0;
+  }
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
+}
+
+
+.get-refunds-section {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 32px;
+  width: 83.33%;
+  margin: 0 auto;
+  align-items: center;
+  justify-self: center;
+
+  img {
+    flex: 1;
+    max-width: 486px;
+    align-self: center;
+    justify-self: center;
+    border-radius: 8px;
+  }
+
+  &__description {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1;
+    p {
+      margin-bottom: 0;
+    }
+  }
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+    flex-direction: column;
+
+    img {
+      max-width: 100%;
+    }
+  }
+}
+
+.decret-section {
+  width: 66.67%;
+  align-self: center;
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
+}

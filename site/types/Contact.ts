@@ -10,3 +10,12 @@ export interface InputsState {
   siret: InputState;
   rna: InputState;
 }
+
+export interface InputsStateBenef {
+  firstname: InputState;
+  lastname: InputState;
+  email: InputState;
+  reason: InputState;
+  message: InputState;
+  consent: InputState;
+}

@@ -43,32 +43,33 @@ const ContactSection: React.FC<Props> = ({ isProVersion }) => {
   });
 
   return (
-    <section className={cn(styles.contact)}>
+    <>
+      <div className={cn(styles.contact)}>
+        <div className="fr-container">
+          <section className="fr-my-4w fr-my-md-8w fr-px-2w">
+            <h2 className="fr-mb-2w fr-h3">Vous ne trouvez pas de réponse satisfaisante ?</h2>
+            <p className="fr-mb-2w">
+              Contactez-nous directement par e-mail pour que nous puissions trouver une solution.
+            </p>
+            <button
+              id={SKIP_LINKS_ID.contactUsByMail}
+              className="fr-btn fr-btn--primary fr-btn--icon-left fr-icon-mail-fill"
+              onClick={() => contactModal.open()}
+            >
+              Nous contacter par mail
+            </button>
+          </section>
+        </div>
+      </div>
       <contactModal.Component
         title="Formulaire de contact"
         className="fr-mb-0"
         iconId="fr-icon-mail-line"
         size="large"
       >
-        {!modalIsClosed && (
-          <ContactForm closeFn={contactModal.close} isProVersion={!!isProVersion} />
-        )}
+        <ContactForm closeFn={contactModal.close} isProVersion={!!isProVersion} />
       </contactModal.Component>
-
-      <div className="fr-mb-4w fr-px-2w">
-        <h2 className="fr-mb-2w fr-h3">Vous ne trouvez pas de réponse satisfaisante.</h2>
-        <p className="fr-mb-2w">
-          Contactez-nous directement par e-mail pour que nous puissions trouver une solution.
-        </p>
-        <button
-          id={SKIP_LINKS_ID.contactUsByMail}
-          className="fr-btn fr-btn--primary fr-btn--icon-left fr-icon-mail-fill"
-          onClick={() => contactModal.open()}
-        >
-          Nous contacter par mail
-        </button>
-      </div>
-    </section>
+    </>
   );
 };
 

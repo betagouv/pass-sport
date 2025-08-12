@@ -149,13 +149,14 @@ const AahCafForm = ({
           inputProps={{
             label: (
               <>
-                Numéro de l’allocataire <CAF />*
+                Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
-            hintText: 'Format attendu : 7 chiffres',
+            hintText:
+              'Personne responsable du compte gérant l’allocation. Peut être la même personne que le bénéficiaire.',
             nativeInputProps: {
               name: 'recipientCafNumber',
-              placeholder: 'ex: 0000000',
+              placeholder: 'Exemple : 0123456',
               type: 'text',
               required: true,
               onChange: (e: ChangeEvent<HTMLInputElement>) =>
