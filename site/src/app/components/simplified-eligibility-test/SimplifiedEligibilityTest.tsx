@@ -126,7 +126,7 @@ export default function SimplifiedEligibilityTest({
             setAlertMeta({
               title: successInitialMeta.title,
               description:
-                'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu de 1er septembre. Nous nous excusons pour la gêne occasionnée.',
+                'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu du 1er septembre. Nous nous excusons pour la gêne occasionnée.',
             });
           } else {
             setAlertMeta({
@@ -168,7 +168,7 @@ export default function SimplifiedEligibilityTest({
           setAlertMeta({
             title: successInitialMeta.title,
             description:
-              'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu de 1er septembre. Nous nous excusons pour la gêne occasionnée.',
+              'En tant qu’étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu du 1er septembre. Nous nous excusons pour la gêne occasionnée.',
           });
           setKnowMoreMeta({
             title: 'A savoir',
@@ -239,7 +239,7 @@ export default function SimplifiedEligibilityTest({
                     name: 'my-select',
                     required: true,
                     onChange: (e) => {
-                      setAllocationName(e.target.value);
+                      setAllocationName(e.target.value as ALLOCATION);
                       resetStates();
                     },
                   }}
@@ -267,7 +267,7 @@ export default function SimplifiedEligibilityTest({
                     },
                     {
                       value: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
-                      label: 'Aide annuelle formations sanitaires et sociales',
+                      label: 'Bourse régionale formations sanitaires et sociales',
                     },
                   ]}
                   placeholder="Sélectionner une option"

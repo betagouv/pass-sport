@@ -40,7 +40,7 @@ const TestOuCode = () => {
                 avant le 15 octobre 2025 :
                 <ul className="list-style-type--circle">
                   <li>bourse du CROUS (y compris l’aide annuelle) ;</li>
-                  <li>bourse régionale pour une formation sanitaire ou sociale.</li>
+                  <li>bourse régionale formations sanitaires et sociales.</li>
                 </ul>
               </li>
             </ul>
