@@ -2,6 +2,7 @@
 .venv
 
 *.csv
+*.xlsx
 
 ignored/
 backup/
