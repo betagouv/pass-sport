@@ -110,6 +110,11 @@
       height: auto;
       justify-content: initial;
     }
+
+    @media screen and (max-width: $xl) {
+      padding: 32px;
+      height: 400px;
+    }
   }
 
   &__image {
