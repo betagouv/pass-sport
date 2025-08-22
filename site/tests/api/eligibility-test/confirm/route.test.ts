@@ -6,6 +6,15 @@ import { fetchCode } from '@/app/services/eligibility-test';
 import { POST } from '@/app/v2/api/eligibility-test/confirm/route';
 import { buildConfirmResponseBody } from '../../../helpers/builders/confirm-response-body';
 import { EnhancedConfirmResponseBody } from 'types/EligibilityTest';
+import { generatePdfBuffer } from '@/app/v2/api/eligibility-test/confirm/generate-pdf-buffer';
+
+jest.mock('@react-pdf/renderer', () => {});
+jest.mock('../../../../src/app/components/pdf-pass-sport/PdfPassSport', () => {});
+jest.mock('../../../../src/app/v2/api/eligibility-test/confirm/generate-pdf-buffer', () => {
+  return {
+    generatePdfBuffer: jest.fn(),
+  };
+});
 
 jest.mock('../../../../src/app/services/eligibility-test', () => {
   const original = jest.requireActual('../../../../src/app/services/eligibility-test');
@@ -76,6 +85,9 @@ describe('POST /eligibility-test/confirm', () => {
     payload.append('id', '1');
     payload.append('situation', 'jeune');
     payload.append('organisme', 'CAF');
+
+    const mockedPdfGenerationBuffer = generatePdfBuffer as jest.Mock;
+    mockedPdfGenerationBuffer.mockImplementationOnce(() => Buffer.from('example-df'));
 
     const request = new Request('http://localhost/api/eligibility-test/confirm', {
       method: 'POST',

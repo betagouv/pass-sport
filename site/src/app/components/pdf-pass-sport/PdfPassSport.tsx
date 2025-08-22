@@ -1,15 +1,16 @@
 import React from 'react';
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
-
-import FontRegular from './fonts/marianne-regular.woff2';
-import FontBold from './fonts/marianne-bold.woff2';
 import { formatDate } from '@/utils/date';
+import path from 'path';
+
+const regular = path.resolve(process.cwd(), 'assets', 'marianne-regular');
+const bold = path.resolve(process.cwd(), 'assets', 'marianne-bold');
 
 Font.register({
   family: 'Marianne',
   fonts: [
-    { src: FontRegular, fontWeight: 400 },
-    { src: FontBold, fontWeight: 700 },
+    { src: regular, fontWeight: 400 },
+    { src: bold, fontWeight: 700 },
   ],
 });
 
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   codeDobTitle: {
-    fontSize: 11,
+    fontSize: 41,
     color: '#666666',
   },
   codeDobValue: {
@@ -180,22 +181,33 @@ type PdfPassSportProps = {
   };
 };
 
+function getAsset(filename: string) {
+  return path.resolve(process.cwd(), 'assets', filename);
+}
+
 export default function PdfPassSport({
   benef: { firstname, lastname, dob, code, gender },
 }: PdfPassSportProps) {
+  // todo: to remove when ready
+  // const firstname = 'X';
+  // const lastname = 'X';
+  // const gender = 'M';
+  // const code = 'XX-XXXX-XXXX';
+  // const dob = '2025-12-31';
+
   return (
     <Document>
       <Page size="A4" style={styles.page} orientation="landscape">
         <View style={styles.codeContainer}>
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
-          <Image src="/images/left-lines.png" style={styles.leftLines} />
+          <Image src={getAsset('left-lines.png')} style={styles.leftLines} />
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
-          <Image src="/images/right-lines.png" style={styles.rightLines} />
+          <Image src={getAsset('right-lines.png')} style={styles.rightLines} />
           <View style={styles.imagesContainer}>
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
-            <Image src="/images/bloc-ministere.png" style={styles.ministereLogo} />
+            <Image src={getAsset('bloc-ministere.png')} style={styles.ministereLogo} />
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
-            <Image src="/images/pass-sport-logo.png" style={styles.passSportLogo} />
+            <Image src={getAsset('pass-sport-logo.png')} style={styles.passSportLogo} />
           </View>
           <View style={styles.codeTextContainer}>
             <Text style={styles.codeFirstname}>{firstname}</Text>

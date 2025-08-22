@@ -1,10 +1,11 @@
 import { fetchCode } from '@/app/services/eligibility-test';
-import { ConfirmPayload } from 'types/EligibilityTest';
+import { ConfirmPayload, ConfirmResponseBodyItem } from 'types/EligibilityTest';
 import { zfd } from 'zod-form-data';
 import z, { ZodError } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 import { handleSupportCookie } from '@/utils/cookie';
 import { isSanitairesAndSociauxBoursiersBFC } from '@/app/v2/test-eligibilite-base/helpers/helpers';
+import { generatePdfBuffer } from '@/app/v2/api/eligibility-test/confirm/generate-pdf-buffer';
 
 const DEFAULT_INSEE_CODE = '75113';
 
@@ -54,6 +55,31 @@ export async function POST(request: Request): Promise<Response> {
       } else {
         await handleSupportCookie(payload, 'confirm');
       }
+    }
+
+    const hasDataForPdfGeneration =
+      !('message' in data) &&
+      ['prenom', 'nom', 'date_naissance', 'id_psp', 'genre'].filter((key) => key in data[0]);
+
+    if (hasDataForPdfGeneration) {
+      const { nom, prenom, date_naissance, genre, id_psp } = data[0] as ConfirmResponseBodyItem;
+      const pdfBuffer = await generatePdfBuffer({
+        lastname: nom,
+        firstname: prenom,
+        dob: date_naissance,
+        gender: genre,
+        code: id_psp,
+      });
+
+      return Response.json(
+        [
+          {
+            ...data[0],
+            pdf_base_64: pdfBuffer.toString('base64'),
+          },
+          data.slice(1),
+        ].flat(),
+      );
     }
 
     return Response.json(data);
