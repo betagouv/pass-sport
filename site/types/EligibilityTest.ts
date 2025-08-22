@@ -98,6 +98,8 @@ export interface ConfirmResponseBodyItem {
   updated_at: string;
   created_at: string;
   uuid_doc: unknown;
+
+  pdf_base_64: string;
 }
 
 export type ConfirmResponseBody = ConfirmResponseBodyItem[];

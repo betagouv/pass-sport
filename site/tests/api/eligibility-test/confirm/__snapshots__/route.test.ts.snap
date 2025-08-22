@@ -32,6 +32,7 @@ exports[`POST /eligibility-test/confirm should return fetched data 1`] = `
     "nom": "DUPOND",
     "nom_complet": "MANON DUPOND",
     "organisme": "MSA",
+    "pdf_base_64": "ZXhhbXBsZS1kZg==",
     "prenom": "MANON",
     "refuser": false,
     "situation": "jeune",

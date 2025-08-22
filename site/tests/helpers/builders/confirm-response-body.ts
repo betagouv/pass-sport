@@ -60,6 +60,7 @@ export const buildConfirmResponseBody = ({
       uuid_doc: null,
       refuser: false,
       nom_complet: 'MANON DUPOND',
+      pdf_base_64: 'test-base-64',
     },
   ];
 };
