@@ -59,6 +59,13 @@
     border-radius: 0 8px 8px 0;
   }
 
+  &__accordions {
+    width: 66.67%;
+    align-self: center;
+    margin-top: -32px;
+  }
+
+
   @media screen and (max-width: $lg) {
     flex-direction: column-reverse;
     height: auto;
@@ -71,6 +78,10 @@
       padding: 24px 0;
       height: auto;
       justify-content: initial;
+    }
+
+    &__accordions {
+      width: 100%;
     }
 
     img {
@@ -86,8 +97,18 @@
   width: 66.67%;
   align-self: center;
 
+  &__accordions {
+    width: 66.67%;
+    align-self: center;
+    margin-top: -16px;
+  }
+
   @media screen and (max-width: $lg) {
     width: 100%;
+
+    &__accordions {
+      width: 100%;
+    }
   }
 }
 

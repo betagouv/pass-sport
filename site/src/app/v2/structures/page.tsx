@@ -9,6 +9,9 @@ import Image from 'next/image';
 import athletism from '@/images/structures/athletism.webp';
 import simonRunning from '@/images/structures/simon-running.webp';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
+import Accordion from '@codegouvfr/react-dsfr/Accordion';
+import { AccordionsKitCommunication } from '@/app/v2/structures/components/AccordionsKitCommunication';
+import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -72,11 +75,10 @@ export default function Page() {
           className={styles['become-partner-section']}
         >
           <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
-          <p>
-            En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
-            partenaire du dispositif. Des tutoriels seront bientôt à votre disposition sur cet
-            espace pour faciliter votre engagement dans le déploiement du pass Sport.
-          </p>
+        </section>
+
+        <section className={styles['become-partner-section__accordions']}>
+          <AccordionsFaq />
         </section>
 
         <section
@@ -97,13 +99,11 @@ export default function Page() {
               l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
               dispositif.
             </p>
-
-            <span>
-              <Link href="/v2/partenaires" className="fr-link ">
-                Accédez aux ressources
-              </Link>
-            </span>
           </div>
+        </section>
+
+        <section className={styles['communication-kit-section__accordions']}>
+          <AccordionsKitCommunication />
         </section>
 
         <section
