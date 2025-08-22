@@ -101,7 +101,10 @@ export default function Page() {
             </section>
           </div>
 
-          <div className={styles['eligibility-section']}>
+          <section
+            className={styles['eligibility-section']}
+            id={SKIP_LINKS_ID.eligibilityTestButton}
+          >
             <div className={cn('fr-container', styles['eligibility-section__wrapper'])}>
               <SimplifiedEligibilityTest
                 display="row"
@@ -111,7 +114,7 @@ export default function Page() {
                 displaySeparator={false}
               />
             </div>
-          </div>
+          </section>
         </section>
 
         <section id={JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB} className={styles['find-club-section']}>

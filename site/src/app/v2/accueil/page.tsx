@@ -128,7 +128,7 @@ export default async function Accueil() {
           <GuidingBlock {...guidingBlocks2} />
         </section>
 
-        <section>
+        <section id={SKIP_LINKS_ID.eligibilityTestButton}>
           <div className={styles['eligibility-section']}>
             <div
               className={cn(
