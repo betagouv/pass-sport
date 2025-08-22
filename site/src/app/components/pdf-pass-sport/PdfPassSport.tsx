@@ -188,13 +188,6 @@ function getAsset(filename: string) {
 export default function PdfPassSport({
   benef: { firstname, lastname, dob, code, gender },
 }: PdfPassSportProps) {
-  // todo: to remove when ready
-  // const firstname = 'X';
-  // const lastname = 'X';
-  // const gender = 'M';
-  // const code = 'XX-XXXX-XXXX';
-  // const dob = '2025-12-31';
-
   return (
     <Document>
       <Page size="A4" style={styles.page} orientation="landscape">
