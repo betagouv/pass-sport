@@ -53,7 +53,7 @@ export default function Page() {
             <AccordionsSocialMediasVisuals />
           </section>
           <section className={styles['resources__accordions-item']}>
-            <WebsiteAccordions />
+            <WebsiteAccordions titleAs="h3" />
           </section>
           <section className={styles['resources__accordions-item']}>
             <AccordionsLogos />

@@ -1,22 +1,22 @@
 'use client';
 
-import Accordion from '@codegouvfr/react-dsfr/Accordion';
-import Link from 'next/link';
+import Accordion, { AccordionProps } from '@codegouvfr/react-dsfr/Accordion';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
-export default function AccordionKakemono() {
+type AccordionKakemonoProps = {
+  titleAs: AccordionProps['titleAs'];
+};
+
+export default function AccordionKakemono({ titleAs }: AccordionKakemonoProps) {
   return (
-    <Accordion label="Kakémono" expanded={false} onExpandedChange={() => {}}>
+    <Accordion label="Kakémono" expanded={false} onExpandedChange={() => {}} titleAs={titleAs}>
       <ul className="fr-pl-4w">
         <li>
-          <Link
+          <DownloadLink
+            details="PDF ~ 84.6 KB"
+            label="Kakémono"
             href="/assets/partenaires/kakemono/kakemono_pass_sport_2025.pdf"
-            className="fr-link"
-            download="kakemono_pass_sport_2025.pdf"
-            target="_blank"
-          >
-            Kakémono
-          </Link>
-          <p className="fr-mt-1v fr-text--xs fr-mb-0">PDF ~ 84.6 KB</p>
+          />
         </li>
       </ul>
     </Accordion>

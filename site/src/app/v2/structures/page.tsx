@@ -100,7 +100,7 @@ export default function Page() {
           />
 
           <div className={styles['communication-kit-section__description']}>
-            <h1>Téléchargez votre kit de communication</h1>
+            <h2>Téléchargez votre kit de communication</h2>
             <p>
               Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré un ensemble
               d&apos;outils et supports de communication qui sont mis à disposition de

@@ -2,67 +2,48 @@
 
 import Accordion from '@codegouvfr/react-dsfr/Accordion';
 import Link from 'next/link';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export default function AccordionsSocialMediasVisuals() {
   return (
     <>
-      <Accordion label="Pour les réseaux sociaux" onExpandedChange={() => {}}>
+      <Accordion label="Pour les réseaux sociaux" onExpandedChange={() => {}} titleAs="h3">
         <p>Visuels (format publication)</p>
         <ul className="fr-pl-4w">
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/structures_sportives_visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              className="fr-link"
-              download="structures_sportives_visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              target="_blank"
-            >
-              Télécharger le visuel à destination des jeunes
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">jpg ~ 208 KB</p>
+              label="Télécharger le visuel à destination des jeunes"
+              details="jpg ~ 208 KB"
+            />
           </li>
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/structures_sportives_visuel_pour_communiquer_aupres_des_parents.jpg"
-              className="fr-link"
-              download="structures_sportives_visuel_pour_communiquer_aupres_des_parents.jpg"
-              target="_blank"
-            >
-              Télécharger le visuel à destination des parents
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">jpg ~ 220 KB</p>
+              label="Télécharger le visuel à destination des parents"
+              details="jpg ~ 220 KB"
+            />
           </li>
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_etudiants_boursiers.jpg"
-              className="fr-link"
-              download="visuel_pour_communiquer_aupres_des_etudiants_boursiers.jpg"
-              target="_blank"
-            >
-              Télécharger le visuel à destination des étudiants boursiers
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">jpg ~ 226 KB</p>
+              label="Télécharger le visuel à destination des étudiants boursiers"
+              details="jpg ~ 226 KB"
+            />
           </li>
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_beneficiaires_aah.jpg"
-              className="fr-link"
-              download="visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              target="_blank"
-            >
-              Télécharger le visuel à destination des 16-30 ans en situation de handicap
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">jpg ~ 258 KB</p>
+              label="Télécharger le visuel à destination des 16-30 ans en situation de handicap"
+              details="jpg ~ 258 KB"
+            />
           </li>
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_parents_de_beneficiaires_aeeh.jpg"
-              className="fr-link"
-              download="visuel_pour_les_parents_de_beneficiaires_aeeh.jpg"
-              target="_blank"
-            >
-              Télécharger le visuel à destination des 6-19 ans en situation de handicap
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">jpg ~ 257 KB</p>
+              label="Télécharger le visuel à destination des 6-19 ans en situation de handicap"
+              details="jpg ~ 264 KB"
+            />
           </li>
         </ul>
         <p>Vidéos de présentation du pass Sport avec athlètes (format story ou reel)</p>

@@ -1,45 +1,33 @@
 'use client';
 
 import Accordion from '@codegouvfr/react-dsfr/Accordion';
-import Link from 'next/link';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export function AccordionsLogos() {
   return (
     <>
-      <Accordion label="Logo" expanded={false} onExpandedChange={() => {}}>
+      <Accordion label="Logo" expanded={false} onExpandedChange={() => {}} titleAs="h3">
         <ul className="fr-pl-4w">
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/logos/charte_utilisation_des_logos_pass_sport.pdf"
-              className="fr-link"
-              target="_blank"
-              download="charte_utilisation_des_logos_pass_sport.pdf"
-            >
-              Charte d&apos;utilisation
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">PDF ~ 5.3 MB</p>
+              label="Charte d'utilisation"
+              details="PDF ~ 5.3 MB"
+            />
           </li>
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/logos/logo_bleu_principal.png"
-              className="fr-link"
-              target="_blank"
-              download="logo_bleu_principal.png"
-            >
-              Logo bleu (principal)
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">png ~ 7.6 KB</p>
+              label="Logo bleu (principal)"
+              details="png ~ 7.6 KB"
+            />
           </li>
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/logos/logo_blanc_secondaire.png"
-              className="fr-link"
-              target="_blank"
-              download="logo_blanc_secondaire.png"
-            >
-              Logo blanc (secondaire)
-            </Link>
-            <p className="fr-mt-1v fr-text--xs fr-mb-0">png ~ 34.7 KB</p>
+              label="Logo blanc (secondaire)"
+              details="png ~ 34.7 KB"
+            />
           </li>
         </ul>
       </Accordion>

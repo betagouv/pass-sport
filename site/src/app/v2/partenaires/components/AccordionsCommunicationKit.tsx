@@ -1,8 +1,8 @@
 'use client';
 
 import Accordion from '@codegouvfr/react-dsfr/Accordion';
-import Link from 'next/link';
 import AccordionKakemono from '@/app/v2/partenaires/components/AccordionKakemono';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export default function AccordionsCommunicationKit() {
   return (
@@ -11,15 +11,11 @@ export default function AccordionsCommunicationKit() {
       <Accordion label="Affiches à destination des jeunes - A3" onExpandedChange={() => {}}>
         <ul className="fr-pl-4w">
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/affiches/partenaires_affiche_destination_des_jeunes.pdf"
-              className="fr-link"
-              download="partenaires_affiche_destination_des_jeunes.pdf"
-              target="_blank"
-            >
-              Affiches à destination des jeunes - A3
-            </Link>
-            <p className="fr-mt-1v fr-text--xs fr-mb-0">PDF ~ 80.5 KB</p>
+              label="Affiches à destination des jeunes - A3"
+              details="PDF ~ 220 KB"
+            />
           </li>
         </ul>
       </Accordion>
@@ -27,15 +23,11 @@ export default function AccordionsCommunicationKit() {
       <Accordion label="Affiches à destination des parents - A3" onExpandedChange={() => {}}>
         <ul className="fr-pl-4w">
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/affiches/partenaires_affiche_destination_des_parents.pdf"
-              className="fr-link"
-              download="partenaires_affiche_destination_des_parents.pdf"
-              target="_blank"
-            >
-              Affiches à destination des parents - A3
-            </Link>
-            <p className="fr-mt-1v fr-text--xs fr-mb-0">PDF ~ 223 KB</p>
+              label="Affiches à destination des parents - A3"
+              details="PDF ~ 223 KB"
+            />
           </li>
         </ul>
       </Accordion>
@@ -46,19 +38,15 @@ export default function AccordionsCommunicationKit() {
       >
         <ul className="fr-pl-4w">
           <li>
-            <Link
+            <DownloadLink
               href="/assets/partenaires/flyers/flyer_pass_sport_2025.pdf"
-              className="fr-link"
-              download="flyer_pass_sport_2025.pdf"
-              target="_blank"
-            >
-              Flyer pass Sport à distribuer - A4
-            </Link>
-            <p className="fr-mt-1v fr-text--xs fr-mb-0">PDF ~ 106 KB</p>
+              label="Flyer pass Sport à distribuer - A4"
+              details="PDF ~ 106 KB"
+            />
           </li>
         </ul>
       </Accordion>
-      <AccordionKakemono />
+      <AccordionKakemono titleAs="h3" />
     </>
   );
 }
