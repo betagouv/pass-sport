@@ -78,11 +78,16 @@ export default function Page() {
           className={styles['become-partner-section']}
         >
           <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
+          <p>
+            En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
+            partenaire du dispositif. Des tutoriels seront bientôt à votre disposition sur cet
+            espace pour faciliter votre engagement dans le déploiement du pass Sport.
+          </p>
         </section>
 
-        <section className={styles['become-partner-section__accordions']}>
-          <AccordionsBecomePartner />
-        </section>
+        {/*<section className={styles['become-partner-section__accordions']}>*/}
+        {/*  <AccordionsBecomePartner />*/}
+        {/*</section>*/}
 
         <section
           id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
@@ -211,19 +216,20 @@ export default function Page() {
           </div>
         </section>
 
-        <section id={STRUCTURE_PAGE_ANCHORS.FAQ} className={styles['faq-section']}>
-          <h2 className="fr-mb-2w">Une question ?</h2>
-          <AccordionsFaq />
+        {/* todo: to update later */}
+        {/*<section id={STRUCTURE_PAGE_ANCHORS.FAQ} className={styles['faq-section']}>*/}
+        {/*  <h2 className="fr-mb-2w">Une question ?</h2>*/}
+        {/*  <AccordionsFaq />*/}
 
-          <p className="fr-mt-4w">
-            <Link
-              href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.PRO}`}
-              className="fr-link fr-link--icon-right fr-icon-arrow-right-line"
-            >
-              Voir plus de questions
-            </Link>
-          </p>
-        </section>
+        {/*  <p className="fr-mt-4w">*/}
+        {/*    <Link*/}
+        {/*      href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.PRO}`}*/}
+        {/*      className="fr-link fr-link--icon-right fr-icon-arrow-right-line"*/}
+        {/*    >*/}
+        {/*      Voir plus de questions*/}
+        {/*    </Link>*/}
+        {/*  </p>*/}
+        {/*</section>*/}
 
         <section className={styles['decret-section']}>
           <h1 className="fr-h4">Texte de référence</h1>

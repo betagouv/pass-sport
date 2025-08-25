@@ -4,7 +4,10 @@ import Link from 'next/link';
 export function AccordionsBecomePartner() {
   return (
     <>
-      <Accordion label="J’étais partenaire du dispositif l’année dernière">
+      <Accordion
+        label="J’étais partenaire du dispositif l’année dernière"
+        onExpandedChange={() => {}}
+      >
         <p>Vous avez juste à mettre à jour sur votre Compte Asso avec :</p>
         <ul className="fr-pl-4w">
           <li>
@@ -35,11 +38,33 @@ export function AccordionsBecomePartner() {
         </ul>
       </Accordion>
 
-      <Accordion label="Vous êtes une structure affiliée à l’une des 120 fédérations sportives et 22 groupements nationaux agréés par le ministère des Sports, de la Jeunesse et de la Vie associative"></Accordion>
-      <Accordion label="Je suis une structure agrée Sport ou Jeunesse Éducation Populaire et propose une activité physique et sportive tout au long de l’année"></Accordion>
-      <Accordion label="Je suis un Loisir Sportif Marchand ayant signé la charte d’engagement proposée par le ministère des Sports, de la Jeunesse et de la Vie associative"></Accordion>
-      <Accordion label="Je ne sais pas à quel type de structure j’appartiens"></Accordion>
-      <Accordion label="Je n’appartiens à aucune de ces structures"></Accordion>
+      <Accordion
+        label="Vous êtes une structure affiliée à l’une des 120 fédérations sportives et 22 groupements nationaux agréés par le ministère des Sports, de la Jeunesse et de la Vie associative"
+        onExpandedChange={() => {}}
+      >
+        <p></p>
+      </Accordion>
+      <Accordion
+        label="Je suis une structure agrée Sport ou Jeunesse Éducation Populaire et propose une activité physique et sportive tout au long de l’année"
+        onExpandedChange={() => {}}
+      >
+        <p></p>
+      </Accordion>
+      <Accordion
+        label="Je suis un Loisir Sportif Marchand ayant signé la charte d’engagement proposée par le ministère des Sports, de la Jeunesse et de la Vie associative"
+        onExpandedChange={() => {}}
+      >
+        <p></p>
+      </Accordion>
+      <Accordion
+        label="Je ne sais pas à quel type de structure j’appartiens"
+        onExpandedChange={() => {}}
+      >
+        <p></p>
+      </Accordion>
+      <Accordion label="Je n’appartiens à aucune de ces structures" onExpandedChange={() => {}}>
+        <p></p>
+      </Accordion>
     </>
   );
 }
