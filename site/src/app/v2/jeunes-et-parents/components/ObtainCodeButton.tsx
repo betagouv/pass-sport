@@ -16,12 +16,13 @@ export default function ObtainCodeButton() {
     CODES_OBTAINABLE && (
       <Button
         className="fr-my-2w"
+        priority="secondary"
         linkProps={{
-          href: '/v2/test-ou-code',
+          href: '/v2/test-eligibilite',
           onClick: onObtainCodeClicked,
         }}
       >
-        Récupérez votre pass Sport
+        Demander le pass Sport
       </Button>
     )
   );

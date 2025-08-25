@@ -24,6 +24,8 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { useRef } from 'react';
 import { useUpdateHeadings } from '@/app/hooks/accessibility/use-update-headings';
 import { FOOTER_CLASSES } from '@/app/constants/dsfr-classes';
+import { shouldDisplayChatbot } from '@/utils/date';
+import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
 
 export default function PassSportFooter() {
   const footerRef = useRef<HTMLDivElement>(null);
@@ -231,6 +233,7 @@ export default function PassSportFooter() {
     },
   ];
 
+  // @ts-ignore
   const linkList: FooterProps.LinkList.List = [
     {
       links: [
@@ -276,28 +279,22 @@ export default function PassSportFooter() {
         },
       ],
     },
-    // {
-    //   links: [
-    //     {
-    //       text: isProVersion ? 'Je suis un particulier' : 'Je suis une structure partenaire',
-    //       linkProps: {
-    //         href: isProVersion ? '/v2/accueil' : '/v2/pro/accueil',
-    //       },
-    //     },
-    //     ...((shouldDisplayChatbot()
-    //       ? [
-    //           {
-    //             text: CHATBOT_EXTERNAL_URL_TITLE,
-    //             linkProps: {
-    //               href: CHATBOT_EXTERNAL_URL,
-    //               target: '_blank',
-    //               title: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
-    //             },
-    //           },
-    //         ]
-    //       : []) as [FooterProps.LinkList.Link] | []),
-    //   ],
-    // },
+    {
+      links: [
+        ...((shouldDisplayChatbot()
+          ? [
+              {
+                text: CHATBOT_EXTERNAL_URL_TITLE,
+                linkProps: {
+                  href: CHATBOT_EXTERNAL_URL,
+                  target: '_blank',
+                  title: `${CHATBOT_EXTERNAL_URL_TITLE} (nouvelle fenêtre)`,
+                },
+              },
+            ]
+          : []) as [FooterProps.LinkList.Link]),
+      ],
+    },
   ];
 
   const domains = ['legifrance.gouv.fr', 'info.gouv.fr', 'service-public.fr', 'data.gouv.fr'];
