@@ -15,6 +15,7 @@ import { AccordionsBecomePartner } from '@/app/v2/structures/components/Accordio
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -78,6 +79,34 @@ export default function Page() {
           className={styles['become-partner-section']}
         >
           <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
+          <p>
+            En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
+            partenaire du dispositif.
+          </p>
+
+          <span>
+            <DownloadLink
+              details="PDF ~ 252 kB"
+              label="Télécharger la notice pass Sport 2025"
+              href="/assets/partenaires/notice-pass-sport-2025.pdf"
+            />
+          </span>
+
+          <p>
+            Des tutoriels seront bientôt à votre disposition sur cet espace pour faciliter votre
+            engagement dans le déploiement du pass Sport.
+          </p>
+
+          <p>
+            Si vous êtes une structure lucrative du loisir sportif marchand, il vous faudra
+            télécharger la charte d’engagement signée dans votre espace sur Le Compte Asso.
+          </p>
+
+          <DownloadLink
+            details="PDF ~ 156 kB"
+            label="Télécharger la charte d’engagement 2025"
+            href="/assets/partenaires/charte-lsm-2025-non-adherents.pdf"
+          />
         </section>
 
         {/*<section className={styles['become-partner-section__accordions']}>*/}

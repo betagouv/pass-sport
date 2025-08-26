@@ -14,7 +14,7 @@ export default function AccordionKakemono({ titleAs }: AccordionKakemonoProps) {
         <li>
           <DownloadLink
             details="PDF ~ 84.6 KB"
-            label="Kakémono"
+            label="Télécharger le kakémono"
             href="/assets/partenaires/kakemono/kakemono_pass_sport_2025.pdf"
           />
         </li>

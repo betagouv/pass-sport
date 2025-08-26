@@ -10,47 +10,46 @@ export default function AccordionsSocialMediasVisuals() {
       <h2 className="fr-mb-2w fr-h6">Réseaux sociaux</h2>
 
       <Accordion label="Visuels (format publication)" onExpandedChange={() => {}}>
-        <p>Visuels (format publication)</p>
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              label="Consulter le visuel à destination des jeunes"
+              label="Télécharger le visuel à destination des jeunes"
               details="jpg ~ 258 KB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_parents.jpg"
-              label="Consulter le visuel à destination des parents"
+              label="Télécharger le visuel à destination des parents"
               details="jpg ~ 265 KB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_etudiants_boursiers.jpg"
-              label="Consulter le visuel à destination des étudiants boursiers"
+              label="Télécharger le visuel à destination des étudiants boursiers"
               details="jpg ~ 226 KB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              label="Consulter le visuel à destination des 14-17 ans bénéficiaires de l'ARS"
+              label="Télécharger le visuel à destination des 14-17 ans bénéficiaires de l'ARS"
               details="jpg ~ 258 KB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_beneficiaires_aah.jpg"
-              label="Consulter le visuel à destination des 16-30 ans en situation de handicap"
+              label="Télécharger le visuel à destination des 16-30 ans en situation de handicap"
               details="jpg ~ 249 KB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_parents_de_beneficiaires_aeeh.jpg"
-              label="Visuel à destination des 6-19 ans en situation de handicap"
+              label="Télécharger le visuel à destination des 6-19 ans en situation de handicap"
               details="jpg ~ 264 KB"
             />
           </li>
@@ -58,7 +57,9 @@ export default function AccordionsSocialMediasVisuals() {
       </Accordion>
 
       <Accordion label="Vidéos de présentation du pass Sport" onExpandedChange={() => {}}>
-        <p>Vidéos de présentation du pass Sport avec athlètes (format story ou reel)</p>
+        <p className="fr-text--bold fr-text--lg">
+          Vidéos de présentation du pass Sport avec athlètes (format story ou reel) :
+        </p>
 
         <ul className="fr-pl-4w">
           <li>
@@ -123,7 +124,9 @@ export default function AccordionsSocialMediasVisuals() {
           </li>
         </ul>
 
-        <p>Vidéos de présentation du pass Sport standard (format story ou reel)</p>
+        <p className="fr-text--bold fr-text--lg">
+          Vidéos de présentation du pass Sport standard (format story ou reel) :
+        </p>
 
         <ul className="fr-pl-4w">
           <li>

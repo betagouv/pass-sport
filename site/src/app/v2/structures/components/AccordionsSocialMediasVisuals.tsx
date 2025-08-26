@@ -8,7 +8,7 @@ export default function AccordionsSocialMediasVisuals() {
   return (
     <>
       <Accordion label="Pour les réseaux sociaux" onExpandedChange={() => {}} titleAs="h3">
-        <p>Visuels (format publication)</p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">Visuels (format publication) :</p>
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
@@ -46,7 +46,9 @@ export default function AccordionsSocialMediasVisuals() {
             />
           </li>
         </ul>
-        <p>Vidéos de présentation du pass Sport avec athlètes (format story ou reel)</p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">
+          Vidéos de présentation du pass Sport avec athlètes (format story ou reel) :
+        </p>
         <ul className="fr-pl-4w">
           <li>
             <Link
@@ -109,7 +111,9 @@ export default function AccordionsSocialMediasVisuals() {
             <p className="fr-mt-1v fr-text--xs">MP4 ~ 38.1 MB</p>
           </li>
         </ul>
-        <p>Vidéos de présentation du pass Sport standard (format story ou reel)</p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">
+          Vidéos de présentation du pass Sport standard (format story ou reel) :
+        </p>
         <ul className="fr-pl-4w">
           <li>
             <Link
@@ -123,7 +127,9 @@ export default function AccordionsSocialMediasVisuals() {
           </li>
         </ul>
 
-        <p>Texte prêt à l&apos;emploi pour accompagner les visuels et vidéos</p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">
+          Texte prêt à l&apos;emploi pour accompagner les visuels et vidéos :
+        </p>
         <ul className="fr-pl-4w">
           <li>
             <Link

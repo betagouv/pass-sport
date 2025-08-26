@@ -11,30 +11,30 @@ export function AccordionsKitCommunication() {
   return (
     <>
       <Accordion label="À afficher ou distribuer" titleAs="h3">
-        <p>Affiches :</p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">Affiches :</p>
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
               href="/assets/partenaires/affiches/structures_sportives_affiche_destination_des_jeunes.pdf"
-              label="Affiche à destination des jeunes - A3"
+              label="Télécharger l'affiche à destination des jeunes - A3"
               details="PDF ~ 80.5 KB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/affiches/structures_sportives_affiche_destination_des_parents.pdf"
-              label="Affiche à destination des parents - A3"
+              label="Télécharger l'affiche à destination des parents - A3"
               details="PDF ~ 79.0 KB"
             />
           </li>
         </ul>
 
-        <p>Flyer :</p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">Flyer :</p>
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
               href="/assets/partenaires/flyers/flyer_pass_sport_2025.pdf"
-              label="Flyer"
+              label="Télécharger le flyer à distribuer - A4"
               details="PDF ~ 106 KB"
             />
           </li>
