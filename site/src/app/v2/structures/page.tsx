@@ -127,9 +127,8 @@ export default function Page() {
             <h2>Téléchargez votre kit de communication</h2>
             <p>
               Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré un ensemble
-              d&apos;outils et supports de communication qui sont mis à disposition de
-              l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
-              dispositif.
+              d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
+              peuvent être utilisés pour assurer la promotion du dispositif.
             </p>
           </div>
         </section>

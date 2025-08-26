@@ -148,14 +148,11 @@ export default function AccordionsSocialMediasVisuals() {
       >
         <ul className="fr-pl-4w">
           <li>
-            <Link
-              href="https://1drv.ms/b/c/b345885e8d90b69e/EUZu3VxBcypPg5tiVKbxu64BkK79QiDOZ1B-lOjXmkyybw?e=VI0xCP"
-              className="fr-link"
-              target="_blank"
-            >
-              Télécharger le texte prêt à l&apos;emploi pour Instagram et Facebook
-            </Link>
-            <p className="fr-mt-1v fr-text--xs fr-mb-0">PDF ~ 145 KB</p>
+            <DownloadLink
+              details="PDF ~ 145 KB"
+              label={"Télécharger le texte prêt à l'emploi pour Instagram et Facebook"}
+              href="/assets/partenaires/publications-pretes-a-l-emploi-pour-accompagner-les-visuels-pass-sport.pdf"
+            />
           </li>
         </ul>
       </Accordion>
