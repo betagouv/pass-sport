@@ -18,7 +18,7 @@ export default function WebsiteAccordions({
 
       <Accordion label="Pour les sites internet" onExpandedChange={() => {}} titleAs={titleAs}>
         <ul className="fr-pl-4w">
-          <li>
+          <li className="fr-mb-1w">
             <Link href="https://youtu.be/iXjgePcJFQI" className="fr-link" target="_blank">
               Consulter la vidéo de présentation (avec athlètes)
             </Link>

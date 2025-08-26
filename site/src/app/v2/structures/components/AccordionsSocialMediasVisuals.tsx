@@ -12,103 +12,45 @@ export default function AccordionsSocialMediasVisuals() {
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/structures_sportives_visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              label="Télécharger le visuel à destination des jeunes"
-              details="jpg ~ 208 KB"
+              label="Télécharger la vidéo à destination de présentation 50 secondes"
+              details="MP4 ~ 99.1 MB"
+              href="/assets/partenaires/videos/video-presentation-50-secondes.mp4"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/structures_sportives_visuel_pour_communiquer_aupres_des_parents.jpg"
-              label="Télécharger le visuel à destination des parents"
-              details="jpg ~ 220 KB"
+              label="Télécharger la vidéo à destination de présentation 30 secondes"
+              details="MP4 ~ 2.5 MB"
+              href="/assets/partenaires/videos/video-presentation-30-secondes.mp4"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_etudiants_boursiers.jpg"
-              label="Télécharger le visuel à destination des étudiants boursiers"
-              details="jpg ~ 226 KB"
+              label="Télécharger la vidéo à destination des salles de sport"
+              details="MP4 ~ 30.5 MB"
+              href="/assets/partenaires/videos/video-salles-de-sport.mp4"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_beneficiaires_aah.jpg"
-              label="Télécharger le visuel à destination des 16-30 ans en situation de handicap"
-              details="jpg ~ 258 KB"
+              label="Télécharger la vidéo à destination des étudiants boursiers"
+              details="MP4 ~ 2.7 MB"
+              href="/assets/partenaires/videos/video-etudiants-boursiers.mp4"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_parents_de_beneficiaires_aeeh.jpg"
-              label="Télécharger le visuel à destination des 6-19 ans en situation de handicap"
-              details="jpg ~ 264 KB"
+              label="Télécharger la vidéo à destination des 14-17 ans bénéficiaires de l’ARS"
+              details="MP4 ~ 29.7 MB"
+              href="/assets/partenaires/videos/video-14-17-ans-ars.mp4"
             />
           </li>
-        </ul>
-        <p className="fr-text--bold fr-text--lg fr-mb-0">
-          Vidéos de présentation du pass Sport avec athlètes (format story ou reel) :
-        </p>
-        <ul className="fr-pl-4w">
           <li>
-            <Link
-              href="https://1drv.ms/v/c/b345885e8d90b69e/Ea0Wkw_f_BZHg_rhL2xh530Bq295t_BreWb8qLZAennF-g?e=a1otUv"
-              className="fr-link"
-              target="_blank"
-            >
-              Consulter la vidéo à destination de présentation 50 secondes
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">MP4 ~ 99.1 MB</p>
-          </li>
-          <li>
-            <Link
-              href="https://1drv.ms/v/c/b345885e8d90b69e/Ec5X9oOWz1pIhyMW3olHBtMBxIj5j3J41T4cRZCo1Kjevg?e=MRfVzQ"
-              className="fr-link"
-              target="_blank"
-            >
-              Consulter la vidéo à destination de présentation 30 secondes
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">MP4 ~ 2.5 MB</p>
-          </li>
-          <li>
-            <Link
-              href="https://1drv.ms/v/c/b345885e8d90b69e/EebSPmkyLW1Atqiclv6Lln0BWdVruEY4bxiTchwAJiSBzw?e=q7ESvr"
-              className="fr-link"
-              target="_blank"
-            >
-              Consulter la vidéo à destination des salles de sport
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">MP4 ~ 30.5 MB</p>
-          </li>
-          <li>
-            <Link
-              href="https://1drv.ms/v/c/b345885e8d90b69e/EQ_hCtM2WOJPtD-CqZ0W6m8BUK_peQLGmp7lRL6FyJXwSQ?e=Z0iUyF"
-              className="fr-link"
-              target="_blank"
-            >
-              Consulter la vidéo à destination des étudiants boursiers
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">MP4 ~ 2.7 MB</p>
-          </li>
-          <li>
-            <Link
-              href="https://1drv.ms/v/c/b345885e8d90b69e/EV4UGABc_BJNvEgjGIAp4p4Bx3afHtaxS9haepVdgsyu2Q?e=qedqzj"
-              className="fr-link"
-              target="_blank"
-            >
-              Consulter la vidéo à destination des 14-17 ans bénéficiaires de l&apos;ARS
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">MP4 ~ 29.7 MB</p>
-          </li>
-          <li>
-            <Link
-              href="https://1drv.ms/v/c/b345885e8d90b69e/EbHXZBbkQAFOvbLLRHq5fvQBQBEAhssVPlHFlLJL5MmgaA?e=lvEh8k"
-              className="fr-link"
-              target="_blank"
-            >
-              Consulter la vidéo à destination des 6-30 ans en situation de handicap
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">MP4 ~ 38.1 MB</p>
+            <DownloadLink
+              label="Télécharger la vidéo à destination des 6-30 ans en situation de handicap"
+              details="MP4 ~ 38.1 MB"
+              href="/assets/partenaires/videos/video-aah.mp4"
+            />
           </li>
         </ul>
         <p className="fr-text--bold fr-text--lg fr-mb-0">
@@ -116,14 +58,11 @@ export default function AccordionsSocialMediasVisuals() {
         </p>
         <ul className="fr-pl-4w">
           <li>
-            <Link
-              href="https://1drv.ms/v/c/b345885e8d90b69e/EagfPhJYiRxMgywHV9dWr2MBFys15UcCJ8d64ro4dy-eGw?e=eCZ6rX"
-              className="fr-link"
-              target="_blank"
-            >
-              Consulter la vidéo de présentation standard
-            </Link>
-            <p className="fr-mt-1v fr-text--xs">MP4 ~ 2.4 MB</p>
+            <DownloadLink
+              label="Télécharger la vidéo de présentation standard"
+              details="MP4 ~ 2.4 MB"
+              href="/assets/partenaires/videos/video-presentation-standard.mp4"
+            />
           </li>
         </ul>
 
