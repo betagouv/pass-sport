@@ -129,7 +129,7 @@ export default function AccordionsSocialMediasVisuals() {
           <li>
             <DownloadLink
               details="PDF ~ 145 KB"
-              label={"Télécharger le texte prêt à l'emploi pour Instagram et Facebook"}
+              label={"Télécharger le texte prêt à l'emploi pour les réseaux sociaux"}
               href="/assets/partenaires/publications-pretes-a-l-emploi-pour-accompagner-les-visuels-pass-sport.pdf"
             />
           </li>
