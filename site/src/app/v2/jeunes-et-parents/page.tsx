@@ -142,7 +142,6 @@ export default function Page() {
                   <Link
                     href="/v2/trouver-un-club"
                     className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
-                    target="_blank"
                   >
                     Liste de structures sportives partenaires
                   </Link>
