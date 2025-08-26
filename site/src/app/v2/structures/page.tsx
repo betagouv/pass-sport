@@ -78,11 +78,6 @@ export default function Page() {
           className={styles['become-partner-section']}
         >
           <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
-          <p>
-            En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
-            partenaire du dispositif. Des tutoriels seront bientôt à votre disposition sur cet
-            espace pour faciliter votre engagement dans le déploiement du pass Sport.
-          </p>
         </section>
 
         {/*<section className={styles['become-partner-section__accordions']}>*/}
