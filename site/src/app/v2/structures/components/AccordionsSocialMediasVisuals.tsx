@@ -12,14 +12,14 @@ export default function AccordionsSocialMediasVisuals() {
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
-              label="Télécharger la vidéo à destination de présentation 50 secondes"
+              label="Télécharger la vidéo de présentation 50 secondes"
               details="MP4 ~ 99.1 MB"
               href="/assets/partenaires/videos/video-presentation-50-secondes.mp4"
             />
           </li>
           <li>
             <DownloadLink
-              label="Télécharger la vidéo à destination de présentation 30 secondes"
+              label="Télécharger la vidéo de présentation 30 secondes"
               details="MP4 ~ 2.5 MB"
               href="/assets/partenaires/videos/video-presentation-30-secondes.mp4"
             />
