@@ -9,6 +9,13 @@ import Image from 'next/image';
 import athletism from '@/images/structures/athletism.webp';
 import simonRunning from '@/images/structures/simon-running.webp';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
+import Accordion from '@codegouvfr/react-dsfr/Accordion';
+import { AccordionsKitCommunication } from '@/app/v2/structures/components/AccordionsKitCommunication';
+import { AccordionsBecomePartner } from '@/app/v2/structures/components/AccordionsBecomePartner';
+import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
+import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
+import { DISPLAY_TYPE } from '@/app/constants/display-type';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -74,10 +81,37 @@ export default function Page() {
           <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
           <p>
             En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
-            partenaire du dispositif. Des tutoriels seront bientôt à votre disposition sur cet
-            espace pour faciliter votre engagement dans le déploiement du pass Sport.
+            partenaire du dispositif.
           </p>
+
+          <span>
+            <DownloadLink
+              details="PDF ~ 252 kB"
+              label="Télécharger la notice pass Sport 2025"
+              href="/assets/partenaires/notice-pass-sport-2025.pdf"
+            />
+          </span>
+
+          <p>
+            Des tutoriels seront bientôt à votre disposition sur cet espace pour faciliter votre
+            engagement dans le déploiement du pass Sport.
+          </p>
+
+          <p>
+            Si vous êtes une structure lucrative du loisir sportif marchand, il vous faudra
+            télécharger la charte d’engagement signée dans votre espace sur Le Compte Asso.
+          </p>
+
+          <DownloadLink
+            details="PDF ~ 156 kB"
+            label="Télécharger la charte d’engagement 2025"
+            href="/assets/partenaires/charte-lsm-2025-non-adherents.pdf"
+          />
         </section>
+
+        {/*<section className={styles['become-partner-section__accordions']}>*/}
+        {/*  <AccordionsBecomePartner />*/}
+        {/*</section>*/}
 
         <section
           id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
@@ -90,20 +124,17 @@ export default function Page() {
           />
 
           <div className={styles['communication-kit-section__description']}>
-            <h1>Téléchargez votre kit de communication</h1>
+            <h2>Téléchargez votre kit de communication</h2>
             <p>
               Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré un ensemble
-              d&apos;outils et supports de communication qui sont mis à disposition de
-              l&apos;ensemble des acteurs et peuvent être utilisés pour assurer la promotion du
-              dispositif.
+              d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
+              peuvent être utilisés pour assurer la promotion du dispositif.
             </p>
-
-            <span>
-              <Link href="/v2/partenaires" className="fr-link ">
-                Accédez aux ressources
-              </Link>
-            </span>
           </div>
+        </section>
+
+        <section className={styles['communication-kit-section__accordions']}>
+          <AccordionsKitCommunication />
         </section>
 
         <section
@@ -208,12 +239,27 @@ export default function Page() {
           </div>
         </section>
 
+        {/* todo: to update later */}
+        {/*<section id={STRUCTURE_PAGE_ANCHORS.FAQ} className={styles['faq-section']}>*/}
+        {/*  <h2 className="fr-mb-2w">Une question ?</h2>*/}
+        {/*  <AccordionsFaq />*/}
+
+        {/*  <p className="fr-mt-4w">*/}
+        {/*    <Link*/}
+        {/*      href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.PRO}`}*/}
+        {/*      className="fr-link fr-link--icon-right fr-icon-arrow-right-line"*/}
+        {/*    >*/}
+        {/*      Voir plus de questions*/}
+        {/*    </Link>*/}
+        {/*  </p>*/}
+        {/*</section>*/}
+
         <section className={styles['decret-section']}>
           <h1 className="fr-h4">Texte de référence</h1>
           <Link
             href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
             target="_blank"
-            className="align-self--baseline"
+            className="align-self--baseline fr-link"
             aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"
           >
             Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025

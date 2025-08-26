@@ -5,8 +5,10 @@ import PageTitle from '@/components/PageTitle/PageTitle';
 import Image from 'next/image';
 import athletism from '@/images/structures/athletism.webp';
 import cn from 'classnames';
-import CommunicationKitAccordions from '@/app/v2/partenaires/components/CommunicationKitAccordions';
-import SocialMediasVisualsAccordions from '@/app/v2/partenaires/components/SocialMediasVisualsAccordions';
+import AccordionsCommunicationKit from '@/app/v2/partenaires/components/AccordionsCommunicationKit';
+import AccordionsSocialMediasVisuals from '@/app/v2/partenaires/components/AccordionsSocialMediasVisuals';
+import WebsiteAccordions from '@/app/v2/partenaires/components/AccordionsWebsites';
+import { AccordionsLogos } from '@/app/v2/partenaires/components/AccordionsLogos';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -41,15 +43,20 @@ export default function Page() {
             d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
             peuvent être utilisés pour assurer la promotion du dispositif.
           </p>
-          <p>Cette page sera complétée progressivement d&apos;ici le 1er septembre.</p>
         </section>
 
         <section className={styles['resources__accordions-section']}>
           <section className={styles['resources__accordions-item']}>
-            <CommunicationKitAccordions />
+            <AccordionsCommunicationKit />
           </section>
           <section className={styles['resources__accordions-item']}>
-            <SocialMediasVisualsAccordions />
+            <AccordionsSocialMediasVisuals />
+          </section>
+          <section className={styles['resources__accordions-item']}>
+            <WebsiteAccordions titleAs="h3" />
+          </section>
+          <section className={styles['resources__accordions-item']}>
+            <AccordionsLogos />
           </section>
         </section>
       </div>

@@ -4,4 +4,5 @@ export const STRUCTURE_PAGE_ANCHORS = {
   LE_COMPTE_ASSO_ACCOUNT: 'le-compte-asso-account',
   INPUT_CODES: 'input-codes',
   GET_REFUNDS: 'get-refunds',
+  FAQ: 'faq',
 };
