@@ -16,3 +16,10 @@ export function matchExactDrajes(input: string): boolean {
 
   return regex.test(input);
 }
+
+// Business rule
+export function matchExactLsm(input: string): boolean {
+  const regex = /\bLSMUSC2025\b/i;
+
+  return regex.test(input);
+}
