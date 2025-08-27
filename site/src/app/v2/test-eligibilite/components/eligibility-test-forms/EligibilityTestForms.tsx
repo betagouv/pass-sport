@@ -47,11 +47,9 @@ const EligibilityTestForms = () => {
 
     switch (eligibilityData[0].organisme) {
       case 'cnous':
-        return 'Vous êtes étudiant boursier';
       case 'CAF':
-        return 'Vous êtes affilié à la CAF';
       case 'MSA':
-        return 'Vous êtes affilié à la MSA';
+        return 'Votre caisse d’allocation';
       default:
         return '';
     }

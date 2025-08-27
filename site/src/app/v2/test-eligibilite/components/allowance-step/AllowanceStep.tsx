@@ -90,13 +90,10 @@ const AllowanceStep = () => {
   const getStepCheckerName = useCallback(() => {
     switch (allowance) {
       case ALLOWANCE.AAH:
-        return 'Vous bénéficiez de l’AAH';
       case ALLOWANCE.AEEH:
-        return 'Vous bénéficiez de l’AEEH';
       case ALLOWANCE.ARS:
-        return 'Vous bénéficiez de l’ARS';
       case ALLOWANCE.CROUS:
-        return 'Vous êtes étudiant boursier';
+        return 'Vos informations d’éligibilité';
       default:
         return '';
     }
@@ -130,13 +127,6 @@ const AllowanceStep = () => {
             </>
           )}
 
-          {benefIsEligible && (
-            <CorrectiveInfo
-              situation={eligibilityData?.[0]?.situation}
-              originalAllowance={originalAllowance}
-            />
-          )}
-
           {isValidated && allowance === ALLOWANCE.NONE && (
             <StepChecker title={`Vous ne bénéficiez d'aucune aide`} onClick={restartTest} />
           )}
@@ -161,7 +151,7 @@ const AllowanceStep = () => {
                     setDob(e.target.value ?? undefined);
                   },
                 }}
-                hintText="Personne à qui le pass est destiné."
+                hintText="Personne à qui le pass Sport est destiné."
                 state={dobState}
                 stateRelatedMessage={dobStateRelatedMessages}
               />
@@ -322,8 +312,14 @@ const AllowanceStep = () => {
             >
               <Alert
                 severity="info"
-                title="Les étudiants boursiers ne pourront obtenir leur code qu’à partir du 1er novembre"
-                description="Nous nous excusons de la gêne occasionnée. "
+                title="Les étudiants boursiers pourront obtenir leur code progressivement à partir du 1er novembre."
+                description={
+                  <p>
+                    Vous les recevrez directement dans votre boite courriel.
+                    <br />
+                    Nous nous excusons pour la gêne occasionnée.
+                  </p>
+                }
               />
             </div>
           )}

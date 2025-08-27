@@ -162,7 +162,8 @@ const StepOneForm = ({
       case ALLOWANCE.AAH:
         return (
           <>
-            Nom de famille du bénéficiaire <span className="text--required">*</span>
+            Nom de famille de l&apos;enfant ou du jeune adulte bénéficiaire{' '}
+            <span className="text--required">*</span>
           </>
         );
       case ALLOWANCE.ARS:
@@ -227,7 +228,7 @@ const StepOneForm = ({
               </>
             ) : (
               <>
-                Format attendu : Votre nom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
+                Format attendu : Le nom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
                 <MSA />
               </>
             )
@@ -265,8 +266,8 @@ const StepOneForm = ({
               </>
             ) : (
               <>
-                Format attendu : Votre prénom tel qu’il est écrit sur vos papiers de la <CAF /> ou
-                la <MSA />
+                Format attendu : Le prénom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
+                <MSA />
               </>
             )
           }
