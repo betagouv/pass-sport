@@ -123,7 +123,21 @@
 
 .decret-section {
   width: 66.67%;
-  margin: 0 auto 48px auto;
+  margin: 48px auto 48px auto;
+
+  @media screen and (max-width: $lg) {
+    width: 100%;
+  }
+}
+
+.activate-code-section__image {
+  max-height: 400px;
+}
+
+.faq-section {
+  width: 66.67%;
+  align-self: center;
+  margin: 0 auto;
 
   @media screen and (max-width: $lg) {
     width: 100%;
