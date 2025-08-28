@@ -36,7 +36,7 @@ export default function AccordionsSocialMediasVisuals() {
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_jeunes.jpg"
               label="Télécharger le visuel à destination des 14-17 ans bénéficiaires de l'ARS"
-              details="jpg ~ 258 KB"
+              details="jpg ~ 260 KB"
             />
           </li>
           <li>
