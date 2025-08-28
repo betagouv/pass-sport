@@ -224,12 +224,12 @@ const StepOneForm = ({
           hintText={
             isDirectBeneficiary ? (
               <>
-                Format attendu : Votre nom tel qu’il est écrit sur vos papiers du <CROUS />
+                Format attendu : Nom tel qu’il est écrit sur vos papiers du <CROUS />.
               </>
             ) : (
               <>
-                Format attendu : Le nom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
-                <MSA />
+                Format attendu : Nom tel qu’il est écrit sur vos papiers de la <CAF /> ou la <MSA />
+                .
               </>
             )
           }
@@ -262,12 +262,12 @@ const StepOneForm = ({
           hintText={
             isDirectBeneficiary ? (
               <>
-                Format attendu : Votre prénom tel qu’il est écrit sur vos papiers du <CROUS />
+                Format attendu : Prénom tel qu’il est écrit sur vos papiers du <CROUS />.
               </>
             ) : (
               <>
-                Format attendu : Le prénom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
-                <MSA />
+                Format attendu : Prénom tel qu’il est écrit sur vos papiers de la <CAF /> ou la{' '}
+                <MSA />.
               </>
             )
           }

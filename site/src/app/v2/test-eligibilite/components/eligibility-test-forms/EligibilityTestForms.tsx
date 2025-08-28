@@ -55,8 +55,6 @@ const EligibilityTestForms = () => {
     }
   }, [eligibilityData]);
 
-  useAutoCorrectAllowance();
-
   return (
     <>
       {eligibilityData && eligibilityData.length > 0 && (
@@ -78,7 +76,7 @@ const EligibilityTestForms = () => {
 
       {!eligibilityData && (
         <p className="fr-mb-2w fr-ml-n1w">
-          Ces informations nous aideront à connaitre votre caisse d&apos;affiliation.
+          Ces informations nous aideront à connaître votre caisse d&apos;affiliation.
         </p>
       )}
 

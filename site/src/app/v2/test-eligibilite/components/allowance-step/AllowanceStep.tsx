@@ -120,9 +120,9 @@ const AllowanceStep = () => {
           <h2 className="fr-text--bold fr-mb-2w fr-text--xl">Quelle est votre situation ?</h2>
           {(!isValidated || !benefIsEligible) && (
             <>
-              <span className="text--italic">Tous les champs ci-dessous sont obligatoires*</span>
+              <span className="text--italic">Tous les champs ci-dessous sont obligatoires *</span>
               <h3 className="fr-mt-1w fr-mb-2w fr-text--md fr-text--regular">
-                Ces informations nous aideront à connaitre votre éligibilité.
+                Ces informations nous aideront à connaître votre éligibilité.
               </h3>
             </>
           )}
@@ -145,8 +145,11 @@ const AllowanceStep = () => {
                 }
                 nativeInputProps={{
                   type: 'date',
+                  min: '1990-01-01',
+                  max: '2099-12-31',
                   required: true,
                   value: dob,
+                  autoFocus: true,
                   onChange: (e) => {
                     setDob(e.target.value ?? undefined);
                   },
@@ -280,15 +283,23 @@ const AllowanceStep = () => {
               {allowance === ALLOWANCE.AEEH &&
                 dob &&
                 getAeehCodeObtentionType(dob).displayType === AEEH_CODE_OBTENTION_TYPE.LINK && (
-                  <div className="fr-mt-2w">
-                    <Link
-                      href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
-                      className="fr-link fr-link--icon-left fr-icon-mail-line"
-                    >
-                      Contactez-nous pour obtenir votre code
-                    </Link>
-                    <p className="fr-mt-2w">Préparez votre pièce justificative</p>
-                  </div>
+                  <>
+                    <Alert
+                      severity="success"
+                      title="Bonne nouvelle, d'après les informations que vous avez fournies, vous êtes éligible au pass Sport"
+                      aria-live="polite"
+                      description="En raison des politiques de confidentialité mises en place pour la protection de vos données, merci  de nous contacter en préparant votre pièce justificative pour obtenir votre pass Sport."
+                    />
+
+                    <p className="fr-mt-2w">
+                      <Link
+                        href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
+                        className="fr-link fr-link--icon-left fr-icon-mail-line"
+                      >
+                        Contactez-nous pour obtenir votre code
+                      </Link>
+                    </p>
+                  </>
                 )}
 
               {allowance === ALLOWANCE.CROUS && CODES_OBTAINABLE_FOR_CROUS && (

@@ -100,7 +100,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
 
               <p className="fr-text--lg">
                 Code valable jusqu’au <span className="fr-text--bold">31 décembre 2025</span>{' '}
-                (strictement personnel)
+                (strictement personnel).
               </p>
             </div>
             <div className={styles['section-success__image']}>

@@ -75,7 +75,7 @@ const CityFinder = ({
       <label className={rootStyles['text--black']} htmlFor={inputName}>
         {legend}
         <p className={cn('fr-text--xs', styles.hint, 'fr-mb-1w', 'fr-mt-1v')}>
-          Personne responsable du compte gérant l&apos;allocation.
+          Personne responsable du compte de l&apos;allocation.
         </p>
       </label>
 
