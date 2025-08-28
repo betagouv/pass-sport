@@ -232,7 +232,7 @@ body[data-tac] {
 
   /*** Texte du bandeau ***/
   #tarteaucitronDisclaimerAlert {
-    margin-bottom: 2rem;
+    margin-bottom: 8px;
   }
 
 
@@ -251,7 +251,7 @@ body[data-tac] {
   }
 
   #tarteaucitronDisclaimerAlert > p:last-child {
-    margin-bottom: 0;
+    margin-bottom: 1rem;
   }
 
   /*** Bouton fermer le bandeau optionnel (closePopup) ***/
@@ -1082,7 +1082,7 @@ body[data-tac] {
   #tarteaucitronDisclaimerAlert {
     font-size: 1rem !important;
     text-align: left !important;
-    margin: 0;
+    margin-top: 0;
     display: block;
   }
 
