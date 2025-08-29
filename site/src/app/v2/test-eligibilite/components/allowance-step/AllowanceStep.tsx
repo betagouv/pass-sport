@@ -147,7 +147,7 @@ const AllowanceStep = () => {
                 }
                 nativeInputProps={{
                   type: 'date',
-                  min: '1990-01-01',
+                  min: '1950-01-01',
                   max: '2099-12-31',
                   required: true,
                   value: dob,
@@ -234,7 +234,7 @@ const AllowanceStep = () => {
                         Étudiant boursier
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse du CROUS ou bourse régionale pour une formation sanitaire ou
+                          Bourse du CROUS ou bourse régionale pour une formation sanitaire et
                           sociale
                         </span>
                       </p>

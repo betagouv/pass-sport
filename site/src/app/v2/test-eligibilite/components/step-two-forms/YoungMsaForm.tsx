@@ -221,7 +221,7 @@ const YoungMsaForm = ({
           nativeInputProps={{
             name: 'recipientBirthDate',
             type: 'date',
-            min: '1990-01-01',
+            min: '1950-01-01',
             max: '2099-12-31',
             'aria-label': "Saisir la date de naissance de l'allocataire",
             required: true,

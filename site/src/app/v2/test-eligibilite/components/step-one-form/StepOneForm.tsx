@@ -163,19 +163,45 @@ const StepOneForm = ({
         return (
           <>
             Nom de famille de l&apos;enfant ou du jeune adulte bénéficiaire{' '}
-            <span className="text--required">*</span>
+            <span className="text--required">*</span>{' '}
           </>
         );
+      case ALLOWANCE.AEEH:
       case ALLOWANCE.ARS:
         return (
           <>
-            Nom de famille de votre enfant <span className="text--required">*</span>
+            Nom de famille de l&apos;enfant <span className="text--required">*</span>
           </>
         );
       default:
         return (
           <>
             Nom de famille <span className="text--required">*</span>
+          </>
+        );
+    }
+  }, [allowance]);
+
+  const getFirstnameLabel = useCallback(() => {
+    switch (allowance) {
+      case ALLOWANCE.AAH:
+        return (
+          <>
+            Prénom l&apos;enfant ou du jeune adulte bénéficiaire{' '}
+            <span className="text--required">*</span>{' '}
+          </>
+        );
+      case ALLOWANCE.AEEH:
+      case ALLOWANCE.ARS:
+        return (
+          <>
+            Prénom de l&apos;enfant <span className="text--required">*</span>
+          </>
+        );
+      default:
+        return (
+          <>
+            Prénom <span className="text--required">*</span>
           </>
         );
     }
@@ -239,18 +265,7 @@ const StepOneForm = ({
           state={inputStates.beneficiaryFirstname.state}
           stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
           disabled={isFormDisabled}
-          label={
-            isDirectBeneficiary ? (
-              <>
-                Prénom <span className="text--required">*</span>
-              </>
-            ) : (
-              <>
-                Prénom de l&apos;enfant ou du jeune adulte bénéficiaire{' '}
-                <span className="text--required">*</span>
-              </>
-            )
-          }
+          label={getFirstnameLabel()}
           nativeInputProps={{
             name: 'beneficiaryFirstname',
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
