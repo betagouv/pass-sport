@@ -120,11 +120,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
             <hr className="fr-mb-2w" />
             <JeDonneMonAvisBtn isSuccess />
           </section>
-
-          <section className={styles['section-missions']}>
-            <hr />
-            <MissionCards isUsingSuccessUrls />
-          </section>
         </>
       ) : (
         <>
@@ -164,11 +159,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           <section className={styles['section-je-donne-mon-avis']}>
             <hr className="fr-mb-2w" />
             <JeDonneMonAvisBtn isSuccess={false} />
-          </section>
-
-          <section className={styles['section-missions']}>
-            <hr />
-            <MissionCards isUsingSuccessUrls={false} />
           </section>
         </>
       )}
