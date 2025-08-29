@@ -99,3 +99,9 @@
 .fr-text-default--grey  {
   color: #3A3A3A;
 }
+
+.background-contrast {
+  &--grey {
+    background-color: var(--background-contrast-grey);
+  }
+}

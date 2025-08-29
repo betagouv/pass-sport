@@ -14,10 +14,6 @@ type Props = Omit<RadioButtonsProps, 'legend'> & {
 const CustomRadioButtons: React.FC<Props> = (props) => {
   const { onOkButtonClicked, legend, legendDescription, ...onlyRadioButtonsProps } = props;
 
-  useEffect(() => {
-    setFocusOn(`#${props.id} div div input`);
-  }, [props.id]);
-
   return (
     <div>
       <RadioButtons

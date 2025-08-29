@@ -11,6 +11,8 @@ import { useCallback, useContext, useEffect, useRef } from 'react';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { push } from '@socialgouv/matomo-next';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
+import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 
 interface Props {
   isSuccess: boolean;
@@ -51,31 +53,41 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           >
             <div className={styles['section-success__description']}>
               <Badge severity="success">mon pass sport</Badge>
-              <p className="fr-text--lg fr-mt-3w">
-                <span className="fr-text--bold">Téléchargez</span> votre pass Sport pour le
-                présenter à votre club.
-              </p>
 
-              <p className="fr-text--lg">
-                Code valable jusqu’au <span className="fr-text--bold">31 décembre 2025</span>{' '}
-                (strictement personnel)
+              <p className="fr-my-3w">Votre code pass Sport est le :</p>
+              <p className="fr-text--xl fr-text--bold fr-mb-0">
+                {eligibilityData?.[0] && pspCodeData?.[0] && pspCodeData[0].id_psp}
+              </p>
+              <p className="fr-text--lg fr-mt-3w">
+                <span className="fr-text--bold">
+                  Notez ce numéro ou téléchargez votre pass Sport
+                </span>{' '}
+                pour le présenter à votre club.
               </p>
 
               {eligibilityData?.[0] && pspCodeData?.[0] && (
                 <div className={styles['download-section']}>
                   {linkSource ? (
                     <>
-                      <Link
+                      <DownloadLink
+                        details="PDF ~100 KB"
+                        label="Télécharger mon pass Sport"
                         href={linkSource}
-                        download={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}
-                        className="fr-link fr-icon-download-line fr-link--icon-right"
+                        filename={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}
                         onClick={onDownloadLinkClicked}
-                        target="_blank"
-                      >
-                        Mon pass Sport à télécharger
-                      </Link>
+                      />
 
-                      <p className="fr-mt-1v fr-text--xs">PDF ~100 KB</p>
+                      {/*<Link*/}
+                      {/*  href={linkSource}*/}
+                      {/*  download={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}*/}
+                      {/*  className="fr-link fr-icon-download-line fr-link--icon-right"*/}
+                      {/*  onClick={onDownloadLinkClicked}*/}
+                      {/*  target="_blank"*/}
+                      {/*>*/}
+                      {/*  Télécharger mon pass Sport*/}
+                      {/*</Link>*/}
+
+                      {/*<p className="fr-mt-1v fr-text--xs">PDF ~100 KB</p>*/}
                     </>
                   ) : (
                     <Alert
@@ -85,6 +97,11 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                   )}
                 </div>
               )}
+
+              <p className="fr-text--lg">
+                Code valable jusqu’au <span className="fr-text--bold">31 décembre 2025</span>{' '}
+                (strictement personnel).
+              </p>
             </div>
             <div className={styles['section-success__image']}>
               <Image src={code} className={cn('fr-responsive-img')} alt="" />
@@ -92,8 +109,8 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           </section>
 
           <section className={styles['section-cta']}>
-            <p className="fr-text--bold fr-text--lg">Vous avez plusieurs enfants ?</p>
-            <p className="fr-text--lg">
+            <p className="fr-text--bold fr-text--lg fr-mb-0">Vous avez plusieurs enfants ?</p>
+            <p className="fr-text--lg fr-mb-0">
               Vous devez demander un code pour chaque enfant pouvant bénéficier du pass Sport.
             </p>
             <Actions displayHomeBackBtn={false} newTestBtnVariant="tertiary" />
@@ -102,11 +119,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           <section className={styles['section-je-donne-mon-avis']}>
             <hr className="fr-mb-2w" />
             <JeDonneMonAvisBtn isSuccess />
-          </section>
-
-          <section className={styles['section-missions']}>
-            <hr />
-            <MissionCards isUsingSuccessUrls />
           </section>
         </>
       ) : (
@@ -120,8 +132,8 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
             {isEligible ? (
               <Alert
                 severity="warning"
-                title="Les informations que vous avez fournies ne correspondent pas avec nos données"
-                description="Vérifiez vos informations puis contactez le support."
+                title="Les informations que vous avez fournies ne correspondent pas à nos données"
+                description="Vérifiez vos informations avant de contacter le support."
               />
             ) : (
               <Alert
@@ -134,7 +146,10 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           <section className={styles['section-cta']}>
             {/* todo: Put link with pre-selected object */}
             {/* "Je suis éligible mais je n'arrive pas à obtenir mon code" */}
-            <Link className={cn(['fr-btn', styles['section-cta__link']])} href="/v2/une-question">
+            <Link
+              className={cn(['fr-btn', styles['section-cta__link']])}
+              href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+            >
               Contacter le support
             </Link>
 
@@ -144,11 +159,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           <section className={styles['section-je-donne-mon-avis']}>
             <hr className="fr-mb-2w" />
             <JeDonneMonAvisBtn isSuccess={false} />
-          </section>
-
-          <section className={styles['section-missions']}>
-            <hr />
-            <MissionCards isUsingSuccessUrls={false} />
           </section>
         </>
       )}

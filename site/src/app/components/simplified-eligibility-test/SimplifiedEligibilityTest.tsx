@@ -224,6 +224,8 @@ export default function SimplifiedEligibilityTest({
                   nativeInputProps={{
                     required: true,
                     type: 'date',
+                    min: '1950-01-01',
+                    max: '2099-12-31',
                     onChange: (e) => {
                       setTargetDate(e.target.value);
                       resetStates();

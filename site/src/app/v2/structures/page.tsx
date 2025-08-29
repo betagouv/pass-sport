@@ -9,7 +9,6 @@ import Image from 'next/image';
 import athletism from '@/images/structures/athletism.webp';
 import simonRunning from '@/images/structures/simon-running.webp';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
-import Accordion from '@codegouvfr/react-dsfr/Accordion';
 import { AccordionsKitCommunication } from '@/app/v2/structures/components/AccordionsKitCommunication';
 import { AccordionsBecomePartner } from '@/app/v2/structures/components/AccordionsBecomePartner';
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
@@ -239,20 +238,19 @@ export default function Page() {
           </div>
         </section>
 
-        {/* todo: to update later */}
-        {/*<section id={STRUCTURE_PAGE_ANCHORS.FAQ} className={styles['faq-section']}>*/}
-        {/*  <h2 className="fr-mb-2w">Une question ?</h2>*/}
-        {/*  <AccordionsFaq />*/}
+        <section id={STRUCTURE_PAGE_ANCHORS.FAQ} className={styles['faq-section']}>
+          <h2 className="fr-mb-2w">Une question ?</h2>
+          <AccordionsFaq />
 
-        {/*  <p className="fr-mt-4w">*/}
-        {/*    <Link*/}
-        {/*      href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.PRO}`}*/}
-        {/*      className="fr-link fr-link--icon-right fr-icon-arrow-right-line"*/}
-        {/*    >*/}
-        {/*      Voir plus de questions*/}
-        {/*    </Link>*/}
-        {/*  </p>*/}
-        {/*</section>*/}
+          <p className="fr-mt-4w">
+            <Link
+              href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.PRO}`}
+              className="fr-link fr-link--icon-right fr-icon-arrow-right-line"
+            >
+              Voir plus de questions
+            </Link>
+          </p>
+        </section>
 
         <section className={styles['decret-section']}>
           <h1 className="fr-h4">Texte de référence</h1>

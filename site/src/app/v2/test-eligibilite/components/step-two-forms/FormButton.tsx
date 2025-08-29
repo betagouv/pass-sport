@@ -11,7 +11,7 @@ const FormButton = ({ isDisabled }: Props) => (
     disabled={isDisabled}
     className="fr-mt-3w"
   >
-    Je vérifie mon éligibilité
+    Valider les informations
   </Button>
 );
 

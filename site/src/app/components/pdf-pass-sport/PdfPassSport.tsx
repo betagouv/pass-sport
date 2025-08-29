@@ -152,8 +152,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   codeDobTitle: {
-    fontSize: 41,
+    fontSize: 11,
     color: '#666666',
+    marginTop: 11,
   },
   codeDobValue: {
     fontSize: 13,
@@ -163,6 +164,8 @@ const styles = StyleSheet.create({
   codeTitle: {
     fontSize: 11,
     color: '#666666',
+    marginTop: 11,
+    marginBottom: -6,
   },
   codeValue: {
     fontSize: 30,
@@ -210,70 +213,29 @@ export default function PdfPassSport({
             <Text style={styles.codeTitle}>Code</Text>
             <Text style={styles.codeValue}>{code}</Text>
             <Text style={styles.codeHintText}>Présentez ce pass à votre club</Text>
-            <Text style={styles.codeHintText}>Code valable jusqu’au 31 décembre 2025</Text>
+            <Text style={styles.codeHintText}>Code valable jusqu&apos;au 31 décembre 2025</Text>
             <Text style={styles.codeHintText}>(strictement personnel)</Text>
           </View>
         </View>
         <View style={styles.separator}></View>
         <View style={styles.descriptionContainer}>
-          <Text style={styles.mainTitle}>Comment activer le pass Sport ?</Text>
           <View style={styles.section}>
+            <Text style={styles.title}>Comment activer le pass Sport ?</Text>
+
             <Text style={styles.sectionText}>
-              Rapprochez-vous de votre structure pour savoir si elle accepte le pass Sport ou
-              consultez la liste des structures partenaires sur www.pass.sports.gouv.fr.
+              Sur présentation du code ci-contre, la structure sportive déduira automatiquement 70€
+              du coût de la licence ou de l&apos;abonnement lors de l&apos;inscription.
             </Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.title}>Si vous n’avez pas encore effectué votre inscription</Text>
-
+            <Text style={styles.title}>Où utiliser le pass Sport ?</Text>
             <Text style={styles.sectionText}>
-              Pour activer votre code, il suffit de présenter votre code à votre club, association
-              ou salle de sport au moment de l’inscription. Celui-ci déduira automatiquement 70€ du
-              prix de la licence ou de l&apos;abonnement au moment de l&apos;inscription.
+              Vous pouvez utiliser le pass Sport dès maintenant dans plus de 85 000 clubs,
+              associations sportives et salles de sport partenaires : football, breakdance, judo,
+              basketball, skateboard, escalade, salle de sport…et bien d&apos;autres disciplines !
+              Si vous avez déjà choisi une structure, demandez-lui s&apos;il accepte le pass Sport.
             </Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.title}>Si vous avez déjà effectué votre inscription</Text>
-            <Text style={styles.sectionText}>
-              Si vous avez déjà payé l&apos;intégralité de votre inscription et que tous les
-              paiements ont été encaissés, votre club pourra vous rembourser 70€ en échange de votre
-              pass Sport.
-            </Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.title}>Ce que vous ne pouvez pas faire avec le pass Sport :</Text>
-            <View style={styles.list}>
-              <View style={styles.listItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Recevoir directement les 70€ ;</Text>
-              </View>
-              <View style={styles.listItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Le donner à quelqu’un d’autre ;</Text>
-              </View>
-              <View style={styles.listItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  Acheter du matériel ou de l’équipement sportif ;
-                </Text>
-              </View>
-              <View style={styles.listItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  Financer des stages ou séances de découverte ;
-                </Text>
-              </View>
-              <View style={styles.lastListItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  Vous faire rembourser le pass Sport par un club (sauf si le club ne l’a pas encore
-                  saisi et accepte de vous rembourser de votre inscription).
-                </Text>
-              </View>
-            </View>
           </View>
 
           <View style={styles.section}>

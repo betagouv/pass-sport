@@ -250,7 +250,7 @@ export default function PassSportFooter() {
           },
         },
         {
-          text: 'Structures',
+          text: 'Structures sportives',
           linkProps: {
             href: '/v2/structures',
           },

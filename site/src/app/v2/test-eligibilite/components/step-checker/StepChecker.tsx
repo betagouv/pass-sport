@@ -23,7 +23,7 @@ export function StepChecker({
 }: StepCheckerProps) {
   return (
     <summary className={cn([className, styles.container])}>
-      <span className="fr-icon-checkbox-fill" aria-hidden />
+      <span className="fr-icon-bookmark-fill" aria-hidden />
       {title}
       <Button
         type="button"

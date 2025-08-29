@@ -152,8 +152,7 @@ const AahCafForm = ({
                 Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
-            hintText:
-              'Personne responsable du compte gérant l’allocation. Peut être la même personne que le bénéficiaire.',
+            hintText: 'Personne responsable du compte de l’allocation.',
             nativeInputProps: {
               name: 'recipientCafNumber',
               placeholder: 'Exemple : 0123456',
@@ -170,9 +169,9 @@ const AahCafForm = ({
           }}
           secondHint={
             <>
-              Appelé « numéro de dossier » Le numéro figure en haut à gauche de tous les courriers
-              émis par la <CAF /> ainsi que sur toutes les attestations que vous pouvez télécharger
-              depuis votre espace personnel.
+              Aussi appelé « numéro de dossier ». Le numéro figure en haut à gauche de tous les
+              courriers émis par la <CAF /> ainsi que sur toutes les attestations que vous pouvez
+              télécharger depuis votre espace personnel.
             </>
           }
         />

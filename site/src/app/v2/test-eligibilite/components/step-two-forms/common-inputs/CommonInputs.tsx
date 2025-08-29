@@ -47,8 +47,18 @@ const CommonInputs = ({
   return (
     <>
       <Select
-        label={isDirectBeneficiary ? `Pays de naissance *` : `Pays de naissance de l’allocataire *`}
-        hint="Format attendu : Format attendu : Si le nom du pays est composé, veillez à saisir un tiret entre deux noms (ex : Pays-Bas)"
+        label={
+          isDirectBeneficiary ? (
+            <>
+              Pays de naissance <span className="text--required">*</span>
+            </>
+          ) : (
+            <>
+              Pays de naissance de l&apos;allocataire <span className="text--required">*</span>
+            </>
+          )
+        }
+        hint="Si le nom du pays contient plusieurs mots, vérifiez s'il y a des tirets (ex : Royaume-Uni ou Côte-d'Ivoire)."
         nativeSelectProps={{
           name: birthCountryInputName,
           onChange: onCountryChanged,

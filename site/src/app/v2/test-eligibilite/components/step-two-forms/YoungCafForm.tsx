@@ -90,7 +90,7 @@ const YoungCafForm = ({
   };
 
   const notifyError = () => {
-    setError('Une erreur a eu lieu. Merci de rééessayer plus tard');
+    setError('Une erreur a eu lieu. Merci de réessayer plus tard');
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -158,8 +158,7 @@ const YoungCafForm = ({
                 Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
-            hintText:
-              'Personne responsable du compte gérant l’allocation. Peut être la même personne que le bénéficiaire.',
+            hintText: 'Personne responsable du compte de l’allocation.',
             nativeInputProps: {
               name: 'recipientCafNumber',
               placeholder: 'Exemple : 0123456',
@@ -176,9 +175,9 @@ const YoungCafForm = ({
           }}
           secondHint={
             <>
-              Appelé « numéro de dossier » Le numéro figure en haut à gauche de tous les courriers
-              émis par la <CAF /> ainsi que sur toutes les attestations que vous pouvez télécharger
-              depuis votre espace personnel.
+              Aussi appelé « numéro de dossier ». Le numéro figure en haut à gauche de tous les
+              courriers émis par la <CAF /> ainsi que sur toutes les attestations que vous pouvez
+              télécharger depuis votre espace personnel.
             </>
           }
         />
@@ -202,9 +201,8 @@ const YoungCafForm = ({
           disabled={isFormDisabled}
           hintText={
             <>
-              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur les papiers de
-              la
-              <CAF />
+              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos papiers de
+              la <CAF />.
             </>
           }
         />
@@ -228,7 +226,7 @@ const YoungCafForm = ({
           hintText={
             <>
               Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur les papiers
-              de la <CAF />
+              de la <CAF />.
             </>
           }
         />

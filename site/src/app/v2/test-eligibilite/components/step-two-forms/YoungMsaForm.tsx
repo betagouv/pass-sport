@@ -182,8 +182,8 @@ const YoungMsaForm = ({
           disabled={isFormDisabled}
           hintText={
             <>
-              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur les papiers de
-              la <MSA />
+              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos papiers de
+              la <MSA />.
             </>
           }
         />
@@ -206,7 +206,7 @@ const YoungMsaForm = ({
           hintText={
             <>
               Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur les papiers
-              de la <MSA />
+              de la <MSA />.
             </>
           }
         />
@@ -217,10 +217,12 @@ const YoungMsaForm = ({
               Date de naissance de l’allocataire <span className="text--required">*</span>
             </>
           }
-          hintText="Format attendu JJ/MM/AAAA"
+          hintText="Format attendu : jj/mm/aaaa."
           nativeInputProps={{
             name: 'recipientBirthDate',
             type: 'date',
+            min: '1950-01-01',
+            max: '2099-12-31',
             'aria-label': "Saisir la date de naissance de l'allocataire",
             required: true,
           }}

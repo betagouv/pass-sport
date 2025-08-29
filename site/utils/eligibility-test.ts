@@ -1,4 +1,4 @@
-import { isWithinInterval, parse, startOfDay } from 'date-fns';
+import { isWithinInterval, parse } from 'date-fns';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 export enum ALLOCATION {
