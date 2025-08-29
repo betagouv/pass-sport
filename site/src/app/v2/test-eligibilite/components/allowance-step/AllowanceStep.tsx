@@ -8,14 +8,11 @@ import CustomRadioButtons from '@/app/v2/test-eligibilite-base/components/custom
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crous-eligibility-test-forms/CrousEligibilityTestForms';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
-import Link from 'next/link';
-import { JEUNES_PARENTS_PAGE_AEEH_PARAMS } from '@/app/constants/search-query-params';
 import cn from 'classnames';
 import styles from './styles.module.scss';
 import { RadioButtonsProps } from '@codegouvfr/react-dsfr/RadioButtons';
 import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
 import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
-import CorrectiveInfo from '@/app/v2/test-eligibilite/components/corrective-info/CorrectiveInfo';
 import Input, { InputProps } from '@codegouvfr/react-dsfr/Input';
 import {
   AEEH_CODE_OBTENTION_TYPE,
@@ -25,8 +22,9 @@ import {
 } from '@/utils/eligibility-test';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
-import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
+import ContactAeehSection from '@/app/v2/jeunes-et-parents/components/ContactAeehSection';
+import { push } from '@socialgouv/matomo-next';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
@@ -51,6 +49,10 @@ const AllowanceStep = () => {
   const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
   const [dob, setDob] = useState<string | undefined>(undefined);
   const fieldsetId = 'allowanceStep-fieldset';
+
+  const onAeehFormClick = useCallback(() => {
+    push(['trackEvent', 'Eligibility Test', 'Clicked', 'Button to open AEEH form']);
+  }, []);
 
   useRemoveAttributeById(fieldsetId, 'aria-labelledby');
   useAskConsentForSupport();
@@ -288,17 +290,14 @@ const AllowanceStep = () => {
                       severity="success"
                       title="Bonne nouvelle, d'après les informations que vous avez fournies, vous êtes éligible au pass Sport"
                       aria-live="polite"
-                      description="En raison des politiques de confidentialité mises en place pour la protection de vos données, merci  de nous contacter en préparant votre pièce justificative pour obtenir votre pass Sport."
+                      description="Remplissez le formulaire de demande du pass Sport pour obtenir votre code, à l’aide du bouton ci-dessous."
                     />
 
-                    <p className="fr-mt-2w">
-                      <Link
-                        href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
-                        className="fr-link fr-link--icon-left fr-icon-mail-line"
-                      >
-                        Contactez-nous pour obtenir votre code
-                      </Link>
-                    </p>
+                    {CODES_OBTAINABLE && (
+                      <div className="fr-mt-2w">
+                        <ContactAeehSection onOpenBtnClick={onAeehFormClick} />
+                      </div>
+                    )}
                   </>
                 )}
 

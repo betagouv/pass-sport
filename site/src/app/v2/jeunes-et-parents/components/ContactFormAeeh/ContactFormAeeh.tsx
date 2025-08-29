@@ -9,6 +9,7 @@ import { InputsStateBenef } from '@/types/Contact';
 import { postContact } from '../../../une-question/client-agent';
 import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
+import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 const aeehReasons = {
   'demande-code-aeeh': `demande-code-aeeh`,
@@ -144,8 +145,9 @@ const ContactFormAeeh = ({ closeFn }: Props) => {
     <>
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <p className="fr-my-2w">
-          Si votre enfant a moins de 13 ans et bénéficie de l’AEEH, il vous faut compléter et
-          envoyer le formulaire ci-dessous pour que son code pass Sport vous soit transmis.
+          Si votre enfant a moins de 13 ans et bénéficie de l&apos;
+          <AEEH />, il vous faut compléter et envoyer le formulaire ci-dessous pour que son code
+          pass Sport vous soit transmis.
         </p>
         <div>
           <div className={styles.form}>

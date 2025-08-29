@@ -8,7 +8,59 @@ export default function AccordionsSocialMediasVisuals() {
   return (
     <>
       <Accordion label="Pour les réseaux sociaux" onExpandedChange={() => {}} titleAs="h3">
+        <p className="fr-text--lg">
+          Téléchargez les visuels et vidéos pour les ajouter sur vos réseaux.
+        </p>
+
         <p className="fr-text--bold fr-text--lg fr-mb-0">Visuels (format publication) :</p>
+        <ul className="fr-pl-4w">
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_jeunes.jpg"
+              label="Télécharger le visuel à destination des jeunes"
+              details="jpg ~ 258 KB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_parents.jpg"
+              label="Télécharger le visuel à destination des parents"
+              details="jpg ~ 265 KB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_etudiants_boursiers.jpg"
+              label="Télécharger le visuel à destination des étudiants boursiers"
+              details="jpg ~ 226 KB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_jeunes.jpg"
+              label="Télécharger le visuel à destination des 14-17 ans bénéficiaires de l'ARS"
+              details="jpg ~ 260 KB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_beneficiaires_aah.jpg"
+              label="Télécharger le visuel à destination des 16-30 ans en situation de handicap"
+              details="jpg ~ 249 KB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_parents_de_beneficiaires_aeeh.jpg"
+              label="Télécharger le visuel à destination des 6-19 ans en situation de handicap"
+              details="jpg ~ 264 KB"
+            />
+          </li>
+        </ul>
+
+        <p className="fr-text--bold fr-text--lg fr-mb-0">
+          Vidéos de présentation du pass Sport avec athlètes (format story ou reel) :{' '}
+        </p>
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink

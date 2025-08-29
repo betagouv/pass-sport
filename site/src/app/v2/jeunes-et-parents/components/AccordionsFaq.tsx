@@ -65,12 +65,8 @@ export function AccordionsFaq() {
               <AEEH />.
               <p className="fr-mb-2w">
                 → La demande doit être faite en ligne, à partir du 1er septembre.{' '}
-                <Link
-                  href="/v2/test-eligibilite"
-                  className="fr-link"
-                  title={"Aller vers le formulaire d'obtention du pass Sport"}
-                >
-                  Cliquez ici
+                <Link href="/v2/test-eligibilite" className="fr-link">
+                  Aller vers le formulaire d&apos;obtention du pass Sport
                 </Link>
                 .
               </p>
@@ -217,13 +213,13 @@ export function AccordionsFaq() {
           </p>
           <p className="fr-mb-2w">
             Votre code peut être utilisé dans plus de 85 000 autres clubs et salles de sport à
-            travers toute la France. Vous pouvez consulter ici{' '}
+            travers toute la France. Vous pouvez consulter ici une{' '}
             <Link
               className="fr-link"
               href="/v2/trouver-un-club"
               title="Aller vers la liste et cartographie des clubs"
             >
-              une liste indicative des établissements
+              liste indicative des établissements
             </Link>
             .
           </p>

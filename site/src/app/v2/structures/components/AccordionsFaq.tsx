@@ -93,18 +93,19 @@ export function AccordionsFaq() {
           <p className="fr-mb-2w">
             Pour obtenir le remboursement des pass Sport, suivez ces étapes :
           </p>
-          <ul className="fr-ml-2w">
+          <ol className="fr-ml-2w">
             <li>
-              Saisie du pass Sport : saisissez le pass Sport de votre adhérent sur &ldquo;
+              Saisie du pass Sport : sur{' '}
               <Link
                 className="fr-link"
                 href="https://lecompteasso.associations.gouv.fr"
                 target="_blank"
                 title="Le Compte Asso - Nouvelle fenêtre"
               >
-                Le compte Asso&rdquo; (LCA)
+                Le Compte Asso
               </Link>{' '}
-              entre le 1er septembre et le 31 décembre 2025.
+              saisissez le pass Sport de votre adhérent entre le 1er septembre et le 31 décembre
+              2025.
             </li>
             <li>
               Ouverture du dossier de remboursement : au premier pass Sport saisi, un dossier de
@@ -116,16 +117,10 @@ export function AccordionsFaq() {
               votre RIB.
             </li>
             <li>
-              Les premiers remboursements auront lieu à partir du mois d&apos;octobre, à condition
-              que votre RIB soit correctement renseigné. Ensuite, chaque 15 du mois, le service
-              récupère tous les pass saisis au cours des 30 derniers jours pour effectuer les
-              paiements en fin de mois.
-            </li>
-            <li>
               Virement bancaire : votre structure sera remboursée par virement bancaire de l’Agence
               de Services et de Paiement (ASP), tiers payeur de l&apos;État.
             </li>
-          </ul>
+          </ol>
         </article>
       </Accordion>
       <Accordion
