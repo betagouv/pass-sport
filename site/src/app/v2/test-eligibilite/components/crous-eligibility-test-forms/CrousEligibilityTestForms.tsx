@@ -37,8 +37,6 @@ const CrousEligibilityTestForms = () => {
     ]);
   }, []);
 
-  useAutoCorrectAllowance();
-
   return (
     <>
       {eligibilityData && eligibilityData.length > 0 && (

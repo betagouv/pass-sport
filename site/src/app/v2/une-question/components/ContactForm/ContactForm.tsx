@@ -19,7 +19,7 @@ const visitorReasons = {
   'code-fails': 'Mon code ne fonctionne pas',
   'club-pas-trouvé': 'Je ne trouve pas mon club',
   'refus-code-club': 'Mon club refuse de prendre le pass Sport',
-  'club-wait-50': "Mon club attend d'être remboursé avant de me faire la déduction de 50 euros",
+  'club-wait-70': "Mon club attend d'être remboursé avant de me faire la déduction de 70 euros",
   'deja-paye-comment-rembourse':
     "j'ai déjà payé mon adhésion, comment me faire rembourser mon pass Sport ?",
   boursier: 'Je suis boursier ou boursière',
@@ -220,7 +220,10 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
         <div>
           <div className={styles.form}>
             <div>
-              <p className={styles.paragraph}>Tous les champs ci-dessous sont obligatoires*</p>
+              <p className={styles.paragraph}>
+                Tous les champs ci-dessous sont obligatoires{' '}
+                <span className="text--required">*</span>
+              </p>
             </div>
             <div className={styles['names-input-container']}>
               <div>

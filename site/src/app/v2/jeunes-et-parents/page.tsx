@@ -14,6 +14,9 @@ import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constant
 import ObtainCodeButton from '@/app/v2/jeunes-et-parents/components/ObtainCodeButton';
 import ContactAeehSection from '@/app/v2/jeunes-et-parents/components/ContactAeehSection';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
+import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
+import { DISPLAY_TYPE } from '@/app/constants/display-type';
+import { AccordionsFaq } from '@/app/v2/jeunes-et-parents/components/AccordionsFaq';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -257,6 +260,20 @@ export default function Page() {
               <span className="fr-text--bold">valable du 1er septembre au 31 décembre 2025.</span>
             </p>
           </div>
+        </section>
+
+        <section id={JEUNES_PARENTS_PAGE_ANCHORS.FAQ} className={styles['faq-section']}>
+          <h2 className="fr-mb-2w">Une question ?</h2>
+          <AccordionsFaq />
+
+          <p className="fr-mt-4w">
+            <Link
+              href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.BENEF}`}
+              className="fr-link fr-link--icon-right fr-icon-arrow-right-line"
+            >
+              Voir plus de questions
+            </Link>
+          </p>
         </section>
 
         <section className={styles['decret-section']}>

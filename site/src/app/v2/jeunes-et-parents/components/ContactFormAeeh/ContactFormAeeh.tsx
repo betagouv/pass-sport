@@ -9,6 +9,7 @@ import { InputsStateBenef } from '@/types/Contact';
 import { postContact } from '../../../une-question/client-agent';
 import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
+import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 const aeehReasons = {
   'demande-code-aeeh': `demande-code-aeeh`,
@@ -144,20 +145,24 @@ const ContactFormAeeh = ({ closeFn }: Props) => {
     <>
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <p className="fr-my-2w">
-          Si votre enfant a moins de 13 ans et bénéficie de l’AEEH, il vous faut compléter et
-          envoyer le formulaire ci-dessous pour que son code pass Sport vous soit transmis.
+          Si votre enfant a moins de 13 ans et bénéficie de l&apos;
+          <AEEH />, il vous faut compléter et envoyer le formulaire ci-dessous pour que son code
+          pass Sport vous soit transmis.
         </p>
         <div>
           <div className={styles.form}>
             <div>
-              <p className={styles.paragraph}>Tous les champs ci-dessous sont obligatoires*</p>
+              <p className={styles.paragraph}>
+                Tous les champs ci-dessous sont obligatoires{' '}
+                <span className="text--required">*</span>
+              </p>
             </div>
             <div className={styles['names-input-container']}>
               <div>
                 <Input
                   label={
                     <>
-                      Prénom <span className="text--required">*</span>
+                      Prénom du parent <span className="text--required">*</span>
                     </>
                   }
                   nativeInputProps={{
@@ -176,7 +181,7 @@ const ContactFormAeeh = ({ closeFn }: Props) => {
                 <Input
                   label={
                     <>
-                      Nom de famille <span className="text--required">*</span>
+                      Nom de famille du parent <span className="text--required">*</span>
                     </>
                   }
                   nativeInputProps={{
@@ -196,7 +201,7 @@ const ContactFormAeeh = ({ closeFn }: Props) => {
               <Input
                 label={
                   <>
-                    Adresse e-mail <span className="text--required">*</span>
+                    Adresse courriel <span className="text--required">*</span>
                   </>
                 }
                 nativeInputProps={{
@@ -220,8 +225,9 @@ const ContactFormAeeh = ({ closeFn }: Props) => {
                   Message <span className="text--required">*</span>
                 </>
               }
+              hintText="Merci de nous indiquer le nom, le prénom et la date de naissance de votre enfant."
               nativeTextAreaProps={{
-                placeholder: 'Message*',
+                placeholder: 'Message *',
                 name: 'message',
                 onChange: (e: ChangeEvent<HTMLTextAreaElement>) =>
                   onInputChanged(e.target.value, 'message'),
