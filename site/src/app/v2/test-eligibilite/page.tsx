@@ -43,8 +43,8 @@ const EligibilityTest = () => {
             </ul>
             <p className="fr-text--xl">
               Exception pour les bénéficiaires de l’
-              <AEEH /> : demandez votre pass Sport directement sur notre site à partir du 1er
-              septembre.
+              <AEEH /> entre 6 et 13 ans : demandez votre pass Sport directement sur notre site à
+              partir du 1er septembre.
             </p>
           </div>
         </div>
