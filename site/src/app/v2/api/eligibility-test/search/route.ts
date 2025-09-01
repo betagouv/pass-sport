@@ -4,6 +4,7 @@ import { zfd } from 'zod-form-data';
 import z, { ZodError } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 import { handleSupportCookie } from '@/utils/cookie';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 const schema = zfd.formData({
   beneficiaryLastname: z.string(),
@@ -11,6 +12,7 @@ const schema = zfd.formData({
   beneficiaryBirthDate: z.string(),
   recipientResidencePlace: z.string(),
   isFromCrous: z.coerce.boolean(),
+  allowanceName: z.nativeEnum(ALLOWANCE).optional(),
 });
 
 const DEFAULT_INSEE_CODE = '75113';

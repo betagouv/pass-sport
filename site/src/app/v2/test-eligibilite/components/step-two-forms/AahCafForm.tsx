@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
 import {
   AahCafInputsState,
   ConfirmResponseErrorBody,
@@ -11,6 +11,7 @@ import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchPspCode } from '../../agent';
 import CustomInput from '@/app/v2/test-eligibilite/components/custom-input/CustomInput';
 import { CAF } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
 
 const initialInputsState: AahCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -33,6 +34,7 @@ const AahCafForm = ({
   const [inputStates, setInputStates] = useState<AahCafInputsState>(initialInputsState);
   const [error, setError] = useState<string | null>();
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
+  const { allowance } = useContext(EligibilityTestContext);
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: AahCafInputsState } => {
     let isValid = true;
@@ -79,6 +81,10 @@ const AahCafForm = ({
     formData.append('situation', eligibilityDataItem.situation);
     formData.append('organisme', eligibilityDataItem.organisme);
     formData.set('recipientCafNumber', formData.get('recipientCafNumber')!.toString().trim());
+
+    if (allowance) {
+      formData.set('allowanceName', allowance);
+    }
 
     return fetchPspCode(formData);
   };

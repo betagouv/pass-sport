@@ -1,5 +1,5 @@
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
 import {
   ConfirmResponseErrorBody,
   EnhancedConfirmResponseBody,
@@ -12,6 +12,7 @@ import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchPspCode } from '../../agent';
 import { CAF } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
 
 const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -32,6 +33,7 @@ const YoungCafForm = ({
   onEligibilitySuccess,
   onEligibilityFailure,
 }: Props) => {
+  const { allowance } = useContext(EligibilityTestContext);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
@@ -85,6 +87,10 @@ const YoungCafForm = ({
     formData.set('recipientLastname', formData.get('recipientLastname')!.toString().trim());
     formData.set('recipientFirstname', formData.get('recipientFirstname')!.toString().trim());
     formData.set('recipientCafNumber', formData.get('recipientCafNumber')!.toString().trim());
+
+    if (allowance) {
+      formData.set('allowanceName', allowance);
+    }
 
     return fetchPspCode(formData);
   };
