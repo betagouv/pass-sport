@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/nextjs';
 import { handleSupportCookie } from '@/utils/cookie';
 import { isSanitairesAndSociauxBoursiersBFC } from '@/app/v2/test-eligibilite-base/helpers/helpers';
 import { generatePdfBuffer } from '@/app/v2/api/eligibility-test/confirm/generate-pdf-buffer';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 const DEFAULT_INSEE_CODE = '75113';
 
@@ -20,6 +21,7 @@ const schema = zfd.formData({
   recipientBirthPlace: z.string().optional(),
   recipientBirthDate: z.string().optional(),
   recipientBirthCountry: z.string().optional(),
+  allowanceName: z.nativeEnum(ALLOWANCE).optional(),
 });
 
 export async function POST(request: Request): Promise<Response> {

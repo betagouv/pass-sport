@@ -1,5 +1,5 @@
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
 import {
   ConfirmResponseErrorBody,
   EnhancedConfirmResponseBody,
@@ -12,6 +12,7 @@ import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchPspCode } from '../../agent';
 import { MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
 
 const initialInputsState: YoungMsaInputsState = {
   recipientLastname: { state: 'default' },
@@ -36,8 +37,8 @@ const YoungMsaForm = ({
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungMsaInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-
   const [error, setError] = useState<string | null>();
+  const { allowance } = useContext(EligibilityTestContext);
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungMsaInputsState } => {
     let isValid = true;
@@ -78,8 +79,13 @@ const YoungMsaForm = ({
     formData.set('recipientBirthDate', formattedRecipientBirthDate);
 
     const birthCountry = formData.get('recipientBirthCountry') as string;
+
     if (birthCountry === 'FR') {
       formData.delete('recipientBirthCountry');
+    }
+
+    if (allowance) {
+      formData.set('allowanceName', allowance);
     }
 
     return fetchPspCode(formData);

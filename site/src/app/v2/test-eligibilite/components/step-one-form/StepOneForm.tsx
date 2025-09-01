@@ -140,6 +140,10 @@ const StepOneForm = ({
       formData.set('isFromCrous', 'true');
     }
 
+    if (allowance) {
+      formData.set('allowanceName', allowance);
+    }
+
     return fetchEligible(formData);
   };
 

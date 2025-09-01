@@ -123,6 +123,9 @@ function hasGivenConsentForSupportCookie(cookies: NextApiRequest['cookies']) {
 function formatNote(attempts: object[]) {
   let mapping: { [key: string]: string } = {
     attemptNumber: 'Tentative numéro',
+    id: 'Id du bénéficiaire en base',
+    situation: 'Situation du bénéficiaire',
+    organisme: 'Organisme du bénéficiaire',
     beneficiaryLastname: 'Nom du bénéficiaire',
     beneficiaryFirstname: 'Prénom du bénéficiaire',
     beneficiaryBirthDate: 'Date de naissance du bénéficiaire',
@@ -133,6 +136,8 @@ function formatNote(attempts: object[]) {
     recipientBirthPlace: `Lieu de naissance de l'allocataire`,
     recipientBirthCountry: `Pays de naissance de l'allocataire`,
     step: 'Etape du formulaire',
+    allowanceName: `Nom de l'allocation`,
+    isFromCrous: 'Provenant du CROUS',
   };
 
   let formattedNote = attempts.map((obj, index) => {

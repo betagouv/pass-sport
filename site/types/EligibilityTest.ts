@@ -1,4 +1,5 @@
 import { InputState } from './form';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 // Form step, search being the first step & confirm being the final step
 export type FormStep = 'search' | 'confirm';
@@ -130,5 +131,6 @@ export interface SearchPayload {
   beneficiaryFirstname: string;
   beneficiaryBirthDate: string;
   recipientResidencePlace: string;
+  allowanceName?: ALLOWANCE;
   isFromCrous?: boolean;
 }

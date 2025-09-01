@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
 import {
   ConfirmResponseErrorBody,
   CrousInputsState,
@@ -12,6 +12,7 @@ import ErrorAlert from '../error-alert/ErrorAlert';
 import { fetchPspCode } from '../../agent';
 import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
 
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
@@ -30,7 +31,7 @@ const CrousForm = ({
   const [inputStates, setInputStates] = useState<CrousInputsState>({
     ...(eligibilityDataItem.hasMatricule ? { recipientIneNumber: { state: 'default' } } : {}),
   });
-
+  const { allowance } = useContext(EligibilityTestContext);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
 
@@ -105,6 +106,10 @@ const CrousForm = ({
       if (birthCountry === 'FR') {
         formData.delete('recipientBirthCountry');
       }
+    }
+
+    if (allowance) {
+      formData.set('allowanceName', allowance);
     }
 
     return fetchPspCode(formData);
