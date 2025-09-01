@@ -194,26 +194,26 @@ export default function Page() {
                 étudiants boursiers.
               </li>
             </ol>
-            <section className="fr-my-4w" id={SKIP_LINKS_ID.aeehContent}>
-              <KnowMore
-                variant="yellow"
-                knowMore={{
-                  title: `Exception pour les bénéficiaires de l'AEEH entre 6 et 13 ans`,
-                  description: CODES_OBTAINABLE
-                    ? 'Demandez votre pass Sport directement à partir de ce formulaire'
-                    : `Demandez votre pass Sport directement sur notre site à partir du 1er septembre.`,
-                }}
-              >
-                {CODES_OBTAINABLE && <ContactAeehSection />}
-              </KnowMore>
-              {/* todo: confirm with Julianne */}
-              {/*<p>*/}
-              {/*  <span className="fr-text--bold">*/}
-              {/*    Exception pour les bénéficiaires de l&apos;AEEH*/}
-              {/*  </span>{' '}*/}
-              {/*  : demandez votre pass Sport directement sur notre site à partir du 1er septembre.*/}
-              {/*</p>*/}
-            </section>
+            {/*<section className="fr-my-4w" id={SKIP_LINKS_ID.aeehContent}>*/}
+            {/*  <KnowMore*/}
+            {/*    variant="yellow"*/}
+            {/*    knowMore={{*/}
+            {/*      title: `Exception pour les bénéficiaires de l'AEEH entre 6 et 13 ans`,*/}
+            {/*      description: CODES_OBTAINABLE*/}
+            {/*        ? 'Demandez votre pass Sport directement à partir de ce formulaire'*/}
+            {/*        : `Demandez votre pass Sport directement sur notre site à partir du 1er septembre.`,*/}
+            {/*    }}*/}
+            {/*  >*/}
+            {/*    {CODES_OBTAINABLE && <ContactAeehSection />}*/}
+            {/*  </KnowMore>*/}
+            {/*  /!* todo: confirm with Julianne *!/*/}
+            {/*  /!*<p>*!/*/}
+            {/*  /!*  <span className="fr-text--bold">*!/*/}
+            {/*  /!*    Exception pour les bénéficiaires de l&apos;AEEH*!/*/}
+            {/*  /!*  </span>{' '}*!/*/}
+            {/*  /!*  : demandez votre pass Sport directement sur notre site à partir du 1er septembre.*!/*/}
+            {/*  /!*</p>*!/*/}
+            {/*</section>*/}
             Si, après cette date vous n&apos;avez pas reçu votre pass Sport :
             <ol className="fr-ml-2w" start={1}>
               <li>Vérifiez dans vos spams ou indésirables.</li>

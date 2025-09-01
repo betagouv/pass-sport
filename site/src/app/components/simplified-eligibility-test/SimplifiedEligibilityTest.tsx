@@ -328,13 +328,23 @@ export default function SimplifiedEligibilityTest({
           {displayAeehLink && (
             <p className="fr-mb-0 fr-mt-3w text-align--center">
               <Link
-                href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
-                className="fr-link"
-                onClick={onAeehLinkClick}
+                href="/v2/test-eligibilite"
+                className="fr-btn fr-btn--secondary"
+                onClick={onCodeObtentionLinkClick}
               >
-                Contactez-nous pour demander votre pass Sport
+                Demander mon pass Sport
               </Link>
             </p>
+            // todo: Enable later
+            // <p className="fr-mb-0 fr-mt-3w text-align--center">
+            //   <Link
+            //     href={`/v2/jeunes-et-parents?${JEUNES_PARENTS_PAGE_AEEH_PARAMS.aeehModalOpened}=1#${SKIP_LINKS_ID.aeehContent}`}
+            //     className="fr-link"
+            //     onClick={onAeehLinkClick}
+            //   >
+            //     Contactez-nous pour demander votre pass Sport
+            //   </Link>
+            // </p>
           )}
 
           {displayEligibilityLink && (
