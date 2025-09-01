@@ -23,8 +23,8 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   const successRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const { eligibilityData, pspCodeData } = useContext(EligibilityTestContext);
-  const linkSource = pspCodeData?.[0].pdf_base_64
-    ? `data:application/pdf;base64,${pspCodeData?.[0].pdf_base_64}`
+  const linkSource = pspCodeData?.[0]?.pdf_base_64
+    ? `data:application/pdf;base64,${pspCodeData?.[0]?.pdf_base_64}`
     : null;
 
   const onDownloadLinkClicked = useCallback(() => {

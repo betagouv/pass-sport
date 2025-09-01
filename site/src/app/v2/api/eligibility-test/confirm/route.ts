@@ -58,6 +58,8 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const hasDataForPdfGeneration =
+      Array.isArray(data) &&
+      data.length > 0 &&
       !('message' in data) &&
       ['prenom', 'nom', 'date_naissance', 'id_psp', 'genre'].filter((key) => key in data[0]);
 
