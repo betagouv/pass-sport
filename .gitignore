@@ -5,5 +5,5 @@
 .DS_Store
 .idea
 
-send-in-mass-crisp-logs.txt
 *.parquet
+*.txt
