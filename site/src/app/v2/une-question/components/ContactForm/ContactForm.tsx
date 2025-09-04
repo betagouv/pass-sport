@@ -12,17 +12,19 @@ import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
 
 const visitorReasons = {
-  'aije-droit': 'Ai-je droit au pass Sport ?',
-  'eligibility-test-fail': 'Mon test me dit que je ne suis pas éligible',
   'code-pas-reçu': "Je n'ai pas reçu mon code pass Sport",
-  'obtenir-pass': "J'ai supprimé mon code par erreur",
-  'code-fails': 'Mon code ne fonctionne pas',
-  'club-pas-trouvé': 'Je ne trouve pas mon club',
-  'refus-code-club': 'Mon club refuse de prendre le pass Sport',
+  'ars-non-eligible':
+    'Je perçois l’ARS pour mon enfant de moins de 14 ans. Pourquoi je n’ai pas reçu le code ?',
+  'non-eligible': 'Pourquoi je n’ai plus droit au pass Sport cette année ?',
+  'eligibility-test-fail': `Le formulaire me dit "Les informations que vous avez fournies ne correspondent pas à nos données"`,
+  'fratrie-code-manquant': "Il manque le pass Sport d'un ou plusieurs de mes enfants",
+  'aije-droit': 'Suis-je éligible ?',
+  boursier: 'Je suis boursier ou boursière',
   'club-wait-70': "Mon club attend d'être remboursé avant de me faire la déduction de 70 euros",
   'deja-paye-comment-rembourse':
     "j'ai déjà payé mon adhésion, comment me faire rembourser mon pass Sport ?",
-  boursier: 'Je suis boursier ou boursière',
+  'club-pas-trouvé': 'Je ne trouve pas mon club dans la liste des partenaires',
+  'refus-code-club': 'Mon club ne prend pas le pass Sport',
   other: 'Autre',
 };
 
