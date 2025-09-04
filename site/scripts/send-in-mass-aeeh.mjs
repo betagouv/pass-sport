@@ -17,6 +17,7 @@ const LOGS_PATH = './logs-crisp-aeeh-2025.txt';
 const LOGS_ERROR_PATH = './logs-crisp-error-aeeh-2025.txt';
 const SEGMENT_AEEH_CODE_QUERY = 'demande-code-aeeh';
 const SEGMENT_AEEH_ALREADY_PROCESSED = 'aeeh-traite';
+const DEFAULT_TIMEOUT = 'sleep 1';
 
 function logError(sessionId, message) {
   const timestamp = new Date().toISOString(); // Timestamp for logging
@@ -59,33 +60,36 @@ const options = {
   },
 };
 
+let processedConversationsCount = 0;
+
 async function main() {
   const logs = [];
   let totalImpacted = 0;
-
   let results = await getConversations();
-  let i = 1;
+  let batchCount = 1;
+
+  if (results.length <= 0) {
+    console.debug(`Total impacted ${totalImpacted}`);
+    return;
+  }
 
   do {
-    console.debug(`processing batch ${i}...`);
-
-    execSync('sleep 1');
+    console.debug(`processing batch ${batchCount}...`);
+    execSync(DEFAULT_TIMEOUT);
 
     totalImpacted += await processConversations(results, logs);
-
-    execSync('sleep 1');
+    execSync(DEFAULT_TIMEOUT);
 
     if (results?.length > 0) {
       results = await getConversations();
     }
 
-    console.debug(`batch ${i++} processed.`);
-  } while (results.length > 0);
+    console.debug(`batch ${batchCount++} processed.`);
+  } while (results.length > 0 && batchCount < 100);
 
   console.debug(`Total impacted ${totalImpacted}`);
   console.debug('Writing logs...');
 
-  console.debug({ logs });
   fs.writeFileSync(LOGS_PATH, JSON.stringify(logs));
   console.debug('Finished writing logs');
 }
@@ -99,11 +103,14 @@ async function getConversations() {
     url.searchParams.append('search_type', 'filter');
     url.searchParams.append('search_operator', 'and');
 
-    // todo: update to target correct segment, replace "test-patrick" by SEGMENT_AEEH_CODE_QUERY
+    // Target conversations with segment SEGMENT_AEEH_CODE_QUERY
+    // And conversations that does not have segment SEGMENT_AEEH_ALREADY_PROCESSED
     url.searchParams.append(
       'search_query',
       `[{"criterion":"meta.segments","query":["${SEGMENT_AEEH_CODE_QUERY}"],"model":"conversation","operator":"eq","_$":{"id":"41b825da-d91c-4954-b40b-c4e525b583ce","criterionId":"conversation_meta.segments"}},{"criterion":"meta.segments","query":["${SEGMENT_AEEH_ALREADY_PROCESSED}"],"model":"conversation","operator":"neq","_$":{"id":"08e01139-f9ab-46b5-bf30-1fa8526dd969","criterionId":"conversation_meta.segments"}}]`,
     );
+
+    // [{"criterion":"meta.segments","query":["test-patrick"],"model":"conversation","operator":"eq","_$":{"id":"41b825da-d91c-4954-b40b-c4e525b583ce","criterionId":"conversation_meta.segments"}},{"criterion":"meta.segments","query":["aeeh-traite"],"model":"conversation","operator":"neq","_$":{"id":"08e01139-f9ab-46b5-bf30-1fa8526dd969","criterionId":"conversation_meta.segments"}}]
 
     const { data } = await got(url, { ...options, responseType: 'json' }).json();
 
@@ -127,14 +134,16 @@ async function processConversations(conversations = [], logs = []) {
 
       try {
         await sendMessageInConversation(sessionId);
-        execSync('sleep 1');
+        execSync(DEFAULT_TIMEOUT);
         try {
           const existingSegments = conversation?.meta?.segments ?? [];
 
           await updateSegments({ sessionId, existingSegments });
-          execSync('sleep 1');
+          execSync(DEFAULT_TIMEOUT);
 
           await resolveConversation(sessionId);
+          count++;
+          console.debug(`${++processedConversationsCount} Conversations processed`);
         } catch (err) {
           console.debug(`Error while resolving message from ${sessionId}`, err);
           logError(sessionId, err);
@@ -153,8 +162,6 @@ async function processConversations(conversations = [], logs = []) {
           err,
         });
       }
-
-      count += 1;
     }
   }
 
@@ -165,8 +172,22 @@ async function sendMessageInConversation(sessionId) {
   // https://docs.crisp.chat/references/rest-api/v1/#send-a-message-in-conversation
   // https://api.crisp.chat/v1/website/website_id/conversation/session_id/message
   const message = `
-Cordialement,
-L’équipe Pass Sport`;
+Bonjour,
+
+Si votre enfant bénéficie de l'allocation d'éducation de l'enfant handicapé (AEEH) et que vous souhaitez obtenir un code pass Sport, veuillez remplir le formulaire suivant : [CLIQUEZ ICI](https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh)
+
+Dans ce formulaire, vous devez impérativement joindre le document suivant, fourni par votre CAF ou votre MSA : attestation de paiement de l’Allocation d’Éducation de l’Enfant Handicapé (AEEH).
+AUCUN AUTRE JUSTIFICATIF NE POURRA ÊTRE ACCEPTÉ. AUCUNE RELANCE NE SERA EFFECTUÉE EN CAS D’ERREUR.
+
+Une fois le formulaire complété, nous vérifierons vos informations. Si tout est conforme, le code pass Sport de votre enfant vous sera envoyé directement par e-mail.
+
+En attendant, vous pouvez proposer cette solution à votre structure sportive :
+• Régler l’inscription avec la déduction immédiate de 70 € ;
+• Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass Sport.
+Si vous n’êtes finalement pas éligible, la structure sportive pourra encaisser le chèque.
+
+Cordialement, 
+L’équipe pass Sport`;
 
   await got(
     `https://api.crisp.chat/v1/website/${envVars.CRISP_WEBSITE}/conversation/${sessionId}/message`,
@@ -220,5 +241,4 @@ async function updateSegments({ sessionId, existingSegments }) {
 
 // Prior to executing the main script (main()), check the number of conversations from getConversations() manually
 // Execute here main()
-// await main(1);
-// await getConversations();
+await main(1);
