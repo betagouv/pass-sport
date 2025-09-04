@@ -17,6 +17,8 @@ const ContactAeehSection = ({ onOpenBtnClick = () => {} }: ContactAeehSectionPro
         <Link
           id={SKIP_LINKS_ID.contactUsByMail}
           href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
+          target="_blank"
+          title="Remplir le formulaire sur démarches simplifiées - Nouvelel fenêtre"
           onClick={() => {
             onAeehFormClick();
           }}
