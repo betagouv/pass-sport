@@ -102,7 +102,7 @@ async function getConversations() {
     // todo: update to target correct segment, replace "test-patrick" by SEGMENT_AEEH_CODE_QUERY
     url.searchParams.append(
       'search_query',
-      '[{"criterion":"meta.segments","query":["test-patrick"],"model":"conversation","operator":"eq","_$":{"id":"41b825da-d91c-4954-b40b-c4e525b583ce","criterionId":"conversation_meta.segments"}},{"criterion":"meta.segments","query":["aeeh-traite"],"model":"conversation","operator":"neq","_$":{"id":"08e01139-f9ab-46b5-bf30-1fa8526dd969","criterionId":"conversation_meta.segments"}}]',
+      `[{"criterion":"meta.segments","query":["${SEGMENT_AEEH_CODE_QUERY}"],"model":"conversation","operator":"eq","_$":{"id":"41b825da-d91c-4954-b40b-c4e525b583ce","criterionId":"conversation_meta.segments"}},{"criterion":"meta.segments","query":["${SEGMENT_AEEH_ALREADY_PROCESSED}"],"model":"conversation","operator":"neq","_$":{"id":"08e01139-f9ab-46b5-bf30-1fa8526dd969","criterionId":"conversation_meta.segments"}}]`,
     );
 
     const { data } = await got(url, { ...options, responseType: 'json' }).json();
