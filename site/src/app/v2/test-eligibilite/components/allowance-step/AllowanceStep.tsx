@@ -325,7 +325,7 @@ const AllowanceStep = () => {
                 severity="info"
                 title="Bonne nouvelle, d'après les informations que vous avez fournies, vous êtes éligible au pass Sport"
                 aria-live="polite"
-                description="Remplissez le formulaire de demande du pass Sport pour obtenir votre code, à l’aide du bouton ci-dessous."
+                description="Remplissez le formulaire de demande du pass Sport pour obtenir votre code, à l’aide du lien ci-dessous."
               />
 
               {CODES_OBTAINABLE && (
