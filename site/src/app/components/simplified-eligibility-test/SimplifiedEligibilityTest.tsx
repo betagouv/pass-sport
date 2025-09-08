@@ -356,19 +356,19 @@ export default function SimplifiedEligibilityTest({
               <p>Le dispositif est ouvert :</p>
               <ul className="fr-ml-2w">
                 <li>
-                  Aux jeunes de 14 à 17 ans bénéficiaires de l&apos;
-                  <ARS /> (Allocation de Rentrée Scolaire) ;
+                  Aux jeunes de 14 à 17 ans bénéficiaires de l&apos;ARS (Allocation de Rentrée
+                  Scolaire) ;
                 </li>
                 <li>
                   Aux jeunes en situation de handicap :
                   <ul className="fr-ml-2w">
                     <li>
-                      De 6 à 19 ans bénéficiaires de l&apos;
-                      <AEEH />* (Allocation d&apos;Education de l&apos;Enfant Handicapé) ;
+                      De 6 à 19 ans bénéficiaires de l&apos;AEEH (Allocation d&apos;Education de
+                      l&apos;Enfant Handicapé) ;
                     </li>
                     <li>
-                      De 16 à 30 ans bénéficiaires de l&apos;
-                      <AAH />* (Allocation aux Adultes Handicapés).
+                      De 16 à 30 ans bénéficiaires de l&apos;AAH (Allocation aux Adultes
+                      Handicapés).
                     </li>
                   </ul>
                 </li>
