@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Link from 'next/link';
 
 type ContactAeehSectionProps = {
@@ -15,15 +14,15 @@ const ContactAeehSection = ({ onOpenBtnClick = () => {} }: ContactAeehSectionPro
     <>
       <section>
         <Link
-          id={SKIP_LINKS_ID.contactUsByMail}
+          className="fr-link"
           href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
           target="_blank"
-          title="Remplir le formulaire sur démarches simplifiées - Nouvelel fenêtre"
+          title="Faites-en la demande sur démarches-simplifiées - Nouvelle fenêtre"
           onClick={() => {
             onAeehFormClick();
           }}
         >
-          Remplir le formulaire sur démarches simplifiées
+          Faites-en la demande sur démarches-simplifiées
         </Link>
       </section>
     </>

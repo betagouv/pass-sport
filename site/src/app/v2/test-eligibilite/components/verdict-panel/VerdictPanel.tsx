@@ -13,6 +13,7 @@ import { push } from '@socialgouv/matomo-next';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
+import { AAH, AEEH, ARS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 interface Props {
   isSuccess: boolean;
@@ -136,23 +137,54 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                 description="Vérifiez vos informations avant de contacter le support."
               />
             ) : (
-              <Alert
-                severity="error"
-                title="Nous sommes désolés, d’après les informations que vous nous avez fournies, vous n’êtes pas éligible au pass Sport."
-              />
+              <>
+                <Alert
+                  severity="error"
+                  title="Nous sommes désolés, d’après les informations que vous nous avez fournies, vous n’êtes pas éligible au pass Sport."
+                />
+                <section className="fr-mt-3w">
+                  <p>Le dispositif est ouvert :</p>
+                  <ul className="fr-ml-2w">
+                    <li>
+                      Aux jeunes de 14 à 17 ans bénéficiaires de l&apos;ARS (Allocation de Rentrée
+                      Scolaire) ;
+                    </li>
+                    <li>
+                      Aux jeunes en situation de handicap :
+                      <ul className="fr-ml-2w">
+                        <li>
+                          De 6 à 19 ans bénéficiaires de l&apos;AEEH (Allocation d&apos;Education de
+                          l&apos;Enfant Handicapé) ;
+                        </li>
+                        <li>
+                          De 16 à 30 ans bénéficiaires de l&apos;AAH (Allocation aux Adultes
+                          Handicapés).
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      Aux jeunes de moins de 28 ans bénéficiaires d&apos;une bourse attribuée avant
+                      le 15 octobre 2025 :
+                      <ul className="fr-ml-2w">
+                        <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
+                        <li>Bourse régionale pour une formation sanitaire et sociale.</li>
+                      </ul>
+                    </li>
+                  </ul>
+                </section>
+              </>
             )}
           </section>
 
           <section className={styles['section-cta']}>
-            {/* todo: Put link with pre-selected object */}
-            {/* "Je suis éligible mais je n'arrive pas à obtenir mon code" */}
-            <Link
-              className={cn(['fr-btn', styles['section-cta__link']])}
-              href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-            >
-              Contacter le support
-            </Link>
-
+            {isEligible && (
+              <Link
+                className={cn(['fr-btn', styles['section-cta__link']])}
+                href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+              >
+                Contacter le support
+              </Link>
+            )}
             <Actions displayHomeBackBtn newTestBtnVariant="tertiary" />
           </section>
 
