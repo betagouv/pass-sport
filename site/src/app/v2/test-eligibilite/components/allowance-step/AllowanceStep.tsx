@@ -282,25 +282,6 @@ const AllowanceStep = () => {
                   <EligibilityTestForms />
                 )}
 
-              {allowance === ALLOWANCE.AEEH &&
-                dob &&
-                getAeehCodeObtentionType(dob).displayType === AEEH_CODE_OBTENTION_TYPE.LINK && (
-                  <>
-                    <Alert
-                      severity="success"
-                      title="Bonne nouvelle, d'après les informations que vous avez fournies, vous êtes éligible au pass Sport"
-                      aria-live="polite"
-                      description="Remplissez le formulaire de demande du pass Sport pour obtenir votre code, à l’aide du bouton ci-dessous."
-                    />
-
-                    {CODES_OBTAINABLE && (
-                      <div className="fr-mt-2w">
-                        <ContactAeehSection onOpenBtnClick={onAeehFormClick} />
-                      </div>
-                    )}
-                  </>
-                )}
-
               {allowance === ALLOWANCE.CROUS && CODES_OBTAINABLE_FOR_CROUS && (
                 <CrousEligibilityTestForms />
               )}
@@ -332,6 +313,44 @@ const AllowanceStep = () => {
                 }
               />
             </div>
+          )}
+
+        {isValidated &&
+          benefIsEligible &&
+          allowance === ALLOWANCE.AEEH &&
+          dob &&
+          getAeehCodeObtentionType(dob).displayType === AEEH_CODE_OBTENTION_TYPE.LINK && (
+            <section style={{ maxWidth: 792, margin: '0 auto 72px auto' }}>
+              <Alert
+                severity="info"
+                title="Bonne nouvelle, d'après les informations que vous avez fournies, vous êtes éligible au pass Sport"
+                aria-live="polite"
+                description="Remplissez le formulaire de demande du pass Sport pour obtenir votre code, à l’aide du bouton ci-dessous."
+              />
+
+              {CODES_OBTAINABLE && (
+                <>
+                  <div className="fr-my-3w">
+                    <ContactAeehSection onOpenBtnClick={onAeehFormClick} />
+                  </div>
+
+                  <p>En attente du code, vous pouvez proposer cette solution à votre club :</p>
+
+                  <ul className="fr-ml-2w">
+                    <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
+                    <li>
+                      Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass
+                      Sport.
+                    </li>
+                  </ul>
+
+                  <p>
+                    Si vous n’êtes finalement pas éligible, le club pourra encaisser le chèque.
+                    Chaque club reste libre d’accepter ou non cette solution.
+                  </p>
+                </>
+              )}
+            </section>
           )}
 
         {isValidated && allowance && dob && !benefIsEligible && (
