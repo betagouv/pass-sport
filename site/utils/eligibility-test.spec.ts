@@ -134,10 +134,20 @@ describe('Eligibility tests suite', () => {
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
+
+      expect(getAeehCodeObtentionType('2006-01-01')).toEqual({
+        isEligible: true,
+        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+      });
+
+      expect(getAeehCodeObtentionType('2007-12-31')).toEqual({
+        isEligible: true,
+        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+      });
     });
 
     it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.FORM}`, () => {
-      expect(getAeehCodeObtentionType('2006-01-01')).toEqual({
+      expect(getAeehCodeObtentionType('2008-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
