@@ -25,7 +25,7 @@ describe('Eligibility tests suite', () => {
       it('AEEH', () => {
         // nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
         expect(
-          isEligible({ targetDate: '2006-01-01', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2005-01-01', allocationName: ALLOCATION.AEEH }),
         ).toBeTruthy();
         expect(
           isEligible({ targetDate: '2019-12-31', allocationName: ALLOCATION.AEEH }),
@@ -82,7 +82,7 @@ describe('Eligibility tests suite', () => {
       it('AEEH', () => {
         // nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
         expect(
-          isEligible({ targetDate: '2005-12-31', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2004-12-31', allocationName: ALLOCATION.AEEH }),
         ).toBeFalsy();
         expect(
           isEligible({ targetDate: '2020-01-01', allocationName: ALLOCATION.AEEH }),
@@ -121,25 +121,30 @@ describe('Eligibility tests suite', () => {
     });
   });
 
-  // <li>For 6 to 13 years old, it should display the link (01/01/2012 to 31/12/2019)</li>
-  // <li>For 14 to 19 years old, it should display the form (01/01/2006 to 31/12/2011)</li>
+  // <li>For 6 to 13 years old, it should display the link</li>
+  // <li>For 14 to 17 years old, it should display the form</li>
+  // <li>For 18 to 20 years old, it should display the link</li>
   describe('getAeehCodeObtentionType() tests suite', () => {
     it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.LINK}`, () => {
+      // 13 years old
       expect(getAeehCodeObtentionType('2012-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
 
+      // 6 years old
       expect(getAeehCodeObtentionType('2019-12-31')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
 
-      expect(getAeehCodeObtentionType('2006-01-01')).toEqual({
+      // 20 years old
+      expect(getAeehCodeObtentionType('2005-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
 
+      // 18 years old
       expect(getAeehCodeObtentionType('2007-12-31')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
