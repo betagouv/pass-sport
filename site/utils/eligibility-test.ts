@@ -97,7 +97,7 @@ export function isEligible({
       return isBetween({
         inputDates: {
           targetDate,
-          startDate: '01/01/2006',
+          startDate: '01/01/2005',
           endDate: '31/12/2019',
         },
       });
