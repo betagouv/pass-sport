@@ -121,25 +121,30 @@ describe('Eligibility tests suite', () => {
     });
   });
 
-  // <li>For 6 to 13 years old, it should display the link (01/01/2012 to 31/12/2019)</li>
-  // <li>For 14 to 19 years old, it should display the form (01/01/2006 to 31/12/2011)</li>
+  // <li>For 6 to 13 years old, it should display the link</li>
+  // <li>For 14 to 17 years old, it should display the form</li>
+  // <li>For 18 to 20 years old, it should display the link</li>
   describe('getAeehCodeObtentionType() tests suite', () => {
     it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.LINK}`, () => {
+      // 13 years old
       expect(getAeehCodeObtentionType('2012-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
 
+      // 6 years old
       expect(getAeehCodeObtentionType('2019-12-31')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
 
+      // 20 years old
       expect(getAeehCodeObtentionType('2005-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
 
+      // 18 years old
       expect(getAeehCodeObtentionType('2007-12-31')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
