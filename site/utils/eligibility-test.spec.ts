@@ -25,7 +25,7 @@ describe('Eligibility tests suite', () => {
       it('AEEH', () => {
         // nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
         expect(
-          isEligible({ targetDate: '2006-01-01', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2005-01-01', allocationName: ALLOCATION.AEEH }),
         ).toBeTruthy();
         expect(
           isEligible({ targetDate: '2019-12-31', allocationName: ALLOCATION.AEEH }),
@@ -82,7 +82,7 @@ describe('Eligibility tests suite', () => {
       it('AEEH', () => {
         // nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
         expect(
-          isEligible({ targetDate: '2005-12-31', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2004-12-31', allocationName: ALLOCATION.AEEH }),
         ).toBeFalsy();
         expect(
           isEligible({ targetDate: '2020-01-01', allocationName: ALLOCATION.AEEH }),
