@@ -135,7 +135,7 @@ describe('Eligibility tests suite', () => {
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
 
-      expect(getAeehCodeObtentionType('2006-01-01')).toEqual({
+      expect(getAeehCodeObtentionType('2005-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
       });
