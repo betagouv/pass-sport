@@ -3,6 +3,7 @@ from typing import List
 import re
 import numpy as np
 import pandas as pd
+from datetime import date
 
 def unaccent_and_upper(text: str) -> str:
     text = unicodedata.normalize('NFKD', text)
@@ -30,3 +31,7 @@ def require_columns(required_columns: List[str], df: pd.DataFrame) -> None:
     for column in required_columns:
         if column not in df.columns:
             raise ValueError(f"Column '{column}' not found in DataFrame.")
+
+def get_current_date_for_file_name(filename: str) -> str:
+    today = date.today()
+    return f"{today.strftime("%Y-%m-%d")}-{filename}"
