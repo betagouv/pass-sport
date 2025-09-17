@@ -57,15 +57,6 @@ export default function SimplifiedEligibilityTest({
     push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked', 'Code obtention link']);
   }, []);
 
-  const onKnowMoreLinkClick = useCallback(() => {
-    push([
-      'trackEvent',
-      'Simplified Eligibility Test',
-      'Button clicked',
-      'Know more about conditions link',
-    ]);
-  }, []);
-
   const [displayEligibilityConditions, setDisplayEligibilityConditions] = useState<boolean>(false);
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);

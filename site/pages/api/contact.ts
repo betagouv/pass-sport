@@ -101,6 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Writing private note, with all attempts
   if (attempts !== null) {
+    // Delay needed for the note to not appear first in some situations
+    await new Promise((resolve) => setTimeout(resolve, 150));
     await crispClient.website.sendMessageInConversation(
       envVars.CRISP_WEBSITE,
       conversation.session_id,
@@ -110,6 +112,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         origin: 'urn:pass-sport',
         content: formatNote(attempts),
       },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await crispClient.website.changeConversationState(
+      envVars.CRISP_WEBSITE,
+      conversation.session_id,
+      'pending',
     );
   }
 
