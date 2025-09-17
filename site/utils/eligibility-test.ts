@@ -47,8 +47,9 @@ function isBetween({
 /**
  * Get the way to obtain code for AEEH
  * <ul>
+ * <li>For 18 to 20 years old, it should display the link (01/01/2005 to 31/12/2007)</li>
+ * <li>For 14 to 17 years old, it should display the form (01/01/2008 to 31/12/2011)</li>
  * <li>For 6 to 13 years old, it should display the link (01/01/2012 to 31/12/2019)</li>
- * <li>For 14 to 20 years old, it should display the form (01/01/2005 to 31/12/2011)</li>
  * </ul>
  * @param targetDate
  */
