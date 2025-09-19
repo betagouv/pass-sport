@@ -4,6 +4,7 @@ import re
 import numpy as np
 import pandas as pd
 from datetime import date
+from utils.constants import ISO_TO_COUNTRY
 
 def unaccent_and_upper(text: str) -> str:
     text = unicodedata.normalize('NFKD', text)
@@ -35,3 +36,6 @@ def require_columns(required_columns: List[str], df: pd.DataFrame) -> None:
 def get_current_date_for_file_name(filename: str) -> str:
     today = date.today()
     return f"{today.strftime("%Y-%m-%d")}-{filename}"
+
+def get_country_from_iso(countr_iso: str) -> str:
+    return ISO_TO_COUNTRY[countr_iso.upper()]
