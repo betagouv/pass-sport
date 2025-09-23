@@ -13,6 +13,7 @@ import GuidingBlock, { GuidingBlockProps } from '@/app/components/guided-block/G
 import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
 import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
+import Video from '@/app/v2/accueil/components/video/Video';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -26,8 +27,7 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
     description: 'Comment bénéficier du pass Sport pour votre inscription sportive ?',
     knowMore: {
       title: 'A savoir',
-      description:
-        'Vous pourrez recevoir ou demander le pass Sport à partir du 1er septembre 2025.',
+      description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre.',
     },
     points: [
       {
@@ -63,7 +63,7 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
     knowMore: {
       title: 'A savoir',
       description:
-        'Vous pourrez collecter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
+        'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 70€. Nous vous remercions pour votre mobilisation.',
     },
     points: [
       {
@@ -118,7 +118,21 @@ export default async function Accueil() {
                 </h1>
               </section>
 
-              <MainTiles titleAs="h2" />
+              <section id={SKIP_LINKS_ID.eligibilityTestButton}>
+                <div className={styles['eligibility-section']}>
+                  <div className={cn(styles['eligibility-section__wrapper'])}>
+                    <SimplifiedEligibilityTest
+                      display="row"
+                      buttonVariant="primary"
+                      headingLevel="h1"
+                      jeDonneMonAvisBtnPadding={false}
+                      displaySeparator={false}
+                      hasBackground
+                      hasBorder
+                    />
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         </section>
@@ -126,25 +140,6 @@ export default async function Accueil() {
         <section className={styles['guiding-blocks']}>
           <GuidingBlock {...guidingBlocks1} />
           <GuidingBlock {...guidingBlocks2} />
-        </section>
-
-        <section id={SKIP_LINKS_ID.eligibilityTestButton}>
-          <div className={styles['eligibility-section']}>
-            <div
-              className={cn(
-                'fr-container fr-grid-row fr-grid-row--center',
-                styles['eligibility-section__wrapper'],
-              )}
-            >
-              <SimplifiedEligibilityTest
-                display="row"
-                buttonVariant="primary"
-                headingLevel="h1"
-                jeDonneMonAvisBtnPadding={false}
-                displaySeparator={false}
-              />
-            </div>
-          </div>
         </section>
 
         <section className="fr-container">
@@ -165,11 +160,11 @@ export default async function Accueil() {
               sécurisé.
             </p>
 
-            <div className="fr-my-5w">
-              <MainTiles titleAs="h2" />
-            </div>
+            <section className="fr-my-4w">
+              <Video videoFullUrl="https://vimeo.com/1113160982?share=copy#t=0" />
+            </section>
 
-            <h1 className="fr-mb-5w">Une question ?</h1>
+            <h1 className="fr-my-5w">Une question ?</h1>
             <p className="fr-mb-2w">
               Vous avez consulté les différentes pages sans trouver l’information que vous cherchiez
               ? Vous vous posez des questions sur le pass Sport ?
@@ -177,6 +172,10 @@ export default async function Accueil() {
             <Link href="/v2/une-question" className="fr-icon-arrow-right-line fr-link--icon-right">
               Consulter la liste des questions fréquemment posées
             </Link>
+
+            <section className="fr-my-5w">
+              <MainTiles titleAs="h2" />
+            </section>
           </div>
         </section>
 
