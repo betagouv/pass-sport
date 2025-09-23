@@ -14,7 +14,8 @@ import { AccordionsBecomePartner } from '@/app/v2/structures/components/Accordio
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
-import { DownloadLink } from '@/app/components/download-link/DownloadLink';
+import { AccordionsTools } from '@/app/v2/structures/components/AccordionsTools';
+import KnowMore from '@/app/components/know-more/KnowMore';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -68,7 +69,7 @@ export default function Page() {
             knowMore={{
               title: 'A savoir',
               description:
-                'Vous pourrez collecter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
+                'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 70€. Nous vous remercions pour votre mobilisation.',
             }}
           />
         </section>
@@ -78,39 +79,11 @@ export default function Page() {
           className={styles['become-partner-section']}
         >
           <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
-          <p>
-            En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
-            partenaire du dispositif.
-          </p>
-
-          <span>
-            <DownloadLink
-              details="PDF ~ 252 kB"
-              label="Télécharger la notice pass Sport 2025"
-              href="/assets/partenaires/notice-pass-sport-2025.pdf"
-            />
-          </span>
-
-          <p>
-            Des tutoriels seront bientôt à votre disposition sur cet espace pour faciliter votre
-            engagement dans le déploiement du pass Sport.
-          </p>
-
-          <p>
-            Si vous êtes une structure lucrative du loisir sportif marchand, il vous faudra
-            télécharger la charte d’engagement signée dans votre espace sur Le Compte Asso.
-          </p>
-
-          <DownloadLink
-            details="PDF ~ 156 kB"
-            label="Télécharger la charte d’engagement 2025"
-            href="/assets/partenaires/charte-lsm-2025-non-adherents.pdf"
-          />
         </section>
 
-        {/*<section className={styles['become-partner-section__accordions']}>*/}
-        {/*  <AccordionsBecomePartner />*/}
-        {/*</section>*/}
+        <section className={styles['become-partner-section__accordions']}>
+          <AccordionsBecomePartner />
+        </section>
 
         <section
           id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
@@ -196,22 +169,27 @@ export default function Page() {
               nouveau bénéficiaire.
             </li>
           </ol>
-
-          <p>
-            Vous pourrez saisir les codes des bénéficiaires{' '}
-            <span className="fr-text--bold">
-              à partir du 1er septembre jusqu’au 31 décembre 2025.
-            </span>
+          <p className="fr-mb-0">
+            Vous pouvez saisir les codes des bénéficiaires depuis le 1er septembre jusqu&apos;au 31
+            décembre 2025.
           </p>
 
-          <Link
-            className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
-            target="_blank"
-            aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
-            href="https://lecompteasso.associations.gouv.fr/"
-          >
-            Le Compte Asso
-          </Link>
+          <p className="fr-mb-0">
+            <Link
+              href="https://lecompteasso.associations.gouv.fr/"
+              target="_blank"
+              title="Lien vers Le Compte Asso (nouvelle fenêtre)"
+              className="fr-link"
+            >
+              Le Compte Asso
+            </Link>
+          </p>
+
+          <p>Outils mis à disposition par le ministère chargé des Sports :</p>
+
+          <section>
+            <AccordionsTools />
+          </section>
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.GET_REFUNDS} className={styles['get-refunds-section']}>
@@ -224,16 +202,37 @@ export default function Page() {
           <div className={styles['get-refunds-section__description']}>
             <h1>Recevez le remboursement</h1>
 
+            <KnowMore
+              variant="yellow"
+              knowMore={{
+                title: 'A savoir',
+                description:
+                  'Vous pouvez demander le remboursement des pass Sport depuis le 1er septembre 2025.',
+              }}
+            />
+
             <p>
-              Des informations seront régulièrement mises à jour sur cette page pour vous informer
-              des échéances de paiement.
+              Les remboursements arriveront dans le mois suivant la saisie des codes dans votre
+              compte Asso.
             </p>
 
             <p>
-              Vous pourrez saisir les codes des bénéficiaires{' '}
+              Vous pouvez saisir les codes des bénéficiaires{' '}
               <span className="fr-text--bold">
-                à partir du 1er septembre et jusqu’au 31 décembre 2025.
+                depuis le 1er septembre jusqu’au 31 décembre 2025
               </span>
+              .
+            </p>
+
+            <p className="fr-mb-0">
+              <Link
+                href="https://lecompteasso.associations.gouv.fr/"
+                target="_blank"
+                title="Lien vers Le Compte Asso (nouvelle fenêtre)"
+                className="fr-link"
+              >
+                Le Compte Asso
+              </Link>
             </p>
           </div>
         </section>
