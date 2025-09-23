@@ -82,7 +82,8 @@ export function AccordionsBecomePartner() {
           Votre structure doit être affiliée, pour la saison 2025-2026, à l&apos;une des{' '}
           <Link
             href="https://www.sports.gouv.fr/les-118-federations-sportives-et-22-groupements-nationaux-530"
-            title="Aller vers la liste des fédérations sportives agréées par le ministère chargé des Sports"
+            title="Aller vers la liste des fédérations sportives agréées par le ministère chargé des Sports - Nouvelle fenêtre"
+            target="_blank"
             className="fr-link"
           >
             fédérations sportives agréées
@@ -122,7 +123,14 @@ export function AccordionsBecomePartner() {
       >
         <p className="fr-mb-2w">
           Votre association doit avoir un{' '}
-          <Link href="https://www.associations.gouv.fr/agrements.html" className="fr-link">
+          <Link
+            href="https://www.associations.gouv.fr/liste-des-agrements-existants"
+            className="fr-link"
+            target="_blank"
+            title={
+              "Aller sur le site pour consulter l'agrément Sport ou Jeunesse Éducation Populaire (JEP)"
+            }
+          >
             agrément Sport ou Jeunesse Éducation Populaire (JEP)
           </Link>{' '}
           en cours de validité délivré par le préfet du département et proposer une activité
@@ -232,7 +240,7 @@ export function AccordionsBecomePartner() {
         </p>
         Un{' '}
         <Link
-          href="https://view.genially.com/68ca5c87e161eb800feb72cf/guide-vclubs-affiliees-a-une-fede-agreee-ministere-charge-des-sports"
+          href="https://view.genially.com/68a832edc26eae6fb0633be1"
           title="Consultez le tutorial - Nouvelle fenêtre"
           target="_blank"
           className="fr-link"
@@ -263,7 +271,7 @@ export function AccordionsBecomePartner() {
             ;
           </li>
           <li>
-            Vous avec un{' '}
+            Vous avez un{' '}
             <Link
               href="https://www.associations.gouv.fr/la-procedure-de-demande-dagrement-jep"
               target="_blank"
