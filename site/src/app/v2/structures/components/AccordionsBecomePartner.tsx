@@ -11,7 +11,8 @@ export function AccordionsBecomePartner() {
         onExpandedChange={() => {}}
       >
         <p>
-          Vous avez simplement à mettre à jour votre{' '}
+          Pour rester partenaire du dispositif cette année, vous avez simplement à mettre à jour
+          votre{' '}
           <Link
             href="https://lecompteasso.associations.gouv.fr/"
             target="_blank"
@@ -32,21 +33,10 @@ export function AccordionsBecomePartner() {
         <p>Votre justificatif d’éligibilité peut être l’un des trois ci-dessous :</p>
         <ul className="fr-pl-4w">
           <li>
-            Structure Affilée : attestation d&apos;affiliation à une fédération sportive agréée par
-            le Ministère des Sports, de la Jeunesse et de la Vie associative ;
+            Structure affilée : attestation d&apos;affiliation à une fédération sportive agréée par
+            le Ministère chargé des Sports ;
           </li>
-          <li>
-            Association :{' '}
-            <Link
-              href="https://www.associations.gouv.fr/agrements.html"
-              target="_blank"
-              className="fr-link"
-              title={"Aller vers le site contenant l'agrément JEP ou Sport valide"}
-            >
-              agrément JEP ou Sport valide
-            </Link>{' '}
-            ;
-          </li>
+          <li>Association : agrément JEP ou Sport valide ;</li>
           <li>
             Structure à but lucratif (Loisirs Sportifs Marchands) : charte d&apos;engagement 2025.
           </li>
@@ -59,8 +49,7 @@ export function AccordionsBecomePartner() {
         />
 
         <p className="fr-mb-1w">
-          Pour vous aider dans vos démarches, vous pouvez téléchargez notre notice d’aide aux clubs
-          :{' '}
+          Pour vous aider dans vos démarches, vous pouvez téléchargez notre notice d’aide :{' '}
         </p>
         <DownloadLink
           details="PDF ~ 252 kB"
@@ -122,19 +111,9 @@ export function AccordionsBecomePartner() {
         onExpandedChange={() => {}}
       >
         <p className="fr-mb-2w">
-          Votre association doit avoir un{' '}
-          <Link
-            href="https://www.associations.gouv.fr/liste-des-agrements-existants"
-            className="fr-link"
-            target="_blank"
-            title={
-              "Aller sur le site pour consulter l'agrément Sport ou Jeunesse Éducation Populaire (JEP)"
-            }
-          >
-            agrément Sport ou Jeunesse Éducation Populaire (JEP)
-          </Link>{' '}
-          en cours de validité délivré par le préfet du département et proposer une activité
-          physique et sportive tout au long de l&apos;année.
+          Votre association doit avoir un agrément Sport ou Jeunesse Éducation Populaire (JEP) en
+          cours de validité délivré par le préfet du département et proposer une activité physique
+          et sportive tout au long de l&apos;année.
         </p>
 
         <ul className="fr-pl-4w">
@@ -248,55 +227,6 @@ export function AccordionsBecomePartner() {
           tutoriel
         </Link>{' '}
         est disponible pour vous accompagner.
-      </Accordion>
-      <Accordion
-        label="Je ne sais pas à quel type de structure j’appartiens"
-        onExpandedChange={() => {}}
-      >
-        <p>
-          Si vous êtes une <span className="fr-text--bold">association</span>, à laquelle des
-          propositions suivantes vous identifiez-vous ?
-        </p>
-        <ul className="fr-pl-4w fr-mb-2w">
-          <li>
-            Affiliation à une{' '}
-            <Link
-              href="https://www.sports.gouv.fr/les-118-federations-sportives-et-22-groupements-nationaux-530"
-              target="_blank"
-              className="fr-link"
-              title="Aller vers le site contenant les 118 federations sportives et les 22 groupements nationaux - Nouvelle fenêtre"
-            >
-              fédération agrée par le ministère chargé des Sports
-            </Link>{' '}
-            ;
-          </li>
-          <li>
-            Vous avez un{' '}
-            <Link
-              href="https://www.associations.gouv.fr/la-procedure-de-demande-dagrement-jep"
-              target="_blank"
-              className="fr-link"
-              title={"Aller vers le site contenant la procedure de demande d'agrement JEP"}
-            >
-              agrément Sport ou Jeunesse Éducation Populaire
-            </Link>{' '}
-            et proposez une activité physique et sportive tout au long de l’année.
-          </li>
-        </ul>
-
-        <p className="fr-mb-2w">
-          Si vous vous vous identifiez à l’une de ces propositions, vous pouvez vous rendre sur la
-          rubrique pertinente ci-dessus.
-        </p>
-
-        <p className="fr-mb-2w">
-          Si vous êtes une <span className="fr-text--bold">structure commerciale</span>, vous pouvez
-          consulter la rubrique qui concerne les Loisirs Sportifs Marchands.
-        </p>
-        <p>
-          Si vous ne vous identifiez à aucune de ces propositions, vous n’êtes pas éligible au
-          dispositif.
-        </p>
       </Accordion>
       <Accordion label="Je n’appartiens à aucune de ces structures" onExpandedChange={() => {}}>
         <p>

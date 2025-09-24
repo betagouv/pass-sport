@@ -6,7 +6,7 @@ type KnowMoreProps = {
   variant: 'purple' | 'yellow';
   knowMore: {
     title: string;
-    description: string;
+    description: string | ReactNode;
   };
   children?: ReactNode;
 };

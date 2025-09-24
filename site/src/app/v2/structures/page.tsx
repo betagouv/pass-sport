@@ -31,7 +31,7 @@ export default function Page() {
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire. Il prend la forme d'une réduction immédiate lors de l'inscription. C'est un dispositif du ministère des Sports, de la Jeunesse et de la Vie associative."
+            description="Le pass Sport est une aide financière de 70€ par enfant éligible pour couvrir tout ou partie des frais d’inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d’une réduction immédiate lors de l’inscription. Ce dispositif est financé par le ministère chargé des Sports."
             variant="yellow"
             fullWidth
             points={[
@@ -98,9 +98,9 @@ export default function Page() {
           <div className={styles['communication-kit-section__description']}>
             <h2>Téléchargez votre kit de communication</h2>
             <p>
-              Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré un ensemble
-              d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
-              peuvent être utilisés pour assurer la promotion du dispositif.
+              Le ministère chargé des Sports a élaboré un ensemble d&apos;outils et supports de
+              communication qui sont mis à disposition des acteurs et peuvent être utilisés pour
+              assurer la promotion du dispositif.
             </p>
           </div>
         </section>
@@ -143,8 +143,8 @@ export default function Page() {
 
           <ul className="fr-ml-2w fr-mt-n3w">
             <li>
-              Clubs affiliés aux fédérations sportives agréées par le ministère des Sports, de la
-              Jeunesse et de la Vie associative : attestation d&apos;affiliation ;
+              Clubs affiliés à une fédération sportive agréée par le ministère chargé des Sports :
+              attestation d&apos;affiliation (une attestation par fédération affiliée) ;
             </li>
             <li>
               Associations agréées Jeunesse Education Populaire (JEP) ou Sport : agrément JEP ou
@@ -170,8 +170,8 @@ export default function Page() {
             </li>
           </ol>
           <p className="fr-mb-0">
-            Vous pouvez saisir les codes des bénéficiaires depuis le 1er septembre jusqu&apos;au 31
-            décembre 2025.
+            Vous pouvez saisir les codes des bénéficiaires depuis le 1er septembre{' '}
+            <span className="fr-text--bold">jusqu&apos;au 31 décembre 2025</span>.
           </p>
 
           <p className="fr-mb-0">
@@ -206,8 +206,7 @@ export default function Page() {
               variant="yellow"
               knowMore={{
                 title: 'A savoir',
-                description:
-                  'Vous pouvez demander le remboursement des pass Sport depuis le 1er septembre 2025.',
+                description: `Une 1ère vague de paiement est en cours. Les structures concernées recevront un remboursement le 7 octobre.`,
               }}
             />
 

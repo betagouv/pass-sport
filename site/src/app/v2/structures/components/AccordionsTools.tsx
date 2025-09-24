@@ -7,7 +7,7 @@ export function AccordionsTools() {
   return (
     <>
       <Accordion
-        label="Outils pour les structures affiliées à l’une des fédérations sportives agréés par le ministère chargé des Sports"
+        label="Outils pour les structures affiliées à l’une des fédérations sportives agréées par le ministère chargé des Sports"
         onExpandedChange={() => {}}
       >
         <ul className="fr-pl-4w">
@@ -22,17 +22,6 @@ export function AccordionsTools() {
             </Link>
           </li>
           <li className="fr-mb-2w">
-            <Link
-              href="https://www.sports.gouv.fr/les-118-federations-sportives-et-22-groupements-nationaux-530"
-              className="fr-link"
-              target="_blank"
-              title="Consulter la liste des fédérations sportives agréées par le Ministère chargé des Sports - Nouvelle fenêtre"
-            >
-              Consulter la liste des fédérations sportives agréées par le Ministère chargé des
-              Sports
-            </Link>
-          </li>
-          <li className="fr-mb-2w">
             <DownloadLink
               details="PDF ~ 252 kB"
               label="Télécharger la notice pass Sport 2025"
@@ -43,7 +32,7 @@ export function AccordionsTools() {
       </Accordion>
 
       <Accordion
-        label="Outils pour les structures agrées Sport ou Jeunesse Éducation Populaire qui proposent une activité physique et sportive tout au long de l’année"
+        label="Outils pour les structures agréées Sport ou Jeunesse Éducation Populaire qui proposent une activité physique et sportive tout au long de l’année"
         onExpandedChange={() => {}}
       >
         <ul className="fr-pl-4w">
@@ -55,16 +44,6 @@ export function AccordionsTools() {
               title="Consulter le tutoriel pour les structures agrémentées - Nouvelle fenêtre"
             >
               Consulter le tutoriel pour les structures agrémentées
-            </Link>
-          </li>
-          <li className="fr-mb-2w">
-            <Link
-              href="https://www.associations.gouv.fr/la-procedure-de-demande-dagrement-jep"
-              className="fr-link"
-              target="_blank"
-              title="Consulter la procédure d’agrément sur associations.gouv.fr - Nouvelle fenêtre"
-            >
-              Consulter la procédure d’agrément sur associations.gouv.fr
             </Link>
           </li>
           <li className="fr-mb-2w">
@@ -88,7 +67,7 @@ export function AccordionsTools() {
               className="fr-link"
               title="Consulter le tutoriel pour les structures Loisir Sportif Marchand - Nouvelle fenêtre"
             >
-              Consulter le tutoriel pour les structures Loisir Sportif Marchand
+              Consulter le tutoriel pour les structures Loisirs Sportifs Marchands
             </Link>
           </li>
 
