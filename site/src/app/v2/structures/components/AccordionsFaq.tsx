@@ -18,14 +18,14 @@ export function AccordionsFaq() {
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
           <p className="fr-mb-2w">
             Pour appliquer la réduction de 70€, le bénéficiaire doit vous fournir le pass Sport
-            qu&apos;il a reçu par e-mail.
+            qu&apos;il a reçu par e-mail ou via démarches-simplifiées.
           </p>
-
           <p className="fr-mb-2w">
-            Le code alphanumérique commençant par 25 est à saisir sur votre Compte Asso.
+            Le code alphanumérique commençant par 25 est à enregistrer sur votre Compte Asso.
           </p>
-
-          <p className="fr-mb-4w">Voici à quoi ressemble un pass Sport :</p>
+          <p className="fr-mb-4w">
+            Le pass Sport peut se présenter sous la forme du code seul OU du modèle ci-dessous :
+          </p>
           <Image
             src={code}
             className={cn('fr-responsive-img', styles['activate-code-section__image'])}
@@ -176,7 +176,7 @@ export function AccordionsFaq() {
               <ul className="fr-ml-2w">
                 <li>
                   Association : attestation d&apos;affiliation à une fédération sportive agréée par
-                  le ministère des Sports, de la Jeunesse et de la Vie associative ;
+                  le ministère chargé des Sports ;
                 </li>
                 <li>Association : agrément JEP ou Sport valide ;</li>
                 <li>

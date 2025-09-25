@@ -158,11 +158,11 @@ export default async function Accueil() {
             </p>
 
             <p>
-              Cette aide du ministère des Sports, de la Jeunesse et de la Vie associative s’adresse
-              aux enfants et aux jeunes qui rencontrent des obstacles à la pratique sportive –
-              qu’ils soient d’ordre financier, social ou liés à un handicap. L’objectif : leur
-              permettre d’accéder durablement à une activité physique encadrée, au sein d’un
-              environnement structurant, éducatif et sécurisé.
+              Cette aide du ministère chargé des Sports s&apos;adresse aux enfants et aux jeunes qui
+              rencontrent des obstacles à la pratique sportive – qu’ils soient d’ordre financier,
+              social ou liés à un handicap. L’objectif : leur permettre d’accéder durablement à une
+              activité physique encadrée, au sein d’un environnement structurant, éducatif et
+              sécurisé.
             </p>
 
             <div className="fr-my-5w">

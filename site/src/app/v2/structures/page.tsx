@@ -14,7 +14,8 @@ import { AccordionsBecomePartner } from '@/app/v2/structures/components/Accordio
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
-import { DownloadLink } from '@/app/components/download-link/DownloadLink';
+import { AccordionsTools } from '@/app/v2/structures/components/AccordionsTools';
+import KnowMore from '@/app/components/know-more/KnowMore';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -30,7 +31,7 @@ export default function Page() {
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire. Il prend la forme d'une réduction immédiate lors de l'inscription. C'est un dispositif du ministère des Sports, de la Jeunesse et de la Vie associative."
+            description="Le pass Sport est une aide financière de 70€ par enfant éligible pour couvrir tout ou partie des frais d’inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d’une réduction immédiate lors de l’inscription. Ce dispositif est financé par le ministère chargé des Sports."
             variant="yellow"
             fullWidth
             points={[
@@ -68,7 +69,7 @@ export default function Page() {
             knowMore={{
               title: 'A savoir',
               description:
-                'Vous pourrez collecter les codes auprès des jeunes et les enregistrer sur le Compte Asso à partir du 1er septembre 2025.',
+                'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 70€. Nous vous remercions pour votre mobilisation.',
             }}
           />
         </section>
@@ -78,39 +79,11 @@ export default function Page() {
           className={styles['become-partner-section']}
         >
           <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
-          <p>
-            En tant que structure proposant une activité physique ou sportive, vous pouvez devenir
-            partenaire du dispositif.
-          </p>
-
-          <span>
-            <DownloadLink
-              details="PDF ~ 252 kB"
-              label="Télécharger la notice pass Sport 2025"
-              href="/assets/partenaires/notice-pass-sport-2025.pdf"
-            />
-          </span>
-
-          <p>
-            Des tutoriels seront bientôt à votre disposition sur cet espace pour faciliter votre
-            engagement dans le déploiement du pass Sport.
-          </p>
-
-          <p>
-            Si vous êtes une structure lucrative du loisir sportif marchand, il vous faudra
-            télécharger la charte d’engagement signée dans votre espace sur Le Compte Asso.
-          </p>
-
-          <DownloadLink
-            details="PDF ~ 156 kB"
-            label="Télécharger la charte d’engagement 2025"
-            href="/assets/partenaires/charte-lsm-2025-non-adherents.pdf"
-          />
         </section>
 
-        {/*<section className={styles['become-partner-section__accordions']}>*/}
-        {/*  <AccordionsBecomePartner />*/}
-        {/*</section>*/}
+        <section className={styles['become-partner-section__accordions']}>
+          <AccordionsBecomePartner />
+        </section>
 
         <section
           id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
@@ -125,9 +98,9 @@ export default function Page() {
           <div className={styles['communication-kit-section__description']}>
             <h2>Téléchargez votre kit de communication</h2>
             <p>
-              Le ministère des Sports, de la Jeunesse et la Vie associative a élaboré un ensemble
-              d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
-              peuvent être utilisés pour assurer la promotion du dispositif.
+              Le ministère chargé des Sports a élaboré un ensemble d&apos;outils et supports de
+              communication qui sont mis à disposition des acteurs et peuvent être utilisés pour
+              assurer la promotion du dispositif.
             </p>
           </div>
         </section>
@@ -170,8 +143,8 @@ export default function Page() {
 
           <ul className="fr-ml-2w fr-mt-n3w">
             <li>
-              Clubs affiliés aux fédérations sportives agréées par le ministère des Sports, de la
-              Jeunesse et de la Vie associative : attestation d&apos;affiliation ;
+              Clubs affiliés à une fédération sportive agréée par le ministère chargé des Sports :
+              attestation d&apos;affiliation (une attestation par fédération affiliée) ;
             </li>
             <li>
               Associations agréées Jeunesse Education Populaire (JEP) ou Sport : agrément JEP ou
@@ -196,22 +169,27 @@ export default function Page() {
               nouveau bénéficiaire.
             </li>
           </ol>
-
-          <p>
-            Vous pourrez saisir les codes des bénéficiaires{' '}
-            <span className="fr-text--bold">
-              à partir du 1er septembre jusqu’au 31 décembre 2025.
-            </span>
+          <p className="fr-mb-0">
+            Vous pouvez saisir les codes des bénéficiaires depuis le 1er septembre{' '}
+            <span className="fr-text--bold">jusqu&apos;au 31 décembre 2025</span>.
           </p>
 
-          <Link
-            className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
-            target="_blank"
-            aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
-            href="https://lecompteasso.associations.gouv.fr/"
-          >
-            Le Compte Asso
-          </Link>
+          <p className="fr-mb-0">
+            <Link
+              href="https://lecompteasso.associations.gouv.fr/"
+              target="_blank"
+              title="Lien vers Le Compte Asso (nouvelle fenêtre)"
+              className="fr-link"
+            >
+              Le Compte Asso
+            </Link>
+          </p>
+
+          <p>Outils mis à disposition par le ministère chargé des Sports :</p>
+
+          <section>
+            <AccordionsTools />
+          </section>
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.GET_REFUNDS} className={styles['get-refunds-section']}>
@@ -224,16 +202,36 @@ export default function Page() {
           <div className={styles['get-refunds-section__description']}>
             <h1>Recevez le remboursement</h1>
 
+            <KnowMore
+              variant="yellow"
+              knowMore={{
+                title: 'A savoir',
+                description: `Une 1ère vague de paiement est en cours. Les structures concernées recevront un remboursement le 7 octobre.`,
+              }}
+            />
+
             <p>
-              Des informations seront régulièrement mises à jour sur cette page pour vous informer
-              des échéances de paiement.
+              Les remboursements arriveront dans le mois suivant la saisie des codes dans votre
+              compte Asso.
             </p>
 
             <p>
-              Vous pourrez saisir les codes des bénéficiaires{' '}
+              Vous pouvez saisir les codes des bénéficiaires{' '}
               <span className="fr-text--bold">
-                à partir du 1er septembre et jusqu’au 31 décembre 2025.
+                depuis le 1er septembre jusqu’au 31 décembre 2025
               </span>
+              .
+            </p>
+
+            <p className="fr-mb-0">
+              <Link
+                href="https://lecompteasso.associations.gouv.fr/"
+                target="_blank"
+                title="Lien vers Le Compte Asso (nouvelle fenêtre)"
+                className="fr-link"
+              >
+                Le Compte Asso
+              </Link>
             </p>
           </div>
         </section>

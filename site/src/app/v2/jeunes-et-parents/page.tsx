@@ -32,7 +32,7 @@ export default function Page() {
       <div className="fr-container">
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou partie des frais d'inscription dans un club, association sportive ou salle de sport partenaire. Il prend la forme d'une réduction immédiate lors de l'inscription. C'est un dispositif du ministère des Sports, de la Jeunesse et de la Vie associative."
+            description="Le pass Sport est une aide financière de 70€ par enfant éligible pour couvrir tout ou partie des frais d’inscription dans un club, association sportive ou salle de sport partenaire, qui prend la forme d’une réduction immédiate lors de l’inscription. Ce dispositif est financé par le ministère chargé des Sports."
             variant="purple"
             fullWidth
             points={[
@@ -63,8 +63,7 @@ export default function Page() {
             ]}
             knowMore={{
               title: 'A savoir',
-              description:
-                'Vous pourrez recevoir ou demander le pass Sport à partir du 1er septembre 2025.',
+              description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre 2025.',
             }}
           />
         </section>
@@ -176,7 +175,7 @@ export default function Page() {
             variant="purple"
             knowMore={{
               title: 'A savoir',
-              description: `Vous pourrez recevoir ou demander le pass Sport à partir du 1er septembre et l'utiliser jusqu'au 31 décembre 2025.`,
+              description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre 2025.',
             }}
           />
           <div>
@@ -194,26 +193,6 @@ export default function Page() {
                 étudiants boursiers.
               </li>
             </ol>
-            {/*<section className="fr-my-4w" id={SKIP_LINKS_ID.aeehContent}>*/}
-            {/*  <KnowMore*/}
-            {/*    variant="yellow"*/}
-            {/*    knowMore={{*/}
-            {/*      title: `Exception pour les bénéficiaires de l'AEEH entre 6 et 13 ans`,*/}
-            {/*      description: CODES_OBTAINABLE*/}
-            {/*        ? 'Demandez votre pass Sport directement à partir de ce formulaire'*/}
-            {/*        : `Demandez votre pass Sport directement sur notre site à partir du 1er septembre.`,*/}
-            {/*    }}*/}
-            {/*  >*/}
-            {/*    {CODES_OBTAINABLE && <ContactAeehSection />}*/}
-            {/*  </KnowMore>*/}
-            {/*  /!* todo: confirm with Julianne *!/*/}
-            {/*  /!*<p>*!/*/}
-            {/*  /!*  <span className="fr-text--bold">*!/*/}
-            {/*  /!*    Exception pour les bénéficiaires de l&apos;AEEH*!/*/}
-            {/*  /!*  </span>{' '}*!/*/}
-            {/*  /!*  : demandez votre pass Sport directement sur notre site à partir du 1er septembre.*!/*/}
-            {/*  /!*</p>*!/*/}
-            {/*</section>*/}
             Si, après cette date vous n&apos;avez pas reçu votre pass Sport :
             <ol className="fr-ml-2w" start={1}>
               <li>Vérifiez dans vos spams ou indésirables.</li>
@@ -226,10 +205,6 @@ export default function Page() {
               <li>Récupérer votre code sur ce site (après le 1er septembre).</li>
             </ol>
             <ObtainCodeButton />
-            <p>
-              Vous pourrez utiliser votre pass Sport{' '}
-              <span className="fr-text--bold">jusqu&apos;au 31 décembre 2025.</span>
-            </p>
           </div>
         </section>
 
@@ -247,12 +222,17 @@ export default function Page() {
             <h1>Utilisez votre code</h1>
 
             <p>
+              Le pass Sport prend la forme d&apos;un code composé de 10 caractères alphanumériques,
+              différents de ceux de 2024.
+            </p>
+
+            <p>
               Pour l&apos;utiliser, il suffira de{' '}
               <span className="fr-text--bold">
-                présenter son code à son club ou sa salle de sport au moment de l&apos;inscription.
-              </span>{' '}
-              Celui-ci déduira automatiquement 70€ du prix de la licence ou de l&apos;abonnement au
-              moment de l&apos;inscription.
+                présenter votre code à votre club ou salle de sport au moment de l&apos;inscription
+              </span>
+              . Celui-ci déduira automatiquement 70€ du prix de la licence ou de l&apos;abonnement
+              au moment de l&apos;inscription.
             </p>
 
             <p>

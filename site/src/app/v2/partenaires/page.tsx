@@ -39,9 +39,9 @@ export default function Page() {
 
         <section className={styles['resources__description-section']}>
           <p className="fr-text--lg">
-            Le ministère des Sports, de la Jeunesse et de la Vie associative a élaboré un ensemble
-            d&apos;outils et supports de communication qui sont mis à disposition des acteurs et
-            peuvent être utilisés pour assurer la promotion du dispositif.
+            Le ministère chargé des Sports a élaboré un ensemble d&apos;outils et supports de
+            communication qui sont mis à disposition des acteurs et peuvent être utilisés pour
+            assurer la promotion du dispositif.
           </p>
         </section>
 
