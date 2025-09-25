@@ -245,6 +245,7 @@ ISO_TO_COUNTRY = {
     'VI': 'Virgin Islands (U.S.)',
     'WF': 'Wallis and Futuna',
     'EH': 'Western Sahara',
+    'XK': 'Kosovo',
     'YE': 'Yemen',
     'ZM': 'Zambia',
     'ZW': 'Zimbabwe'
