@@ -6,10 +6,13 @@ import { usePathname } from 'next/navigation';
 import { navigationItemStandard } from './navigation';
 import styles from './styles.module.scss';
 import { useUpdateList } from '@/app/hooks/accessibility/use-update-list';
-import { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
+import Notice from '@codegouvfr/react-dsfr/Notice';
+import Link from 'next/link';
+import { push } from '@socialgouv/matomo-next';
 
 export default function PassSportNavigation() {
   const paths: string | null = usePathname();
@@ -20,6 +23,9 @@ export default function PassSportNavigation() {
 
   const headerRef = useRef<HTMLDivElement | null>(null);
   const headerContainerRef = useRef<HTMLDivElement | null>(null);
+  const onNoticeClick = useCallback(() => {
+    push(['trackEvent', 'Notice banner', 'Clicked', 'Link to forms']);
+  }, []);
 
   useUpdateList({
     parentRef: headerRef,
@@ -69,6 +75,22 @@ export default function PassSportNavigation() {
           },
           text: item.text,
         }))}
+      />
+      <Notice
+        title="Vous n'avez pas reçu votre code ? "
+        description={
+          <>
+            Les conditions d’éligibilité évoluent en 2025,{' '}
+            <Link
+              className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
+              href="/v2/test-ou-code"
+              onClick={onNoticeClick}
+            >
+              testez votre droit au pass Sport
+            </Link>
+            .
+          </>
+        }
       />
     </div>
   );

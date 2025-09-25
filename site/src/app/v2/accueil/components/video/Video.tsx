@@ -11,7 +11,8 @@ interface Props {
 }
 
 const Video = ({ videoFullUrl }: Props) => {
-  const title = 'Vidéo de présentation du dispositif pass Sport du ministère des Sports';
+  const title =
+    'Vidéo de présentation du dispositif pass Sport avec deux athlètes français : Lucie Hautière (para tennis de table) et Simon Boypa (athlétisme).\n';
   const parentRef = useRef<HTMLDivElement | null>(null);
 
   useUpdateTitleIframe({
@@ -23,11 +24,11 @@ const Video = ({ videoFullUrl }: Props) => {
   return (
     <div ref={parentRef}>
       <figure className="fr-my-2w fr-content-media">
-        <div className={cn('vimeo_player', styles['vimeo_player'])} data-videoid="956531127" />
-        <figcaption className={`fr-content-media__caption ${styles.text}`}>
+        <div className={cn('vimeo_player', styles['vimeo_player'])} data-videoid="1113160982" />
+        <figcaption className="fr-content-media__caption">
           {title}
           <a
-            className={`fr-link ${styles.text}`}
+            className="fr-link"
             href={videoFullUrl}
             aria-label="Ouvrir une nouvelle fenêtre vers la vidéo Viméo"
             target="_blank"
@@ -35,7 +36,7 @@ const Video = ({ videoFullUrl }: Props) => {
             Voir la vidéo sur Viméo
           </a>
         </figcaption>
-        <div className={`fr-transcription ${styles.transcription}`} id="transcription-2160">
+        <div className="fr-transcription" id="transcription-2160">
           <button
             className="fr-transcription__btn"
             aria-expanded="false"
@@ -89,36 +90,37 @@ const Video = ({ videoFullUrl }: Props) => {
                           id="fr-transcription-modal-transcription-2160-title"
                           className="fr-modal__title"
                         >
-                          Présentation du dispositif pass Sport du ministère des Sports
+                          Vidéo de présentation du dispositif pass Sport avec deux athlètes français
+                          : Lucie Hautière (para tennis de table) et Simon Boypa (athlétisme).
                         </h1>
                         <div>
-                          <p>Tu veux profiter d’une aide de 50 euros grâce au pass Sport ?</p>
+                          <p>Lucie : Bonne nouvelle, la campagne pass Sport est lancée. </p>
                           <p>
-                            Pour en profiter, tu n’as rien à faire, juste à attendre de recevoir ton
-                            pass Sport par sms ou par mail.
+                            Simon : Cette année, c&apos;est 70€ pour aider les jeunes à pratiquer un
+                            sport, sous conditions d&apos;éligibilité.
+                          </p>
+                          <p>Lucie : C&apos;est super simple à utiliser.</p>
+                          <p>
+                            Simon : T&apos;as rien à faire. Si tu es éligible, tu recevras un code
+                            directement par mail ou par SMS.
                           </p>
                           <p>
-                            Les envois auront lieu entre le 30 mai et le 2 juin et à partir du 30
-                            août. Tu pourras aussi faire la demande ou retrouver ton pass Sport sur
-                            le site pass.sports.gouv.fr.
+                            Lucie : Ensuite, Il suffit de le montrer à ton club ou à ta salle de
+                            sport au moment de l&apos;inscription.
                           </p>
                           <p>
-                            Ensuite, trouve ton futur club de sport parmi plus de 85 000 structures
-                            partenaires !
+                            Simon : Il y a plus de 85 000 clubs, associations sportives et salles de
+                            sport qui sont partenaires. Si tu n&apos;as pas reçu de code, pas de
+                            panique, tu peux le demander sur le site pass.sport.gouv.fr.
                           </p>
                           <p>
-                            Dépêche toi de profiter d’une aide de 50 euros grâce au pass Sport !
+                            Lucie : Le pass est valable du 1er septembre au 31 décembre 2025, pense
+                            à l’activer à temps.
                           </p>
                           <p>
-                            Ça concerne plus de 6,5 millions de jeunes de 6 à 30 ans… Alors pourquoi
-                            pas toi !
-                          </p>
-                          <p>
-                            Si tu veux plus d’infos, rendez-vous sur{' '}
-                            <Link href="https://www.pass.sports.gouv.fr" target="_blank">
-                              pass.sports.gouv.fr
-                            </Link>{' '}
-                            ou sur nos réseaux sociaux !
+                            Simon : Pour plus d&apos;infos, rendez vous sur le site internet et les
+                            réseaux sociaux de pass Sport. Envie de bouger ? pass Sport, faites
+                            entrer le sport dans votre vie.
                           </p>
                         </div>
                       </div>

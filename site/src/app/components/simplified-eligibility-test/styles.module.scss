@@ -9,6 +9,14 @@
   flex-direction: column;
   border-radius: 8px;
 
+  &--has-background{
+    background-color: var(--background-alt-pink-tuile);
+  }
+
+  &--has-border {
+    border: 2px solid var(--border-plain-pink-tuile);
+  }
+
   form {
     width: 100%;
   }

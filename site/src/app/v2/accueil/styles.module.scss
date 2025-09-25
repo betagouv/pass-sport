@@ -64,10 +64,6 @@
         font-weight: 800;
       }
     }
-
-    button {
-      background-color: white;
-    }
   }
 }
 
@@ -132,9 +128,6 @@
 }
 
 .eligibility-section {
-  background-color: var(--pink-tuile-950-100);
-  padding: 100px;
-  width: 85%;
   justify-self: center;
   border-radius: 8px;
 
@@ -143,7 +136,6 @@
   }
 
   @media screen and (max-width: $lg) {
-    padding: 24px;
     width: 100%;
     border-radius: 0;
   }

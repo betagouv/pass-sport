@@ -18,7 +18,6 @@ import KnowMore from '@/app/components/know-more/KnowMore';
 import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
-import { AAH, AEEH, ARS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -27,6 +26,8 @@ type SimplifiedEligibilityTestProps = {
   headingLevel: 'h1' | 'h2';
   jeDonneMonAvisBtnPadding: boolean;
   displaySeparator: boolean;
+  hasBackground?: boolean;
+  hasBorder?: boolean;
 };
 
 export default function SimplifiedEligibilityTest({
@@ -36,6 +37,8 @@ export default function SimplifiedEligibilityTest({
   headingLevel,
   jeDonneMonAvisBtnPadding,
   displaySeparator,
+  hasBackground = false,
+  hasBorder = false,
 }: SimplifiedEligibilityTestProps) {
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
@@ -74,13 +77,12 @@ export default function SimplifiedEligibilityTest({
     if (!allocationName) return;
 
     const successInitialMeta = {
-      title: `Bonne nouvelle, d'après les informations que vous nous avez fournies, vous êtes éligible au pass Sport.`,
-      description:
-        "Disponible à partir du 1er septembre et jusqu'au 31 décembre 2025, ce dispositif vous permet de bénéficier d'une réduction immédiate de 70 € sur votre inscription dans l'un des 85 000 clubs, associations sportives ou salles de sport partenaires.",
+      title: `Bonne nouvelle, vous êtes éligible au pass Sport.`,
+      description: '',
     };
 
     const errorInitialMeta = {
-      title: `Nous sommes désolés, d'après les informations que vous nous avez fournies, vous n'êtes pas éligible au pass Sport.`,
+      title: `Vous n’êtes pas éligible au pass Sport.`,
       description: '',
     };
 
@@ -113,7 +115,7 @@ export default function SimplifiedEligibilityTest({
           if (!CODES_OBTAINABLE_FOR_CROUS) {
             setAlertMeta({
               title: successInitialMeta.title,
-              description: `En tant qu'étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu du 1er septembre. Nous nous excusons pour la gêne occasionnée.`,
+              description: `En tant qu'étudiant boursier, vous recevrez un code entre mi-octobre et fin novembre.`,
             });
           } else {
             setAlertMeta({
@@ -173,18 +175,20 @@ export default function SimplifiedEligibilityTest({
 
   return (
     <>
-      <div className={styles['eligibility-test']}>
+      <div
+        className={cn({
+          [styles['eligibility-test']]: true,
+          [styles['eligibility-test--has-background']]: hasBackground,
+          [styles['eligibility-test--has-border']]: hasBorder,
+        })}
+      >
         {headingLevel === 'h1' && (
-          <h1 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h1>
+          <h1 className="fr-h5 fr-mb-0">Testez votre éligibilité en 1 min</h1>
         )}
 
         {headingLevel === 'h2' && (
-          <h2 className="fr-h2 fr-mb-0">Vérifier mon éligibilité en 1 min</h2>
+          <h2 className="fr-h5 fr-mb-0">Testez votre éligibilité en 1 min</h2>
         )}
-
-        <p className="fr-text--sm fr-text-default--grey fr-ml-1w fr-mt-1w fr-mb-0">
-          Vérifiez votre éligibilité ou celle votre enfant. Ces informations ne sont pas conservées.
-        </p>
 
         <form
           onSubmit={(e) => {
@@ -313,19 +317,23 @@ export default function SimplifiedEligibilityTest({
             <>
               <p className="fr-my-3w text-align--center">
                 <Link
-                  className="fr-link"
+                  className="fr-btn fr-btn--secondary"
                   href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
                   target="_blank"
-                  title="Faites-en la demande sur démarches-simplifiées - Nouvelle fenêtre"
+                  title="Récupérer le pass Sport sur démarches-simplifiées - Nouvelle fenêtre"
                   onClick={() => {
                     onAeehLinkClick();
                   }}
                 >
-                  Faites-en la demande sur démarches-simplifiées
+                  Récupérer mon pass Sport
                 </Link>
               </p>
 
-              <p>En attente du code, vous pouvez proposer cette solution à votre club :</p>
+              <p className="text-align--center fr-mb-2w fr-text--sm">
+                La demande est à effectuer sur démarches-simplifiées.
+              </p>
+
+              <p>Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club :</p>
 
               <ul className="fr-ml-2w">
                 <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>

@@ -334,7 +334,9 @@ const AllowanceStep = () => {
                     <ContactAeehSection onOpenBtnClick={onAeehFormClick} />
                   </div>
 
-                  <p>En attente du code, vous pouvez proposer cette solution à votre club :</p>
+                  <p>
+                    Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club :
+                  </p>
 
                   <ul className="fr-ml-2w">
                     <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
