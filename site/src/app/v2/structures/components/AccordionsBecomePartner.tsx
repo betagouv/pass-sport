@@ -68,20 +68,8 @@ export function AccordionsBecomePartner() {
         onExpandedChange={() => {}}
       >
         <p className="fr-mb-2w">
-          Votre structure doit être affiliée, pour la saison 2025-2026, à l&apos;une des{' '}
-          <Link
-            href="https://www.sports.gouv.fr/les-118-federations-sportives-et-22-groupements-nationaux-530"
-            title="Aller vers la liste des fédérations sportives agréées par le ministère chargé des Sports - Nouvelle fenêtre"
-            target="_blank"
-            className="fr-link"
-          >
-            fédérations sportives agréées
-          </Link>{' '}
-          par le ministère chargé des Sports.
-        </p>
-
-        <p className="fr-mb-2w">
-          Si c&apos;est le cas, vous devrez vous créer un compte sur{' '}
+          Si vous êtes affiliée à l&apos;une des fédérations éligible agréées par le ministère
+          chargé des Sports, vous devrez vous créer un compte sur{' '}
           <Link
             href="https://lecompteasso.associations.gouv.fr/"
             target="_blank"
