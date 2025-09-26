@@ -32,7 +32,7 @@ export function AccordionsTools() {
       </Accordion>
 
       <Accordion
-        label="Outils pour les structures agréées Sport ou Jeunesse Éducation Populaire qui proposent une activité physique et sportive tout au long de l’année"
+        label="Outils pour les associations ayant un agrément Sport ou Jeunesse Education Populaire et proposant une activité sportive tout au long de l'année"
         onExpandedChange={() => {}}
       >
         <ul className="fr-pl-4w">

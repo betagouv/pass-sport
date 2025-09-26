@@ -107,7 +107,7 @@ export function AccordionsBecomePartner() {
         </p>
       </Accordion>
       <Accordion
-        label="Je suis une structure agrémentée Sport ou Jeunesse Éducation Populaire qui propose une activité physique et sportive tout au long de l’année"
+        label="Je suis une association ayant un agrément Sport ou Jeunesse Education Populaire et je propose une activité sportive tout au long de l'année"
         onExpandedChange={() => {}}
       >
         <p className="fr-mb-2w">
