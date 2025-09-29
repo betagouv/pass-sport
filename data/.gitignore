@@ -6,6 +6,7 @@
 *.xlsx
 *.zip
 *.sql
+*.pdf
 
 ignored/
 backup/
