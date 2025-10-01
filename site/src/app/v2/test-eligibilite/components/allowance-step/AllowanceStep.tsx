@@ -95,6 +95,7 @@ const AllowanceStep = () => {
       case ALLOWANCE.AEEH:
       case ALLOWANCE.ARS:
       case ALLOWANCE.CROUS:
+      case ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX:
         return 'Vos informations d’éligibilité';
       default:
         return '';
@@ -250,6 +251,24 @@ const AllowanceStep = () => {
                   {
                     label: (
                       <p className="fr-text--bold">
+                        Étudiant formation sanitaire et sociale
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                          Bourse régionale pour une formation sanitaire et sociale
+                        </span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      onChange: () => {
+                        setIsValidated(false);
+                        setAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
+                        setOriginalAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
+                      },
+                    },
+                  },
+                  {
+                    label: (
+                      <p className="fr-text--bold">
                         Aucune
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
@@ -282,9 +301,9 @@ const AllowanceStep = () => {
                   <EligibilityTestForms />
                 )}
 
-              {allowance === ALLOWANCE.CROUS && CODES_OBTAINABLE_FOR_CROUS && (
-                <CrousEligibilityTestForms />
-              )}
+              {(allowance === ALLOWANCE.CROUS ||
+                allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
+                CODES_OBTAINABLE_FOR_CROUS && <CrousEligibilityTestForms />}
             </>
           )}
         </div>
@@ -293,7 +312,8 @@ const AllowanceStep = () => {
       <div ref={portalRef}>
         {isValidated &&
           benefIsEligible &&
-          allowance === ALLOWANCE.CROUS &&
+          (allowance === ALLOWANCE.CROUS ||
+            allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
           !CODES_OBTAINABLE_FOR_CROUS && (
             <div
               style={{
