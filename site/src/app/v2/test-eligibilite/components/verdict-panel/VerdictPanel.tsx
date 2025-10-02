@@ -14,6 +14,7 @@ import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonn
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import { AAH, AEEH, ARS } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 interface Props {
   isSuccess: boolean;
@@ -23,7 +24,7 @@ interface Props {
 const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   const successRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
-  const { eligibilityData, pspCodeData } = useContext(EligibilityTestContext);
+  const { eligibilityData, pspCodeData, allowance } = useContext(EligibilityTestContext);
   const linkSource = pspCodeData?.[0]?.pdf_base_64
     ? `data:application/pdf;base64,${pspCodeData?.[0]?.pdf_base_64}`
     : null;
@@ -77,18 +78,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                         filename={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}
                         onClick={onDownloadLinkClicked}
                       />
-
-                      {/*<Link*/}
-                      {/*  href={linkSource}*/}
-                      {/*  download={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}*/}
-                      {/*  className="fr-link fr-icon-download-line fr-link--icon-right"*/}
-                      {/*  onClick={onDownloadLinkClicked}*/}
-                      {/*  target="_blank"*/}
-                      {/*>*/}
-                      {/*  Télécharger mon pass Sport*/}
-                      {/*</Link>*/}
-
-                      {/*<p className="fr-mt-1v fr-text--xs">PDF ~100 KB</p>*/}
                     </>
                   ) : (
                     <Alert
@@ -131,11 +120,36 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
             tabIndex={-1}
           >
             {isEligible ? (
-              <Alert
-                severity="warning"
-                title="Les informations que vous avez fournies ne correspondent pas à nos données"
-                description="Vérifiez vos informations avant de contacter le support."
-              />
+              <>
+                {allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX ? (
+                  <>
+                    <Alert
+                      severity="info"
+                      title="Les étudiants des formations sanitaires et sociales..."
+                      description={<p>...</p>}
+                    />
+
+                    <p className="fr-mt-2w">
+                      Faire la demande sur{' '}
+                      <Link
+                        className="fr-link"
+                        href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
+                        target="_blank"
+                        title="Faire la demande de pass Sport sur démarches-simplifiées - Nouvelle fenêtre"
+                        onClick={() => {}}
+                      >
+                        démarches-simplifiées
+                      </Link>
+                    </p>
+                  </>
+                ) : (
+                  <Alert
+                    severity="warning"
+                    title="Les informations que vous avez fournies ne correspondent pas à nos données"
+                    description="Vérifiez vos informations avant de contacter le support."
+                  />
+                )}
+              </>
             ) : (
               <>
                 <Alert
