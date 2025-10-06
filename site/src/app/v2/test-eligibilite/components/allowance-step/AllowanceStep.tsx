@@ -320,17 +320,29 @@ const AllowanceStep = () => {
                 margin: '0 auto 24px auto',
               }}
             >
-              <Alert
-                severity="info"
-                title="Les étudiants boursiers pourront obtenir leur code progressivement à partir du 1er novembre."
-                description={
-                  <p>
-                    Vous les recevrez directement dans votre boite courriel.
-                    <br />
-                    Nous nous excusons pour la gêne occasionnée.
-                  </p>
-                }
-              />
+              {allowance === ALLOWANCE.CROUS ? (
+                <Alert
+                  severity="info"
+                  title="Les étudiants boursiers de l'enseignement supérieur recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                  description={
+                    <p>
+                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                      pourrez venir le récupérer sur le site du pass Sport.
+                    </p>
+                  }
+                />
+              ) : (
+                <Alert
+                  severity="info"
+                  title="Les étudiants boursiers des formations sanitaires et sociales recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                  description={
+                    <p>
+                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                      pourrez venir le récupérer sur le site du pass Sport.
+                    </p>
+                  }
+                />
+              )}
             </div>
           )}
 
