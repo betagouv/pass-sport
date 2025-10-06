@@ -33,6 +33,10 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
     push(['trackEvent', 'Eligibility Test', 'Link clicked', 'Download link clicked']);
   }, []);
 
+  const onAeehLinkClick = useCallback(() => {
+    push(['trackEvent', 'Simplified Eligibility Test', 'Clicked', 'Button to open AEEH form']);
+  }, []);
+
   useEffect(() => {
     if (isSuccess && successRef.current) {
       successRef.current.focus();
@@ -121,25 +125,84 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           >
             {isEligible ? (
               <>
-                {allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX ? (
+                {[ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX, ALLOWANCE.CROUS].includes(
+                  allowance as ALLOWANCE,
+                ) ? (
+                  <>
+                    {allowance === ALLOWANCE.CROUS ? (
+                      <Alert
+                        severity="info"
+                        title="Les étudiants boursiers de l'enseignement supérieur recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                        description={
+                          <p>
+                            Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                            pourrez venir le récupérer sur le site du pass Sport.
+                          </p>
+                        }
+                      />
+                    ) : (
+                      <Alert
+                        severity="info"
+                        title="Les étudiants boursiers des formations sanitaires et sociales recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                        description={
+                          <p>
+                            Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                            pourrez venir le récupérer sur le site du pass Sport.
+                          </p>
+                        }
+                      />
+                    )}
+                    {/* Todo demarche pour les boursiers apres la deuxieme vague */}
+                    {/*<p className="fr-mt-2w">*/}
+                    {/*  Faire la demande sur{' '}*/}
+                    {/*  <Link*/}
+                    {/*    className="fr-link"*/}
+                    {/*    href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"*/}
+                    {/*    target="_blank"*/}
+                    {/*    title="Faire la demande de pass Sport sur démarches-simplifiées - Nouvelle fenêtre"*/}
+                    {/*    onClick={() => {}}*/}
+                    {/*  >*/}
+                    {/*    démarches-simplifiées*/}
+                    {/*  </Link>*/}
+                    {/*</p>*/}
+                  </>
+                ) : allowance === ALLOWANCE.AEEH ? (
                   <>
                     <Alert
                       severity="info"
-                      title="Les étudiants des formations sanitaires et sociales..."
-                      description={<p>...</p>}
+                      title="Nous n'avons pas retrouvé votre code"
+                      description={`Vérifiez les informations que vous avez remplies avant de cliquer sur "Récupérer mon pass Sport". Vous serez redirigés vers le service démarches-simplifiées qui nous permettra de traiter votre demande.`}
                     />
-
-                    <p className="fr-mt-2w">
-                      Faire la demande sur{' '}
+                    <p className="fr-my-3w text-align--center">
                       <Link
-                        className="fr-link"
+                        className="fr-btn fr-btn--secondary"
                         href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
                         target="_blank"
-                        title="Faire la demande de pass Sport sur démarches-simplifiées - Nouvelle fenêtre"
-                        onClick={() => {}}
+                        title="Récupérer le pass Sport sur démarches-simplifiées - Nouvelle fenêtre"
+                        onClick={() => {
+                          onAeehLinkClick();
+                        }}
                       >
-                        démarches-simplifiées
+                        Récupérer mon pass Sport
                       </Link>
+                    </p>
+
+                    <p>
+                      Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club
+                      :
+                    </p>
+
+                    <ul className="fr-ml-2w">
+                      <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
+                      <li>
+                        Fournir un chèque de 70 € (non encaissé), restitué dès réception du code
+                        pass Sport.
+                      </li>
+                    </ul>
+
+                    <p>
+                      Si vous n&apos;êtes finalement pas éligible, le club pourra encaisser le
+                      chèque. Chaque club reste libre d&apos;accepter ou non cette solution.
                     </p>
                   </>
                 ) : (

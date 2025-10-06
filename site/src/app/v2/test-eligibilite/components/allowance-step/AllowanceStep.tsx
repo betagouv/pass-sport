@@ -232,11 +232,10 @@ const AllowanceStep = () => {
                   {
                     label: (
                       <p className="fr-text--bold">
-                        Étudiant boursier
+                        Étudiant boursier du CROUS
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse du CROUS ou bourse régionale pour une formation sanitaire et
-                          sociale
+                          Bourse annuelle du CROUS pour l&apos;enseignement supérieur
                         </span>
                       </p>
                     ),
@@ -251,10 +250,10 @@ const AllowanceStep = () => {
                   {
                     label: (
                       <p className="fr-text--bold">
-                        Étudiant formation sanitaire et sociale
+                        Étudiant boursier en formation sanitaire et sociale
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse régionale pour une formation sanitaire et sociale
+                          Bourse régionale pour la formation sanitaire et sociale
                         </span>
                       </p>
                     ),

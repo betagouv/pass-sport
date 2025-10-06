@@ -11,4 +11,9 @@ export const CROUS = ({ includeSanitairesEtSociaux = false }) => (
     </span>
   </>
 );
+
+export const FORMATIONS_SANITAIRES_ET_SOCIALES = () => (
+  <span>Bourse régionale pour les formations sanitaires et sociales</span>
+);
+
 export const MSA = () => <abbr title="Mutualité Sociale Agricole">MSA</abbr>;
