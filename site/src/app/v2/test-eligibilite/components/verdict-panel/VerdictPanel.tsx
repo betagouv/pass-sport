@@ -170,7 +170,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                   <>
                     <Alert
                       severity="info"
-                      title="Nous n'avons pas retrouvé votre code"
+                      title="Nous n'avons pas retrouvé votre code."
                       description={`Vérifiez les informations que vous avez remplies avant de cliquer sur "Récupérer mon pass Sport". Vous serez redirigés vers le service démarches-simplifiées qui nous permettra de traiter votre demande.`}
                     />
                     <p className="fr-my-3w text-align--center">
@@ -208,7 +208,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                 ) : (
                   <Alert
                     severity="warning"
-                    title="Les informations que vous avez fournies ne correspondent pas à nos données"
+                    title="Les informations que vous avez fournies ne correspondent pas à nos données."
                     description="Vérifiez vos informations avant de contacter le support."
                   />
                 )}
