@@ -254,14 +254,16 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           </section>
 
           <section className={styles['section-cta']}>
-            {isEligible && (
-              <Link
-                className={cn(['fr-btn', styles['section-cta__link']])}
-                href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-              >
-                Contacter le support
-              </Link>
-            )}
+            {isEligible &&
+              allowance &&
+              ![ALLOWANCE.CROUS, ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX].includes(allowance) && (
+                <Link
+                  className={cn(['fr-btn', styles['section-cta__link']])}
+                  href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+                >
+                  Contacter le support
+                </Link>
+              )}
             <Actions displayHomeBackBtn newTestBtnVariant="tertiary" />
           </section>
 
