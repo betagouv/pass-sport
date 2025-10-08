@@ -129,25 +129,25 @@ describe('Eligibility tests suite', () => {
       // 13 years old
       expect(getAeehCodeObtentionType('2012-01-01')).toEqual({
         isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
 
       // 6 years old
       expect(getAeehCodeObtentionType('2019-12-31')).toEqual({
         isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
 
       // 20 years old
       expect(getAeehCodeObtentionType('2005-01-01')).toEqual({
         isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
 
       // 18 years old
       expect(getAeehCodeObtentionType('2007-12-31')).toEqual({
         isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.LINK,
+        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
     });
 

@@ -13,6 +13,7 @@ import { fetchPspCode } from '../../agent';
 import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 interface Props {
   eligibilityDataItem: SearchResponseBodyItem;
@@ -180,17 +181,22 @@ const CrousForm = ({
         {eligibilityDataItem.hasMatricule && inputStates.recipientIneNumber && (
           <CustomInput
             inputProps={{
-              label: (
-                <>
-                  Numéro INE provenant du <CROUS /> ou bourse régionale pour les formations
-                  sanitaires et sociales <span className="text--required">*</span>
-                </>
-              ),
+              label:
+                allowance === ALLOWANCE.CROUS ? (
+                  <>
+                    Numéro INE provenant du <CROUS /> <span className="text--required">*</span>
+                  </>
+                ) : (
+                  <>
+                    Numéro INE provenant des formations sanitaires et sociales{' '}
+                    <span className="text--required">*</span>
+                  </>
+                ),
               hintText:
-                'Format attendu : 9 chiffres et 2 lettres ou 10 chiffres et 1 lettre, "DD-" suivi de 6 chiffres',
+                'Format attendu : composé de 11 caractères, soit 10 chiffres et 1 lettre soit 9 chiffres et 2 lettres',
               nativeInputProps: {
                 name: 'recipientIneNumber',
-                placeholder: 'ex: 00000000XX ou 0000000000X, DD-000000',
+                placeholder: 'ex: 0000000000X ou 00000000XX',
                 type: 'text',
                 required: true,
                 onChange: (e: ChangeEvent<HTMLInputElement>) =>

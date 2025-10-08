@@ -95,6 +95,7 @@ const AllowanceStep = () => {
       case ALLOWANCE.AEEH:
       case ALLOWANCE.ARS:
       case ALLOWANCE.CROUS:
+      case ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX:
         return 'Vos informations d’éligibilité';
       default:
         return '';
@@ -231,11 +232,10 @@ const AllowanceStep = () => {
                   {
                     label: (
                       <p className="fr-text--bold">
-                        Étudiant boursier
+                        Étudiant boursier du CROUS
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse du CROUS ou bourse régionale pour une formation sanitaire et
-                          sociale
+                          Bourse annuelle du CROUS pour l&apos;enseignement supérieur
                         </span>
                       </p>
                     ),
@@ -244,6 +244,24 @@ const AllowanceStep = () => {
                         setIsValidated(false);
                         setAllowance(ALLOWANCE.CROUS);
                         setOriginalAllowance(ALLOWANCE.CROUS);
+                      },
+                    },
+                  },
+                  {
+                    label: (
+                      <p className="fr-text--bold">
+                        Étudiant boursier en formation sanitaire et sociale
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                          Bourse régionale pour la formation sanitaire et sociale
+                        </span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      onChange: () => {
+                        setIsValidated(false);
+                        setAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
+                        setOriginalAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
                       },
                     },
                   },
@@ -282,9 +300,9 @@ const AllowanceStep = () => {
                   <EligibilityTestForms />
                 )}
 
-              {allowance === ALLOWANCE.CROUS && CODES_OBTAINABLE_FOR_CROUS && (
-                <CrousEligibilityTestForms />
-              )}
+              {(allowance === ALLOWANCE.CROUS ||
+                allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
+                CODES_OBTAINABLE_FOR_CROUS && <CrousEligibilityTestForms />}
             </>
           )}
         </div>
@@ -293,7 +311,8 @@ const AllowanceStep = () => {
       <div ref={portalRef}>
         {isValidated &&
           benefIsEligible &&
-          allowance === ALLOWANCE.CROUS &&
+          (allowance === ALLOWANCE.CROUS ||
+            allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
           !CODES_OBTAINABLE_FOR_CROUS && (
             <div
               style={{
@@ -301,17 +320,29 @@ const AllowanceStep = () => {
                 margin: '0 auto 24px auto',
               }}
             >
-              <Alert
-                severity="info"
-                title="Les étudiants boursiers pourront obtenir leur code progressivement à partir du 1er novembre."
-                description={
-                  <p>
-                    Vous les recevrez directement dans votre boite courriel.
-                    <br />
-                    Nous nous excusons pour la gêne occasionnée.
-                  </p>
-                }
-              />
+              {allowance === ALLOWANCE.CROUS ? (
+                <Alert
+                  severity="info"
+                  title="Les étudiants boursiers de l'enseignement supérieur recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                  description={
+                    <p>
+                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                      pourrez venir le récupérer sur le site du pass Sport.
+                    </p>
+                  }
+                />
+              ) : (
+                <Alert
+                  severity="info"
+                  title="Les étudiants boursiers des formations sanitaires et sociales recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                  description={
+                    <p>
+                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                      pourrez venir le récupérer sur le site du pass Sport.
+                    </p>
+                  }
+                />
+              )}
             </div>
           )}
 

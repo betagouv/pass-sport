@@ -21,6 +21,7 @@ export const ALLOWANCE_MAPPING_TO_ALLOCATION: { [key in ALLOWANCE]: ALLOCATION }
   [ALLOWANCE.AEEH]: ALLOCATION.AEEH,
   [ALLOWANCE.ARS]: ALLOCATION.ARS,
   [ALLOWANCE.CROUS]: ALLOCATION.CROUS,
+  [ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX]: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
 };
 
 const DATE_FORMAT = 'dd/MM/yyyy';
@@ -57,32 +58,11 @@ export function getAeehCodeObtentionType(targetDate: string): {
   isEligible: boolean;
   displayType: AEEH_CODE_OBTENTION_TYPE;
 } {
-  // 01/01/2005 -> 31/12/2007 (18 to 20 years old)
-  // 01/01/2008 -> 31/12/2011 (14 to 17 years old)
-  // 01/01/2012 -> 31/12/2019 (6 to 13 years old)
-  const displayType =
-    isBetween({
-      inputDates: {
-        targetDate,
-        startDate: '01/01/2012',
-        endDate: '31/12/2019',
-      },
-    }) ||
-    isBetween({
-      inputDates: {
-        targetDate,
-        startDate: '01/01/2005',
-        endDate: '31/12/2007',
-      },
-    })
-      ? AEEH_CODE_OBTENTION_TYPE.LINK
-      : AEEH_CODE_OBTENTION_TYPE.FORM;
-
   const _isEligible = isEligible({ targetDate, allocationName: ALLOCATION.AEEH });
 
   return {
     isEligible: _isEligible,
-    displayType,
+    displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
   };
 }
 

@@ -14,6 +14,7 @@ import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonn
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import { AAH, AEEH, ARS } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 interface Props {
   isSuccess: boolean;
@@ -23,13 +24,17 @@ interface Props {
 const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   const successRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
-  const { eligibilityData, pspCodeData } = useContext(EligibilityTestContext);
+  const { eligibilityData, pspCodeData, allowance } = useContext(EligibilityTestContext);
   const linkSource = pspCodeData?.[0]?.pdf_base_64
     ? `data:application/pdf;base64,${pspCodeData?.[0]?.pdf_base_64}`
     : null;
 
   const onDownloadLinkClicked = useCallback(() => {
     push(['trackEvent', 'Eligibility Test', 'Link clicked', 'Download link clicked']);
+  }, []);
+
+  const onAeehLinkClick = useCallback(() => {
+    push(['trackEvent', 'Simplified Eligibility Test', 'Clicked', 'Button to open AEEH form']);
   }, []);
 
   useEffect(() => {
@@ -77,18 +82,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                         filename={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}
                         onClick={onDownloadLinkClicked}
                       />
-
-                      {/*<Link*/}
-                      {/*  href={linkSource}*/}
-                      {/*  download={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}*/}
-                      {/*  className="fr-link fr-icon-download-line fr-link--icon-right"*/}
-                      {/*  onClick={onDownloadLinkClicked}*/}
-                      {/*  target="_blank"*/}
-                      {/*>*/}
-                      {/*  Télécharger mon pass Sport*/}
-                      {/*</Link>*/}
-
-                      {/*<p className="fr-mt-1v fr-text--xs">PDF ~100 KB</p>*/}
                     </>
                   ) : (
                     <Alert
@@ -131,11 +124,95 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
             tabIndex={-1}
           >
             {isEligible ? (
-              <Alert
-                severity="warning"
-                title="Les informations que vous avez fournies ne correspondent pas à nos données"
-                description="Vérifiez vos informations avant de contacter le support."
-              />
+              <>
+                {[ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX, ALLOWANCE.CROUS].includes(
+                  allowance as ALLOWANCE,
+                ) ? (
+                  <>
+                    {allowance === ALLOWANCE.CROUS ? (
+                      <Alert
+                        severity="info"
+                        title="Les étudiants boursiers de l'enseignement supérieur recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                        description={
+                          <p>
+                            Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                            pourrez venir le récupérer sur le site du pass Sport.
+                          </p>
+                        }
+                      />
+                    ) : (
+                      <Alert
+                        severity="info"
+                        title="Les étudiants boursiers des formations sanitaires et sociales recevront leur code par courriel entre le 9 octobre et le 15 novembre."
+                        description={
+                          <p>
+                            Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
+                            pourrez venir le récupérer sur le site du pass Sport.
+                          </p>
+                        }
+                      />
+                    )}
+                    {/* Todo demarche pour les boursiers apres la deuxieme vague */}
+                    {/*<p className="fr-mt-2w">*/}
+                    {/*  Faire la demande sur{' '}*/}
+                    {/*  <Link*/}
+                    {/*    className="fr-link"*/}
+                    {/*    href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"*/}
+                    {/*    target="_blank"*/}
+                    {/*    title="Faire la demande de pass Sport sur démarches-simplifiées - Nouvelle fenêtre"*/}
+                    {/*    onClick={() => {}}*/}
+                    {/*  >*/}
+                    {/*    démarches-simplifiées*/}
+                    {/*  </Link>*/}
+                    {/*</p>*/}
+                  </>
+                ) : allowance === ALLOWANCE.AEEH ? (
+                  <>
+                    <Alert
+                      severity="info"
+                      title="Nous n'avons pas retrouvé votre code."
+                      description={`Vérifiez les informations que vous avez remplies avant de cliquer sur "Récupérer mon pass Sport". Vous serez redirigés vers le service démarches-simplifiées qui nous permettra de traiter votre demande.`}
+                    />
+                    <p className="fr-my-3w text-align--center">
+                      <Link
+                        className="fr-btn fr-btn--secondary"
+                        href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
+                        target="_blank"
+                        title="Récupérer le pass Sport sur démarches-simplifiées - Nouvelle fenêtre"
+                        onClick={() => {
+                          onAeehLinkClick();
+                        }}
+                      >
+                        Récupérer mon pass Sport
+                      </Link>
+                    </p>
+
+                    <p>
+                      Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club
+                      :
+                    </p>
+
+                    <ul className="fr-ml-2w">
+                      <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
+                      <li>
+                        Fournir un chèque de 70 € (non encaissé), restitué dès réception du code
+                        pass Sport.
+                      </li>
+                    </ul>
+
+                    <p>
+                      Si vous n&apos;êtes finalement pas éligible, le club pourra encaisser le
+                      chèque. Chaque club reste libre d&apos;accepter ou non cette solution.
+                    </p>
+                  </>
+                ) : (
+                  <Alert
+                    severity="warning"
+                    title="Les informations que vous avez fournies ne correspondent pas à nos données."
+                    description="Vérifiez vos informations avant de contacter le support."
+                  />
+                )}
+              </>
             ) : (
               <>
                 <Alert
@@ -177,14 +254,16 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           </section>
 
           <section className={styles['section-cta']}>
-            {isEligible && (
-              <Link
-                className={cn(['fr-btn', styles['section-cta__link']])}
-                href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-              >
-                Contacter le support
-              </Link>
-            )}
+            {isEligible &&
+              allowance &&
+              ![ALLOWANCE.CROUS, ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX].includes(allowance) && (
+                <Link
+                  className={cn(['fr-btn', styles['section-cta__link']])}
+                  href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+                >
+                  Contacter le support
+                </Link>
+              )}
             <Actions displayHomeBackBtn newTestBtnVariant="tertiary" />
           </section>
 
