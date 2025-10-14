@@ -93,6 +93,14 @@ export function AccordionsBecomePartner() {
           </Link>{' '}
           est disponible pour vous accompagner.
         </p>
+
+        <div className="fr-mt-2w">
+          <DownloadLink
+            details="PDF ~ 252 kB"
+            label="Télécharger la notice pass Sport 2025"
+            href="/assets/partenaires/notice-pass-sport-2025.pdf"
+          />
+        </div>
       </Accordion>
       <Accordion
         label="Je suis une association ayant un agrément Sport ou Jeunesse Education Populaire et je propose une activité sportive tout au long de l'année"
@@ -140,6 +148,13 @@ export function AccordionsBecomePartner() {
           </Link>{' '}
           est disponible pour vous accompagner.
         </p>
+        <div className="fr-mt-2w">
+          <DownloadLink
+            details="PDF ~ 252 kB"
+            label="Télécharger la notice pass Sport 2025"
+            href="/assets/partenaires/notice-pass-sport-2025.pdf"
+          />
+        </div>
       </Accordion>
       <Accordion
         label="Je suis une structure à but lucratif du secteur Loisirs Sportifs Marchands"
@@ -215,6 +230,13 @@ export function AccordionsBecomePartner() {
           tutoriel
         </Link>{' '}
         est disponible pour vous accompagner.
+        <div className="fr-mt-2w">
+          <DownloadLink
+            details="PDF ~ 264 kB"
+            label="Télécharger la notice pass Sport 2025 dédiée aux Loisirs Sportifs Marchands"
+            href="/assets/partenaires/notice-lsm-2025.pdf"
+          />
+        </div>
       </Accordion>
       <Accordion label="Je n’appartiens à aucune de ces structures" onExpandedChange={() => {}}>
         <p>

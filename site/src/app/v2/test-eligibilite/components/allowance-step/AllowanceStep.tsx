@@ -34,7 +34,7 @@ const AllowanceStep = () => {
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
-  const [originalAllowance, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
+  const [, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
 
   // isValidated is a variable to know whether the user has clicked on the submit button
   const [isValidated, setIsValidated] = useState<boolean | null>(null);

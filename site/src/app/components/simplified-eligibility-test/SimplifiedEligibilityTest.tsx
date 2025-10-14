@@ -115,7 +115,7 @@ export default function SimplifiedEligibilityTest({
           if (!CODES_OBTAINABLE_FOR_CROUS) {
             setAlertMeta({
               title: successInitialMeta.title,
-              description: `En tant qu'étudiant boursier, vous recevrez un code entre mi-octobre et fin novembre.`,
+              description: `En tant qu'étudiant boursier, vous recevrez un code par mail entre mi-octobre et fin novembre.`,
             });
           } else {
             setAlertMeta({

@@ -67,7 +67,7 @@ const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
     },
     points: [
       {
-        title: 'Devenez partenaire du pass Sport',
+        title: 'Consultez les outils pour les partenaires',
         linkProps: {
           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
         },
