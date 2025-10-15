@@ -35,7 +35,7 @@ export default function Page() {
             fullWidth
             points={[
               {
-                title: 'Consultez les outils pour les partenaires',
+                title: 'Consultez les outils pour les structures sportives',
                 linkProps: {
                   href: `#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
                 },
@@ -77,7 +77,7 @@ export default function Page() {
           id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}
           className={styles['become-partner-section']}
         >
-          <h1 className="fr-mb-0">Consultez les outils pour les partenaires</h1>
+          <h1 className="fr-mb-0">Consultez les outils pour les structures sportives</h1>
         </section>
 
         <section className={styles['become-partner-section__accordions']}>
@@ -198,8 +198,8 @@ export default function Page() {
             </li>
           </ol>
           <p className="fr-mb-0">
-            Vous pouvez saisir les codes des bénéficiaires depuis le 1er septembre{' '}
-            <span className="fr-text--bold">jusqu&apos;au 31 décembre 2025</span>.
+            Vous pouvez saisir les codes des bénéficiaires{' '}
+            <span className="fr-text--bold">du 1er septembre jusqu&apos;au 31 décembre 2025</span>.
           </p>
 
           <p className="fr-mb-0">
@@ -233,16 +233,13 @@ export default function Page() {
             />
 
             <p>
-              Si votre dossier est correct, lles remboursements arriveront dans le mois suivant la
+              Si votre dossier est correct, les remboursements arriveront dans le mois suivant la
               saisie des codes dans votre compte Asso.
             </p>
 
             <p>
               Vous pouvez saisir les codes des bénéficiaires{' '}
-              <span className="fr-text--bold">
-                depuis le 1er septembre jusqu’au 31 décembre 2025
-              </span>
-              .
+              <span className="fr-text--bold">du 1er septembre jusqu’au 31 décembre 2025</span>.
             </p>
 
             <p className="fr-mb-0">
