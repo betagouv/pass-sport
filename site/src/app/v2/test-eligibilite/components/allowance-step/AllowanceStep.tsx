@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { FormEvent, useCallback, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
@@ -35,10 +35,11 @@ const AllowanceStep = () => {
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
   const [, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // isValidated is a variable to know whether the user has clicked on the submit button
   const [isValidated, setIsValidated] = useState<boolean | null>(null);
-
+  const dobId = 'dob-id';
   const [radioButtonsState, setRadioButtonsState] = useState<RadioButtonsProps['state']>('default');
   const radioButtonsStateRelatedMessage =
     radioButtonsState === 'error' ? `Le choix de l'allocation est requise` : '';
@@ -66,7 +67,9 @@ const AllowanceStep = () => {
     setDob(undefined);
   };
 
-  const buttonClickedHandler = () => {
+  const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     setRadioButtonsState(allowance === null ? 'error' : 'default');
     setDobState(!dob ? 'error' : 'default');
 
@@ -74,6 +77,12 @@ const AllowanceStep = () => {
       setIsValidated(true);
     } else {
       setIsValidated(false);
+
+      if (!dob) {
+        formRef?.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
+      } else {
+        formRef?.current?.querySelector<HTMLInputElement>(`#${fieldsetId}`)?.focus();
+      }
     }
 
     // Set benef eligibility
@@ -123,7 +132,10 @@ const AllowanceStep = () => {
           <h2 className="fr-text--bold fr-mb-2w fr-text--xl">Quelle est votre situation ?</h2>
           {(!isValidated || !benefIsEligible) && (
             <>
-              <span className="text--italic">Tous les champs ci-dessous sont obligatoires *</span>
+              <span className="text--italic">
+                Tous les champs ci-dessous sont obligatoires{' '}
+                <span className="text--required">*</span>
+              </span>
               <h3 className="fr-mt-1w fr-mb-2w fr-text--md fr-text--regular">
                 Ces informations nous aideront à connaître votre éligibilité.
               </h3>
@@ -139,7 +151,7 @@ const AllowanceStep = () => {
               <StepChecker title={getStepCheckerName()} onClick={restartTest} />
             ) : null
           ) : (
-            <div>
+            <form ref={formRef} onSubmit={onSubmitHandler}>
               <Input
                 label={
                   <>
@@ -147,6 +159,7 @@ const AllowanceStep = () => {
                   </>
                 }
                 nativeInputProps={{
+                  id: dobId,
                   type: 'date',
                   min: '1950-01-01',
                   max: '2099-12-31',
@@ -173,7 +186,6 @@ const AllowanceStep = () => {
                   </>
                 }
                 key={CustomButtonsGroupKey}
-                onOkButtonClicked={buttonClickedHandler}
                 options={[
                   {
                     label: (
@@ -285,7 +297,7 @@ const AllowanceStep = () => {
                   },
                 ]}
               />
-            </div>
+            </form>
           )}
 
           {isValidated && benefIsEligible && (

@@ -1,18 +1,16 @@
 import RadioButtons, { RadioButtonsProps } from '@codegouvfr/react-dsfr/RadioButtons';
 import styles from './styles.module.scss';
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import Button from '@codegouvfr/react-dsfr/Button';
-import { setFocusOn } from '@/utils/dom';
 
 type Props = Omit<RadioButtonsProps, 'legend'> & {
   id: string;
   legend: string | ReactNode;
   legendDescription?: ReactNode;
-  onOkButtonClicked: () => void;
 };
 
 const CustomRadioButtons: React.FC<Props> = (props) => {
-  const { onOkButtonClicked, legend, legendDescription, ...onlyRadioButtonsProps } = props;
+  const { legend, legendDescription, ...onlyRadioButtonsProps } = props;
 
   return (
     <div>
@@ -30,7 +28,7 @@ const CustomRadioButtons: React.FC<Props> = (props) => {
         }
       />
       <div className={styles['button-container']}>
-        <Button onClick={onOkButtonClicked}>Valider les informations</Button>
+        <Button type="submit">Valider les informations</Button>
       </div>
     </div>
   );
