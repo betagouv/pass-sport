@@ -57,7 +57,7 @@ export default async function Questions({
         <ContactSection isProVersion={displayType === DISPLAY_TYPE.PRO} />
       </main>
 
-      <SocialMediaPanel />
+      <SocialMediaPanel titleAs="h2" />
     </>
   );
 }

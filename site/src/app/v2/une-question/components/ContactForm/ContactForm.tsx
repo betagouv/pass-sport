@@ -283,13 +283,14 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                     }}
                     state={inputStates.siret.state}
                     stateRelatedMessage={inputStates.siret.errorMsg}
+                    hintText="Format attendu: Le SIRET doit contenir 14 chiffres"
                   />
                 </div>
 
                 <div>
                   <Input
                     label="RNA"
-                    hintText="Le numéro RNA est le numéro d'identification du Répertoire National des Associations"
+                    hintText="Format attendu: Le numéro RNA est le numéro d'identification du Répertoire National des Associations"
                     nativeInputProps={{
                       name: 'rna',
                       onChange: (e: ChangeEvent<HTMLInputElement>) =>

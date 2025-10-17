@@ -12,8 +12,6 @@ import code from '@/images/code.svg';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 import ObtainCodeButton from '@/app/v2/jeunes-et-parents/components/ObtainCodeButton';
-import ContactAeehSection from '@/app/v2/jeunes-et-parents/components/ContactAeehSection';
-import { CODES_OBTAINABLE } from '@/app/constants/env';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
 import { AccordionsFaq } from '@/app/v2/jeunes-et-parents/components/AccordionsFaq';
@@ -70,7 +68,7 @@ export default function Page() {
 
         <section id={JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}>
           <div className={styles['eligibility-section__description']}>
-            <h1 className="fr-mb-2w">Testez votre éligibilité en 1 min</h1>
+            <h2 className="fr-mb-2w fr-h1">Testez votre éligibilité en 1 min</h2>
 
             <section className="fr-mb-2w">
               <p>Qui est concerné par le pass Sport ?</p>
@@ -127,7 +125,7 @@ export default function Page() {
           />
 
           <div className={styles['find-club-section__description']}>
-            <h1>Trouvez une structure sportive partenaire</h1>
+            <h2 className="fr-h1">Trouvez une structure sportive partenaire</h2>
             <p>
               Vous pouvez utiliser le pass Sport dans plus de 85 000 clubs, associations sportives
               et salles de sport partenaires, partout en France.
@@ -170,9 +168,10 @@ export default function Page() {
           id={JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}
           className={styles['receive-code-section']}
         >
-          <h1>Recevez votre pass Sport</h1>
+          <h2 className="fr-h1">Recevez votre pass Sport</h2>
           <KnowMore
             variant="purple"
+            titleAs="h3"
             knowMore={{
               title: 'A savoir',
               description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre 2025.',
@@ -219,7 +218,7 @@ export default function Page() {
           />
 
           <div className={styles['activate-code-section__description']}>
-            <h1>Utilisez votre code</h1>
+            <h2 className="fr-h1">Utilisez votre code</h2>
 
             <p>
               Le pass Sport prend la forme d&apos;un code composé de 10 caractères alphanumériques,
@@ -257,7 +256,7 @@ export default function Page() {
         </section>
 
         <section className={styles['decret-section']}>
-          <h1 className="fr-h4">Texte de référence</h1>
+          <h2 className="fr-h4">Texte de référence</h2>
           <Link
             href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
             target="_blank"

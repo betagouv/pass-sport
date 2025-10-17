@@ -18,6 +18,7 @@ import KnowMore from '@/app/components/know-more/KnowMore';
 import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
+import { InputState } from '@/types/form';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -28,6 +29,11 @@ type SimplifiedEligibilityTestProps = {
   displaySeparator: boolean;
   hasBackground?: boolean;
   hasBorder?: boolean;
+};
+
+type FormInputsState = {
+  dob: InputState;
+  allowance: InputState;
 };
 
 export default function SimplifiedEligibilityTest({
@@ -63,6 +69,11 @@ export default function SimplifiedEligibilityTest({
   const [displayEligibilityConditions, setDisplayEligibilityConditions] = useState<boolean>(false);
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
+  // todo : finish form error handling
+  const initialInputsState: FormInputsState = {
+    dob: { state: 'default' },
+    allowance: { state: 'default' },
+  };
 
   function resetStates() {
     setDisplayEligibilityConditions(false);
@@ -196,7 +207,7 @@ export default function SimplifiedEligibilityTest({
             e.preventDefault();
           }}
         >
-          <fieldset className="fr-fieldset" aria-describedby="eligibility-notification-message">
+          <div className="fr-fieldset" aria-describedby="eligibility-notification-message">
             <div
               className={cn(
                 styles['eligibility-test__fields'],
@@ -217,6 +228,8 @@ export default function SimplifiedEligibilityTest({
                     onChange: (e) => {
                       setTargetDate(e.target.value);
                       resetStates();
+                      // state={inputStates.beneficiaryLastname.state}
+                      // stateRelatedMessage={inputStates.beneficiaryLastname.errorMsg}
                     },
                   }}
                 />
@@ -281,7 +294,7 @@ export default function SimplifiedEligibilityTest({
                 </Button>
               </div>
             </div>
-          </fieldset>
+          </div>
 
           <section id="eligibility-notification-message" role="alert">
             {success !== null && alertMeta !== null && (
@@ -291,6 +304,7 @@ export default function SimplifiedEligibilityTest({
                 key={`${allocationName}-success`}
                 title={alertMeta.title}
                 description={alertMeta.description}
+                isClosed={true}
               />
             )}
           </section>
