@@ -285,7 +285,7 @@ export default function SimplifiedEligibilityTest({
                         ...inputStates,
                         dob: {
                           state: inputIsValid ? 'default' : 'error',
-                          errorMsg: !inputIsValid ? 'La date de naissance est incorrecte' : '',
+                          errorMsg: !inputIsValid ? 'La date de naissance est invalide' : '',
                         },
                       });
 

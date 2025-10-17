@@ -237,6 +237,17 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   }
                   nativeInputProps={{
                     name: 'firstname',
+                    onBlur: (e) => {
+                      const inputIsValid = !!e.target?.checkValidity();
+
+                      setInputStates({
+                        ...inputStates,
+                        firstname: {
+                          state: inputIsValid ? 'default' : 'error',
+                          errorMsg: !inputIsValid ? mapper['firstname'] : '',
+                        },
+                      });
+                    },
                     onChange: (e: ChangeEvent<HTMLInputElement>) =>
                       onInputChanged(e.target.value, 'firstname'),
                     autoComplete: 'given-name',
@@ -256,6 +267,17 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   }
                   nativeInputProps={{
                     name: 'lastname',
+                    onBlur: (e) => {
+                      const inputIsValid = !!e.target?.checkValidity();
+
+                      setInputStates({
+                        ...inputStates,
+                        lastname: {
+                          state: inputIsValid ? 'default' : 'error',
+                          errorMsg: !inputIsValid ? mapper['lastname'] : '',
+                        },
+                      });
+                    },
                     onChange: (e: ChangeEvent<HTMLInputElement>) =>
                       onInputChanged(e.target.value, 'lastname'),
                     autoComplete: 'family-name',
@@ -277,6 +299,17 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                     }
                     nativeInputProps={{
                       name: 'siret',
+                      onBlur: (e) => {
+                        const inputIsValid = !!e.target?.checkValidity();
+
+                        setInputStates({
+                          ...inputStates,
+                          siret: {
+                            state: inputIsValid ? 'default' : 'error',
+                            errorMsg: !inputIsValid ? mapper['siret'] : '',
+                          },
+                        });
+                      },
                       onChange: (e: ChangeEvent<HTMLInputElement>) =>
                         onInputChanged(e.target.value, 'siret'),
                       required: true,
@@ -293,6 +326,17 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                     hintText="Format attendu: Le numéro RNA est le numéro d'identification du Répertoire National des Associations"
                     nativeInputProps={{
                       name: 'rna',
+                      onBlur: (e) => {
+                        const inputIsValid = !!e.target?.checkValidity();
+
+                        setInputStates({
+                          ...inputStates,
+                          rna: {
+                            state: inputIsValid ? 'default' : 'error',
+                            errorMsg: !inputIsValid ? mapper['rna'] : '',
+                          },
+                        });
+                      },
                       onChange: (e: ChangeEvent<HTMLInputElement>) =>
                         onInputChanged(e.target.value, 'rna'),
                     }}
@@ -312,6 +356,25 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 }
                 nativeInputProps={{
                   name: 'email',
+                  type: 'email',
+                  onBlur: (e) => {
+                    const inputIsValid = !!e.target?.checkValidity();
+
+                    const errorMessage =
+                      e.target.value === ''
+                        ? mapper['email']
+                        : !EMAIL_REGEX.test(e.target.value)
+                          ? 'Format attendu : nom@domaine.fr'
+                          : mapper['email'];
+
+                    setInputStates({
+                      ...inputStates,
+                      email: {
+                        state: inputIsValid ? 'default' : 'error',
+                        errorMsg: !inputIsValid ? errorMessage : '',
+                      },
+                    });
+                  },
                   onChange: (e: ChangeEvent<HTMLInputElement>) =>
                     onInputChanged(e.target.value, 'email'),
                   autoComplete: 'email',
@@ -332,6 +395,17 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 }
                 nativeSelectProps={{
                   name: 'reason',
+                  onBlur: (e) => {
+                    const inputIsValid = !!e.target?.checkValidity();
+
+                    setInputStates({
+                      ...inputStates,
+                      reason: {
+                        state: inputIsValid ? 'default' : 'error',
+                        errorMsg: !inputIsValid ? mapper['reason'] : '',
+                      },
+                    });
+                  },
                   onChange: (e: SyntheticEvent<HTMLSelectElement>) =>
                     onInputChanged(e.currentTarget.value, 'reason'),
                   defaultValue: '',
@@ -365,6 +439,17 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
               nativeTextAreaProps={{
                 placeholder: 'Message*',
                 name: 'message',
+                onBlur: (e) => {
+                  const inputIsValid = !!e.target?.checkValidity();
+
+                  setInputStates({
+                    ...inputStates,
+                    message: {
+                      state: inputIsValid ? 'default' : 'error',
+                      errorMsg: !inputIsValid ? mapper['message'] : '',
+                    },
+                  });
+                },
                 onChange: (e: ChangeEvent<HTMLTextAreaElement>) =>
                   onInputChanged(e.target.value, 'message'),
                 required: true,
@@ -374,6 +459,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
             />
           </div>
         </div>
+        {/* todo: Check why checkbox is not triggered properly (click on it multiple times to replicate) */}
         <div className="fr-mt-4w">
           <Checkbox
             options={[
@@ -383,6 +469,17 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 nativeInputProps: {
                   name: 'consent',
                   required: true,
+                  onBlur: (e) => {
+                    const inputIsValid = !!e.target?.checkValidity();
+
+                    setInputStates({
+                      ...inputStates,
+                      consent: {
+                        state: inputIsValid ? 'default' : 'error',
+                        errorMsg: !inputIsValid ? mapper['consent'] : '',
+                      },
+                    });
+                  },
                   onChange: (e: ChangeEvent<HTMLInputElement>) =>
                     onInputChanged(e.target.checked ? 'yes' : null, 'consent'),
                 },
