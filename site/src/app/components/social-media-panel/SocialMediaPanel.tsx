@@ -7,13 +7,14 @@ import rootStyles from '@/app/utilities.module.scss';
 interface Props {
   isHomePage?: boolean;
   isProVersion?: boolean;
+  titleAs?: 'h1' | 'h2';
 }
 
 interface SocialMediaLinkProps {
   link: SocialMediaLinkData;
 }
 
-const SocialMediaPanel = ({ isHomePage = false, isProVersion = false }: Props) => {
+const SocialMediaPanel = ({ isHomePage = false, isProVersion = false, titleAs = 'h1' }: Props) => {
   const SocialMediaLink: React.FC<SocialMediaLinkProps> = ({ link }) => (
     <Link
       className={cn('fr-text--lg', 'fr-text--bold', styles.color)}
@@ -34,7 +35,11 @@ const SocialMediaPanel = ({ isHomePage = false, isProVersion = false }: Props) =
         [styles['container--default']]: !isHomePage,
       })}
     >
-      <h1 className={cn(styles.title, 'fr-h5')}>Suivez-nous sur les réseaux sociaux</h1>
+      {titleAs === 'h1' ? (
+        <h1 className={cn(styles.title, 'fr-h5')}>Suivez-nous sur les réseaux sociaux</h1>
+      ) : (
+        <h2 className={cn(styles.title, 'fr-h5')}>Suivez-nous sur les réseaux sociaux</h2>
+      )}
       <ul className={cn(styles['link-container'], rootStyles['list--lean'])}>
         {socialMedia.map((link) => (
           <li key={link.href}>

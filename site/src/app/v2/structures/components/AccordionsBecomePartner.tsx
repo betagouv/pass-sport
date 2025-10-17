@@ -8,6 +8,7 @@ export function AccordionsBecomePartner() {
     <>
       <Accordion
         label="J’étais partenaire du dispositif l’année dernière"
+        titleAs="h3"
         onExpandedChange={() => {}}
       >
         <p>
@@ -65,6 +66,7 @@ export function AccordionsBecomePartner() {
 
       <Accordion
         label="Je suis une structure affiliée à l’une des fédérations sportives agréées par le ministère chargé des Sports"
+        titleAs="h3"
         onExpandedChange={() => {}}
       >
         <p className="fr-mb-2w">
@@ -104,6 +106,7 @@ export function AccordionsBecomePartner() {
       </Accordion>
       <Accordion
         label="Je suis une association ayant un agrément Sport ou Jeunesse Education Populaire et je propose une activité sportive tout au long de l'année"
+        titleAs="h3"
         onExpandedChange={() => {}}
       >
         <p className="fr-mb-2w">
@@ -159,6 +162,7 @@ export function AccordionsBecomePartner() {
       </Accordion>
       <Accordion
         label="Je suis une structure à but lucratif du secteur Loisirs Sportifs Marchands"
+        titleAs="h3"
         onExpandedChange={() => {}}
       >
         <p className="fr-mb-2w">Les responsables de structure s&apos;engagent à :</p>
@@ -239,7 +243,11 @@ export function AccordionsBecomePartner() {
         </Link>{' '}
         est disponible pour vous accompagner.
       </Accordion>
-      <Accordion label="Je n’appartiens à aucune de ces structures" onExpandedChange={() => {}}>
+      <Accordion
+        label="Je n’appartiens à aucune de ces structures"
+        onExpandedChange={() => {}}
+        titleAs="h3"
+      >
         <p>
           Seules les structures appartenant à l’une de ces catégories sont éligibles au dispositif
           pass Sport.
