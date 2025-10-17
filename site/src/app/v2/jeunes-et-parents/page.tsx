@@ -109,7 +109,7 @@ export default function Page() {
               <SimplifiedEligibilityTest
                 display="row"
                 buttonVariant="primary"
-                headingLevel="h2"
+                headingLevel="h3"
                 jeDonneMonAvisBtnPadding={false}
                 displaySeparator={false}
               />
