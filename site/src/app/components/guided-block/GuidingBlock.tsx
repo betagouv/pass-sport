@@ -67,7 +67,7 @@ export default function GuidingBlock({
           knowMore={knowMore}
           variant={variant}
           titleAs={headingLevel === 1 ? 'h2' : 'h3'}
-        ></KnowMore>
+        />
       </footer>
     </section>
   );
