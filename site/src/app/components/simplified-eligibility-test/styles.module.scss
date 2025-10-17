@@ -61,6 +61,15 @@
       flex-direction: column;
     }
   }
+
+  .button-margin--error {
+    margin-top: 1rem;
+    margin-bottom: 3.5rem;
+
+    @media screen and (max-width: $lg) {
+      margin: 0 !important;
+    }
+  }
 }
 
 .je-donne-mon-avis-section {
