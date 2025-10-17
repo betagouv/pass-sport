@@ -14,7 +14,6 @@ import { AccordionsBecomePartner } from '@/app/v2/structures/components/Accordio
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
-import { AccordionsTools } from '@/app/v2/structures/components/AccordionsTools';
 import KnowMore from '@/app/components/know-more/KnowMore';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -36,7 +35,7 @@ export default function Page() {
             fullWidth
             points={[
               {
-                title: 'Devenez partenaire du pass Sport',
+                title: 'Consultez les outils pour les structures sportives',
                 linkProps: {
                   href: `#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
                 },
@@ -78,7 +77,7 @@ export default function Page() {
           id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}
           className={styles['become-partner-section']}
         >
-          <h1 className="fr-mb-0">Devenez partenaire du pass Sport</h1>
+          <h1 className="fr-mb-0">Consultez les outils pour les structures sportives</h1>
         </section>
 
         <section className={styles['become-partner-section__accordions']}>
@@ -125,7 +124,6 @@ export default function Page() {
             Sur Le Compte Asso, vous pourrez créer un compte pour devenir partenaire du dispositif,
             entrer les codes pass Sport et suivre vos remboursements.
           </p>
-
           <Link
             className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
             target="_blank"
@@ -134,13 +132,11 @@ export default function Page() {
           >
             Le Compte Asso
           </Link>
-
           <p>
             Si vous avez déjà un compte sur Le Compte Asso, actualisez votre profil en téléversant
             votre justificatif d&apos;éligibilité dans la section « affiliations et adhérents
             personnes morales » :
           </p>
-
           <ul className="fr-ml-2w fr-mt-n3w">
             <li>
               Clubs affiliés à une fédération sportive agréée par le ministère chargé des Sports :
@@ -152,6 +148,38 @@ export default function Page() {
             </li>
             <li>Structures des loisirs sportifs marchands : charte d&apos;engagement 2025.</li>
           </ul>
+
+          <section>
+            <p className="fr-mt-2w">
+              <Link
+                href="https://view.genially.com/68ca5c87e161eb800feb72cf/guide-clubs-affiliees-a-une-fede-agreee-ministere-charge-des-sports"
+                target="_blank"
+                className="fr-link"
+              >
+                Consulter le tutoriel pour les structures affiliées
+              </Link>
+            </p>
+
+            <p className="fr-mt-2w">
+              <Link
+                href="https://view.genially.com/68c96700f88999c4be85cef4/guide-assos-avec-un-agrement-jep-ou-sport"
+                target="_blank"
+                className="fr-link"
+              >
+                Consulter le tutoriel pour les structures agréées Sport ou JEP
+              </Link>
+            </p>
+
+            <p className="fr-mt-2w">
+              <Link
+                href="https://view.genially.com/68a832edc26eae6fb0633be1/guide-loisirs-sportifs-marchands-lsm"
+                target="_blank"
+                className="fr-link"
+              >
+                Consulter le tutoriel pour les structures Loisirs Sportifs Marchands
+              </Link>
+            </p>
+          </section>
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.INPUT_CODES} className={styles['input-codes-section']}>
@@ -170,8 +198,8 @@ export default function Page() {
             </li>
           </ol>
           <p className="fr-mb-0">
-            Vous pouvez saisir les codes des bénéficiaires depuis le 1er septembre{' '}
-            <span className="fr-text--bold">jusqu&apos;au 31 décembre 2025</span>.
+            Vous pouvez saisir les codes des bénéficiaires{' '}
+            <span className="fr-text--bold">du 1er septembre jusqu&apos;au 31 décembre 2025</span>.
           </p>
 
           <p className="fr-mb-0">
@@ -184,12 +212,6 @@ export default function Page() {
               Le Compte Asso
             </Link>
           </p>
-
-          <p>Outils mis à disposition par le ministère chargé des Sports :</p>
-
-          <section>
-            <AccordionsTools />
-          </section>
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.GET_REFUNDS} className={styles['get-refunds-section']}>
@@ -206,21 +228,18 @@ export default function Page() {
               variant="yellow"
               knowMore={{
                 title: 'A savoir',
-                description: `Une 1ère vague de paiement est en cours. Les structures concernées recevront un remboursement le 7 octobre.`,
+                description: `Une 2ème vague de paiement est en cours. Les structures concernées recevront un remboursement le 31 octobre.`,
               }}
             />
 
             <p>
-              Les remboursements arriveront dans le mois suivant la saisie des codes dans votre
-              compte Asso.
+              Si votre dossier est correct, les remboursements arriveront dans le mois suivant la
+              saisie des codes dans votre compte Asso.
             </p>
 
             <p>
               Vous pouvez saisir les codes des bénéficiaires{' '}
-              <span className="fr-text--bold">
-                depuis le 1er septembre jusqu’au 31 décembre 2025
-              </span>
-              .
+              <span className="fr-text--bold">du 1er septembre jusqu’au 31 décembre 2025</span>.
             </p>
 
             <p className="fr-mb-0">

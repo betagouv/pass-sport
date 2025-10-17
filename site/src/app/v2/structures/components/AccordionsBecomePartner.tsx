@@ -81,6 +81,14 @@ export function AccordionsBecomePartner() {
           ou le mettre à jour.
         </p>
 
+        <div className="fr-mb-2w">
+          <DownloadLink
+            details="PDF ~ 252 kB"
+            label="Télécharger la notice pass Sport 2025"
+            href="/assets/partenaires/notice-pass-sport-2025.pdf"
+          />
+        </div>
+
         <p>
           Un{' '}
           <Link
@@ -127,6 +135,14 @@ export function AccordionsBecomePartner() {
           </Link>{' '}
           ou le mettre à jour.
         </p>
+
+        <div>
+          <DownloadLink
+            details="PDF ~ 252 kB"
+            label="Télécharger la notice pass Sport 2025"
+            href="/assets/partenaires/notice-pass-sport-2025.pdf"
+          />
+        </div>
 
         <p>
           Un{' '}
@@ -205,6 +221,13 @@ export function AccordionsBecomePartner() {
           </Link>{' '}
           ou le mettre à jour.
         </p>
+        <div className="fr-mt-2w">
+          <DownloadLink
+            details="PDF ~ 264 kB"
+            label="Télécharger la notice pass Sport 2025 dédiée aux Loisirs Sportifs Marchands"
+            href="/assets/partenaires/notice-lsm-2025.pdf"
+          />
+        </div>
         Un{' '}
         <Link
           href="https://view.genially.com/68a832edc26eae6fb0633be1"
