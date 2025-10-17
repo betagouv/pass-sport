@@ -9,12 +9,17 @@ type KnowMoreProps = {
     description: string | ReactNode;
   };
   children?: ReactNode;
+  titleAs?: 'h2' | 'h3';
 };
 
-export default function KnowMore({ variant, knowMore, children }: KnowMoreProps) {
+export default function KnowMore({ variant, knowMore, children, titleAs = 'h2' }: KnowMoreProps) {
   return (
     <div className={cn([styles.container, styles[`container--${variant}`]])}>
-      <h2 className={cn('fr-text--md', styles['container__title'])}>{knowMore?.title}</h2>
+      {titleAs === 'h2' ? (
+        <h2 className={cn('fr-text--md', styles['container__title'])}>{knowMore?.title}</h2>
+      ) : (
+        <h3 className={cn('fr-text--md fr-h2', styles['container__title'])}>{knowMore?.title}</h3>
+      )}
       <p className="fr-text--md fr-mb-0 fr-mt-1w">{knowMore?.description}</p>
       {children && <div className="fr-mt-1w">{children}</div>}
     </div>
