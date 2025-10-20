@@ -39,14 +39,14 @@ const proReasons = {
 };
 
 const initialInputsState: InputsState = {
-  firstname: { state: 'default' },
-  lastname: { state: 'default' },
-  email: { state: 'default' },
-  reason: { state: 'default' },
-  message: { state: 'default' },
-  consent: { state: 'default' },
-  siret: { state: 'default' },
-  rna: { state: 'default' },
+  firstname: { state: 'default', errorMsg: '' },
+  lastname: { state: 'default', errorMsg: '' },
+  email: { state: 'default', errorMsg: '' },
+  reason: { state: 'default', errorMsg: '' },
+  message: { state: 'default', errorMsg: '' },
+  consent: { state: 'default', errorMsg: '' },
+  siret: { state: 'default', errorMsg: '' },
+  rna: { state: 'default', errorMsg: '' },
 };
 
 export const mapper: Record<keyof InputsState, string> = {
@@ -60,6 +60,9 @@ export const mapper: Record<keyof InputsState, string> = {
   rna: '',
 };
 
+const SIRET_REGEX = new RegExp('\\d{14}');
+const SIRET_FORMAT_ERROR_MSG = 'Le SIRET doit contenir 14 chiffres.';
+
 interface Props {
   closeFn: VoidFunction;
   isProVersion: boolean;
@@ -68,6 +71,7 @@ interface Props {
 const ContactForm = ({ closeFn, isProVersion }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<InputsState>(initialInputsState);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
   const [isOk, setIsOk] = useState<boolean>(false);
@@ -112,10 +116,9 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
 
     if (isProVersion) {
       const siretInput = formData.get('siret') as string;
-      const regExp = new RegExp('\\d{14}');
-      if (states.siret.state !== 'error' && !regExp.test(siretInput)) {
+      if (states.siret.state !== 'error' && !SIRET_REGEX.test(siretInput)) {
         states.siret.state = 'error';
-        states.siret.errorMsg = 'Le SIRET doit contenir 14 chiffres';
+        states.siret.errorMsg = SIRET_FORMAT_ERROR_MSG;
         isValid = false;
       }
     }
@@ -133,25 +136,20 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
     return { isValid, states };
   };
 
-  const onInputChanged = (text: string | null, field: keyof InputsState) => {
-    if (!text) {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'error', errorMsg: mapper[field] },
-      }));
-    } else {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'default' },
-      }));
-    }
+  const onInputChanged = (text: string, field: keyof InputsState) => {
+    setInputStates((inputStates) => ({
+      ...inputStates,
+      [`${field}`]:
+        text !== ''
+          ? { state: 'default', errorMsg: '' }
+          : { state: 'error', errorMsg: mapper[field] },
+    }));
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(formRef.current!);
-
     const { isValid, states } = isFormValid(formData);
 
     setInputStates({ ...states });
@@ -174,6 +172,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
     }
 
     try {
+      setIsLoading(true);
       const response = await postContact(formData, isProVersion);
 
       if (!response.ok) {
@@ -190,6 +189,8 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
       setApiError(true);
       setIsError(true);
       setIsOk(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -298,18 +299,25 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                       </>
                     }
                     nativeInputProps={{
-                      name: 'siret',
                       onBlur: (e) => {
-                        const inputIsValid = !!e.target?.checkValidity();
+                        const siretIsValid = SIRET_REGEX.test(e.target.value);
+
+                        let errorMsg =
+                          e.target.value === ''
+                            ? mapper['siret']
+                            : !siretIsValid
+                              ? SIRET_FORMAT_ERROR_MSG
+                              : '';
 
                         setInputStates({
                           ...inputStates,
                           siret: {
-                            state: inputIsValid ? 'default' : 'error',
-                            errorMsg: !inputIsValid ? mapper['siret'] : '',
+                            state: errorMsg === '' ? 'default' : 'error',
+                            errorMsg,
                           },
                         });
                       },
+                      name: 'siret',
                       onChange: (e: ChangeEvent<HTMLInputElement>) =>
                         onInputChanged(e.target.value, 'siret'),
                       required: true,
@@ -469,19 +477,8 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 nativeInputProps: {
                   name: 'consent',
                   required: true,
-                  onBlur: (e) => {
-                    const inputIsValid = !!e.target?.checkValidity();
-
-                    setInputStates({
-                      ...inputStates,
-                      consent: {
-                        state: inputIsValid ? 'default' : 'error',
-                        errorMsg: !inputIsValid ? mapper['consent'] : '',
-                      },
-                    });
-                  },
-                  onChange: (e: ChangeEvent<HTMLInputElement>) =>
-                    onInputChanged(e.target.checked ? 'yes' : null, 'consent'),
+                  onBlur: (e) => onInputChanged(e.target.checked ? 'yes' : '', 'consent'),
+                  onChange: (e) => onInputChanged(e.target.checked ? 'yes' : '', 'consent'),
                 },
               },
             ]}
@@ -496,6 +493,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
             type="submit"
             iconPosition="right"
             iconId="fr-icon-send-plane-line"
+            disabled={isLoading}
           >
             Envoyer ma demande
           </Button>
