@@ -320,6 +320,7 @@ const StepOneForm = ({
           inputName="recipientResidencePlace"
           inputState={inputStates.recipientResidencePlace}
           onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
+          onBlur={(text) => onInputChanged(text, 'recipientResidencePlace')}
           required
         />
 
