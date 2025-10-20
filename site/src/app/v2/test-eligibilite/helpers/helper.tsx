@@ -5,7 +5,6 @@ import {
   YoungCafInputsState,
   YoungMsaInputsState,
 } from 'types/EligibilityTest';
-import { CAF } from '../../accueil/components/acronymes/Acronymes';
 
 export const mapper: Record<
   | keyof StepOneFormInputsState
@@ -23,11 +22,7 @@ export const mapper: Record<
   recipientBirthPlace: 'La commune de naissance est requise',
   recipientBirthCountry: 'Le pays de naissance est requis',
   recipientIneNumber: 'Le numéro de matricule INE est requis',
-  recipientCafNumber: (
-    <>
-      Le matricule <CAF /> est requis
-    </>
-  ),
+  recipientCafNumber: <>Le matricule CAF est requis</>,
 };
 
 export const convertDate = (date: string): string | null => {
