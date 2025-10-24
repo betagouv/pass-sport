@@ -18,10 +18,10 @@ const AroundMeFilter: React.FC<Props> = ({ isAroundMeDisabled, isChecked, onChan
             onChange={onChange}
             disabled={isAroundMeDisabled}
           />
-          <label className="fr-label" htmlFor="around-me-checkbox-id">
+          <label className="fr-label fr-text--text-mention-grey" htmlFor="around-me-checkbox-id">
             Autour de chez vous
             {isAroundMeDisabled && (
-              <span className="fr-hint-text">
+              <span className="fr-hint-text fr-text--text-mention-grey">
                 Vous devez autoriser la géolocalisation pour utiliser ce filtre
               </span>
             )}

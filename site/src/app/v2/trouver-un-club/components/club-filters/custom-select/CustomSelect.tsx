@@ -8,6 +8,7 @@ import Select, {
   OptionsOrGroups,
   Props as ReactSelectProps,
 } from 'react-select';
+import styles from './styles.module.scss';
 import React from 'react';
 
 export const selectStyles = {
@@ -125,7 +126,14 @@ export const customScreenReaderStatus = ({ count }: { count: number }) =>
 export const createCustomInput = (placeholder: string) => {
   const CustomInput: typeof components.Input = (props) => {
     // isHidden property set to false is important, it is to display the input value (it is initially hidden with opacity: 0)
-    return <components.Input {...props} isHidden={false} placeholder={placeholder} />;
+    return (
+      <components.Input
+        {...props}
+        isHidden={false}
+        placeholder={placeholder}
+        className={styles['placeholder-wrapper']}
+      />
+    );
   };
 
   return CustomInput;
