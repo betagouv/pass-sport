@@ -18,17 +18,25 @@ describe('string tests suite', () => {
 
   describe('matchExactLsm() tests cases', () => {
     it('Should match', () => {
+      const strings = ['LSMUSC2025', 'LSMACTIVE2025', 'LSMCOSMOS2025'];
+
       // Example usage:
-      expect(matchExactLsm('LSMUSC2025')).toBeTruthy();
-      expect(matchExactLsm('lsmusc2025')).toBeTruthy();
-      expect(matchExactLsm('something lsmusc2025 else')).toBeTruthy();
-      expect(matchExactLsm('je suis de la LSMUSC2025')).toBeTruthy();
-      expect(matchExactLsm('je suis de la lsmusc2025,')).toBeTruthy();
+      strings.forEach((str) => {
+        expect(matchExactLsm(str)).toBeTruthy();
+        expect(matchExactLsm(str.toLowerCase())).toBeTruthy();
+        expect(matchExactLsm(`something ${str.toLowerCase()} else`)).toBeTruthy();
+        expect(matchExactLsm(`je suis de la ${str}`)).toBeTruthy();
+        expect(matchExactLsm(`je suis de la ${str.toLowerCase()},`)).toBeTruthy();
+      });
     });
 
     it('Should not match', () => {
-      expect(matchExactLsm('somethingLSMUSC2025else')).toBeFalsy();
-      expect(matchExactLsm('testLSMUSC2025')).toBeFalsy();
+      const strings = ['LSMUSC2025', 'LSMACTIVE2025', 'LSMCOSMOS2025'];
+
+      strings.forEach((str) => {
+        expect(matchExactLsm(`something${str}else`)).toBeFalsy();
+        expect(matchExactLsm(`test${str}`)).toBeFalsy();
+      });
     });
   });
 });
