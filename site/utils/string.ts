@@ -19,7 +19,7 @@ export function matchExactDrajes(input: string): boolean {
 
 // Business rule
 export function matchExactLsm(input: string): boolean {
-  const regex = /\bLSMUSC2025\b/i;
+  const regex = /\bLSM(?:USC|ACTIVE|COSMOS)2025\b/i;
 
   return regex.test(input);
 }
