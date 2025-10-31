@@ -296,9 +296,10 @@ export default function SimplifiedEligibilityTest({
                 />
               </div>
 
-              <div className="fr-fieldset__element">
+              <div className="fr-fieldset__element align-self--baseline">
                 <Select
                   label="Êtes-vous bénéficiaire d'une aide ?"
+                  hint="Sélectionner l'aide dont vous bénéficiez."
                   state={inputStates.allowance.state}
                   stateRelatedMessage={inputStates.allowance?.errorMsg}
                   nativeSelectProps={{
@@ -310,7 +311,6 @@ export default function SimplifiedEligibilityTest({
                     },
                     onBlur: (e) => {
                       const inputIsValid = !!e.target?.checkValidity();
-
                       setInputStates({
                         ...inputStates,
                         allowance: {
