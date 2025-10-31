@@ -200,7 +200,7 @@ const AllowanceStep = () => {
                     setDob(e.target.value ?? undefined);
                   },
                 }}
-                hintText="Format attendu : DD/MM/YYYY, Personne à qui le pass Sport est destiné."
+                hintText="Exemple : 31/12/2025, Personne à qui le pass Sport est destiné."
                 state={inputStates.dob.state}
                 stateRelatedMessage={inputStates.dob.errorMsg}
               />
