@@ -270,6 +270,7 @@ export default function SimplifiedEligibilityTest({
                   label="Date de naissance"
                   state={inputStates.dob?.state}
                   stateRelatedMessage={inputStates.dob?.errorMsg}
+                  hintText="Exemple : 31/12/2025."
                   nativeInputProps={{
                     required: true,
                     type: 'date',
@@ -295,7 +296,7 @@ export default function SimplifiedEligibilityTest({
                 />
               </div>
 
-              <div className="fr-fieldset__element align-self--baseline">
+              <div className="fr-fieldset__element">
                 <Select
                   label="Êtes-vous bénéficiaire d'une aide ?"
                   state={inputStates.allowance.state}
