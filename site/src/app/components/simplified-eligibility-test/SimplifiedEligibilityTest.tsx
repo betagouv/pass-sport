@@ -133,9 +133,9 @@ export default function SimplifiedEligibilityTest({
           [styles['eligibility-test--has-border']]: hasBorder,
         })}
       >
-        <Heading headingLevel={headingLevel} className="fr-h5 fr-mb-0">
+        <p className="fr-h5 fr-mb-0">
           <>Testez votre éligibilité en 1 min</>
-        </Heading>
+        </p>
 
         <form
           onSubmit={(e) => {
