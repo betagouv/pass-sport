@@ -223,7 +223,7 @@ const YoungMsaForm = ({
               Date de naissance de l’allocataire <span className="text--required">*</span>
             </>
           }
-          hintText="Format attendu : jj/mm/aaaa."
+          hintText="Exemple : 31/12/2025."
           nativeInputProps={{
             name: 'recipientBirthDate',
             type: 'date',

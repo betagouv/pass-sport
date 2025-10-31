@@ -1,0 +1,6 @@
+.placeholder-wrapper {
+  input::placeholder {
+    color: var(--text-mention-grey);
+    font-size: 16px;
+  }
+}

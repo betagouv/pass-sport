@@ -551,7 +551,7 @@ export default function PolitiqueDeConfidentialite() {
         </div>
       </main>
 
-      <SocialMediaPanel />
+      <SocialMediaPanel titleAs="h2" />
     </>
   );
 }

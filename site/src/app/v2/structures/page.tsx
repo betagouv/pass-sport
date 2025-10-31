@@ -77,7 +77,7 @@ export default function Page() {
           id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}
           className={styles['become-partner-section']}
         >
-          <h1 className="fr-mb-0">Consultez les outils pour les structures sportives</h1>
+          <h2 className="fr-mb-0 fr-h1">Consultez les outils pour les structures sportives</h2>
         </section>
 
         <section className={styles['become-partner-section__accordions']}>
@@ -112,7 +112,7 @@ export default function Page() {
           id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
           className={styles['lca-section']}
         >
-          <h1>Créez votre Compte Asso</h1>
+          <h2 className="fr-h1">Créez votre Compte Asso</h2>
           {/*<KnowMore*/}
           {/*  variant="yellow"*/}
           {/*  knowMore={{*/}
@@ -183,7 +183,7 @@ export default function Page() {
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.INPUT_CODES} className={styles['input-codes-section']}>
-          <h1>Saisissez les codes des bénéficiaires</h1>
+          <h2 className="fr-h1">Saisissez les codes des bénéficiaires</h2>
 
           <ol className="fr-ml-2w" start={1}>
             <li>Le bénéficiaire vous présente son code alphanumérique (25-XXXX-XXXX).</li>
@@ -222,7 +222,7 @@ export default function Page() {
           />
 
           <div className={styles['get-refunds-section__description']}>
-            <h1>Recevez le remboursement</h1>
+            <h2 className="fr-h1">Recevez le remboursement</h2>
 
             <KnowMore
               variant="yellow"
@@ -270,7 +270,7 @@ export default function Page() {
         </section>
 
         <section className={styles['decret-section']}>
-          <h1 className="fr-h4">Texte de référence</h1>
+          <h2 className="fr-h4">Texte de référence</h2>
           <Link
             href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
             target="_blank"

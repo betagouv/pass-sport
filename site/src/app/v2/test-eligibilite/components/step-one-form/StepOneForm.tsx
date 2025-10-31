@@ -244,6 +244,17 @@ const StepOneForm = ({
           disabled={isFormDisabled}
           nativeInputProps={{
             name: 'beneficiaryLastname',
+            onBlur: (e) => {
+              const inputIsValid = !!e.target?.checkValidity();
+
+              setInputStates({
+                ...inputStates,
+                beneficiaryLastname: {
+                  state: inputIsValid ? 'default' : 'error',
+                  errorMsg: !inputIsValid ? mapper['beneficiaryLastname'] : '',
+                },
+              });
+            },
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
               onInputChanged(e.target.value, 'beneficiaryLastname'),
             autoComplete: 'family-name',
@@ -272,6 +283,17 @@ const StepOneForm = ({
           label={getFirstnameLabel()}
           nativeInputProps={{
             name: 'beneficiaryFirstname',
+            onBlur: (e) => {
+              const inputIsValid = !!e.target?.checkValidity();
+
+              setInputStates({
+                ...inputStates,
+                beneficiaryFirstname: {
+                  state: inputIsValid ? 'default' : 'error',
+                  errorMsg: !inputIsValid ? mapper['beneficiaryFirstname'] : '',
+                },
+              });
+            },
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
               onInputChanged(e.target.value, 'beneficiaryFirstname'),
             autoComplete: 'given-name',
@@ -298,6 +320,7 @@ const StepOneForm = ({
           inputName="recipientResidencePlace"
           inputState={inputStates.recipientResidencePlace}
           onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
+          onBlur={(text) => onInputChanged(text, 'recipientResidencePlace')}
           required
         />
 

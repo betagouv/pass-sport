@@ -98,6 +98,7 @@ const CommonInputs = ({
               )
             }
             isDisabled={areInputsDisabled}
+            onBlur={onBirthPlaceChanged}
             onChanged={onBirthPlaceChanged}
             required={isBirthInputRequired}
             shouldAutoFocus={shouldAutoFocus}

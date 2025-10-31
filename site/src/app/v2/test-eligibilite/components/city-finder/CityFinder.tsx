@@ -29,6 +29,7 @@ interface Props {
   legend: string | ReactNode;
   inputName: string;
   isDisabled: boolean;
+  onBlur: (text: string | null) => void;
   onChanged: (text: string | null) => void;
   required?: boolean;
   shouldAutoFocus?: boolean;
@@ -41,6 +42,7 @@ const CityFinder = ({
   legend,
   inputName,
   isDisabled,
+  onBlur,
   onChanged,
   required = false,
   shouldAutoFocus = false,
@@ -96,6 +98,9 @@ const CityFinder = ({
           loadOptions={fetchCityOptions}
           onChange={birthPlaceChangedHandler}
           onInputChange={onInputChange}
+          onBlur={(e) => {
+            onBlur(e.target.value);
+          }}
           required={required}
           autoFocus={shouldAutoFocus}
           styles={{

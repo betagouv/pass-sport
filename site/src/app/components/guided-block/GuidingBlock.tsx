@@ -16,6 +16,7 @@ export type GuidingBlockProps = {
     description: string;
   };
   fullWidth?: boolean;
+  headingLevel?: number;
 };
 
 export default function GuidingBlock({
@@ -25,6 +26,7 @@ export default function GuidingBlock({
   knowMore,
   variant,
   fullWidth = false,
+  headingLevel = 1,
 }: GuidingBlockProps) {
   return (
     <section
@@ -35,7 +37,12 @@ export default function GuidingBlock({
       )}
     >
       <header>
-        {title && <h1 className={cn('fr-h4', styles.title)}>{title}</h1>}
+        {title &&
+          (headingLevel === 1 ? (
+            <h1 className={cn('fr-h4', styles.title)}>{title}</h1>
+          ) : (
+            <h2 className={cn('fr-h4', styles.title)}>{title}</h2>
+          ))}
         <p className={styles.description}>{description}</p>
       </header>
 
@@ -56,7 +63,11 @@ export default function GuidingBlock({
       )}
 
       <footer className={styles.knowMore}>
-        <KnowMore knowMore={knowMore} variant={variant}></KnowMore>
+        <KnowMore
+          knowMore={knowMore}
+          variant={variant}
+          titleAs={headingLevel === 1 ? 'h2' : 'h3'}
+        />
       </footer>
     </section>
   );

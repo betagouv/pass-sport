@@ -170,6 +170,17 @@ const YoungCafForm = ({
               placeholder: 'Exemple : 0123456',
               type: 'text',
               required: true,
+              onBlur: (e) => {
+                const inputIsValid = !!e.target?.checkValidity();
+
+                setInputStates({
+                  ...inputStates,
+                  recipientCafNumber: {
+                    state: inputIsValid ? 'default' : 'error',
+                    errorMsg: !inputIsValid ? mapper['recipientCafNumber'] : '',
+                  },
+                });
+              },
               onChange: (e: ChangeEvent<HTMLInputElement>) =>
                 onInputChanged(e.target.value, 'recipientCafNumber'),
               'aria-label': "Saisir le numéro de l'allocataire CAF",
@@ -198,6 +209,17 @@ const YoungCafForm = ({
             name: 'recipientLastname',
             placeholder: 'ex: Dupont',
             required: true,
+            onBlur: (e) => {
+              const inputIsValid = !!e.target?.checkValidity();
+
+              setInputStates({
+                ...inputStates,
+                recipientLastname: {
+                  state: inputIsValid ? 'default' : 'error',
+                  errorMsg: !inputIsValid ? mapper['recipientLastname'] : '',
+                },
+              });
+            },
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
               onInputChanged(e.target.value, 'recipientLastname'),
             'aria-label': "Saisir le nom de l'allocataire CAF",
@@ -222,6 +244,17 @@ const YoungCafForm = ({
             name: 'recipientFirstname',
             placeholder: 'ex: Marie',
             required: true,
+            onBlur: (e) => {
+              const inputIsValid = !!e.target?.checkValidity();
+
+              setInputStates({
+                ...inputStates,
+                recipientFirstname: {
+                  state: inputIsValid ? 'default' : 'error',
+                  errorMsg: !inputIsValid ? mapper['recipientFirstname'] : '',
+                },
+              });
+            },
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
               onInputChanged(e.target.value, 'recipientFirstname'),
             'aria-label': "Saisir le prénom de l'allocataire CAF",
