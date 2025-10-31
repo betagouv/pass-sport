@@ -110,7 +110,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
 
     if (states.email.state !== 'error' && !EMAIL_REGEX.test(emailInput)) {
       states.email.state = 'error';
-      states.email.errorMsg = 'Format attendu : nom@domaine.fr';
+      states.email.errorMsg = `L'adresse email saisie n'est pas valide (exemple valide : nom@domaine.fr).`;
       isValid = false;
     }
 
@@ -372,7 +372,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                       e.target.value === ''
                         ? mapper['email']
                         : !EMAIL_REGEX.test(e.target.value)
-                          ? 'Format attendu : nom@domaine.fr'
+                          ? `L'adresse email saisie n'est pas valide (exemple valide : nom@domaine.fr).`
                           : mapper['email'];
 
                     setInputStates({
