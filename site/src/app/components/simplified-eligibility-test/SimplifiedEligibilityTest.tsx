@@ -350,19 +350,17 @@ export default function SimplifiedEligibilityTest({
             </div>
           </div>
 
-          {success !== null && alertMeta !== null && (
-            <Alert
-              id="eligibility-notification-message"
-              severity={success ? 'success' : 'info'}
-              className="fr-mt-2w"
-              key={`${allocationName}-success`}
-              title={alertMeta.title}
-              description={alertMeta.description}
-              // @ts-ignore
-              // ts ignored because the lib doesn't handle role properly
-              role="alert"
-            />
-          )}
+          <div aria-live="polite" aria-atomic="true" id="eligibility-notification-message">
+            {success !== null && alertMeta !== null && (
+              <Alert
+                severity={success ? 'success' : 'info'}
+                className="fr-mt-2w"
+                key={`${allocationName}-success`}
+                title={alertMeta.title}
+                description={alertMeta.description}
+              />
+            )}
+          </div>
 
           {knowMoreMeta && (
             <section className="fr-mt-3w">
