@@ -25,9 +25,25 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import ContactAeehSection from '@/app/v2/jeunes-et-parents/components/ContactAeehSection';
 import { push } from '@socialgouv/matomo-next';
+import { InputState } from '@/types/form';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
+
+type AllowanceFormInputsState = {
+  dob: InputState;
+  allowance: InputState;
+};
+
+const errorMapper: Record<keyof AllowanceFormInputsState, string> = {
+  dob: 'La date de naissance est invalide',
+  allowance: "Le choix de l'allocation est requise",
+};
+
+const initialInputsState: AllowanceFormInputsState = {
+  dob: { state: 'default' },
+  allowance: { state: 'default' },
+};
 
 const AllowanceStep = () => {
   const portalRef = useRef<HTMLDivElement>(null);
@@ -36,17 +52,11 @@ const AllowanceStep = () => {
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
   const [, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [inputStates, setInputStates] = useState<AllowanceFormInputsState>(initialInputsState);
 
   // isValidated is a variable to know whether the user has clicked on the submit button
   const [isValidated, setIsValidated] = useState<boolean | null>(null);
   const dobId = 'dob-id';
-  const [radioButtonsState, setRadioButtonsState] = useState<RadioButtonsProps['state']>('default');
-  const radioButtonsStateRelatedMessage =
-    radioButtonsState === 'error' ? `Le choix de l'allocation est requise` : '';
-
-  const [dobState, setDobState] = useState<InputProps['state']>('default');
-  const dobStateRelatedMessages = dobState === 'error' ? 'La date de naissance est requise' : '';
-
   const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
   const [dob, setDob] = useState<string | undefined>(undefined);
   const fieldsetId = 'allowanceStep-fieldset';
@@ -70,8 +80,17 @@ const AllowanceStep = () => {
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    setRadioButtonsState(allowance === null ? 'error' : 'default');
-    setDobState(!dob ? 'error' : 'default');
+    setInputStates({
+      ...inputStates,
+      dob: {
+        state: !dob ? 'error' : 'default',
+        errorMsg: errorMapper['dob'],
+      },
+      allowance: {
+        state: !allowance ? 'error' : 'default',
+        errorMsg: errorMapper['allowance'],
+      },
+    });
 
     if (dob && allowance) {
       setIsValidated(true);
@@ -166,18 +185,29 @@ const AllowanceStep = () => {
                   required: true,
                   value: dob,
                   autoFocus: true,
+                  onBlur: (e) => {
+                    const inputIsValid = !!e.target?.checkValidity();
+
+                    setInputStates({
+                      ...inputStates,
+                      dob: {
+                        state: inputIsValid ? 'default' : 'error',
+                        errorMsg: !inputIsValid ? errorMapper['dob'] : '',
+                      },
+                    });
+                  },
                   onChange: (e) => {
                     setDob(e.target.value ?? undefined);
                   },
                 }}
-                hintText="Personne à qui le pass Sport est destiné."
-                state={dobState}
-                stateRelatedMessage={dobStateRelatedMessages}
+                hintText="Exemple : 31/12/2025, Personne à qui le pass Sport est destiné."
+                state={inputStates.dob.state}
+                stateRelatedMessage={inputStates.dob.errorMsg}
               />
               <CustomRadioButtons
                 id={fieldsetId}
-                state={radioButtonsState}
-                stateRelatedMessage={radioButtonsStateRelatedMessage}
+                state={inputStates.allowance.state}
+                stateRelatedMessage={inputStates.allowance.errorMsg}
                 name="radio"
                 legend={
                   <>
@@ -288,6 +318,17 @@ const AllowanceStep = () => {
                       </p>
                     ),
                     nativeInputProps: {
+                      onBlur: (e) => {
+                        const inputIsValid = !!e.target?.checkValidity();
+
+                        setInputStates({
+                          ...inputStates,
+                          allowance: {
+                            state: inputIsValid ? 'default' : 'error',
+                            errorMsg: !inputIsValid ? errorMapper['allowance'] : '',
+                          },
+                        });
+                      },
                       onChange: () => {
                         setIsValidated(false);
                         setAllowance(ALLOWANCE.NONE);

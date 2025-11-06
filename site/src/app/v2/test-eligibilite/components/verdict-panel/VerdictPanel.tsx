@@ -5,7 +5,6 @@ import code from '@/images/code-2x.svg';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import Link from 'next/link';
 import Actions from '@/app/components/actions/Actions';
-import MissionCards from '@/app/components/mission-cards/MissionCards';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { useCallback, useContext, useEffect, useRef } from 'react';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
@@ -13,7 +12,6 @@ import { push } from '@socialgouv/matomo-next';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
-import { AAH, AEEH, ARS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 interface Props {

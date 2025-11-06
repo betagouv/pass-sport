@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
 import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
 import { push } from '@socialgouv/matomo-next';
@@ -7,7 +7,6 @@ import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { createPortal } from 'react-dom';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
 import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
-import { useAutoCorrectAllowance } from '@/app/v2/test-eligibilite/hooks/use-auto-correct-allowance';
 
 const CrousEligibilityTestForms = () => {
   const {
@@ -51,7 +50,7 @@ const CrousEligibilityTestForms = () => {
       )}
 
       {!eligibilityData && (
-        <fieldset id="second-step-form" className="fr-fieldset">
+        <div id="second-step-form" className="fr-fieldset" role="presentation">
           <StepOneForm
             onDataReceived={(data: SearchResponseBody) => {
               setEligibilityData(data);
@@ -60,11 +59,11 @@ const CrousEligibilityTestForms = () => {
             onEligibilityFailure={() => onEligibilityFailure('first step')}
             isDirectBeneficiary
           />
-        </fieldset>
+        </div>
       )}
 
       {eligibilityData && eligibilityData.length > 0 && (
-        <fieldset id="third-step-form" className="fr-fieldset">
+        <div id="third-step-form" className="fr-fieldset" role="presentation">
           {eligibilityData[0].situation.toLowerCase() === 'boursier' &&
             eligibilityData[0].organisme === 'cnous' && (
               <CrousForm
@@ -74,7 +73,7 @@ const CrousEligibilityTestForms = () => {
                 onEligibilityFailure={onEligibilityFailure}
               />
             )}
-        </fieldset>
+        </div>
       )}
 
       {((eligibilityData && eligibilityData.length === 0) ||

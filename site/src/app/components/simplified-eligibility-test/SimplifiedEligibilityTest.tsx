@@ -2,7 +2,7 @@
 
 import styles from './styles.module.scss';
 import { Input } from '@codegouvfr/react-dsfr/Input';
-import { Select } from '@codegouvfr/react-dsfr/SelectNext';
+import { Select } from '@codegouvfr/react-dsfr/Select';
 import Button, { ButtonProps } from '@codegouvfr/react-dsfr/Button';
 import {
   AEEH_CODE_OBTENTION_TYPE,
@@ -18,17 +18,61 @@ import KnowMore from '@/app/components/know-more/KnowMore';
 import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
+import { InputState } from '@/types/form';
+import { Heading } from '@/app/components/heading/Heading';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
   buttonVariant?: ButtonProps['priority'];
   onCompletion?: (success: boolean) => void;
-  headingLevel: 'h1' | 'h2';
+  headingLevel: 'h1' | 'h2' | 'h3';
   jeDonneMonAvisBtnPadding: boolean;
   displaySeparator: boolean;
   hasBackground?: boolean;
   hasBorder?: boolean;
 };
+
+type FormInputsState = {
+  dob: InputState;
+  allowance: InputState;
+};
+
+const initialInputsState: Record<keyof FormInputsState, InputState> = {
+  dob: { state: 'default' },
+  allowance: { state: 'default' },
+};
+
+const defaultOptions = [
+  {
+    value: '',
+    label: 'Sélectionner une option',
+  },
+  {
+    value: ALLOCATION.NONE,
+    label: 'Aucune',
+  },
+  {
+    value: ALLOCATION.AEEH,
+    label: `Allocation d'éducation de l'enfant handicapé (AEEH)`,
+  },
+  {
+    value: ALLOCATION.ARS,
+    label: 'Allocation de rentrée scolaire (ARS)',
+  },
+  {
+    value: ALLOCATION.AAH,
+    label: 'Allocation aux adultes handicapés (AAH)',
+  },
+
+  {
+    value: ALLOCATION.CROUS,
+    label: 'Bourse ou aide annuelle CROUS',
+  },
+  {
+    value: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
+    label: 'Bourse régionale formations sanitaires et sociales',
+  },
+];
 
 export default function SimplifiedEligibilityTest({
   display = 'row',
@@ -63,6 +107,8 @@ export default function SimplifiedEligibilityTest({
   const [displayEligibilityConditions, setDisplayEligibilityConditions] = useState<boolean>(false);
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
+  const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
+  const [formHasInvalidInput, setFormHasInvalidInput] = useState(false);
 
   function resetStates() {
     setDisplayEligibilityConditions(false);
@@ -74,104 +120,9 @@ export default function SimplifiedEligibilityTest({
   }
 
   useEffect(() => {
-    if (!allocationName) return;
-
-    const successInitialMeta = {
-      title: `Bonne nouvelle, vous êtes éligible au pass Sport.`,
-      description: '',
-    };
-
-    const errorInitialMeta = {
-      title: `Vous n’êtes pas éligible au pass Sport.`,
-      description: '',
-    };
-
-    if (CODES_OBTAINABLE && success === true && targetDate) {
-      switch (allocationName) {
-        case ALLOCATION.AAH:
-        case ALLOCATION.ARS:
-          setAlertMeta({
-            title: successInitialMeta.title,
-            description: successInitialMeta.description,
-          });
-          setDisplayObtainCodeButton(true);
-          break;
-        case ALLOCATION.AEEH:
-          const { displayType } = getAeehCodeObtentionType(targetDate);
-
-          setAlertMeta({
-            title: successInitialMeta.title,
-            description: successInitialMeta.description,
-          });
-
-          if (displayType === AEEH_CODE_OBTENTION_TYPE.LINK) {
-            setDisplayAeehLink(true);
-          } else if (displayType === AEEH_CODE_OBTENTION_TYPE.FORM) {
-            setDisplayObtainCodeButton(true);
-          }
-          break;
-        case ALLOCATION.CROUS:
-        case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
-          if (!CODES_OBTAINABLE_FOR_CROUS) {
-            setAlertMeta({
-              title: successInitialMeta.title,
-              description: `En tant qu'étudiant boursier, vous recevrez un code par mail entre mi-octobre et fin novembre.`,
-            });
-          } else {
-            setAlertMeta({
-              title: successInitialMeta.title,
-              description: successInitialMeta.description,
-            });
-            setDisplayObtainCodeButton(true);
-          }
-          break;
-      }
-    }
-
-    if (CODES_OBTAINABLE && success === false) {
-      setAlertMeta({
-        title: errorInitialMeta.title,
-        description: errorInitialMeta.description,
-      });
-
-      setDisplayEligibilityConditions(true);
-    }
-
-    if (!CODES_OBTAINABLE && success === true) {
-      switch (allocationName) {
-        case ALLOCATION.AAH:
-        case ALLOCATION.AEEH:
-        case ALLOCATION.ARS:
-          setAlertMeta({
-            title: successInitialMeta.title,
-            description: successInitialMeta.description,
-          });
-          setKnowMoreMeta({
-            title: 'A savoir',
-            description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
-          });
-          break;
-        case ALLOCATION.CROUS:
-        case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
-          setAlertMeta({
-            title: successInitialMeta.title,
-            description: `En tant qu'étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu du 1er septembre. Nous nous excusons pour la gêne occasionnée.`,
-          });
-          setKnowMoreMeta({
-            title: 'A savoir',
-            description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
-          });
-          break;
-      }
-    }
-
-    if (!CODES_OBTAINABLE && success === false) {
-      setAlertMeta({
-        title: errorInitialMeta.title,
-        description: errorInitialMeta.description,
-      });
-    }
-  }, [success, allocationName, targetDate]);
+    // Boolean to apply margin to align the button "Verifier" ........
+    setFormHasInvalidInput(Object.values(inputStates).some((state) => state.errorMsg));
+  }, [inputStates]);
 
   return (
     <>
@@ -182,21 +133,125 @@ export default function SimplifiedEligibilityTest({
           [styles['eligibility-test--has-border']]: hasBorder,
         })}
       >
-        {headingLevel === 'h1' && (
-          <h1 className="fr-h5 fr-mb-0">Testez votre éligibilité en 1 min</h1>
-        )}
-
-        {headingLevel === 'h2' && (
-          <h2 className="fr-h5 fr-mb-0">Testez votre éligibilité en 1 min</h2>
-        )}
+        <p className="fr-h5 fr-mb-0">
+          <>Testez votre éligibilité en 1 min</>
+        </p>
 
         <form
           onSubmit={(e) => {
             // Prevent submission for required fields to work as intended
             e.preventDefault();
+            resetStates();
+
+            const isFormValid = Object.values(inputStates).some((state) => !state.errorMsg);
+
+            if (isFormValid) {
+              if (targetDate && allocationName) {
+                const isBenefEligible = isEligible({ targetDate, allocationName });
+                const successInitialMeta = {
+                  title: `Bonne nouvelle, vous êtes éligible au pass Sport.`,
+                  description: '',
+                };
+
+                const errorInitialMeta = {
+                  title: `Vous n’êtes pas éligible au pass Sport.`,
+                  description: '',
+                };
+
+                if (CODES_OBTAINABLE && isBenefEligible && targetDate) {
+                  switch (allocationName) {
+                    case ALLOCATION.AAH:
+                    case ALLOCATION.ARS:
+                      setAlertMeta({
+                        title: successInitialMeta.title,
+                        description: successInitialMeta.description,
+                      });
+                      setDisplayObtainCodeButton(true);
+                      break;
+                    case ALLOCATION.AEEH:
+                      const { displayType } = getAeehCodeObtentionType(targetDate);
+
+                      setAlertMeta({
+                        title: successInitialMeta.title,
+                        description: successInitialMeta.description,
+                      });
+
+                      if (displayType === AEEH_CODE_OBTENTION_TYPE.LINK) {
+                        setDisplayAeehLink(true);
+                      } else if (displayType === AEEH_CODE_OBTENTION_TYPE.FORM) {
+                        setDisplayObtainCodeButton(true);
+                      }
+                      break;
+                    case ALLOCATION.CROUS:
+                    case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
+                      if (!CODES_OBTAINABLE_FOR_CROUS) {
+                        setAlertMeta({
+                          title: successInitialMeta.title,
+                          description: `En tant qu'étudiant boursier, vous recevrez un code par mail entre mi-octobre et fin novembre.`,
+                        });
+                      } else {
+                        setAlertMeta({
+                          title: successInitialMeta.title,
+                          description: successInitialMeta.description,
+                        });
+                        setDisplayObtainCodeButton(true);
+                      }
+                      break;
+                  }
+                }
+
+                if (!CODES_OBTAINABLE && isBenefEligible) {
+                  switch (allocationName) {
+                    case ALLOCATION.AAH:
+                    case ALLOCATION.AEEH:
+                    case ALLOCATION.ARS:
+                      setAlertMeta({
+                        title: successInitialMeta.title,
+                        description: successInitialMeta.description,
+                      });
+                      setKnowMoreMeta({
+                        title: 'A savoir',
+                        description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
+                      });
+                      break;
+                    case ALLOCATION.CROUS:
+                    case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
+                      setAlertMeta({
+                        title: successInitialMeta.title,
+                        description: `En tant qu'étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu du 1er septembre. Nous nous excusons pour la gêne occasionnée.`,
+                      });
+                      setKnowMoreMeta({
+                        title: 'A savoir',
+                        description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
+                      });
+                      break;
+                  }
+                }
+
+                if (CODES_OBTAINABLE && !isBenefEligible) {
+                  setAlertMeta({
+                    title: errorInitialMeta.title,
+                    description: errorInitialMeta.description,
+                  });
+
+                  setDisplayEligibilityConditions(true);
+                } else if (!CODES_OBTAINABLE && !isBenefEligible) {
+                  setAlertMeta({
+                    title: errorInitialMeta.title,
+                    description: errorInitialMeta.description,
+                  });
+                }
+
+                eligibilityTestOnClick();
+                setSuccess(isBenefEligible);
+                onCompletion?.(isBenefEligible);
+              }
+            } else {
+              setSuccess(false);
+            }
           }}
         >
-          <fieldset className="fr-fieldset" aria-describedby="eligibility-notification-message">
+          <div className="fr-fieldset" aria-describedby="eligibility-notification-message">
             <div
               className={cn(
                 styles['eligibility-test__fields'],
@@ -205,10 +260,17 @@ export default function SimplifiedEligibilityTest({
                   : styles['eligibility-test__fields--column'],
               )}
             >
-              <div className={cn('fr-fieldset__element', styles['eligibility-test__fields-date'])}>
+              <div
+                className={cn(
+                  'fr-fieldset__element align-self--baseline',
+                  styles['eligibility-test__fields-date'],
+                )}
+              >
                 <Input
                   label="Date de naissance"
-                  stateRelatedMessage="Veuillez sélectionnez votre date de naissance"
+                  state={inputStates.dob?.state}
+                  stateRelatedMessage={inputStates.dob?.errorMsg}
+                  hintText="Exemple : 31/12/2025."
                   nativeInputProps={{
                     required: true,
                     type: 'date',
@@ -216,74 +278,79 @@ export default function SimplifiedEligibilityTest({
                     max: '2099-12-31',
                     onChange: (e) => {
                       setTargetDate(e.target.value);
-                      resetStates();
+                    },
+                    onBlur: (e) => {
+                      const inputIsValid = !!e.target?.checkValidity();
+
+                      setInputStates({
+                        ...inputStates,
+                        dob: {
+                          state: inputIsValid ? 'default' : 'error',
+                          errorMsg: !inputIsValid ? 'La date de naissance est invalide' : '',
+                        },
+                      });
+
+                      setTargetDate(e.target.value);
                     },
                   }}
                 />
               </div>
 
-              <div className="fr-fieldset__element">
+              <div className="fr-fieldset__element align-self--baseline">
                 <Select
                   label="Êtes-vous bénéficiaire d'une aide ?"
+                  hint="Sélectionner l'aide dont vous bénéficiez."
+                  state={inputStates.allowance.state}
+                  stateRelatedMessage={inputStates.allowance?.errorMsg}
                   nativeSelectProps={{
                     name: 'my-select',
                     required: true,
+                    defaultValue: '',
                     onChange: (e) => {
                       setAllocationName(e.target.value as ALLOCATION);
-                      resetStates();
+                    },
+                    onBlur: (e) => {
+                      const inputIsValid = !!e.target?.checkValidity();
+                      setInputStates({
+                        ...inputStates,
+                        allowance: {
+                          state: inputIsValid ? 'default' : 'error',
+                          errorMsg: !inputIsValid ? `Le choix de l'aide est requise` : '',
+                        },
+                      });
+
+                      setAllocationName(e.target.value as ALLOCATION);
                     },
                   }}
-                  options={[
-                    {
-                      value: ALLOCATION.NONE,
-                      label: 'Aucune',
-                    },
-                    {
-                      value: ALLOCATION.AEEH,
-                      label: `Allocation d'éducation de l'enfant handicapé (AEEH)`,
-                    },
-                    {
-                      value: ALLOCATION.ARS,
-                      label: 'Allocation de rentrée scolaire (ARS)',
-                    },
-                    {
-                      value: ALLOCATION.AAH,
-                      label: 'Allocation aux adultes handicapés (AAH)',
-                    },
-
-                    {
-                      value: ALLOCATION.CROUS,
-                      label: 'Bourse ou aide annuelle CROUS',
-                    },
-                    {
-                      value: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
-                      label: 'Bourse régionale formations sanitaires et sociales',
-                    },
-                  ]}
-                  placeholder="Sélectionner une option"
-                />
+                >
+                  {defaultOptions.map((option) => {
+                    return option.value !== '' ? (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ) : (
+                      <option key="placeholder" value="" disabled hidden>
+                        Sélectionner une option
+                      </option>
+                    );
+                  })}
+                </Select>
               </div>
               <div className="fr-fieldset__element flex--min-content">
                 <Button
                   type="submit"
                   priority={buttonVariant}
-                  onClick={() => {
-                    if (targetDate && allocationName) {
-                      const result = isEligible({ targetDate, allocationName });
-
-                      setSuccess(result);
-                      eligibilityTestOnClick();
-                      onCompletion?.(result);
-                    }
-                  }}
+                  className={cn({
+                    [styles['button-margin--error']]: formHasInvalidInput,
+                  })}
                 >
                   Vérifier
                 </Button>
               </div>
             </div>
-          </fieldset>
+          </div>
 
-          <section id="eligibility-notification-message" role="alert">
+          <div aria-live="polite" aria-atomic="true" id="eligibility-notification-message">
             {success !== null && alertMeta !== null && (
               <Alert
                 severity={success ? 'success' : 'info'}
@@ -293,7 +360,7 @@ export default function SimplifiedEligibilityTest({
                 description={alertMeta.description}
               />
             )}
-          </section>
+          </div>
 
           {knowMoreMeta && (
             <section className="fr-mt-3w">

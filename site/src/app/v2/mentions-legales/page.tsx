@@ -119,7 +119,7 @@ export default function MentionsLegales() {
         </div>
       </main>
 
-      <SocialMediaPanel />
+      <SocialMediaPanel titleAs="h2" />
     </>
   );
 }

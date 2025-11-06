@@ -8,7 +8,6 @@ import { Suspense } from 'react';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Geolocation from './components/geolocation/Geolocation';
 import Loading from '@/app/components/loading/Loading';
-import EligibilityTestBanner from '@/components/eligibility-test-banner/EligibilityTestBanner';
 import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
@@ -34,7 +33,6 @@ const TrouverUnClub = async () => {
         </Suspense>
       </main>
 
-      {/*<EligibilityTestBanner />*/}
       <SocialMediaPanel />
     </>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
 import YoungCafForm from '../step-two-forms/YoungCafForm';
 import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
@@ -11,7 +11,6 @@ import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/S
 import { createPortal } from 'react-dom';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
-import { useAutoCorrectAllowance } from '@/app/v2/test-eligibilite/hooks/use-auto-correct-allowance';
 
 const EligibilityTestForms = () => {
   const {
@@ -81,7 +80,7 @@ const EligibilityTestForms = () => {
       )}
 
       {!eligibilityData && (
-        <fieldset id="second-step-form" className="fr-fieldset">
+        <div id="second-step-form" className="fr-fieldset" role="presentation">
           <StepOneForm
             onDataReceived={(data: SearchResponseBody) => {
               setEligibilityData(data);
@@ -89,11 +88,11 @@ const EligibilityTestForms = () => {
             }}
             onEligibilityFailure={() => onEligibilityFailure('first step')}
           />
-        </fieldset>
+        </div>
       )}
 
       {eligibilityData && eligibilityData.length > 0 && (
-        <fieldset id="third-step-form" className="fr-fieldset">
+        <div id="third-step-form" className="fr-fieldset" role="presentation">
           {eligibilityData[0].situation.toLowerCase() === 'jeune' &&
             eligibilityData[0].organisme === 'CAF' && (
               <YoungCafForm
@@ -131,7 +130,7 @@ const EligibilityTestForms = () => {
               onEligibilityFailure={onEligibilityFailure}
             />
           )}
-        </fieldset>
+        </div>
       )}
 
       {((eligibilityData && eligibilityData.length === 0) ||
