@@ -6,7 +6,12 @@ interface Props {
 }
 const ErrorAlert = ({ title }: Props) => (
   <>
-    <Alert severity="error" title={title} />
+    <Alert
+      severity="error"
+      title={title}
+      // @ts-ignore
+      role="alert"
+    />
     <div className="fr-mt-4w">
       <Actions />
     </div>
