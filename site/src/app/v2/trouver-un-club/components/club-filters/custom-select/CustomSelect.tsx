@@ -123,7 +123,7 @@ export const customScreenReaderStatus = ({ count }: { count: number }) =>
   `${count} résultat${count !== 1 ? 's' : ''} disponible${count !== 1 ? 's' : ''}`;
 
 // Create Input component to override & fix the cursor issue in order to select the input's value
-export const createCustomInput = (placeholder: string) => {
+export const createCustomInput = (placeholder: string, ariaDescribedby?: string) => {
   const CustomInput: typeof components.Input = (props) => {
     // isHidden property set to false is important, it is to display the input value (it is initially hidden with opacity: 0)
     return (
@@ -132,6 +132,7 @@ export const createCustomInput = (placeholder: string) => {
         isHidden={false}
         placeholder={placeholder}
         className={styles['placeholder-wrapper']}
+        {...(ariaDescribedby && { 'aria-describedby': ariaDescribedby })}
       />
     );
   };

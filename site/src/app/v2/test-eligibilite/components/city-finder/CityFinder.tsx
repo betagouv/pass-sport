@@ -35,7 +35,8 @@ interface Props {
   shouldAutoFocus?: boolean;
 }
 
-const CustomInput = createCustomInput('Entrez le nom de commune');
+const CITY_FINDER_DESC_ERROR_ID = 'city-finder-desc-error';
+const CustomInput = createCustomInput('Entrez le nom de commune', CITY_FINDER_DESC_ERROR_ID);
 
 const CityFinder = ({
   inputState,
@@ -126,7 +127,9 @@ const CityFinder = ({
             className={cn('fr-icon--sm', 'fr-icon-error-fill', styles.error)}
             aria-hidden="true"
           />
-          <p className={cn('fr-text--xs', 'fr-mb-0', styles.error)}>{inputState.errorMsg}</p>
+          <p id={CITY_FINDER_DESC_ERROR_ID} className={cn('fr-text--xs', 'fr-mb-0', styles.error)}>
+            {inputState.errorMsg}
+          </p>
         </div>
       )}
     </div>
