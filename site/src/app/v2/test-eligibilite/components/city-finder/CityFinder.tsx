@@ -118,6 +118,9 @@ const CityFinder = ({
             Input: CustomInput,
             Placeholder: CustomPlaceholder,
           }}
+          {...(inputState.errorMsg
+            ? { 'aria-invalid': true, 'aria-errormessage': CITY_FINDER_DESC_ERROR_ID }
+            : { 'aria-invalid': false })}
         />
       </div>
 
