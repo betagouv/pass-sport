@@ -123,48 +123,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           >
             {isEligible ? (
               <>
-                {[ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX, ALLOWANCE.CROUS].includes(
-                  allowance as ALLOWANCE,
-                ) ? (
-                  <>
-                    {allowance === ALLOWANCE.CROUS ? (
-                      <Alert
-                        severity="info"
-                        title="Les étudiants boursiers de l'enseignement supérieur recevront leur code par courriel entre le 9 octobre et le 15 novembre."
-                        description={
-                          <p>
-                            Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
-                            pourrez venir le récupérer sur le site du pass Sport.
-                          </p>
-                        }
-                      />
-                    ) : (
-                      <Alert
-                        severity="info"
-                        title="Les étudiants boursiers des formations sanitaires et sociales recevront leur code par courriel entre le 9 octobre et le 15 novembre."
-                        description={
-                          <p>
-                            Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
-                            pourrez venir le récupérer sur le site du pass Sport.
-                          </p>
-                        }
-                      />
-                    )}
-                    {/* Todo demarche pour les boursiers apres la deuxieme vague */}
-                    {/*<p className="fr-mt-2w">*/}
-                    {/*  Faire la demande sur{' '}*/}
-                    {/*  <Link*/}
-                    {/*    className="fr-link"*/}
-                    {/*    href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"*/}
-                    {/*    target="_blank"*/}
-                    {/*    title="Faire la demande de pass Sport sur démarches-simplifiées - Nouvelle fenêtre"*/}
-                    {/*    onClick={() => {}}*/}
-                    {/*  >*/}
-                    {/*    démarches-simplifiées*/}
-                    {/*  </Link>*/}
-                    {/*</p>*/}
-                  </>
-                ) : allowance === ALLOWANCE.AEEH ? (
+                {allowance === ALLOWANCE.AEEH ? (
                   <>
                     <Alert
                       severity="info"
@@ -252,16 +211,14 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
           </section>
 
           <section className={styles['section-cta']}>
-            {isEligible &&
-              allowance &&
-              ![ALLOWANCE.CROUS, ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX].includes(allowance) && (
-                <Link
-                  className={cn(['fr-btn', styles['section-cta__link']])}
-                  href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-                >
-                  Contacter le support
-                </Link>
-              )}
+            {isEligible && allowance && (
+              <Link
+                className={cn(['fr-btn', styles['section-cta__link']])}
+                href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+              >
+                Contacter le support
+              </Link>
+            )}
             <Actions displayHomeBackBtn newTestBtnVariant="tertiary" />
           </section>
 

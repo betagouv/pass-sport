@@ -10,10 +10,9 @@ import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crou
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
 import cn from 'classnames';
 import styles from './styles.module.scss';
-import { RadioButtonsProps } from '@codegouvfr/react-dsfr/RadioButtons';
 import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
 import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
-import Input, { InputProps } from '@codegouvfr/react-dsfr/Input';
+import Input from '@codegouvfr/react-dsfr/Input';
 import {
   AEEH_CODE_OBTENTION_TYPE,
   ALLOWANCE_MAPPING_TO_ALLOCATION,
