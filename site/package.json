@@ -26,7 +26,7 @@
     "@codegouvfr/react-dsfr": "^1.25.3",
     "@react-pdf/renderer": "^4.3.0",
     "@sentry/nextjs": "^8.49.0",
-    "@socialgouv/matomo-next": "^1.9.2",
+    "@socialgouv/matomo-next": "^1.10.0",
     "@uidotdev/usehooks": "^2.4.1",
     "classnames": "^2.5.1",
     "crisp-api": "^8.5.0",
