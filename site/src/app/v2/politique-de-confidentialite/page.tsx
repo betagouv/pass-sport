@@ -501,9 +501,7 @@ export default function PolitiqueDeConfidentialite() {
               <Link
                 href="https://www.cnil.fr/fr/mes-demarches/les-droits-pour-maitriser-vos-donnees-personnelles"
                 target="_blank"
-                aria-label={
-                  "Ouvrir une nouvelle fenêtre vers le site de la CNIL pour plus d'informations sur vos droits"
-                }
+                aria-label="Ouvrir une nouvelle fenêtre vers le site de la CNIL pour plus d'informations sur vos droits"
               >
                 Voir le site de la CNIL pour plus d&apos;informations sur vos droits.
               </Link>
