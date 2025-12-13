@@ -84,7 +84,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                   ) : (
                     <Alert
                       severity="error"
-                      title={"Le lien de téléchargement n'a pas pû être crée"}
+                      title="Le lien de téléchargement n'a pas pû être crée"
                     />
                   )}
                 </div>

@@ -24,7 +24,7 @@ export function AccordionsFaq() {
             <Link
               className="fr-link"
               href="/v2/test-eligibilite"
-              title={"Aller vers le test d'éligibilité"}
+              title="Aller vers le test d'éligibilité"
             >
               récupérer mon pass Sport
             </Link>
@@ -88,7 +88,7 @@ export function AccordionsFaq() {
             <Link
               href="/v2/test-eligibilite-base"
               className="fr-link"
-              title={"Aller vers le test d'éligibilité"}
+              title="Aller vers le test d'éligibilité"
             >
               tester mon éligibilité
             </Link>
@@ -101,7 +101,7 @@ export function AccordionsFaq() {
             <Link
               href="/v2/test-eligibilite"
               className="fr-link"
-              title={"Aller vers le formulaire d'obtention du pass Sport"}
+              title="Aller vers le formulaire d'obtention du pass Sport"
             >
               récupérer mon pass Sport
             </Link>
@@ -119,7 +119,7 @@ export function AccordionsFaq() {
             <Link
               href="/v2/test-eligibilite-base"
               className="fr-link"
-              title={"Aller vers le test d'éligibilité"}
+              title="Aller vers le test d'éligibilité"
             >
               tester mon éligibilité
             </Link>
@@ -132,7 +132,7 @@ export function AccordionsFaq() {
             <Link
               href="/v2/test-eligibilite"
               className="fr-link"
-              title={"Aller vers le formulaire d'obtention du pass Sport"}
+              title="Aller vers le formulaire d'obtention du pass Sport"
             >
               récupérer mon pass Sport
             </Link>
