@@ -89,9 +89,7 @@ function ClubDetails({ clubName, isProVersion = false }: Props) {
                 <Link
                   href={mapUrl}
                   target="_blank"
-                  title={
-                    "Ouvrir une nouvelle fenêtre vers google maps contenant l'itinéraire vers le club"
-                  }
+                  title="Ouvrir une nouvelle fenêtre vers google maps contenant l'itinéraire vers le club"
                   onClick={onGoToItinerary}
                 >
                   Voir l&apos;itinéraire

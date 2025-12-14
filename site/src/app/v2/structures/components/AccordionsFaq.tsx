@@ -56,9 +56,7 @@ export function AccordionsFaq() {
               src="/images/structures/pass_sport_not_existing_error.png"
               width={700}
               height={72}
-              alt={
-                "Message d'erreur: le n° pass Sport saisi n'existe pas. Veuillez SVP vérifier le n° et corriger la saisie"
-              }
+              alt="Message d'erreur: le n° pass Sport saisi n'existe pas. Veuillez SVP vérifier le n° et corriger la saisie"
             />
           </div>
 
@@ -78,9 +76,7 @@ export function AccordionsFaq() {
               src="/images/structures/pass_sport_can_only_be_used_once_error_message.png"
               width={700}
               height={72}
-              alt={
-                "Message d'erreur : ce bénéficiaire est déjà inscrit au sein de la même structure ou d'une autre structure. Il ne peut pas être inscrit deux fois."
-              }
+              alt="Message d'erreur : ce bénéficiaire est déjà inscrit au sein de la même structure ou d'une autre structure. Il ne peut pas être inscrit deux fois."
             />
           </div>
         </article>

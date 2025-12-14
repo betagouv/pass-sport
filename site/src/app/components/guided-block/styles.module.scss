@@ -9,7 +9,8 @@
   --max-width: 470px;
 
   &--full-width {
-    max-width: 100%;
+    max-width: 100% !important;
+    width:100% !important;
   }
 
   max-width: var(--max-width);
