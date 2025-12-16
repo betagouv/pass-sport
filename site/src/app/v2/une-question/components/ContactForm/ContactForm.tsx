@@ -10,8 +10,10 @@ import { InputsState } from '@/types/Contact';
 import { postContact } from '../../client-agent';
 import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
+import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
+import { useSearchParams } from 'next/navigation';
 
-const visitorReasons = {
+export const visitorReasons = {
   'code-pas-reçu': "Je n'ai pas reçu mon code pass Sport",
   'ars-non-eligible':
     'Je perçois l’ARS pour mon enfant de moins de 14 ans. Pourquoi je n’ai pas reçu le code ?',
@@ -25,6 +27,7 @@ const visitorReasons = {
     "j'ai déjà payé mon adhésion, comment me faire rembourser mon pass Sport ?",
   'club-pas-trouvé': 'Je ne trouve pas mon club dans la liste des partenaires',
   'refus-code-club': 'Mon club ne prend pas le pass Sport',
+  'aeeh-eligible': 'Mon enfant a entre 6 et 13 ans et bénéficie de l’AEEH',
   other: 'Autre',
 };
 
@@ -75,6 +78,8 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
   const [apiError, setApiError] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
   const [isOk, setIsOk] = useState<boolean>(false);
+  const searchParams = useSearchParams();
+  const segmentValue = searchParams?.get(CONTACT_PAGE_QUERYPARAMS.segment) || '';
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: InputsState } => {
     let isValid = true;
@@ -195,6 +200,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
   };
 
   const reasons = isProVersion ? proReasons : visitorReasons;
+
   return (
     <>
       <form ref={formRef} onSubmit={onSubmitHandler}>
@@ -416,7 +422,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   },
                   onChange: (e: SyntheticEvent<HTMLSelectElement>) =>
                     onInputChanged(e.currentTarget.value, 'reason'),
-                  defaultValue: '',
+                  defaultValue: segmentValue in reasons ? segmentValue : '',
                   required: true,
                 }}
                 state={inputStates.reason.state}

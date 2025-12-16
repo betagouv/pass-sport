@@ -14,6 +14,7 @@ export type UrlQueryParameters = (typeof SEARCH_QUERY_PARAMS)[keyof typeof SEARC
 
 export const CONTACT_PAGE_QUERYPARAMS = {
   modalOpened: 'modalOpened',
+  segment: 'segment',
 };
 
 export const FAQ_PAGE_QUERY_PARAMS = {
