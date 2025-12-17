@@ -10,9 +10,10 @@ import React, { useCallback, useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
+import { push } from '@socialgouv/matomo-next';
+import { isPasSportClosed } from '@/utils/date';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import Link from 'next/link';
-import { push } from '@socialgouv/matomo-next';
 
 export default function PassSportNavigation() {
   const paths: string | null = usePathname();
@@ -77,21 +78,22 @@ export default function PassSportNavigation() {
         }))}
       />
       <Notice
-        title="Vous n'avez pas reçu votre code ? "
-        description={
+        severity="warning"
+        title={
           <>
-            Les conditions d’éligibilité évoluent en 2025,{' '}
+            La récupération des codes pass Sport est momentanément indisponible. Veuillez consulter{' '}
             <Link
-              className="fr-link fr-icon-arrow-right-line fr-link--icon-right"
-              href="/v2/test-ou-code"
-              onClick={onNoticeClick}
+              href="https://www.sports.gouv.fr/exfiltration-de-donnees-provenant-d-un-des-systemes-d-information-du-ministere-10048"
+              title="Lien vers le communiqué de presse"
             >
-              testez votre droit au pass Sport
+              cette page.
             </Link>
-            .
           </>
         }
       />
+      {isPasSportClosed() && (
+        <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />
+      )}
     </div>
   );
 }

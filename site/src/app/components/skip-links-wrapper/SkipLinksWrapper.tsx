@@ -10,7 +10,7 @@ const SkipLinksWrapper = () => {
   const pathname = usePathname();
 
   const eligibilityTestSkipLink =
-    pathname && ['/v2/accueil', '/v2/jeunes-et-parents'].includes(pathname)
+    !isPasSportClosed() && pathname && ['/v2/accueil', '/v2/jeunes-et-parents'].includes(pathname)
       ? {
           label: "Test d'éligibilité",
           anchor: `#${SKIP_LINKS_ID.eligibilityTestButton}`,

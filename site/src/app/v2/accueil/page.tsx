@@ -14,6 +14,7 @@ import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
 import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 import Video from '@/app/v2/accueil/components/video/Video';
+import { isPasSportClosed } from '@/utils/date';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -118,21 +119,23 @@ export default async function Accueil() {
                 </h1>
               </section>
 
-              <section id={SKIP_LINKS_ID.eligibilityTestButton}>
-                <div className={styles['eligibility-section']}>
-                  <div className={cn(styles['eligibility-section__wrapper'])}>
-                    <SimplifiedEligibilityTest
-                      display="row"
-                      buttonVariant="primary"
-                      headingLevel="h2"
-                      jeDonneMonAvisBtnPadding={false}
-                      displaySeparator={false}
-                      hasBackground
-                      hasBorder
-                    />
+              {!isPasSportClosed() && (
+                <section id={SKIP_LINKS_ID.eligibilityTestButton}>
+                  <div className={styles['eligibility-section']}>
+                    <div className={cn(styles['eligibility-section__wrapper'])}>
+                      <SimplifiedEligibilityTest
+                        display="row"
+                        buttonVariant="primary"
+                        headingLevel="h2"
+                        jeDonneMonAvisBtnPadding={false}
+                        displaySeparator={false}
+                        hasBackground
+                        hasBorder
+                      />
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
             </div>
           </div>
         </section>
