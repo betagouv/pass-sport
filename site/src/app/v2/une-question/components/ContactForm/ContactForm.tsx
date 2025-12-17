@@ -208,11 +208,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
           <h2 className="fr-text--bold fr-my-2w fr-h6">
             Avez-vous d&apos;abord consulté notre foire aux questions ?
           </h2>
-          <p className="fr-mb-2w">
-            La réponse à votre question s&apos;y trouve peut-être. Si tel est le cas, vous gagnerez
-            certainement du temps grâce à elle.
-          </p>
-
+          <p className="fr-mb-2w">La réponse à votre question s&apos;y trouve peut-être.</p>
           <p className="fr-mb-2w">
             <Button
               type="button"
