@@ -1,14 +1,13 @@
 import { Metadata } from 'next';
-import AllowanceStep from './components/allowance-step/AllowanceStep';
 import styles from './styles.module.scss';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import PageTitle from '@/components/PageTitle/PageTitle';
 import Image from 'next/image';
 import breakdance from '@/images/eligibility-test/break-dance.webp';
 import cn from 'classnames';
-import KnowMore from '@/app/components/know-more/KnowMore';
 import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import { CODES_OBTAINABLE } from '@/app/constants/env';
+import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",
@@ -50,47 +49,40 @@ const EligibilityTest = () => {
         </div>
       </section>
 
-      <section className="fr-container">
-        <div className={styles['top-section-content']}>
-          <KnowMore
-            variant="purple"
-            knowMore={{
-              title: 'A savoir',
-              description:
-                'Si vous avez plusieurs enfants, vous devez récupérer un pass pour chaque enfant.',
-            }}
-          />
-
-          {!CODES_OBTAINABLE && (
-            <>
-              <p>
-                Si vous <span className="fr-text--bold">êtes éligibles</span>, vous recevrez un
-                courriel ou un SMS avec votre pass Sport :
-              </p>
-
-              <p>
-                <span className="fr-text--bold">
-                  Exception pour les bénéficiaires de l&apos;AEEH entre 6 et 13 ans
-                </span>{' '}
-                : demandez votre pass Sport directement sur notre site à partir du 1er septembre.
-              </p>
-            </>
-          )}
-        </div>
+      <section className="fr-container fr-my-4w">
+        <p className="fr-mb-2w text-align--center fr-text--xl">
+          Pour récupérer votre code, veuillez{' '}
+          <Link
+            href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
+            title="Naviguer vers la page de formulaire de contact du support"
+          >
+            contacter le support
+          </Link>
+        </p>
+        {/*<div className={styles['top-section-content']}>*/}
+        {/*  <KnowMore*/}
+        {/*    variant="purple"*/}
+        {/*    knowMore={{*/}
+        {/*      title: 'A savoir',*/}
+        {/*      description:*/}
+        {/*        'Si vous avez plusieurs enfants, vous devez récupérer un pass pour chaque enfant.',*/}
+        {/*    }}*/}
+        {/*  />*/}
+        {/*</div>*/}
       </section>
 
-      {CODES_OBTAINABLE ? (
-        <AllowanceStep />
-      ) : (
-        <div className={styles.background}>
-          <div className={styles.wrapper}>
-            <p className="fr-text--xl fr-text--bold">
-              Vous pourrez demander le pass Sport à partir du 1er septembre
-            </p>
-            <p>Revenez sur cette page le 1er septembre pour obtenir votre pass.</p>
-          </div>
-        </div>
-      )}
+      {/*{CODES_OBTAINABLE ? (*/}
+      {/*  <AllowanceStep />*/}
+      {/*) : (*/}
+      {/*  <div className={styles.background}>*/}
+      {/*    <div className={styles.wrapper}>*/}
+      {/*      <p className="fr-text--xl fr-text--bold">*/}
+      {/*        Vous pourrez demander le pass Sport à partir du 1er septembre*/}
+      {/*      </p>*/}
+      {/*      <p>Revenez sur cette page le 1er septembre pour obtenir votre pass.</p>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*)}*/}
     </main>
   );
 };
