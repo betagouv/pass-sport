@@ -23,6 +23,10 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   const successRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const { eligibilityData, pspCodeData, allowance } = useContext(EligibilityTestContext);
+  const linkToFaq =
+    allowance !== ALLOWANCE.AEEH
+      ? `/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`
+      : `/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1&${CONTACT_PAGE_QUERYPARAMS.segment}=aeeh-eligible`;
   const linkSource = pspCodeData?.[0]?.pdf_base_64
     ? `data:application/pdf;base64,${pspCodeData?.[0]?.pdf_base_64}`
     : null;
@@ -128,39 +132,9 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                     <Alert
                       severity="info"
                       title="Nous n'avons pas retrouvé votre code."
-                      description={`Vérifiez les informations que vous avez remplies avant de cliquer sur "Récupérer mon pass Sport". Vous serez redirigés vers le service démarches-simplifiées qui nous permettra de traiter votre demande.`}
+                      description={`Vérifiez les informations que vous
+                      avez remplies avant de cliquer sur "Contacter le support"`}
                     />
-                    <p className="fr-my-3w text-align--center">
-                      <Link
-                        className="fr-btn fr-btn--secondary"
-                        href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
-                        target="_blank"
-                        title="Récupérer le pass Sport sur démarches-simplifiées - Nouvelle fenêtre"
-                        onClick={() => {
-                          onAeehLinkClick();
-                        }}
-                      >
-                        Récupérer mon pass Sport
-                      </Link>
-                    </p>
-
-                    <p>
-                      Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club
-                      :
-                    </p>
-
-                    <ul className="fr-ml-2w">
-                      <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
-                      <li>
-                        Fournir un chèque de 70 € (non encaissé), restitué dès réception du code
-                        pass Sport.
-                      </li>
-                    </ul>
-
-                    <p>
-                      Si vous n&apos;êtes finalement pas éligible, le club pourra encaisser le
-                      chèque. Chaque club reste libre d&apos;accepter ou non cette solution.
-                    </p>
                   </>
                 ) : (
                   <Alert
@@ -212,10 +186,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
 
           <section className={styles['section-cta']}>
             {isEligible && allowance && (
-              <Link
-                className={cn(['fr-btn', styles['section-cta__link']])}
-                href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-              >
+              <Link className={cn(['fr-btn', styles['section-cta__link']])} href={linkToFaq}>
                 Contacter le support
               </Link>
             )}
