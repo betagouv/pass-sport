@@ -6,8 +6,9 @@ import Image from 'next/image';
 import breakdance from '@/images/eligibility-test/break-dance.webp';
 import cn from 'classnames';
 import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
-import Link from 'next/link';
+import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
+import KnowMore from '@/app/components/know-more/KnowMore';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",
@@ -50,39 +51,30 @@ const EligibilityTest = () => {
       </section>
 
       <section className="fr-container fr-my-4w">
-        <p className="fr-mb-2w text-align--center fr-text--xl">
-          Pour récupérer votre code, veuillez{' '}
-          <Link
-            href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-            title="Naviguer vers la page de formulaire de contact du support"
-          >
-            contacter le support
-          </Link>
-        </p>
-        {/*<div className={styles['top-section-content']}>*/}
-        {/*  <KnowMore*/}
-        {/*    variant="purple"*/}
-        {/*    knowMore={{*/}
-        {/*      title: 'A savoir',*/}
-        {/*      description:*/}
-        {/*        'Si vous avez plusieurs enfants, vous devez récupérer un pass pour chaque enfant.',*/}
-        {/*    }}*/}
-        {/*  />*/}
-        {/*</div>*/}
+        <div className={styles['top-section-content']}>
+          <KnowMore
+            variant="purple"
+            knowMore={{
+              title: 'A savoir',
+              description:
+                'Si vous avez plusieurs enfants, vous devez récupérer un pass pour chaque enfant.',
+            }}
+          />
+        </div>
       </section>
 
-      {/*{CODES_OBTAINABLE ? (*/}
-      {/*  <AllowanceStep />*/}
-      {/*) : (*/}
-      {/*  <div className={styles.background}>*/}
-      {/*    <div className={styles.wrapper}>*/}
-      {/*      <p className="fr-text--xl fr-text--bold">*/}
-      {/*        Vous pourrez demander le pass Sport à partir du 1er septembre*/}
-      {/*      </p>*/}
-      {/*      <p>Revenez sur cette page le 1er septembre pour obtenir votre pass.</p>*/}
-      {/*    </div>*/}
-      {/*  </div>*/}
-      {/*)}*/}
+      {CODES_OBTAINABLE ? (
+        <AllowanceStep />
+      ) : (
+        <div className={styles.background}>
+          <div className={styles.wrapper}>
+            <p className="fr-text--xl fr-text--bold">
+              Vous pourrez demander le pass Sport à partir du 1er septembre
+            </p>
+            <p>Revenez sur cette page le 1er septembre pour obtenir votre pass.</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
