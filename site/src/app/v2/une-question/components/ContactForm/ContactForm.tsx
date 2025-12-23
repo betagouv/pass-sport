@@ -14,6 +14,7 @@ import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import { useSearchParams } from 'next/navigation';
 
 export const visitorReasons = {
+  'benef-incident-securite-18-decembre': `J'ai une question sur la sécurité de mes données personnelles suite à l'incident du 18 décembre`,
   'code-pas-reçu': "Je n'ai pas reçu mon code pass Sport",
   'ars-non-eligible':
     'Je perçois l’ARS pour mon enfant de moins de 14 ans. Pourquoi je n’ai pas reçu le code ?',
@@ -32,6 +33,7 @@ export const visitorReasons = {
 };
 
 const proReasons = {
+  'club-incident-securite-18-decembre': `J'ai une question sur la sécurité des données de mon club sur mon Compte Asso suite à l'incident du 18 décembre`,
   'what-pass': "Qu'est-ce que le pass Sport ?",
   'devenir-partenaire': 'Comment devenir partenaire ?',
   'club-code-not-working': 'Le code ne fonctionne pas',
