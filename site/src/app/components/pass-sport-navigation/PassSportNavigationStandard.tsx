@@ -77,20 +77,6 @@ export default function PassSportNavigation() {
           text: item.text,
         }))}
       />
-      <Notice
-        severity="warning"
-        title={
-          <>
-            La récupération des codes pass Sport est momentanément indisponible. Veuillez consulter{' '}
-            <Link
-              href="https://www.sports.gouv.fr/exfiltration-de-donnees-provenant-d-un-des-systemes-d-information-du-ministere-10048"
-              title="Lien vers le communiqué de presse"
-            >
-              cette page.
-            </Link>
-          </>
-        }
-      />
       {isPasSportClosed() && (
         <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />
       )}
