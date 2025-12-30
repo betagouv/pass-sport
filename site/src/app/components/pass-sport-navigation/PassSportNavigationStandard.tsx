@@ -6,12 +6,11 @@ import { usePathname } from 'next/navigation';
 import { navigationItemStandard } from './navigation';
 import styles from './styles.module.scss';
 import { useUpdateList } from '@/app/hooks/accessibility/use-update-list';
-import React, { useCallback, useRef } from 'react';
+import React, { useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
-import { push } from '@socialgouv/matomo-next';
-import { isPasSportClosed } from '@/utils/date';
+import { displayOfficialClosingBanner } from '@/utils/date';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import Link from 'next/link';
 
@@ -24,9 +23,6 @@ export default function PassSportNavigation() {
 
   const headerRef = useRef<HTMLDivElement | null>(null);
   const headerContainerRef = useRef<HTMLDivElement | null>(null);
-  const onNoticeClick = useCallback(() => {
-    push(['trackEvent', 'Notice banner', 'Clicked', 'Link to forms']);
-  }, []);
 
   useUpdateList({
     parentRef: headerRef,
@@ -81,17 +77,12 @@ export default function PassSportNavigation() {
         severity="warning"
         title={
           <>
-            La récupération des codes pass Sport est momentanément indisponible. Veuillez consulter{' '}
-            <Link
-              href="https://www.sports.gouv.fr/exfiltration-de-donnees-provenant-d-un-des-systemes-d-information-du-ministere-10048"
-              title="Lien vers le communiqué de presse"
-            >
-              cette page.
-            </Link>
+            Exfiltration de données :{' '}
+            <Link href="/v2/communication">situation et recommandations</Link>
           </>
         }
       />
-      {isPasSportClosed() && (
+      {displayOfficialClosingBanner() && (
         <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />
       )}
     </div>
