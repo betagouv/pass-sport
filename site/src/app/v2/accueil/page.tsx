@@ -140,10 +140,12 @@ export default async function Accueil() {
           </div>
         </section>
 
-        <section className={styles['guiding-blocks']}>
-          <GuidingBlock {...guidingBlocks1} headingLevel={2} />
-          <GuidingBlock {...guidingBlocks2} headingLevel={2} />
-        </section>
+        {!isPasSportClosed() && (
+          <section className={styles['guiding-blocks']}>
+            <GuidingBlock {...guidingBlocks1} headingLevel={2} />
+            <GuidingBlock {...guidingBlocks2} headingLevel={2} />
+          </section>
+        )}
 
         <section className="fr-container">
           <div className={styles['benef-faq']}>
@@ -177,9 +179,11 @@ export default async function Accueil() {
               Consulter la liste des questions fréquemment posées
             </Link>
 
-            <section className="fr-my-5w">
-              <MainTiles titleAs="h3" />
-            </section>
+            {!isPasSportClosed() && (
+              <section className="fr-my-5w">
+                <MainTiles titleAs="h3" />
+              </section>
+            )}
           </div>
         </section>
 
