@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './styles.module.scss';
 import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
-import { isPasSportClosed, shouldDisplayChatbot } from '@/utils/date';
+import { shouldDisplayChatbot } from '@/utils/date';
 
 type NavigationItem = {
   link: string;
@@ -21,22 +21,6 @@ export const navigationItemStandard: NavigationItem[] = [
       </>
     ),
   },
-  ...(!isPasSportClosed()
-    ? [
-        {
-          link: '/v2/jeunes-et-parents',
-          text: 'Jeunes et parents',
-        },
-        {
-          link: '/v2/structures',
-          text: 'Structures sportives',
-        },
-        {
-          link: '/v2/partenaires',
-          text: 'Partenaires',
-        },
-      ]
-    : []),
   {
     link: '/v2/une-question',
     text: 'Une question ?',
