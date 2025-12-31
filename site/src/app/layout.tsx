@@ -11,8 +11,6 @@ import { DsfrProvider } from '@/dsfr/DsfrProvider';
 import PassSportNavigationStandard from './components/pass-sport-navigation/PassSportNavigationStandard';
 import PassSportBreadcrumbStandard from '@/app/components/pass-sport-breadcrumb/PassSportBreadcrumbStandard';
 import { StartDsfrOnHydration } from '@codegouvfr/react-dsfr/next-app-router';
-import Notice from '@codegouvfr/react-dsfr/Notice';
-import { isPasSportClosed } from '@/utils/date';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
