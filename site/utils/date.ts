@@ -19,14 +19,14 @@ export const getAnHourFromNow = () => {
 
 export const isPasSportClosed = () => {
   const currentDate = new Date();
-  const cutOffDate = new Date(2026, 0, 1, 0, 1, 0);
+  const cutOffDate = new Date('2025-12-31T23:01:00Z'); // 00H01 January 1st 2026
 
   return currentDate >= cutOffDate;
 };
 
 export const displayOfficialClosingBanner = () => {
   const currentDate = new Date();
-  const cutOffDate = new Date(2026, 0, 15, 0, 1, 0);
+  const cutOffDate = new Date('2026-01-14T23:01:00Z'); // 00H01 January 15th 2026
 
   return currentDate >= cutOffDate;
 };
