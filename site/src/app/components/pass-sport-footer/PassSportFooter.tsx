@@ -24,7 +24,7 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { useRef } from 'react';
 import { useUpdateHeadings } from '@/app/hooks/accessibility/use-update-headings';
 import { FOOTER_CLASSES } from '@/app/constants/dsfr-classes';
-import { isPasSportClosed, shouldDisplayChatbot } from '@/utils/date';
+import { shouldDisplayChatbot } from '@/utils/date';
 import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
 
 export default function PassSportFooter() {
@@ -243,22 +243,6 @@ export default function PassSportFooter() {
             href: '/v2/accueil',
           },
         },
-        ...((!isPasSportClosed()
-          ? [
-              {
-                text: 'Jeunes et parents',
-                linkProps: {
-                  href: '/v2/jeunes-et-parents',
-                },
-              },
-              {
-                text: 'Structures sportives',
-                linkProps: {
-                  href: '/v2/structures',
-                },
-              },
-            ]
-          : []) as [FooterProps.LinkList.Link, FooterProps.LinkList.Link]),
         {
           text: 'Trouver un club partenaire',
           linkProps: {
