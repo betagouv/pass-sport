@@ -243,22 +243,10 @@ export default function PassSportFooter() {
             href: '/v2/accueil',
           },
         },
-        {
-          text: 'Trouver un club partenaire',
-          linkProps: {
-            href: '/v2/trouver-un-club',
-          },
-        },
       ],
     },
     {
       links: [
-        {
-          text: 'Partenaires',
-          linkProps: {
-            href: '/v2/partenaires',
-          },
-        },
         {
           text: 'Une question ?',
           linkProps: {
