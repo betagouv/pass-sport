@@ -15,31 +15,11 @@ import { useSearchParams } from 'next/navigation';
 
 export const visitorReasons = {
   'benef-incident-securite-18-decembre': `J'ai une question sur la sécurité de mes données personnelles suite à l'incident du 18 décembre`,
-  'code-pas-reçu': "Je n'ai pas reçu mon code pass Sport",
-  'ars-non-eligible':
-    'Je perçois l’ARS pour mon enfant de moins de 14 ans. Pourquoi je n’ai pas reçu le code ?',
-  'non-eligible': 'Pourquoi je n’ai plus droit au pass Sport cette année ?',
-  'eligibility-test-fail': `Le formulaire me dit "Les informations que vous avez fournies ne correspondent pas à nos données"`,
-  'fratrie-code-manquant': "Il manque le pass Sport d'un ou plusieurs de mes enfants",
-  'aije-droit': 'Suis-je éligible ?',
-  boursier: 'Je suis boursier ou boursière',
-  'club-wait-70': "Mon club attend d'être remboursé avant de me faire la déduction de 70 euros",
-  'deja-paye-comment-rembourse':
-    "j'ai déjà payé mon adhésion, comment me faire rembourser mon pass Sport ?",
-  'club-pas-trouvé': 'Je ne trouve pas mon club dans la liste des partenaires',
-  'refus-code-club': 'Mon club ne prend pas le pass Sport',
-  'aeeh-eligible': 'Mon enfant a entre 6 et 13 ans et bénéficie de l’AEEH',
   other: 'Autre',
 };
 
 const proReasons = {
   'club-incident-securite-18-decembre': `J'ai une question sur la sécurité des données de mon club sur mon Compte Asso suite à l'incident du 18 décembre`,
-  'what-pass': "Qu'est-ce que le pass Sport ?",
-  'devenir-partenaire': 'Comment devenir partenaire ?',
-  'club-code-not-working': 'Le code ne fonctionne pas',
-  'cant-get-refund': 'Je ne parviens pas à me faire rembourser',
-  'integrer-supprimer-pass': 'Comment intégrer ou supprimer des pass Sport dans LCA ?',
-  'club-problème-lca': 'Je rencontre un problème sur mon compte LCA',
   other: 'Autre',
 };
 
