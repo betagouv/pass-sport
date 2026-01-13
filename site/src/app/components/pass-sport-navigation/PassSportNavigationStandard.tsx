@@ -73,15 +73,18 @@ export default function PassSportNavigation() {
           text: item.text,
         }))}
       />
-      <Notice
-        severity="warning"
-        title={
-          <>
-            Exfiltration de données :{' '}
-            <Link href="/v2/communication">situation et recommandations</Link>
-          </>
-        }
-      />
+      {!displayOfficialClosingBanner() && (
+        <Notice
+          severity="warning"
+          title={
+            <>
+              Exfiltration de données :{' '}
+              <Link href="/v2/communication">situation et recommandations</Link>
+            </>
+          }
+        />
+      )}
+
       {displayOfficialClosingBanner() && (
         <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />
       )}
