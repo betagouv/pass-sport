@@ -26,7 +26,7 @@ export const isPasSportClosed = () => {
 
 export const displayOfficialClosingBanner = () => {
   const currentDate = new Date();
-  const cutOffDate = new Date('2026-01-14T23:01:00Z'); // 00H01 January 15th 2026
+  const cutOffDate = new Date('2026-01-15T23:01:00Z'); // 00H01 January 16th 2026
 
   return currentDate >= cutOffDate;
 };
