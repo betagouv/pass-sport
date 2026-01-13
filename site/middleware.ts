@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isPasSportClosed } from '@/utils/date';
+import { displayOfficialClosingBanner, isPasSportClosed } from '@/utils/date';
 
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -47,21 +47,20 @@ export function middleware(request: NextRequest) {
 
   response.headers.set('Content-Security-Policy', contentSecurityPolicyHeaderValue);
 
-  if (isPasSportClosed()) {
-    // When pass sport is closed, we want to redirect from certain pages to the homepage
-    const pagesToRedirectFrom = [
-      '/v2/test-eligibilite',
-      '/v2/test-eligibilite-base',
-      '/v2/test-ou-code',
-      '/v2/jeunes-et-parents',
-      '/v2/structures',
-      '/v2/partenaires',
-      '/v2/trouver-un-club',
-    ];
+  // When pass sport is closed, we want to redirect from certain pages to the homepage
+  const pagesToRedirectFrom = [
+    '/v2/test-eligibilite',
+    '/v2/test-eligibilite-base',
+    '/v2/test-ou-code',
+    '/v2/jeunes-et-parents',
+    '/v2/structures',
+    '/v2/partenaires',
+    '/v2/trouver-un-club',
+    ...(displayOfficialClosingBanner() ? ['/v2/communication'] : []),
+  ];
 
-    if (pagesToRedirectFrom.includes(request.nextUrl.pathname)) {
-      return NextResponse.redirect(new URL('/v2/accueil', request.url));
-    }
+  if (pagesToRedirectFrom.includes(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL('/v2/accueil', request.url));
   }
 
   return response;
