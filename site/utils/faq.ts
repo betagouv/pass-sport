@@ -130,11 +130,25 @@ export async function getCrispArticles({
   try {
     let articles: CrispArticle[] | undefined = cache.get(CacheKey.ARTICLES);
 
+    // todo: quick fix, need to iterate through all the pages with the crisp sdk
     if (articles === undefined) {
-      articles = (await crispClient.website.listHelpdeskLocaleArticles(
-        crispIdentifier,
-        locale,
-      )) as CrispArticle[];
+      articles = [
+        ...((await crispClient.website.listHelpdeskLocaleArticles(
+          crispIdentifier,
+          locale,
+          1,
+        )) as CrispArticle[]),
+        ...((await crispClient.website.listHelpdeskLocaleArticles(
+          crispIdentifier,
+          locale,
+          2,
+        )) as CrispArticle[]),
+        ...((await crispClient.website.listHelpdeskLocaleArticles(
+          crispIdentifier,
+          locale,
+          3,
+        )) as CrispArticle[]),
+      ];
 
       cache.set(CacheKey.ARTICLES, articles);
     }
