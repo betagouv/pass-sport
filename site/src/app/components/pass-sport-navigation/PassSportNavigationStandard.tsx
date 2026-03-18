@@ -13,6 +13,7 @@ import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remo
 import { displayOfficialClosingBanner } from '@/utils/date';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import Link from 'next/link';
+import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 
 export default function PassSportNavigation() {
   const paths: string | null = usePathname();
@@ -88,6 +89,27 @@ export default function PassSportNavigation() {
       {displayOfficialClosingBanner() && (
         <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />
       )}
+
+      <Notice
+        severity="warning"
+        title={
+          <>
+            <strong>Évaluation en cours du dispositif pass Sport</strong> : vous pourriez recevoir,
+            par SMS ou par e-mail, une invitation de l&apos;Institut National de la Jeunesse et de
+            l&apos;Education Populaire (INJEP) à participer à une enquête concernant votre pratique
+            sportive. L&apos;enquête est en cours du 17 mars au 12 avril 2026 inclus.
+            <br />
+            <br />
+            <strong>Attention</strong> : Aucune donnée personnelle sensible (coordonnées bancaires,
+            mot de passe, etc.) ne vous sera demandée dans le cadre de ce sondage. En cas de doute
+            sur l&apos;expéditeur, nous vous invitons à nous contacter via{' '}
+            <Link href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}>
+              ce formulaire
+            </Link>
+            .
+          </>
+        }
+      />
     </div>
   );
 }
