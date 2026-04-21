@@ -1,5 +1,5 @@
 pandas==2.2.1
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 pre-commit==3.7.0
 ipykernel==6.22.0
 pycryptodome==3.20.0
