@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { displayOfficialClosingBanner, isPasSportClosed } from '@/utils/date';
+import { isPasSportClosed } from '@/utils/date';
 
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -11,12 +11,12 @@ export function middleware(request: NextRequest) {
 
   const cspHeader = `
     default-src 'self';
-    script-src 'report-sample' ${scriptSrc} https://client.crisp.chat/ https://stats.beta.gouv.fr/matomo.js https://tarteaucitron.io/ https://cdn.tarteaucitron.io/;
+    script-src 'report-sample' ${scriptSrc} https://client.crisp.chat/ https://stats.beta.gouv.fr/matomo.js https://tarteaucitron.io/ https://cdn.tarteaucitron.io/ https://cdntag.tarteaucitron.io/;
     style-src 'report-sample' 'unsafe-inline' 'self' https://unpkg.com https://client.crisp.chat/ https://cdn.tarteaucitron.io/;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
-    connect-src 'self' https://client.crisp.chat/ wss://client.relay.crisp.chat/ https://sports-sgsocialgouv.opendatasoft.com https://stats.beta.gouv.fr https://geo.api.gouv.fr blob:;
+    connect-src 'self' https://client.crisp.chat/ wss://client.relay.crisp.chat/ https://sports-sgsocialgouv.opendatasoft.com https://stats.beta.gouv.fr https://geo.api.gouv.fr https://logs.tarteaucitron.io/ blob:;
     font-src 'self' https://client.crisp.chat/;
     frame-src 'self' https://player.vimeo.com https://pass-sport.crisp.help/ blob:;
     img-src 'self' data: https://image.crisp.chat/ https://client.crisp.chat/ https://storage.crisp.chat/ https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://i.vimeocdn.com https://unpkg.com https://tarteaucitron.io https://jedonnemonavis.numerique.gouv.fr/static/bouton-bleu-clair.svg;
@@ -49,14 +49,17 @@ export function middleware(request: NextRequest) {
 
   // When pass sport is closed, we want to redirect from certain pages to the homepage
   const pagesToRedirectFrom = [
-    '/v2/test-eligibilite',
-    '/v2/test-eligibilite-base',
-    '/v2/test-ou-code',
-    '/v2/jeunes-et-parents',
-    '/v2/structures',
-    '/v2/partenaires',
-    '/v2/trouver-un-club',
-    ...(displayOfficialClosingBanner() ? ['/v2/communication'] : []),
+    ...(isPasSportClosed()
+      ? [
+          '/v2/test-eligibilite',
+          '/v2/test-eligibilite-base',
+          '/v2/test-ou-code',
+          '/v2/jeunes-et-parents',
+          '/v2/structures',
+          '/v2/partenaires',
+          '/v2/trouver-un-club',
+        ]
+      : []),
   ];
 
   if (pagesToRedirectFrom.includes(request.nextUrl.pathname)) {
@@ -75,12 +78,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    {
-      source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
-      missing: [
-        { type: 'header', key: 'next-router-prefetch' },
-        { type: 'header', key: 'purpose', value: 'prefetch' },
-      ],
-    },
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

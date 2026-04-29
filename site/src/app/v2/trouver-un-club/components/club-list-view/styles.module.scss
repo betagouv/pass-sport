@@ -1,4 +1,4 @@
-@import '../../../../sassVariables.module';
+@use '../../../../variables';
 
 .container {
   display: flex;
@@ -9,7 +9,7 @@
 
 .item {
   width: 100%;
-  @media (min-width: $sm) {
+  @media (min-width: variables.$sm) {
     width: 282px;
   }
 }

@@ -1,4 +1,4 @@
-@import '../../../../../sassVariables.module.scss';
+@use '../../../../../variables';
 
 .blue {
   color: var(--background-action-high-blue-france);

@@ -8,13 +8,18 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { 'club-name': clubSlug } = await params;
+
   return {
-    title: `Trouver un club partenaire - ${decodeURIComponent(params['club-name'])} - pass Sport`,
+    title: `Trouver un club partenaire - ${decodeURIComponent(clubSlug)} - pass Sport`,
   };
 }
 
-const ClubPage = ({ params }: { params: { 'club-name': string } }) => {
-  const clubName = decodeURIComponent(params['club-name']);
+export default async function ClubPage({ params }: { params: Promise<{ 'club-name': string }> }) {
+  const { 'club-name': clubSlug } = await params;
+  const clubName = decodeURIComponent(clubSlug);
+
+  console.log({ clubName, params });
 
   return (
     <>
@@ -25,6 +30,4 @@ const ClubPage = ({ params }: { params: { 'club-name': string } }) => {
       <SocialMediaPanel />
     </>
   );
-};
-
-export default ClubPage;
+}

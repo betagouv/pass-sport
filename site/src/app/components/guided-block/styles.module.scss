@@ -1,4 +1,4 @@
-@import '../../../app/sassVariables.module.scss';
+@use '../../variables';
 
 .container {
   --main-color: initial;

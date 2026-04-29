@@ -113,13 +113,6 @@ export default function Page() {
           className={styles['lca-section']}
         >
           <h2 className="fr-h1">Créez votre Compte Asso</h2>
-          {/*<KnowMore*/}
-          {/*  variant="yellow"*/}
-          {/*  knowMore={{*/}
-          {/*    title: 'A savoir',*/}
-          {/*    description: `Vous pouvez suivre la procédure de création pas à pas en visionnant cette vidéo tutoriel.`,*/}
-          {/*  }}*/}
-          {/*/>*/}
           <p>
             Sur Le Compte Asso, vous pourrez créer un compte pour devenir partenaire du dispositif,
             entrer les codes pass Sport et suivre vos remboursements.

@@ -1,4 +1,4 @@
-
+@use './variables';
 
 body[data-tac] {
   --bf500: #000091;
@@ -328,7 +328,7 @@ body[data-tac] {
     margin-right: 0;
   }
 
-  @media screen and (min-width: $md) {
+  @media screen and (min-width: variables.$md) {
     #tarteaucitronRoot #tarteaucitronAlertBig #tarteaucitronCloseAlert,
     #tarteaucitronRoot #tarteaucitronAlertBig #tarteaucitronPersonalize,
     #tarteaucitronRoot #tarteaucitronAlertBig .tarteaucitronCTAButton {

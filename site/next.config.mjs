@@ -2,10 +2,7 @@
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig = {
-  experimental: {
-    // The instrumentation hook is required for Sentry to work on the serverside
-    instrumentationHook: true,
-  },
+  devIndicators: false,
   images: {
     remotePatterns: [
       {

@@ -10,7 +10,7 @@ import {
   getAeehCodeObtentionType,
   isEligible,
 } from '@/utils/eligibility-test';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { InputState } from '@/types/form';
-import { Heading } from '@/app/components/heading/Heading';
+import { useIsMounted } from '@/app/hooks/use-is-mounted';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -84,6 +84,7 @@ export default function SimplifiedEligibilityTest({
   hasBackground = false,
   hasBorder = false,
 }: SimplifiedEligibilityTestProps) {
+  // const isMounted = useIsMounted();
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [allocationName, setAllocationName] = useState<ALLOCATION | null>(null);
@@ -108,7 +109,7 @@ export default function SimplifiedEligibilityTest({
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
-  const [formHasInvalidInput, setFormHasInvalidInput] = useState(false);
+  const formHasInvalidInput = Object.values(inputStates).some((state) => state.errorMsg);
 
   function resetStates() {
     setDisplayEligibilityConditions(false);
@@ -119,10 +120,9 @@ export default function SimplifiedEligibilityTest({
     setKnowMoreMeta(null);
   }
 
-  useEffect(() => {
-    // Boolean to apply margin to align the button "Verifier" ........
-    setFormHasInvalidInput(Object.values(inputStates).some((state) => state.errorMsg));
-  }, [inputStates]);
+  // console.log({ isMounted });
+
+  // if (!isMounted) return <></>;
 
   return (
     <>
@@ -260,12 +260,7 @@ export default function SimplifiedEligibilityTest({
                   : styles['eligibility-test__fields--column'],
               )}
             >
-              <div
-                className={cn(
-                  'fr-fieldset__element align-self--baseline',
-                  styles['eligibility-test__fields-date'],
-                )}
-              >
+              <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
                 <Input
                   label="Date de naissance"
                   state={inputStates.dob?.state}
@@ -296,7 +291,7 @@ export default function SimplifiedEligibilityTest({
                 />
               </div>
 
-              <div className="fr-fieldset__element align-self--baseline">
+              <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
                 <Select
                   label="Êtes-vous bénéficiaire d'une aide ?"
                   hint="Sélectionner l'aide dont vous bénéficiez."
@@ -336,14 +331,10 @@ export default function SimplifiedEligibilityTest({
                   })}
                 </Select>
               </div>
-              <div className="fr-fieldset__element flex--min-content">
-                <Button
-                  type="submit"
-                  priority={buttonVariant}
-                  className={cn({
-                    [styles['button-margin--error']]: formHasInvalidInput,
-                  })}
-                >
+              <div
+                className={cn('fr-fieldset__element', styles['eligibility-test__confirm-button'])}
+              >
+                <Button type="submit" priority={buttonVariant}>
                   Vérifier
                 </Button>
               </div>

@@ -1,4 +1,4 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .main {
   position: relative;
@@ -10,7 +10,7 @@
   & > div {
     height: 440px;
     width: 100%;
-    @media (min-width: $xl) {
+    @media (min-width: variables.$xl) {
       height: 724px;
     }
 

@@ -362,7 +362,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
           <ClubCount totalClubCount={clubsOnList.total_count} />
 
           <SegmentedControl
-            hideLegend={true}
+            hideLegend
             legend="Choisissez entre la vue liste et la vue cartographie pour voir les clubs"
             segments={[
               {

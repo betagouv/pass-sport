@@ -1,17 +1,17 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .faq {
   position: relative;
   background-color: var(--color-white);
   display: flex;
-  max-width: $layout-max-width;
+  max-width: variables.$layout-max-width;
   margin: 48px 0;
   flex-direction: column;
 
   &--from-main-page {
     margin: 24px 24px -80px;
 
-    @media (min-width: $md) {
+    @media (min-width: variables.$md) {
       margin: 0 auto -64px;
     }
   }

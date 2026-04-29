@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { initCrispClient } from 'utils/crisp';
+import { initCrispClient } from '@/utils/crisp';
 import { decryptData } from '@/utils/decryption';
 import { AUTHORIZED_VENDORS_KEY, SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
 import { matchExactDrajes, matchExactLsm } from '@/utils/string';

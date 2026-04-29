@@ -1,11 +1,11 @@
-@import '../../sassVariables.module.scss';
+@use '../../variables';
 
 .menu-item-spacer {
   position: relative;
 
   span {
     display: none;
-    @media (min-width: $lg) {
+    @media (min-width: variables.$lg) {
       display: block;
       position: absolute;
       left: -13px;
@@ -19,7 +19,7 @@
 .header > div > div > div > div > div > div > img {
   display: none;
 
-  @media (min-width: $sm) {
+  @media (min-width: variables.$sm) {
     display: block;
     width: 128px !important;
   }
