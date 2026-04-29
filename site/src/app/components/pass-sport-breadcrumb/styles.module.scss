@@ -18,7 +18,7 @@
     max-width: variables.$layout-max-width;
     margin: auto;
 
-    li:last-child > a{
+    li:last-child > a {
       color: var(--text-action-high-grey) !important;
     }
   }

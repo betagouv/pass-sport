@@ -110,7 +110,10 @@ export async function getCrispCategories({
   locale?: Locale;
 }): Promise<CrispCategory[]> {
   try {
-    return crispClient.website.listHelpdeskLocaleCategories(crispIdentifier, locale);
+    return (await crispClient.website.listHelpdeskLocaleCategories(
+      crispIdentifier,
+      locale,
+    )) as unknown as CrispCategory[];
   } catch (err) {
     console.error('Error while trying to get list of categories', err);
     return [];
@@ -177,11 +180,11 @@ export async function getCrispFullArticle({
   let fullArticle: CrispFullArticle | undefined = cache.get(cacheKey);
 
   if (fullArticle === undefined) {
-    fullArticle = await crispClient.website.resolveHelpdeskLocaleArticle(
+    fullArticle = (await crispClient.website.resolveHelpdeskLocaleArticle(
       crispIdentifier,
       locale,
       articleId,
-    );
+    )) as unknown as CrispFullArticle;
 
     cache.set(cacheKey, fullArticle);
   }

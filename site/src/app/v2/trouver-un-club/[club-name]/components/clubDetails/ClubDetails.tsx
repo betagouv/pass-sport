@@ -3,8 +3,10 @@
 import styles from './styles.module.scss';
 import { formatPhoneNumber } from '@/app/v2/trouver-un-club/[club-name]/helpers';
 import MedicalCertificatePanel from '../medicalCertificatPanel/MedicalCertificatePanel';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import dynamic from 'next/dynamic';
+
+const Map = dynamic(() => import('../map/Map'));
 import { useGetClubs } from '@/app/hooks/use-get-clubs';
 import cn from 'classnames';
 import Link from 'next/link';
@@ -20,7 +22,6 @@ interface Props {
 
 function ClubDetails({ clubName, isProVersion = false }: Props) {
   const { club, error } = useGetClubs(clubName);
-  const Map = useMemo(() => dynamic(() => import('../map/Map')), []);
   const mapUrl = useGetMapUrl(club);
   const onGoToItinerary = useCallback(() => {
     push(['trackEvent', 'Check itinerary', 'Clicked', 'Itinerary on google maps']);

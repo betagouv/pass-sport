@@ -1,5 +1,5 @@
 import { ClubsOnMap, ExportedClub } from 'types/Club';
-import { useContext, useMemo } from 'react';
+import { useContext } from 'react';
 import dynamic from 'next/dynamic';
 import { GeolocationContext } from '@/store/geolocationContext';
 import { useSearchParams } from 'next/navigation';
@@ -38,6 +38,11 @@ const TooManyClubsMessage = () => (
 
 const ZOOM_LEVEL = { COUNTRY: 5, CITY: 7 };
 
+const ClubsMap = dynamic(() => import('../clubs-map/ClubsMap'), {
+  ssr: false,
+  loading: () => <Loading />,
+});
+
 const ClubMapView: React.FC<Props> = ({
   clubsProvider,
   isGeolocationCircleVisible,
@@ -45,15 +50,6 @@ const ClubMapView: React.FC<Props> = ({
 }) => {
   const isFetching = clubsProvider.isFetchingClubsOnMap;
   const areThereTooManyClubs = clubsProvider.total_count === MAP_LIMIT;
-
-  const ClubsMap = useMemo(
-    () =>
-      dynamic(() => import('../clubs-map/ClubsMap'), {
-        ssr: false,
-        loading: () => <Loading />,
-      }),
-    [],
-  );
 
   const searchParams = useSearchParams();
 

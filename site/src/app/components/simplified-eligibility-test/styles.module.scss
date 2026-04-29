@@ -1,6 +1,5 @@
 @use '../../variables';
 
-
 .eligibility-test {
   display: flex;
   align-items: center;
@@ -10,7 +9,7 @@
   flex-direction: column;
   border-radius: 8px;
 
-  &--has-background{
+  &--has-background {
     background-color: var(--background-alt-pink-tuile);
   }
 

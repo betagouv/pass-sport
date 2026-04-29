@@ -1,7 +1,7 @@
 'use client';
 
 import styles from './style.module.scss';
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { getClubs, getClubsWithoutLimit, SqlSearchParams } from '../../agent';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ActivityResponse, ClubsOnList, ClubsOnMap } from 'types/Club';
@@ -29,16 +29,16 @@ interface Props {
   isProVersion?: boolean;
 }
 
+const ClubFiltersInAccordion = dynamic(
+  () => import('../club-filters-in-accordion/ClubFiltersInAccordion'),
+  { ssr: false },
+);
+
 const ClubFinder = ({ activities, isProVersion }: Props) => {
   const limit = LIST_LIMIT;
   const router = useRouter();
   const pathname = usePathname();
 
-  const ClubFiltersInAccordion = useMemo(
-    () =>
-      dynamic(() => import('../club-filters-in-accordion/ClubFiltersInAccordion'), { ssr: false }),
-    [],
-  );
   const appendQueryString = useAppendQueryString();
   const removeQueryString = useRemoveQueryString();
   const searchParams = useSearchParams();
@@ -78,8 +78,6 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
     }),
   });
 
-  const [isAroundMeChecked, setIsAroundMeChecked] = useState<boolean | undefined>(undefined);
-
   const parseParameterFromQuery = (searchQueryParam: UrlQueryParameters) => {
     const param = searchParams && searchParams.get(searchQueryParam);
 
@@ -94,6 +92,12 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
   const isAroundMeCheckedParam = parseParameterFromQuery(SEARCH_QUERY_PARAMS.aroundMe) === '1';
   const cityParam = parseParameterFromQuery(SEARCH_QUERY_PARAMS.city);
   const postalCodeParam = parseParameterFromQuery(SEARCH_QUERY_PARAMS.postalCode);
+
+  const isAroundMeChecked: boolean | undefined = isGeolocationLoading
+    ? undefined
+    : latitude
+      ? isAroundMeCheckedParam
+      : false;
 
   const { clubName, city, postalCode, activity, disability, offset, distance } = clubParams;
 
@@ -129,6 +133,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
 
   useEffect(() => {
     if (!isGeolocationLoading && distance !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClubsOnMap((provider) => ({ ...provider, isFetchingClubsOnMap: true }));
       getClubsWithoutLimit({
         clubName,
@@ -162,6 +167,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
 
   useEffect(() => {
     if (!isGeolocationLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClubParams((previousState) => {
         return {
           ...previousState,
@@ -170,14 +176,6 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
       });
     }
   }, [isGeolocationLoading, buildDistanceExpression]);
-
-  useEffect(() => {
-    if (!latitude) {
-      setIsAroundMeChecked(false);
-    } else {
-      setIsAroundMeChecked(isAroundMeCheckedParam);
-    }
-  }, [latitude, isAroundMeCheckedParam]);
 
   useEffect(() => {
     setFocusOn(`#club-list > li:nth-child(${clubsOnList.firstRecievedClubIndex}) a`);
@@ -189,6 +187,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
         cityParam ? SEARCH_QUERY_PARAMS.city : SEARCH_QUERY_PARAMS.postalCode,
       );
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClubParams((prevState) => {
         return { ...prevState, city: undefined, postalCode: undefined };
       });

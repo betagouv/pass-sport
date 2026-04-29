@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 
 interface Props {
-  params: { 'club-name': string };
+  params: Promise<{ 'club-name': string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

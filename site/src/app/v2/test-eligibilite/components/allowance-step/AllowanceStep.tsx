@@ -45,7 +45,7 @@ const initialInputsState: AllowanceFormInputsState = {
 };
 
 const AllowanceStep = () => {
-  const portalRef = useRef<HTMLDivElement>(null);
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
@@ -142,7 +142,8 @@ const AllowanceStep = () => {
         eligibilityData,
         pspCodeData,
         performNewTest: restartTest,
-        portalRef,
+        portalNode,
+        setPortalNode,
         setAllowance,
         setBenefIsEligible,
         setEligibilityData,
@@ -366,7 +367,7 @@ const AllowanceStep = () => {
         </div>
       </div>
 
-      <div ref={portalRef}>
+      <div ref={setPortalNode}>
         {isValidated &&
           benefIsEligible &&
           (allowance === ALLOWANCE.CROUS ||
