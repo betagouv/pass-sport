@@ -53,7 +53,7 @@ export default function MentionsLegales() {
 
           <section className="fr-mb-4w">
             <h2 className="fr-mb-2w">Directeur de la publication</h2>
-            <p className="fr-mb-2w">Fabienne BOURDAIS, Directrice des sports</p>
+            <p className="fr-mb-2w">Jérôme FOURNIER, Directeur des sports</p>
           </section>
 
           <section className="fr-mb-4w">
