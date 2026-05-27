@@ -19,7 +19,6 @@ import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { InputState } from '@/types/form';
-import { useIsMounted } from '@/app/hooks/use-is-mounted';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import { useUpdateTitleIframe } from '@/app/hooks/accessibility/use-update-title-iframe';

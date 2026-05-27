@@ -12,8 +12,6 @@ import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-repl
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
 import { displayOfficialClosingBanner } from '@/utils/date';
 import Notice from '@codegouvfr/react-dsfr/Notice';
-import Link from 'next/link';
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 
 export default function PassSportNavigation() {
   const paths: string | null = usePathname();

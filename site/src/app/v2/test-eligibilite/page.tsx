@@ -6,8 +6,6 @@ import Image from 'next/image';
 import breakdance from '@/images/eligibility-test/break-dance.webp';
 import cn from 'classnames';
 import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
-import Link from 'next/link';
 import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 import KnowMore from '@/app/components/know-more/KnowMore';
