@@ -1,7 +1,7 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .fieldset__element {
-  @media (min-width: $xl) {
+  @media (min-width: variables.$xl) {
     flex: 0 0 auto;
   }
 }

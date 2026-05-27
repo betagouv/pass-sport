@@ -24,7 +24,7 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import { useRef } from 'react';
 import { useUpdateHeadings } from '@/app/hooks/accessibility/use-update-headings';
 import { FOOTER_CLASSES } from '@/app/constants/dsfr-classes';
-import { shouldDisplayChatbot } from '@/utils/date';
+import { isPasSportClosed, shouldDisplayChatbot } from '@/utils/date';
 import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
 
 export default function PassSportFooter() {
@@ -206,13 +206,6 @@ export default function PassSportFooter() {
         href: '/v2/politique-de-confidentialite',
       },
     },
-    // todo: enable later
-    // {
-    //   text: 'Budget',
-    //   linkProps: {
-    //     href: '/v2/budget',
-    //   },
-    // },
     {
       text: 'Gestion des cookies',
       linkProps: {
@@ -233,7 +226,6 @@ export default function PassSportFooter() {
     },
   ];
 
-  // @ts-ignore
   const linkList: FooterProps.LinkList.List = [
     {
       links: [
@@ -243,10 +235,46 @@ export default function PassSportFooter() {
             href: '/v2/accueil',
           },
         },
+        ...((!isPasSportClosed()
+          ? [
+              {
+                text: 'Jeunes et parents',
+                linkProps: {
+                  href: '/v2/jeunes-et-parents',
+                },
+              },
+              {
+                text: 'Structures sportives',
+                linkProps: {
+                  href: '/v2/structures',
+                },
+              },
+              {
+                text: 'Trouver un club partenaire',
+                linkProps: {
+                  href: '/v2/trouver-un-club',
+                },
+              },
+            ]
+          : []) as [
+          FooterProps.LinkList.Link,
+          FooterProps.LinkList.Link,
+          FooterProps.LinkList.Link,
+        ]),
       ],
     },
     {
       links: [
+        ...((!isPasSportClosed()
+          ? [
+              {
+                text: 'Partenaires',
+                linkProps: {
+                  href: '/v2/partenaires',
+                },
+              },
+            ]
+          : []) as [FooterProps.LinkList.Link]),
         {
           text: 'Une question ?',
           linkProps: {

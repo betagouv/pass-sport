@@ -1,4 +1,4 @@
-@import '../../../../../sassVariables.module.scss';
+@use '../../../../../variables';
 
 .icon-color {
   color: var(--background-action-high-blue-france);
@@ -24,7 +24,7 @@
   .contact-wrapper {
     display: flex;
 
-    @media screen and (max-width: $md) {
+    @media screen and (max-width: variables.$md) {
       flex-direction: column;
     }
   }
@@ -33,7 +33,7 @@
     text-align: right;
     flex: 1;
 
-    @media screen and (max-width: $md) {
+    @media screen and (max-width: variables.$md) {
       flex: initial;
       text-align: left;
       padding-top: 16px;
@@ -46,10 +46,10 @@
 
   .activities {
     columns: 1;
-    @media (min-width: $sm) {
+    @media (min-width: variables.$sm) {
       columns: 2;
     }
-    @media (min-width: $md) {
+    @media (min-width: variables.$md) {
       columns: 3;
     }
   }

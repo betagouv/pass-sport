@@ -15,7 +15,7 @@ import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/Ver
 const EligibilityTestForms = () => {
   const {
     allowance,
-    portalRef,
+    portalNode,
     eligibilityData,
     setEligibilityData,
     pspCodeData,
@@ -135,22 +135,22 @@ const EligibilityTestForms = () => {
 
       {((eligibilityData && eligibilityData.length === 0) ||
         (pspCodeData && pspCodeData.length === 0)) &&
-        portalRef?.current &&
+        portalNode &&
         createPortal(
           <div className="fr-mt-6w">
             <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
           </div>,
-          portalRef.current,
+          portalNode,
         )}
 
       {pspCodeData &&
         pspCodeData.length > 0 &&
-        portalRef?.current &&
+        portalNode &&
         createPortal(
           <div className="fr-mt-6w">
             <VerdictPanel isSuccess isEligible={benefIsEligible} />
           </div>,
-          portalRef.current,
+          portalNode,
         )}
     </>
   );

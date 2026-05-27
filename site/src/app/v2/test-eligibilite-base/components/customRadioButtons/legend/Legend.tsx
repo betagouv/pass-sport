@@ -1,6 +1,5 @@
 import cn from 'classnames';
 import rootStyles from '@/app/utilities.module.scss';
-import styles from './styles.module.scss';
 import { ReactNode } from 'react';
 
 interface Props {

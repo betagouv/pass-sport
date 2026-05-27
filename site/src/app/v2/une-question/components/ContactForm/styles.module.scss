@@ -1,4 +1,4 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .error {
   margin-bottom: 60px;
@@ -10,7 +10,7 @@
   gap: 35px;
   flex-grow: 1;
 
-  @media (min-width: $xl) {
+  @media (min-width: variables.$xl) {
     gap: 16px;
   }
 }
@@ -20,7 +20,7 @@
   flex-direction: column;
   gap: 16px;
 
-  @media (min-width: $xl) {
+  @media (min-width: variables.$xl) {
     flex-direction: row;
   }
 

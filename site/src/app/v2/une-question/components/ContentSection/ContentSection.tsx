@@ -61,12 +61,12 @@ export default function ContentSection({ categoriesWithArticles, isFromMainPage 
                 id={article.id}
                 className={cn('fr-px-6w', 'fr-pt-2w', styles['faq__accordion-expanded-container'])}
               >
-                <Markdown remarkPlugins={[remarkBreaks]} className={styles['faq__markdown']}>
-                  {article.content}
-                </Markdown>
+                <div className={styles['faq__markdown']}>
+                  <Markdown remarkPlugins={[remarkBreaks]}>{article.content}</Markdown>
+                </div>
 
                 <footer
-                  className={cn(styles['faq__feedback-date'], 'fr-text--sm')}
+                  className={cn(styles['arkdown__feedback-date'], 'fr-text--sm')}
                   suppressHydrationWarning
                 >
                   Mis à jour le : {new Date(article.updatedAt).toLocaleDateString()}

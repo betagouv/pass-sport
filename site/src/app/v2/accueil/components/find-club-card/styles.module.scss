@@ -1,4 +1,4 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .sizer {
   max-width: 1200px;
@@ -9,7 +9,7 @@
 }
 
 .button {
-  @media (max-width: $xs) {
+  @media (max-width: variables.$xs) {
     padding: 10px 18px 10px 24px;
   }
 }
@@ -20,7 +20,7 @@
 
 .image-sizer {
   height: auto;
-  @media (min-width: $md) {
+  @media (min-width: variables.$md) {
     height: 600px;
   }
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import Accordion from '@codegouvfr/react-dsfr/Accordion';
-import Link from 'next/link';
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export default function AccordionsSocialMediasVisuals() {

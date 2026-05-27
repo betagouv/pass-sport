@@ -1,4 +1,4 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .fieldset {
   border: none;
@@ -12,7 +12,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  }
+}
 
 .separator {
   background-color: var(--border-default-grey);
@@ -32,7 +32,7 @@
     background-color: var(--border-default-grey);
     height: 1px;
 
-    @media (min-width: $md) {
+    @media (min-width: variables.$md) {
       height: 0px;
     }
   }
@@ -43,7 +43,7 @@
     gap: 16px;
     padding-top: 16px;
 
-    @media (min-width: $md) {
+    @media (min-width: variables.$md) {
       flex-direction: row;
       padding-top: 0;
     }
@@ -53,7 +53,7 @@
     flex-direction: column;
     gap: 0px;
 
-    @media (min-width: $md) {
+    @media (min-width: variables.$md) {
       flex-direction: row;
       gap: 16px;
     }

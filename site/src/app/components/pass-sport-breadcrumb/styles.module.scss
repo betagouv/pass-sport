@@ -1,4 +1,4 @@
-@import '../../../app/sassVariables.module.scss';
+@use '../../variables';
 
 .container {
   background-color: var(--orange-terre-battue-925-125);
@@ -8,17 +8,17 @@
     background-color: var(--brown-caramel-950-100) !important;
   }
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     padding-left: 1rem;
     padding-right: 1rem;
   }
 
   div,
   nav {
-    max-width: $layout-max-width;
+    max-width: variables.$layout-max-width;
     margin: auto;
 
-    li:last-child > a{
+    li:last-child > a {
       color: var(--text-action-high-grey) !important;
     }
   }

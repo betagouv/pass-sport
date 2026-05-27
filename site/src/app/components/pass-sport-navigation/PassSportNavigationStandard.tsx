@@ -12,8 +12,6 @@ import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-repl
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
 import { displayOfficialClosingBanner } from '@/utils/date';
 import Notice from '@codegouvfr/react-dsfr/Notice';
-import Link from 'next/link';
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 
 export default function PassSportNavigation() {
   const paths: string | null = usePathname();
@@ -74,17 +72,6 @@ export default function PassSportNavigation() {
           text: item.text,
         }))}
       />
-      {!displayOfficialClosingBanner() && (
-        <Notice
-          severity="warning"
-          title={
-            <>
-              Exfiltration de données :{' '}
-              <Link href="/v2/communication">situation et recommandations</Link>
-            </>
-          }
-        />
-      )}
 
       {displayOfficialClosingBanner() && (
         <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />

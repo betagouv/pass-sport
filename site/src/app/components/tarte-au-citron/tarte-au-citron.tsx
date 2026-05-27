@@ -16,7 +16,7 @@ import { useEnhanceCookieManagerAccessibility } from '@/app/hooks/accessibility/
 export const EXTERNAL_SHEET_DATA_KEY = 'tac';
 export const EXTERNAL_SHEET_IDENTIFIER = 'external-sheet';
 
-export const TarteAuCitron = () => {
+export const TarteAuCitron = ({ nonce }: { nonce?: string }) => {
   const domain = process.env.NEXT_PUBLIC_TARTEAUCITRON_DOMAIN;
   const pathname = usePathname();
 
@@ -40,6 +40,7 @@ export const TarteAuCitron = () => {
     <Script
       src={`https://tarteaucitron.io/load.js?domain=${domain}&uuid=19b13211bfb1bd1efd6f804a26674ed864265114`}
       strategy="afterInteractive"
+      nonce={nonce}
       onLoad={() => {
         const tac = window.tarteaucitron;
 

@@ -1,11 +1,11 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .container {
   display: flex;
   flex-direction: column;
   gap: 8px;
 
-  @media (min-width: $xl) {
+  @media (min-width: variables.$xl) {
     flex-direction: row;
     justify-content: space-between;
   }

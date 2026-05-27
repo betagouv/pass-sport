@@ -10,16 +10,15 @@ import { AUTHORIZED_VENDORS_KEY } from '@/app/constants/cookie-manager';
 const COOKIE_SUPPORT_KEY = process.env.NEXT_PUBLIC_COOKIE_SUPPORT_KEY as string;
 const BASE_64_KEY_FOR_SUPPORT_COOKIE = process.env.BASE_64_KEY_FOR_SUPPORT_COOKIE as string;
 
-// Max attempts stored for each step, due to cookie size limitation 4096 bytes
 const MAX_ATTEMPTS_PER_STEP = 5;
 
 async function handleSupportCookie(payload: SearchPayload | ConfirmPayload, step: FormStep) {
-  if (!hasGivenConsentForSupportCookie()) {
-    removeSupportCookie();
+  // Added await here because hasGivenConsentForSupportCookie is now async
+  if (!(await hasGivenConsentForSupportCookie())) {
+    await removeSupportCookie(); // Added await
     return;
   }
 
-  // Mapping for human-readable step (displayed on crisp notes)
   const mappingStep: Record<FormStep, string> = {
     search: 'Première étape du formulaire',
     confirm: 'Étape finale du formulaire',
@@ -30,7 +29,6 @@ async function handleSupportCookie(payload: SearchPayload | ConfirmPayload, step
     { ...payload, step: mappingStep[step] },
   ].filter(Boolean);
 
-  // minus slice to take from the end, eg: -5 -> takes the last 5 attempts
   const searchStepPayloads = supportCookiePayload
     .filter(({ step }) => step === mappingStep.search)
     .slice(-MAX_ATTEMPTS_PER_STEP);
@@ -42,11 +40,13 @@ async function handleSupportCookie(payload: SearchPayload | ConfirmPayload, step
   const mergedPayloads = [...searchStepPayloads, ...confirmStepPayloads];
   const encryptedCookiePayload = encryptSupportPayload(mergedPayloads);
 
-  setSupportCookie(encryptedCookiePayload);
+  await setSupportCookie(encryptedCookiePayload); // Added await
 }
 
-function hasGivenConsentForSupportCookie() {
-  const consentCookie = cookies().get(AUTHORIZED_VENDORS_KEY)?.value;
+// Changed to async to await cookies()
+async function hasGivenConsentForSupportCookie() {
+  const cookieStore = await cookies();
+  const consentCookie = cookieStore.get(AUTHORIZED_VENDORS_KEY)?.value;
 
   return consentCookie?.includes(`${COOKIE_SUPPORT_KEY}=true`);
 }
@@ -59,7 +59,8 @@ function encryptSupportPayload(valueToEncrypt: object) {
 }
 
 async function getDecryptedSupportCookie() {
-  const supportCookie = cookies().get(COOKIE_SUPPORT_KEY);
+  const cookieStore = await cookies(); // Added await
+  const supportCookie = cookieStore.get(COOKIE_SUPPORT_KEY);
 
   if (typeof supportCookie?.value === 'string') {
     const decryptedCookieValue = decryptData(supportCookie.value, BASE_64_KEY_FOR_SUPPORT_COOKIE);
@@ -74,10 +75,12 @@ async function getDecryptedSupportCookie() {
   return [];
 }
 
-function setSupportCookie(encryptedPayload: string) {
+// Changed to async to await cookies()
+async function setSupportCookie(encryptedPayload: string) {
   const oneHourFromNow = getAnHourFromNow();
+  const cookieStore = await cookies();
 
-  return cookies().set(COOKIE_SUPPORT_KEY, encryptedPayload, {
+  return cookieStore.set(COOKIE_SUPPORT_KEY, encryptedPayload, {
     secure: true,
     httpOnly: true,
     expires: oneHourFromNow,
@@ -85,8 +88,10 @@ function setSupportCookie(encryptedPayload: string) {
   });
 }
 
-function removeSupportCookie() {
-  return cookies().delete(COOKIE_SUPPORT_KEY);
+// Changed to async to await cookies()
+async function removeSupportCookie() {
+  const cookieStore = await cookies();
+  return cookieStore.delete(COOKIE_SUPPORT_KEY);
 }
 
 export { handleSupportCookie, getDecryptedSupportCookie };

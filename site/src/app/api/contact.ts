@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { initCrispClient } from 'utils/crisp';
+import { initCrispClient } from '@/utils/crisp';
 import { decryptData } from '@/utils/decryption';
 import { AUTHORIZED_VENDORS_KEY, SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
 import { matchExactDrajes, matchExactLsm } from '@/utils/string';
@@ -62,6 +62,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const conversation = await crispClient.website.createNewConversation(envVars.CRISP_WEBSITE);
 
+  if (!conversation.session_id) {
+    return res.status(500).send('Failed to create conversation');
+  }
+
+  const sessionId = conversation.session_id;
+
   const byWhoSegment = isProRequest ? 'Pro' : 'Particulier';
   const failedAttemptSegment =
     hasGivenConsentForSupportCookie(req.cookies) && attempts !== null ? 'tentative-code' : null;
@@ -71,54 +77,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const isFromDrajes = matchExactDrajes(message);
   const isFromLsm = matchExactLsm(message);
 
-  await crispClient.website.updateConversationMetas(
-    envVars.CRISP_WEBSITE,
-    conversation.session_id,
-    {
-      nickname: `${firstname} ${lastname}`,
-      email,
-      data: { email, siret: siret || '', rna: rna || '' },
-      segments: [
-        byWhoSegment,
-        reason.slice(0, MAX_LENGTH_REASON),
-        failedAttemptSegment,
-        isFromDrajes ? drajesSegment : null,
-        isFromLsm ? lsmSegment : null,
-      ].filter(Boolean),
-    },
-  );
+  await crispClient.website.updateConversationMetas(envVars.CRISP_WEBSITE, sessionId, {
+    nickname: `${firstname} ${lastname}`,
+    email,
+    data: { email, siret: siret || '', rna: rna || '' },
+    segments: [
+      byWhoSegment,
+      reason.slice(0, MAX_LENGTH_REASON),
+      failedAttemptSegment,
+      isFromDrajes ? drajesSegment : null,
+      isFromLsm ? lsmSegment : null,
+    ].filter((s): s is string => Boolean(s)),
+  });
 
-  await crispClient.website.sendMessageInConversation(
-    envVars.CRISP_WEBSITE,
-    conversation.session_id,
-    {
-      type: 'text',
-      from: 'user',
-      origin: 'urn:pass-sport',
-      content: message,
-    },
-  );
+  await crispClient.website.sendMessageInConversation(envVars.CRISP_WEBSITE, sessionId, {
+    type: 'text',
+    from: 'user',
+    origin: 'urn:pass-sport',
+    content: message,
+  });
 
   // Writing private note, with all attempts
   if (attempts !== null) {
     // Delay needed for the note to not appear first in some situations
     await new Promise((resolve) => setTimeout(resolve, 150));
-    await crispClient.website.sendMessageInConversation(
-      envVars.CRISP_WEBSITE,
-      conversation.session_id,
-      {
-        type: 'note',
-        from: 'operator',
-        origin: 'urn:pass-sport',
-        content: formatNote(attempts),
-      },
-    );
+    await crispClient.website.sendMessageInConversation(envVars.CRISP_WEBSITE, sessionId, {
+      type: 'note',
+      from: 'operator',
+      origin: 'urn:pass-sport',
+      content: formatNote(attempts),
+    });
     await new Promise((resolve) => setTimeout(resolve, 150));
-    await crispClient.website.changeConversationState(
-      envVars.CRISP_WEBSITE,
-      conversation.session_id,
-      'pending',
-    );
+    await crispClient.website.changeConversationState(envVars.CRISP_WEBSITE, sessionId, 'pending');
   }
 
   return res.status(201).end();

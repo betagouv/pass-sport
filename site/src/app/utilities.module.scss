@@ -53,6 +53,9 @@
     &--baseline {
       align-self: baseline;
     }
+    &--auto {
+      align-self: auto;
+    }
   }
 }
 
@@ -96,7 +99,7 @@
   }
 }
 
-.fr-text-default--grey  {
+.fr-text-default--grey {
   color: var(--text-default-grey);
 }
 
