@@ -54,10 +54,10 @@ export default async function Accueil() {
               sécurisé.
             </p>
 
-            <section className="fr-my-4w">
-              <h3>Vidéo de présentation du pass Sport</h3>
-              <Video videoFullUrl="https://vimeo.com/1113160982?share=copy#t=0" />
-            </section>
+            {/*<section className="fr-my-4w">*/}
+            {/*  <h3>Vidéo de présentation du pass Sport</h3>*/}
+            {/*  <Video videoFullUrl="https://vimeo.com/1113160982?share=copy#t=0" />*/}
+            {/*</section>*/}
 
             <h2 className="fr-my-5w fr-h1">Une question ?</h2>
             <p className="fr-mb-2w">
