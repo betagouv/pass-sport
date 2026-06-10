@@ -223,7 +223,7 @@ export default function PdfPassSport({
             <Text style={styles.title}>Comment activer le pass Sport ?</Text>
 
             <Text style={styles.sectionText}>
-              Sur présentation du code ci-contre, la structure sportive déduira automatiquement 70€
+              Sur présentation du code ci-contre, la structure sportive déduira automatiquement xx €
               du coût de la licence ou de l&apos;abonnement lors de l&apos;inscription.
             </Text>
           </View>

@@ -3,6 +3,11 @@ import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig = {
   devIndicators: false,
+  experimental: {
+    // Prevents Next.js from focusing <main tabIndex={-1}> after client-side
+    // navigation, which scrolled the header out of view (see PageTitle #header)
+    appNewScrollHandler: true,
+  },
   images: {
     remotePatterns: [
       {

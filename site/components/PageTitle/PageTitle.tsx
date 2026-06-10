@@ -5,17 +5,21 @@ import { ReactNode } from 'react';
 interface IProps {
   title: string | ReactNode;
   subtitle?: string | ReactNode;
+  height?: number;
   classes?: {
     container?: string;
   };
 }
 
-export default function PageTitle({ title, subtitle, classes }: IProps) {
+export default function PageTitle({ title, subtitle, height, classes }: IProps) {
   return (
     <div
       // Mainly used as an anchor
       id="header"
       className={cn(styles.container, classes?.container)}
+      style={{
+        ...(height ? { height } : {}),
+      }}
     >
       <div className={styles.titlewrapper}>
         <h1 className={styles.title}>{title}</h1>

@@ -429,9 +429,9 @@ const AllowanceStep = () => {
                   </p>
 
                   <ul className="fr-ml-2w">
-                    <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
+                    <li>Régler l&apos;inscription avec la déduction immédiate de xx € ;</li>
                     <li>
-                      Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass
+                      Fournir un chèque de xx € (non encaissé), restitué dès réception du code pass
                       Sport.
                     </li>
                   </ul>

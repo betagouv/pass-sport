@@ -47,6 +47,18 @@ export function proxy(request: NextRequest) {
 
   response.headers.set('Content-Security-Policy', contentSecurityPolicyHeaderValue);
 
+  const disabledRoutes = [
+    '/v2/budget',
+    '/v2/test-eligibilite-base',
+    '/v2/test-eligibilite',
+    '/v2/test-ou-code',
+    '/v2/partenaires',
+  ];
+
+  if (disabledRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
+    return NextResponse.rewrite(new URL('/v2/not-found', request.url), { status: 404 });
+  }
+
   // When pass sport is closed, we want to redirect from certain pages to the homepage
   const pagesToRedirectFrom = [
     ...(isPasSportClosed()

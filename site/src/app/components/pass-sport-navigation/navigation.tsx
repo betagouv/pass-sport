@@ -31,10 +31,11 @@ export const navigationItemStandard: NavigationItem[] = [
           link: '/v2/structures',
           text: 'Structures sportives',
         },
-        {
-          link: '/v2/partenaires',
-          text: 'Partenaires',
-        },
+        // todo: enable later
+        // {
+        //   link: '/v2/partenaires',
+        //   text: 'Partenaires',
+        // },
       ]
     : []),
   {

@@ -8,98 +8,94 @@ import leftLines from '@/images/homepage/left-lines.svg';
 import rightLines from '@/images/homepage/right-lines.svg';
 import lucie from '@/images/homepage/lucie.jpg';
 import Link from 'next/link';
-import Video from '@/app/v2/accueil/components/video/Video';
 import { isPasSportClosed } from '@/utils/date';
 import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
-import GuidingBlock, { GuidingBlockProps } from '@/app/components/guided-block/GuidingBlock';
-import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
-import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
   description: "Page d'accueil du site pass.sports.gouv.fr pour les particuliers",
 };
-
-const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
-  {
-    variant: 'purple',
-    title: 'Pour les jeunes',
-    description: 'Comment bénéficier du pass Sport pour votre inscription sportive ?',
-    knowMore: {
-      title: 'A savoir',
-      description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre.',
-    },
-    points: [
-      {
-        title: 'Testez votre éligibilité en 1 min',
-        linkProps: {
-          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
-        },
-      },
-      {
-        title: 'Trouvez une structure sportive partenaire',
-        linkProps: {
-          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
-        },
-      },
-      {
-        title: 'Recevez ou demandez votre pass Sport',
-        linkProps: {
-          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
-        },
-      },
-      {
-        title: 'Activez votre code',
-        linkProps: {
-          href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
-        },
-      },
-    ],
-  },
-  {
-    variant: 'yellow',
-    title: 'Pour les structures',
-    description: 'Comment devenir partenaire et accompagner vos adhérents ?',
-    knowMore: {
-      title: 'A savoir',
-      description:
-        'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 70€. Nous vous remercions pour votre mobilisation.',
-    },
-    points: [
-      {
-        title: 'Consultez les outils pour les structures sportives',
-        linkProps: {
-          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
-        },
-      },
-      {
-        title: 'Téléchargez votre kit de communication',
-        linkProps: {
-          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
-        },
-      },
-      {
-        title: 'Créez votre Compte Asso',
-        linkProps: {
-          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
-        },
-      },
-      {
-        title: 'Saisissez les codes des bénéficiaires',
-        linkProps: {
-          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
-        },
-      },
-      {
-        title: 'Obtenez le remboursement',
-        linkProps: {
-          href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
-        },
-      },
-    ],
-  },
-];
+//
+// const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
+//   {
+//     variant: 'purple',
+//     title: 'Pour les jeunes',
+//     description: 'Comment bénéficier du pass Sport pour votre inscription sportive ?',
+//     knowMore: {
+//       title: 'A savoir',
+//       description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre.',
+//     },
+//     points: [
+//       {
+//         title: 'Testez votre éligibilité en 1 min',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
+//         },
+//       },
+//       {
+//         title: 'Trouvez une structure sportive partenaire',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
+//         },
+//       },
+//       {
+//         title: 'Recevez ou demandez votre pass Sport',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
+//         },
+//       },
+//       {
+//         title: 'Activez votre code',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
+//         },
+//       },
+//     ],
+//   },
+//   {
+//     variant: 'yellow',
+//     title: 'Pour les structures',
+//     description: 'Comment devenir partenaire et accompagner vos adhérents ?',
+//     knowMore: {
+//       title: 'A savoir',
+//       description:
+//         'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 50€. Nous vous remercions pour votre mobilisation.',
+//     },
+//     points: [
+//       {
+//         title: 'Consultez les outils pour les structures sportives',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
+//         },
+//       },
+//       {
+//         title: 'Téléchargez votre kit de communication',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
+//         },
+//       },
+//       {
+//         title: 'Créez votre Compte Asso',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
+//         },
+//       },
+//       {
+//         title: 'Saisissez les codes des bénéficiaires',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
+//         },
+//       },
+//       {
+//         title: 'Obtenez le remboursement',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
+//         },
+//       },
+//     ],
+//   },
+// ];
 
 export default async function Accueil() {
   return (
@@ -112,13 +108,12 @@ export default async function Accueil() {
 
             <div className={styles['top-section__content']}>
               <section className={styles['top-section__content-title']}>
-                <Image src={passSportLogoWhite} alt="" />
+                <Image src={passSportLogoWhite} alt="" loading="eager" />
                 <h1 className="fr-text--heavy">
-                  70 € de réduction immédiate
+                  xx € de réduction immédiate
                   <span className="display--block">sur l&apos;inscription sportive</span>
                 </h1>
               </section>
-
               {!isPasSportClosed() && (
                 <section id={SKIP_LINKS_ID.eligibilityTestButton}>
                   <div className={styles['eligibility-section']}>
@@ -140,30 +135,33 @@ export default async function Accueil() {
           </div>
         </section>
 
-        {!isPasSportClosed() && (
-          <section className={styles['guiding-blocks']}>
-            <GuidingBlock {...guidingBlocks1} headingLevel={2} />
-            <GuidingBlock {...guidingBlocks2} headingLevel={2} />
-          </section>
-        )}
+        {/*{!isPasSportClosed() && (*/}
+        {/*  <section className={styles['guiding-blocks']}>*/}
+        {/*    <GuidingBlock {...guidingBlocks1} headingLevel={2} />*/}
+        {/*    <GuidingBlock {...guidingBlocks2} headingLevel={2} />*/}
+        {/*  </section>*/}
+        {/*)}*/}
 
         <section className="fr-container">
           <div className={styles['benef-faq']}>
             <h2 className="fr-mb-5w fr-h1">Qu&apos;est-ce que le pass Sport ?</h2>
             <p className="fr-mb-2w">
-              Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou
+              Le pass Sport est une aide financière de xx € par jeune éligible pour couvrir tout ou
               partie des frais d&apos;inscription dans un club, association sportive ou salle de
               sport partenaire. Il prend la forme d&apos;une réduction immédiate lors de
               l&apos;inscription.
             </p>
 
-            <p>
+            <p className="fr-mb-4w">
               Cette aide du ministère chargé des Sports s&apos;adresse aux enfants et aux jeunes qui
               rencontrent des obstacles à la pratique sportive – qu’ils soient d’ordre financier,
               social ou liés à un handicap. L’objectif : leur permettre d’accéder durablement à une
               activité physique encadrée, au sein d’un environnement structurant, éducatif et
               sécurisé.
             </p>
+
+            <h2 className="fr-mb-5w fr-h1">Qui peut en bénéficier ?</h2>
+            <p className="fr-mb-2w">À venir</p>
 
             {/*<section className="fr-my-4w">*/}
             {/*  <h3>Vidéo de présentation du pass Sport</h3>*/}

@@ -115,7 +115,8 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
-  width: 66.67%;
+  //width: 66.67%;
+  width: 83.33%;
   align-self: center;
 
   p {
@@ -130,7 +131,7 @@
 .input-codes-section {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
   width: 66.67%;
   align-self: center;
 

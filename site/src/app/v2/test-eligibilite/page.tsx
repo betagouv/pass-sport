@@ -30,6 +30,7 @@ const EligibilityTest = () => {
             src={breakdance}
             className={cn(['fr-responsive-img', styles['top-section-tile__image']])}
             alt=""
+            loading="eager"
           />
           <div className={styles['top-section-tile__description']}>
             <p className="fr-text--xl fr-mb-1w">

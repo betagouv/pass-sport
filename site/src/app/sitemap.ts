@@ -9,24 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: 'https://pass.sports.gouv.fr/v2/test-eligibilite',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: 'https://pass.sports.gouv.fr/v2/test-eligibilite-base',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: 'https://pass.sports.gouv.fr/v2/test-ou-code',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
       url: 'https://pass.sports.gouv.fr/v2/jeunes-et-parents',
       lastModified: new Date(),
       changeFrequency: 'weekly',
@@ -38,12 +20,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
-    {
-      url: 'https://pass.sports.gouv.fr/v2/partenaires',
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
+    // todo: enable later
+    // {
+    //   url: 'https://pass.sports.gouv.fr/v2/partenaires',
+    //   lastModified: new Date(),
+    //   changeFrequency: 'weekly',
+    //   priority: 0.8,
+    // },
+    // {
+    //   url: 'https://pass.sports.gouv.fr/v2/test-eligibilite',
+    //   lastModified: new Date(),
+    //   changeFrequency: 'monthly',
+    //   priority: 0.9,
+    // },
+    // {
+    //   url: 'https://pass.sports.gouv.fr/v2/test-eligibilite-base',
+    //   lastModified: new Date(),
+    //   changeFrequency: 'monthly',
+    //   priority: 0.9,
+    // },
+    // {
+    //   url: 'https://pass.sports.gouv.fr/v2/test-ou-code',
+    //   lastModified: new Date(),
+    //   changeFrequency: 'monthly',
+    //   priority: 0.9,
+    // },
     {
       url: 'https://pass.sports.gouv.fr/v2/une-question',
       lastModified: new Date(),

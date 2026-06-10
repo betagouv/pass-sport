@@ -77,7 +77,7 @@ export default function PassSportNavigation() {
         title="La campagne pass Sport 2026 ouvrira le 1er septembre."
         link={{
           linkProps: {
-            href: '#',
+            href: '/v2/une-question',
             title: "Plus d'informations - nouvelle fenêtre",
           },
           text: "Plus d'informations",
