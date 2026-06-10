@@ -10,7 +10,7 @@ export function useUpdateTitleIframe({
   targetSelector?: string;
 }) {
   useEffect(() => {
-    const updateTitle = (ref: MutableRefObject<HTMLDivElement | null>) => {
+    const updateTitle = (_: MutableRefObject<HTMLDivElement | null>) => {
       const node = parentRef.current?.querySelector(targetSelector);
 
       if (node) {
@@ -18,7 +18,7 @@ export function useUpdateTitleIframe({
       }
     };
 
-    const observer = new MutationObserver((mutations) => {
+    const observer = new MutationObserver(() => {
       updateTitle(parentRef);
     });
 

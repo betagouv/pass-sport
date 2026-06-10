@@ -172,7 +172,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
         setIsOk(true);
         formRef.current?.reset();
       }
-    } catch (e) {
+    } catch {
       setApiError(true);
       setIsError(true);
       setIsOk(false);
@@ -223,7 +223,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   nativeInputProps={{
                     name: 'firstname',
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
 
                       setInputStates({
                         ...inputStates,
@@ -253,7 +253,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   nativeInputProps={{
                     name: 'lastname',
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
 
                       setInputStates({
                         ...inputStates,
@@ -319,7 +319,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                     nativeInputProps={{
                       name: 'rna',
                       onBlur: (e) => {
-                        const inputIsValid = !!e.target?.checkValidity();
+                        const inputIsValid = e.target?.checkValidity();
 
                         setInputStates({
                           ...inputStates,
@@ -350,7 +350,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   name: 'email',
                   type: 'email',
                   onBlur: (e) => {
-                    const inputIsValid = !!e.target?.checkValidity();
+                    const inputIsValid = e.target?.checkValidity();
 
                     const errorMessage =
                       e.target.value === ''
@@ -388,7 +388,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 nativeSelectProps={{
                   name: 'reason',
                   onBlur: (e) => {
-                    const inputIsValid = !!e.target?.checkValidity();
+                    const inputIsValid = e.target?.checkValidity();
 
                     setInputStates({
                       ...inputStates,
@@ -432,7 +432,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 placeholder: 'Message*',
                 name: 'message',
                 onBlur: (e) => {
-                  const inputIsValid = !!e.target?.checkValidity();
+                  const inputIsValid = e.target?.checkValidity();
 
                   setInputStates({
                     ...inputStates,

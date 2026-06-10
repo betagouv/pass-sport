@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "^22"
+    "node": "^25"
   },
   "scripts": {
     "predev": "react-dsfr update-icons",

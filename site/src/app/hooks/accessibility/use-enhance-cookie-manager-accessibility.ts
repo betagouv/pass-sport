@@ -7,7 +7,7 @@ import {
 // todo: To refactor if time permits
 export function useEnhanceCookieManagerAccessibility() {
   useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
+    const observer = new MutationObserver(() => {
       const { body } = document;
 
       const tacRoot = body.querySelector<HTMLDivElement>('#tarteaucitronRoot');

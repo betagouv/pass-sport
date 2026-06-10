@@ -10,7 +10,6 @@ import React, { useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
-import { displayOfficialClosingBanner } from '@/utils/date';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 
 export default function PassSportNavigation() {
@@ -73,9 +72,17 @@ export default function PassSportNavigation() {
         }))}
       />
 
-      {displayOfficialClosingBanner() && (
-        <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />
-      )}
+      <Notice
+        severity="info"
+        title="La campagne pass Sport 2026 ouvrira le 1er septembre."
+        link={{
+          linkProps: {
+            href: '#',
+            title: "Plus d'informations - nouvelle fenêtre",
+          },
+          text: "Plus d'informations",
+        }}
+      ></Notice>
     </div>
   );
 }

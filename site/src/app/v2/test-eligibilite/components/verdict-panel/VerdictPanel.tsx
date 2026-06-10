@@ -35,9 +35,9 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
     push(['trackEvent', 'Eligibility Test', 'Link clicked', 'Download link clicked']);
   }, []);
 
-  const onAeehLinkClick = useCallback(() => {
-    push(['trackEvent', 'Simplified Eligibility Test', 'Clicked', 'Button to open AEEH form']);
-  }, []);
+  // const onAeehLinkClick = useCallback(() => {
+  //   push(['trackEvent', 'Simplified Eligibility Test', 'Clicked', 'Button to open AEEH form']);
+  // }, []);
 
   useEffect(() => {
     if (isSuccess && successRef.current) {

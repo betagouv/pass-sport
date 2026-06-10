@@ -77,7 +77,6 @@ export default function SimplifiedEligibilityTest({
   display = 'row',
   buttonVariant = 'primary',
   onCompletion,
-  headingLevel,
   jeDonneMonAvisBtnPadding,
   displaySeparator,
   hasBackground = false,
@@ -108,7 +107,6 @@ export default function SimplifiedEligibilityTest({
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
-  const formHasInvalidInput = Object.values(inputStates).some((state) => state.errorMsg);
 
   function resetStates() {
     setDisplayEligibilityConditions(false);
@@ -118,10 +116,6 @@ export default function SimplifiedEligibilityTest({
     setAlertMeta(null);
     setKnowMoreMeta(null);
   }
-
-  // console.log({ isMounted });
-
-  // if (!isMounted) return <></>;
 
   return (
     <>
@@ -274,7 +268,7 @@ export default function SimplifiedEligibilityTest({
                       setTargetDate(e.target.value);
                     },
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
 
                       setInputStates({
                         ...inputStates,
@@ -304,7 +298,7 @@ export default function SimplifiedEligibilityTest({
                       setAllocationName(e.target.value as ALLOCATION);
                     },
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
                       setInputStates({
                         ...inputStates,
                         allowance: {
