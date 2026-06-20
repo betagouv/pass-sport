@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { getAnHourFromNow } from './date';
-import { decryptData, encrypt } from '@/utils/decryption';
+import { decryptAuthenticated, encryptAuthenticated } from '@/utils/decryption';
 import { fromBase64ToString } from '@/utils/string';
 import { ConfirmPayload, FormStep, SearchPayload } from '@/types/EligibilityTest';
 import { AUTHORIZED_VENDORS_KEY } from '@/app/constants/cookie-manager';
@@ -52,7 +52,7 @@ async function hasGivenConsentForSupportCookie() {
 }
 
 function encryptSupportPayload(valueToEncrypt: object) {
-  return encrypt(
+  return encryptAuthenticated(
     Buffer.from(JSON.stringify(valueToEncrypt), 'utf-8').toString('base64'),
     BASE_64_KEY_FOR_SUPPORT_COOKIE,
   );
@@ -63,7 +63,10 @@ async function getDecryptedSupportCookie() {
   const supportCookie = cookieStore.get(COOKIE_SUPPORT_KEY);
 
   if (typeof supportCookie?.value === 'string') {
-    const decryptedCookieValue = decryptData(supportCookie.value, BASE_64_KEY_FOR_SUPPORT_COOKIE);
+    const decryptedCookieValue = decryptAuthenticated(
+      supportCookie.value,
+      BASE_64_KEY_FOR_SUPPORT_COOKIE,
+    );
 
     if (typeof decryptedCookieValue === 'string') {
       return JSON.parse(fromBase64ToString(decryptedCookieValue));

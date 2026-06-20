@@ -1,14 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { initCrispClient } from '@/utils/crisp';
-import { decryptData } from '@/utils/decryption';
+import { decryptAuthenticated } from '@/utils/decryption';
 import { AUTHORIZED_VENDORS_KEY, SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
 import { matchExactDrajes, matchExactLsm } from '@/utils/string';
 
 const { crispClient, envVars } = initCrispClient();
 const contactFormSchema = z
   .object({
-    email: z.string(),
+    email: z.email(),
     firstname: z.string(),
     lastname: z.string(),
     message: z.string(),
@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const encryptedBase64Value = req.cookies[SUPPORT_COOKIE_KEY];
 
     if (typeof encryptedBase64Value === 'string') {
-      const decryptedSupportCookieValue = decryptData(
+      const decryptedSupportCookieValue = decryptAuthenticated(
         encryptedBase64Value,
         BASE_64_KEY_FOR_SUPPORT_COOKIE,
       );
@@ -48,12 +48,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  const jsonBody = JSON.parse(req.body);
-
   let body: ContactRequestBody;
 
   try {
-    body = contactFormSchema.parse(jsonBody);
+    body = contactFormSchema.parse(JSON.parse(req.body));
   } catch (e) {
     return res.status(400).send((e as Error).message);
   }

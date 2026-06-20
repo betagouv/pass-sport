@@ -1,7 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { isPasSportClosed } from '@/utils/date';
 
+const ELIGIBILITY_PATH = '/v2/api/eligibility-test/';
+
+function isAllowedOrigin(request: NextRequest): boolean {
+  const expected = process.env.ORIGIN_SHARED_SECRET;
+  if (!expected) {
+    return false;
+  }
+
+  const got = request.headers.get('x-origin-secret') ?? '';
+  const a = Buffer.from(got);
+  const b = Buffer.from(expected);
+
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith(ELIGIBILITY_PATH) && !isAllowedOrigin(request)) {
+    return new NextResponse('Forbidden', { status: 403 });
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   const scriptSrc =

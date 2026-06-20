@@ -96,7 +96,7 @@ export const fetchCode = async (
 
   if (!response.ok) {
     throw new Error(
-      `Request to LCA api on /confirm has failed. Response status is ${response.status}; Response body is ${JSON.stringify(await response.json())}.`,
+      `Request to LCA api on /confirm has failed. Response status is ${response.status}.`,
     );
   }
 
@@ -105,7 +105,7 @@ export const fetchCode = async (
   if ('message' in responseBody) {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
-      scope.setExtra('responseBody', responseBody);
+      scope.setExtra('responseMessage', responseBody.message);
       scope.captureMessage('Unexpected response on LCA POST api/eligibility-test/confirm');
     });
     return responseBody;
@@ -131,7 +131,7 @@ export const fetchEligible = async (payload: SearchPayload) => {
 
   if (!response.ok) {
     throw new Error(
-      `Request to LCA api on /search has failed. Response status is ${response.status}; Response body is ${JSON.stringify(await response.json())}`,
+      `Request to LCA api on /search has failed. Response status is ${response.status}.`,
     );
   }
 
@@ -140,7 +140,7 @@ export const fetchEligible = async (payload: SearchPayload) => {
   if ('message' in responseBody) {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
-      scope.setExtra('responseBody', responseBody);
+      scope.setExtra('responseMessage', responseBody.message);
       scope.captureMessage('Unexpected response on LCA POST api/eligibility-test/search');
     });
 
