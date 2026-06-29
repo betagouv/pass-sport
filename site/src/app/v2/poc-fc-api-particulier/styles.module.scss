@@ -1,0 +1,13 @@
+.section {
+  margin-top: 2rem;
+}
+
+.payload {
+  background-color: var(--background-alt-grey);
+  padding: 1rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

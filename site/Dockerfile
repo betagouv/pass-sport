@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:25-alpine
 
 RUN adduser -D -u 1001 -s /bin/sh site
 USER site

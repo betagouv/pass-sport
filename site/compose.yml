@@ -7,7 +7,16 @@ services:
       - '3000:3000'
     env_file:
       - ./.env.local
+    environment:
+      - DATABASE_URL=postgres://passsport:passsport@db:5432/passsport
+      - REDIS_URL=redis://redis:6379
+      - PGSSL_DISABLE=true
     command: npm run dev
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     develop:
       watch:
         - action: sync
@@ -17,3 +26,29 @@ services:
             - node_modules/
         - action: rebuild
           path: package.json
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: passsport
+      POSTGRES_PASSWORD: passsport
+      POSTGRES_DB: passsport
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U passsport -d passsport']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  pgdata:
