@@ -1,5 +1,6 @@
 // Lazy singleton Redis client (Scalingo Redis addon provides REDIS_URL).
-// Used only by the API Particulier rate limiter — stores counters, never confidential data.
+// Used by the API Particulier rate limiter (counters) and the POC FC session
+// store (short-lived personal data keyed by a random session id, TTL'd).
 
 import type { RedisLike } from '@/app/services/rate-limiter';
 

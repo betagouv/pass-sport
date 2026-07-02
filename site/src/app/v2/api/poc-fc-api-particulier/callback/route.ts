@@ -7,23 +7,20 @@ import {
   getFranceConnectConfig,
   verifyIdToken,
 } from '@/app/services/france-connect';
-import { callApiParticulier } from '@/app/services/api-particulier';
+import { callApiParticulierFranceConnect } from '@/app/services/api-particulier';
 import { AuditContext } from '@/app/services/audit';
 import { getClientIp } from '@/utils/client-ip';
 import {
   FC_ID_TOKEN_COOKIE,
   FC_NONCE_COOKIE,
-  FC_RESULT_COOKIE,
   FC_STATE_COOKIE,
   PocResult,
   getRedirectUri,
-  sessionCookieOptions,
   transientCookieOptions,
 } from '@/app/v2/api/poc-fc-api-particulier/shared';
+import { storePocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
 
 const PAGE_PATH = '/v2/poc-fc-api-particulier';
-// Browser cookies cap at ~4KB; keep the stored result under that.
-const MAX_RESULT_COOKIE_SIZE = 3800;
 
 const redirectToPage = (request: Request, query = ''): NextResponse =>
   NextResponse.redirect(new URL(`${PAGE_PATH}${query}`, request.url));
@@ -74,28 +71,25 @@ export async function GET(request: Request): Promise<Response> {
 
     // FranceConnect-only test mode: skip API Particulier (no token/SIRET/Redis needed).
     const skipApiParticulier = process.env.POC_SKIP_API_PARTICULIER === 'true';
-    const apiParticulier = skipApiParticulier ? [] : await callApiParticulier(identity, audit);
 
-    const result: PocResult = { identity, apiParticulier };
-    const serialized = JSON.stringify(result);
+    // Mode "FranceConnecté" (mode 2): the FC access token authenticates the API
+    // Particulier calls directly — no identity params sent. Must happen here, while
+    // the token is fresh. `identity` (pivot from /userinfo) is still kept in the
+    // result for the downstream LCA calls (fetchEligible / fetchCode).
+    // Mode 1 (static token + identity params) lives in the /identite route, for
+    // users who cannot use FranceConnect.
+    const apiParticulier = skipApiParticulier
+      ? []
+      : await callApiParticulierFranceConnect(tokens.accessToken, audit);
+
+    const result: PocResult = { identity, apiParticulier, mode: 'france_connect' };
+
+    // Personal data goes to the Redis session store; the browser only receives
+    // the random session id (httpOnly cookie).
+    await storePocResult(result);
 
     const response = redirectToPage(request, '?status=ok');
     response.cookies.set(FC_ID_TOKEN_COOKIE, tokens.idToken, transientCookieOptions());
-
-    if (serialized.length <= MAX_RESULT_COOKIE_SIZE) {
-      response.cookies.set(FC_RESULT_COOKIE, serialized, sessionCookieOptions());
-    } else {
-      // Result too large for a cookie — keep identity + status, drop verbose payloads.
-      const trimmed: PocResult = {
-        identity,
-        apiParticulier: apiParticulier.map((r) => ({
-          ...r,
-          data: null,
-          error: r.error ?? 'Payload omitted (POC cookie size limit)',
-        })),
-      };
-      response.cookies.set(FC_RESULT_COOKIE, JSON.stringify(trimmed), sessionCookieOptions());
-    }
 
     return response;
   } catch (e) {

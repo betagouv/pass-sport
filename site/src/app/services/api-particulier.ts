@@ -27,23 +27,37 @@ export interface ApiParticulierResourceResult {
 
 export type ApiParticulierResults = ApiParticulierResourceResult[];
 
+const getClientConfig = () => {
+  const recipient = process.env.API_PARTICULIER_RECIPIENT_SIRET;
+  if (!recipient) {
+    throw new Error('API_PARTICULIER_RECIPIENT_SIRET is missing');
+  }
+
+  return {
+    environment: (process.env.API_PARTICULIER_ENV === 'production' ? 'production' : 'staging') as
+      | 'production'
+      | 'staging',
+    // recipient is also mandatory on FranceConnect-mode calls.
+    defaultParams: { recipient },
+  };
+};
+
+// Mode "identité pivot": static API Particulier token, identity passed as query params.
 const getClient = (): Client => {
   const token = process.env.API_PARTICULIER_TOKEN;
   if (!token) {
     throw new Error('API_PARTICULIER_TOKEN is missing');
   }
 
-  const recipient = process.env.API_PARTICULIER_RECIPIENT_SIRET;
-  if (!recipient) {
-    throw new Error('API_PARTICULIER_RECIPIENT_SIRET is missing');
-  }
-
-  return new Client({
-    token,
-    environment: process.env.API_PARTICULIER_ENV === 'production' ? 'production' : 'staging',
-    defaultParams: { recipient },
-  });
+  return new Client({ token, ...getClientConfig() });
 };
+
+// Mode "FranceConnecté": the FC access token replaces the static API key
+// (Authorization: Bearer <fc_token>). API Particulier introspects it with
+// FranceConnect and resolves the user's pivot identity itself — no identity
+// params are sent.
+const getFranceConnectClient = (fcAccessToken: string): Client =>
+  new Client({ token: fcAccessToken, ...getClientConfig() });
 
 // FranceConnect "male"/"female" -> API Particulier "M"/"F".
 const mapGender = (gender?: string): string | undefined => {
@@ -170,6 +184,52 @@ const callResource = async ({
   }
 };
 
+// Mode "FranceConnecté" (mode 2): authenticates each call with the FranceConnect
+// access token obtained during the OIDC callback. Must be called while that token
+// is still valid — i.e. within the callback flow, before any long-lived processing.
+// The pivot identity fetched from /userinfo stays available for downstream LCA
+// calls (fetchEligible / fetchCode); it is simply not sent to API Particulier.
+export const callApiParticulierFranceConnect = async (
+  fcAccessToken: string,
+  audit: AuditContext,
+): Promise<ApiParticulierResults> => {
+  const client = getFranceConnectClient(fcAccessToken);
+  const redis = await getRedis();
+
+  return Promise.all([
+    callResource({
+      redis,
+      audit,
+      resource: 'dss.quotient_familial_france_connect',
+      label: 'Quotient familial CAF/MSA',
+      call: () => client.dss.quotient_familial(),
+    }),
+    callResource({
+      redis,
+      audit,
+      resource: 'dss.allocation_adulte_handicape_france_connect',
+      label: 'Allocation adulte handicapé (AAH)',
+      call: () => client.dss.allocation_adulte_handicape(),
+    }),
+    callResource({
+      redis,
+      audit,
+      resource: 'dss.allocation_enfant_handicape_france_connect',
+      label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
+      call: () => client.dss.allocation_enfant_handicape(),
+    }),
+    callResource({
+      redis,
+      audit,
+      resource: 'cnous.etudiant_boursier_france_connect',
+      label: 'Statut étudiant boursier',
+      call: () => client.cnous.etudiant_boursier(),
+    }),
+  ]);
+};
+
+// Mode "identité pivot" (mode 1): static token, FC identity replayed as query params.
+// Kept as a fallback — unlike mode 2 it works outside the FC session lifetime.
 export const callApiParticulier = async (
   identity: FranceConnectIdentity,
   audit: AuditContext,

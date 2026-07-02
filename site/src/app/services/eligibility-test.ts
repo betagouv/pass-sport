@@ -118,7 +118,12 @@ export const fetchCode = async (
   return responseBody;
 };
 
-export const fetchEligible = async (payload: SearchPayload) => {
+export const fetchEligible = async (
+  payload: SearchPayload,
+  // keepMatricule: server-side only. The matricule must NEVER reach the browser;
+  // it is kept solely so a server flow can chain fetchCode with it.
+  options?: { keepMatricule?: boolean },
+) => {
   const authenticationKey = process.env.LCA_API_KEY;
 
   if (!authenticationKey) {
@@ -148,6 +153,10 @@ export const fetchEligible = async (payload: SearchPayload) => {
   }
 
   return responseBody.map((item) => {
+    if (options?.keepMatricule) {
+      return { ...item, hasMatricule: !!item.matricule };
+    }
+
     // Remove matricule from final output
     const { matricule, ...remaining } = item;
 

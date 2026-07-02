@@ -1,9 +1,11 @@
 import { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import FranceConnectSection from './components/FranceConnectSection';
-import { FC_RESULT_COOKIE, PocResult } from '@/app/v2/api/poc-fc-api-particulier/shared';
+import EligibilitySection from './components/EligibilitySection';
+import IdentityForm from './components/IdentityForm';
+import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
+import { listBeneficiaryCandidates } from '@/app/services/lca-bridge';
 import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
@@ -16,28 +18,16 @@ const ERROR_MESSAGES: Record<string, string> = {
   state: 'Échec de la vérification de sécurité (state). Veuillez réessayer.',
   callback: "Erreur lors de l'échange avec FranceConnect ou API Particulier.",
   access_denied: 'Vous avez refusé la connexion FranceConnect.',
+  logout_state: 'Vous avez été déconnecté (vérification de sécurité incomplète).',
 };
 
 interface Props {
   searchParams: Promise<{ error?: string; status?: string }>;
 }
 
-const readResult = async (): Promise<PocResult | null> => {
-  const cookieStore = await cookies();
-  const raw = cookieStore.get(FC_RESULT_COOKIE)?.value;
-  if (!raw) {
-    return null;
-  }
-  try {
-    return JSON.parse(raw) as PocResult;
-  } catch {
-    return null;
-  }
-};
-
 export default async function PocFcApiParticulier({ searchParams }: Props) {
   const { error, status } = await searchParams;
-  const result = await readResult();
+  const result = await loadPocResult();
 
   return (
     <main
@@ -66,17 +56,31 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
 
       {!result ? (
         <section className={styles.section}>
-          <h2 className="fr-h4">1. Connexion</h2>
-          <p>Connectez-vous avec FranceConnect pour lancer la démonstration.</p>
+          <h2 className="fr-h4 fr-mb-2w">Connexion</h2>
+          <p className="fr-mb-2w">
+            Connectez-vous avec FranceConnect pour lancer la démonstration.
+          </p>
           <FranceConnectSection />
+
+          <hr className="fr-mt-3w" />
+
+          <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
+          <p>Renseignez vos informations pour vérifier votre situation.</p>
+          <IdentityForm />
         </section>
       ) : (
         <section className={styles.section}>
           <div className="fr-alert fr-alert--success fr-mb-3w">
-            <p>Connexion FranceConnect réussie.</p>
+            <p>
+              {result.mode === 'formulaire'
+                ? 'Informations bien reçues.'
+                : 'Connexion FranceConnect réussie.'}
+            </p>
           </div>
 
-          <h2 className="fr-h4">Identité FranceConnect</h2>
+          <h2 className="fr-h4">
+            {result.mode === 'formulaire' ? 'Identité renseignée' : 'Identité FranceConnect'}
+          </h2>
           <pre className={styles.payload}>{JSON.stringify(result.identity, null, 2)}</pre>
 
           <h2 className="fr-h4 fr-mt-3w">Réponses API Particulier</h2>
@@ -95,11 +99,17 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             </section>
           ))}
 
+          <h2 className="fr-h4 fr-mt-3w">Éligibilité pass Sport (LCA)</h2>
+          <EligibilitySection
+            candidates={listBeneficiaryCandidates(result.identity, result.apiParticulier)}
+            hasStoredResidence={!!result.residenceInsee}
+          />
+
           <Link
             href="/v2/api/poc-fc-api-particulier/logout"
             className="fr-btn fr-btn--secondary fr-mt-3w"
           >
-            Se déconnecter
+            {result.mode === 'formulaire' ? 'Terminer' : 'Terminer et me déconnecter'}
           </Link>
         </section>
       )}

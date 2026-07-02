@@ -7,6 +7,9 @@
 
 export interface RedisLike {
   eval(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown>;
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, mode: 'EX', ttlSeconds: number): Promise<unknown>;
+  del(key: string): Promise<unknown>;
 }
 
 export class RateLimitedError extends Error {
