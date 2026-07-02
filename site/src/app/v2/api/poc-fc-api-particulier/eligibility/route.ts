@@ -2,8 +2,8 @@
 // the result cookie to drive the LCA calls (fetchEligible, then fetchCode).
 //
 // POST body: { candidateIndex: number, residenceInsee: string, searchItemId?: number }
-// - candidateIndex selects the beneficiary among the eligible candidates rebuilt
-//   server-side from the cookie (QF children for ARS/AEEH, connected user for
+// - candidateIndex selects the beneficiary among the candidates rebuilt
+//   server-side from the session (QF children for ARS/AEEH, connected user for
 //   AAH/CROUS).
 // - residenceInsee is the INSEE code of the commune de résidence, picked by the
 //   user (a postal code maps to several communes, so it cannot be derived from
@@ -47,12 +47,8 @@ const sanitizeConfirm = <T extends { allocataire?: { matricule?: string } }>(ite
 
 const schema = z.object({
   candidateIndex: z.number().int().min(0),
-  // INSEE commune code: 5 chars, digits except Corsica (2A/2B). Optional here:
-  // the mode 1 form already asked it and stored it in the session.
-  residenceInsee: z
-    .string()
-    .regex(/^\d[\dAB]\d{3}$/)
-    .optional(),
+  // INSEE commune code: 5 chars, digits except Corsica (2A/2B).
+  residenceInsee: z.string().regex(/^\d[\dAB]\d{3}$/),
   searchItemId: z.number().int().optional(),
 });
 
@@ -64,14 +60,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const { identity, apiParticulier } = pocResult;
-    const body = schema.parse(await request.json());
-    const { candidateIndex, searchItemId } = body;
-
-    // The stored residence (mode 1 form) wins; the FC flow provides it per call.
-    const residenceInsee = pocResult.residenceInsee ?? body.residenceInsee;
-    if (!residenceInsee) {
-      return NextResponse.json({ error: 'Commune de résidence manquante.' }, { status: 400 });
-    }
+    const { candidateIndex, residenceInsee, searchItemId } = schema.parse(await request.json());
 
     const candidates = listBeneficiaryCandidates(identity, apiParticulier);
     const candidate = candidates[candidateIndex];

@@ -33,7 +33,7 @@ const StepOneForm = ({
   isDirectBeneficiary = false,
 }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
-  const { allowance, dob } = useContext(EligibilityTestContext);
+  const { allowance, dob, setSearchedBeneficiary } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
@@ -83,6 +83,13 @@ const StepOneForm = ({
 
       return;
     }
+
+    // POC embed only (setter absent otherwise): keep the typed identity around
+    // for the no-match fallback — this form unmounts when the search is empty.
+    setSearchedBeneficiary?.({
+      lastname: formData.get('beneficiaryLastname')!.toString().trim(),
+      firstname: formData.get('beneficiaryFirstname')!.toString().trim(),
+    });
 
     await requestEligibilityTest().then(({ status, body }) => {
       if (status !== 200) {

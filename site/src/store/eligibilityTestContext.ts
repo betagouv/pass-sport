@@ -1,6 +1,10 @@
-import React, { Dispatch, SetStateAction } from 'react';
+import React, { Dispatch, ReactNode, SetStateAction } from 'react';
 import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+
+// The searched beneficiary identity, captured at step-one submit (the form
+// unmounts on no-match, so the typed names would otherwise be lost).
+export type SearchedBeneficiary = { lastname: string; firstname: string };
 
 type EligibilityTestContextProps = {
   performNewTest: VoidFunction;
@@ -15,6 +19,12 @@ type EligibilityTestContextProps = {
   setBenefIsEligible: Dispatch<SetStateAction<boolean>>;
   setAllowance: Dispatch<SetStateAction<ALLOWANCE | null>>;
   allowance: ALLOWANCE | null;
+  // Optional slot (POC embed only): rendered instead of the default
+  // VerdictPanel when the LCA search finds no match. Absent on the real
+  // /v2/test-eligibilite page — behavior there is unchanged.
+  searchNoMatchFallback?: ReactNode;
+  searchedBeneficiary?: SearchedBeneficiary | null;
+  setSearchedBeneficiary?: (beneficiary: SearchedBeneficiary) => void;
 };
 
 const EligibilityTestContext = React.createContext<EligibilityTestContextProps>({

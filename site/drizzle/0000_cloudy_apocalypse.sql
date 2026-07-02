@@ -5,7 +5,6 @@ CREATE TABLE "audit_api_particulier" (
 	"france_connected" boolean NOT NULL,
 	"client_ip" "inet",
 	"user_agent" text,
-	"recipient_siret" text,
 	"resource" text NOT NULL,
 	"http_status" integer,
 	"success" boolean NOT NULL,

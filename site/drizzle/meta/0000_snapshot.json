@@ -46,12 +46,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "recipient_siret": {
-          "name": "recipient_siret",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "resource": {
           "name": "resource",
           "type": "text",

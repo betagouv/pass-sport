@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import FranceConnectSection from './components/FranceConnectSection';
 import EligibilitySection from './components/EligibilitySection';
-import IdentityForm from './components/IdentityForm';
+import IdentityVerificationFallback from './components/IdentityVerificationFallback';
+import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
 import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
 import { listBeneficiaryCandidates } from '@/app/services/lca-bridge';
 import styles from './styles.module.scss';
@@ -58,29 +59,26 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
         <section className={styles.section}>
           <h2 className="fr-h4 fr-mb-2w">Connexion</h2>
           <p className="fr-mb-2w">
-            Connectez-vous avec FranceConnect pour lancer la démonstration.
+            Connectez-vous avec FranceConnect pour récupérer les codes pass Sport.
           </p>
           <FranceConnectSection />
 
           <hr className="fr-mt-3w" />
 
           <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
-          <p>Renseignez vos informations pour vérifier votre situation.</p>
-          <IdentityForm />
+          {/* Existing eligibility-test journey, with an API Particulier
+              verification fallback when the LCA search finds no match. */}
+          <div className={styles['eligibility-embed']}>
+            <AllowanceStep searchNoMatchFallback={<IdentityVerificationFallback />} />
+          </div>
         </section>
       ) : (
         <section className={styles.section}>
           <div className="fr-alert fr-alert--success fr-mb-3w">
-            <p>
-              {result.mode === 'formulaire'
-                ? 'Informations bien reçues.'
-                : 'Connexion FranceConnect réussie.'}
-            </p>
+            <p>Connexion FranceConnect réussie.</p>
           </div>
 
-          <h2 className="fr-h4">
-            {result.mode === 'formulaire' ? 'Identité renseignée' : 'Identité FranceConnect'}
-          </h2>
+          <h2 className="fr-h4">Identité FranceConnect</h2>
           <pre className={styles.payload}>{JSON.stringify(result.identity, null, 2)}</pre>
 
           <h2 className="fr-h4 fr-mt-3w">Réponses API Particulier</h2>
@@ -102,14 +100,13 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
           <h2 className="fr-h4 fr-mt-3w">Éligibilité pass Sport (LCA)</h2>
           <EligibilitySection
             candidates={listBeneficiaryCandidates(result.identity, result.apiParticulier)}
-            hasStoredResidence={!!result.residenceInsee}
           />
 
           <Link
             href="/v2/api/poc-fc-api-particulier/logout"
             className="fr-btn fr-btn--secondary fr-mt-3w"
           >
-            {result.mode === 'formulaire' ? 'Terminer' : 'Terminer et me déconnecter'}
+            Terminer et me déconnecter
           </Link>
         </section>
       )}

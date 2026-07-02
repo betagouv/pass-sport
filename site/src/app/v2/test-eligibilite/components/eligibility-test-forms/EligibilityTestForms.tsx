@@ -21,6 +21,7 @@ const EligibilityTestForms = () => {
     pspCodeData,
     setPspCodeData,
     benefIsEligible,
+    searchNoMatchFallback,
   } = useContext(EligibilityTestContext);
 
   const onEligibilitySuccess = useCallback(() => {
@@ -138,7 +139,13 @@ const EligibilityTestForms = () => {
         portalNode &&
         createPortal(
           <div className="fr-mt-6w">
-            <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
+            {/* POC embed: on a search no-match, render the provided fallback
+                instead of the default verdict. */}
+            {searchNoMatchFallback && eligibilityData && eligibilityData.length === 0 ? (
+              searchNoMatchFallback
+            ) : (
+              <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
+            )}
           </div>,
           portalNode,
         )}

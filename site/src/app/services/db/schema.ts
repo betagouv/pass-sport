@@ -10,7 +10,6 @@ export const auditApiParticulier = pgTable(
     franceConnected: boolean('france_connected').notNull(),
     clientIp: inet('client_ip'),
     userAgent: text('user_agent'),
-    recipientSiret: text('recipient_siret'),
     // e.g. dss.quotient_familial_identite
     resource: text('resource').notNull(),
     httpStatus: integer('http_status'),

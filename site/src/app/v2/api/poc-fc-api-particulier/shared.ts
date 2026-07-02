@@ -12,12 +12,6 @@ const LOGOUT_CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/logout/callback';
 export interface PocResult {
   identity: FranceConnectIdentity;
   apiParticulier: ApiParticulierResults;
-  // 'france_connect' = mode 2 (FC token authenticates API Particulier);
-  // 'formulaire' = mode 1 fallback (identity typed by the user, static token).
-  mode?: 'france_connect' | 'formulaire';
-  // INSEE code of the commune de résidence when already asked (mode 1 form);
-  // reused by the LCA step instead of asking again.
-  residenceInsee?: string;
 }
 
 const isProd = process.env.NODE_ENV === 'production';

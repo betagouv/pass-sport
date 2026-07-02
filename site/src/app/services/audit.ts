@@ -18,7 +18,6 @@ export interface AuditContext {
   franceConnected: boolean;
   clientIp: string | null;
   userAgent: string | null;
-  recipientSiret: string | null;
 }
 
 // Per-resource outcome captured around each SDK call.
@@ -38,7 +37,6 @@ export const writeAuditEvent = async (ctx: AuditContext, record: AuditRecord): P
       franceConnected: ctx.franceConnected,
       clientIp: ctx.clientIp,
       userAgent: ctx.userAgent,
-      recipientSiret: ctx.recipientSiret,
       resource: record.resource,
       httpStatus: record.httpStatus,
       success: record.success,

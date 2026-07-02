@@ -1,9 +1,9 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
+import EligibilityTestContext, { SearchedBeneficiary } from '@/store/eligibilityTestContext';
 import CustomRadioButtons from '@/app/v2/test-eligibilite-base/components/customRadioButtons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crous-eligibility-test-forms/CrousEligibilityTestForms';
@@ -44,11 +44,18 @@ const initialInputsState: AllowanceFormInputsState = {
   allowance: { state: 'default' },
 };
 
-const AllowanceStep = () => {
+interface AllowanceStepProps {
+  // Optional slot (POC embed): rendered instead of the default VerdictPanel
+  // when the LCA search finds no match. Absent on /v2/test-eligibilite.
+  searchNoMatchFallback?: ReactNode;
+}
+
+const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
+  const [searchedBeneficiary, setSearchedBeneficiary] = useState<SearchedBeneficiary | null>(null);
   const [, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AllowanceFormInputsState>(initialInputsState);
@@ -77,6 +84,7 @@ const AllowanceStep = () => {
     setIsValidated(null);
     setEligibilityData(null);
     setPspCodeData(null);
+    setSearchedBeneficiary(null);
     setDob('');
   };
 
@@ -148,6 +156,11 @@ const AllowanceStep = () => {
         setBenefIsEligible,
         setEligibilityData,
         setPspCodeData,
+        // Injected only for the POC embed: the real page keeps an identical
+        // context value (setter absent -> step-one capture is a no-op).
+        ...(searchNoMatchFallback
+          ? { searchNoMatchFallback, searchedBeneficiary, setSearchedBeneficiary }
+          : {}),
       }}
     >
       <div className={cn(styles.background)}>

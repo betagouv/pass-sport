@@ -66,11 +66,7 @@ export async function GET(request: Request): Promise<Response> {
       franceConnected: true,
       clientIp: getClientIp(request.headers),
       userAgent: request.headers.get('user-agent'),
-      recipientSiret: process.env.API_PARTICULIER_RECIPIENT_SIRET ?? null,
     };
-
-    // FranceConnect-only test mode: skip API Particulier (no token/SIRET/Redis needed).
-    const skipApiParticulier = process.env.POC_SKIP_API_PARTICULIER === 'true';
 
     // Mode "FranceConnecté" (mode 2): the FC access token authenticates the API
     // Particulier calls directly — no identity params sent. Must happen here, while
@@ -78,11 +74,9 @@ export async function GET(request: Request): Promise<Response> {
     // result for the downstream LCA calls (fetchEligible / fetchCode).
     // Mode 1 (static token + identity params) lives in the /identite route, for
     // users who cannot use FranceConnect.
-    const apiParticulier = skipApiParticulier
-      ? []
-      : await callApiParticulierFranceConnect(tokens.accessToken, audit);
+    const apiParticulier = await callApiParticulierFranceConnect(tokens.accessToken, audit);
 
-    const result: PocResult = { identity, apiParticulier, mode: 'france_connect' };
+    const result: PocResult = { identity, apiParticulier };
 
     // Personal data goes to the Redis session store; the browser only receives
     // the random session id (httpOnly cookie).

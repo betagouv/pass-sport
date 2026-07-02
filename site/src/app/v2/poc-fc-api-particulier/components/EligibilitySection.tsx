@@ -28,9 +28,6 @@ interface EligibilityResponse {
 
 interface Props {
   candidates: BeneficiaryCandidate[];
-  // true when the residence INSEE code is already stored server-side (mode 1
-  // form): the commune field is not shown again.
-  hasStoredResidence?: boolean;
 }
 
 const ALLOWANCE_LABELS: Record<string, string> = {
@@ -50,15 +47,14 @@ const eligibilitiesLabel = (candidate: BeneficiaryCandidate): string =>
         .join(', ')})`
     : 'pas éligible au pass Sport d’après les informations reçues';
 
-export default function EligibilitySection({ candidates, hasStoredResidence = false }: Props) {
+export default function EligibilitySection({ candidates }: Props) {
   const [candidateIndex, setCandidateIndex] = useState(0);
   const [cityInputState, setCityInputState] = useState<InputState>({ state: 'default' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<EligibilityResponse | null>(null);
 
-  // residenceInsee is omitted when it is already stored server-side (mode 1 form).
-  const callEligibility = async (residenceInsee?: string, searchItemId?: number) => {
+  const callEligibility = async (residenceInsee: string, searchItemId?: number) => {
     setIsLoading(true);
     setError(null);
 
@@ -85,11 +81,6 @@ export default function EligibilitySection({ candidates, hasStoredResidence = fa
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    if (hasStoredResidence) {
-      callEligibility();
-      return;
-    }
 
     const formData = new FormData(e.currentTarget);
     const insee = (formData.get('residenceInsee') ?? residenceInsee).toString();
@@ -138,17 +129,15 @@ export default function EligibilitySection({ candidates, hasStoredResidence = fa
         ))}
       </fieldset>
 
-      {!hasStoredResidence && (
-        <CityFinder
-          legend="Commune où vous habitez"
-          inputName="residenceInsee"
-          inputState={cityInputState}
-          isDisabled={isLoading}
-          onChanged={() => setCityInputState({ state: 'default' })}
-          onBlur={() => {}}
-          required
-        />
-      )}
+      <CityFinder
+        legend="Commune où vous habitez"
+        inputName="residenceInsee"
+        inputState={cityInputState}
+        isDisabled={isLoading}
+        onChanged={() => setCityInputState({ state: 'default' })}
+        onBlur={() => {}}
+        required
+      />
 
       <Button priority="primary" type="submit" disabled={isLoading} className="fr-mt-2w">
         {isLoading ? 'Recherche en cours…' : 'Obtenir mon code pass Sport'}
@@ -201,9 +190,7 @@ export default function EligibilitySection({ candidates, hasStoredResidence = fa
               type="button"
               disabled={isLoading}
               className="fr-mr-1w fr-mb-1w"
-              onClick={() =>
-                callEligibility(hasStoredResidence ? undefined : residenceInsee, item.id)
-              }
+              onClick={() => callEligibility(residenceInsee, item.id)}
             >
               {item.prenom} {item.nom} — {item.situation} ({item.organisme})
             </Button>

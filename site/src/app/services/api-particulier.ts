@@ -9,6 +9,7 @@ import {
   AllocationEnfantHandicapeData,
   EtudiantBoursierData,
 } from '@/types/ApiParticulier';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 type ApiParticulierData =
   | QuotientFamilialData
@@ -226,6 +227,48 @@ export const callApiParticulierFranceConnect = async (
       call: () => client.cnous.etudiant_boursier(),
     }),
   ]);
+};
+
+// Allowances verifiable through a single API Particulier "identité" endpoint.
+export type VerifiableAllowance = ALLOWANCE.AAH | ALLOWANCE.AEEH | ALLOWANCE.CROUS;
+
+// Mode "identité pivot" for ONE allowance: used by the no-FranceConnect journey
+// when the LCA search found nothing — verifies the typed identity against the
+// endpoint matching the allowance the user selected.
+export const callApiParticulierAllowanceIdentite = async (
+  allowance: VerifiableAllowance,
+  identity: FranceConnectIdentity,
+  audit: AuditContext,
+): Promise<ApiParticulierResourceResult> => {
+  const client = getClient();
+  const redis = await getRedis();
+
+  switch (allowance) {
+    case ALLOWANCE.AAH:
+      return callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_adulte_handicape_identite',
+        label: 'Allocation adulte handicapé (AAH)',
+        call: () => client.dss.allocation_adulte_handicape_identite(toDssParams(identity)),
+      });
+    case ALLOWANCE.AEEH:
+      return callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_enfant_handicape_identite',
+        label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
+        call: () => client.dss.allocation_enfant_handicape_identite(toDssParams(identity)),
+      });
+    case ALLOWANCE.CROUS:
+      return callResource({
+        redis,
+        audit,
+        resource: 'cnous.etudiant_boursier_identite',
+        label: 'Statut étudiant boursier',
+        call: () => client.cnous.etudiant_boursier_identite(toCnousParams(identity)),
+      });
+  }
 };
 
 // Mode "identité pivot" (mode 1): static token, FC identity replayed as query params.
