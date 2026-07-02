@@ -14,13 +14,19 @@ import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import { useSearchParams } from 'next/navigation';
 
 export const visitorReasons = {
-  'benef-incident-securite-18-decembre': `J'ai une question sur la sécurité de mes données personnelles suite à l'incident du 18 décembre`,
-  other: 'Autre',
+  'aije-droit-benef': `Ai-je droit au pass Sport cette année ?`,
+  'paiement-phase1-benef': `J'ai droit au pass Sport, mais mon club me demande de payer avant septembre. Que faire ?`,
+  'non-eligible-benef': `Pourquoi n'ai-je plus droit au pass Sport ?`,
+  boursier: `Je suis boursier, j'ai une question`,
+  'other-benef': `Autre`,
 };
 
 const proReasons = {
-  'club-incident-securite-18-decembre': `J'ai une question sur la sécurité des données de mon club sur mon Compte Asso suite à l'incident du 18 décembre`,
-  other: 'Autre',
+  'aije-droit-club': `Quel public est éligible au pass Sport cette année ?`,
+  'eligible-club': `Ma structure peut-elle accepter le pass Sport ?`,
+  'paiement-phase1-club': `Inscriptions entre juin et fin août : comment procéder ?`,
+  'lca-club': `Je rencontre des difficultés sur le Compte Asso`,
+  'other-club': `Autre`,
 };
 
 const initialInputsState: InputsState = {

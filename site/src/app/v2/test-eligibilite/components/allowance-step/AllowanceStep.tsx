@@ -206,7 +206,7 @@ const AllowanceStep = () => {
                     setDob(e.target.value ?? '');
                   },
                 }}
-                hintText="Exemple : 31/12/2025, Personne à qui le pass Sport est destiné."
+                hintText="Exemple : 31/12/2026, Personne à qui le pass Sport est destiné."
                 state={inputStates.dob.state}
                 stateRelatedMessage={inputStates.dob.errorMsg}
               />
@@ -429,9 +429,9 @@ const AllowanceStep = () => {
                   </p>
 
                   <ul className="fr-ml-2w">
-                    <li>Régler l&apos;inscription avec la déduction immédiate de xx € ;</li>
+                    <li>Régler l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                     <li>
-                      Fournir un chèque de xx € (non encaissé), restitué dès réception du code pass
+                      Fournir un chèque de 50 € (non encaissé), restitué dès réception du code pass
                       Sport.
                     </li>
                   </ul>

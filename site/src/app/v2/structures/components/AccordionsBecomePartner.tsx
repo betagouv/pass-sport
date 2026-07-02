@@ -204,7 +204,7 @@ export function AccordionsBecomePartner() {
             contrôle d&apos;honorabilité ;
           </li>
           <li>
-            Appliquer immédiatement, lors de l&apos;inscription, la réduction de xx € en échange du
+            Appliquer immédiatement, lors de l&apos;inscription, la réduction de 50 € en échange du
             pass Sport délivré par le ministère chargé des Sports ;
           </li>
           <li>

@@ -24,7 +24,7 @@ import { AAH, AEEH, ARS, CROUS } from '@/app/v2/accueil/components/acronymes/Acr
 //           <Image
 //             src={code}
 //             className={cn('fr-responsive-img', styles['activate-code-section__image'])}
-//             alt="Modèle pass Sport 2025"
+//             alt="Modèle pass Sport 2026"
 //           />
 //         </article>
 //       </Accordion>
@@ -96,7 +96,7 @@ import { AAH, AEEH, ARS, CROUS } from '@/app/v2/accueil/components/acronymes/Acr
 //                 Le Compte Asso
 //               </Link>{' '}
 //               saisissez le pass Sport de votre adhérent entre le 1er septembre et le 31 décembre
-//               2025.
+//               2026.
 //             </li>
 //             <li>
 //               Ouverture du dossier de remboursement : au premier pass Sport saisi, un dossier de
@@ -172,7 +172,7 @@ import { AAH, AEEH, ARS, CROUS } from '@/app/v2/accueil/components/acronymes/Acr
 //                 <li>Association : agrément JEP ou Sport valide ;</li>
 //                 <li>
 //                   Structures à but lucratif (Loisirs Sportifs Marchands) : charte d&apos;engagement
-//                   2025.
+//                   2026.
 //                 </li>
 //               </ul>
 //             </li>
@@ -196,7 +196,7 @@ import { AAH, AEEH, ARS, CROUS } from '@/app/v2/accueil/components/acronymes/Acr
 //             Allez dans la rubrique{' '}
 //             <span className="fr-text--bold">&ldquo;Gérer les inscriptions pass Sport&rdquo;</span>{' '}
 //             (voir copie d&apos;écran ci-jointe). Vous devez impérativement saisir tous les codes
-//             avant le 31 décembre 2025.
+//             avant le 31 décembre 2026.
 //           </p>
 //
 //           <div className="text-align--center fr-my-1w">
@@ -238,7 +238,7 @@ export function AccordionsFaq() {
           <ol>
             <li>
               <span className="fr-text--bold">Si vous avez déjà encaissé le règlement :</span> à
-              partir du 1er septembre, vous pourrez rembourser xx € à la famille sur présentation du
+              partir du 1er septembre, vous pourrez rembourser 50 € à la famille sur présentation du
               code pass Sport.
             </li>
 
@@ -248,9 +248,9 @@ export function AccordionsFaq() {
               </span>
               , vous pouvez proposer ce mode de régularisation :{' '}
               <ul>
-                <li>Paiement de l&apos;inscription avec la déduction immédiate de xx € ;</li>
+                <li>Paiement de l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                 <li>
-                  Dépôt d&apos;un chèque de caution de xx € qui ne sera pas encaissé et que vous
+                  Dépôt d&apos;un chèque de caution de 50 € qui ne sera pas encaissé et que vous
                   restituerez dès réception du code pass Sport (à partir du 1er septembre).
                 </li>
               </ul>
@@ -328,13 +328,13 @@ export function AccordionsFaq() {
       <Accordion label="Qui sont les bénéficiaires du pass Sport ?" onExpandedChange={() => {}}>
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
           <p className="fr-mb-2w">
-            Pour la saison 2025-2026, le dispositif est ouvert aux jeunes remplissant les conditions
+            Pour la saison 2026-2027, le dispositif est ouvert aux jeunes remplissant les conditions
             suivantes :
           </p>
 
           <ul className="fr-pl-0">
             <li>
-              Jeunes de 14 à 17 ans bénéficiaires de l&apos;
+              Jeunes de 12 à 17 ans bénéficiaires de l&apos;
               <ARS />* ;
             </li>
             <li>

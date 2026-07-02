@@ -82,7 +82,6 @@ export default function SimplifiedEligibilityTest({
   hasBackground = false,
   hasBorder = false,
 }: SimplifiedEligibilityTestProps) {
-  // const isMounted = useIsMounted();
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [allocationName, setAllocationName] = useState<ALLOCATION | null>(null);
@@ -204,7 +203,7 @@ export default function SimplifiedEligibilityTest({
                       });
                       setKnowMoreMeta({
                         title: 'A savoir',
-                        description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
+                        description: `Le pass Sport 2026 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
                       });
                       break;
                     case ALLOCATION.CROUS:
@@ -215,7 +214,7 @@ export default function SimplifiedEligibilityTest({
                       });
                       setKnowMoreMeta({
                         title: 'A savoir',
-                        description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
+                        description: `Le pass Sport 2026 sera progressivement disponible par mail ou SMS à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
                       });
                       break;
                   }
@@ -258,7 +257,7 @@ export default function SimplifiedEligibilityTest({
                   label="Date de naissance"
                   state={inputStates.dob?.state}
                   stateRelatedMessage={inputStates.dob?.errorMsg}
-                  hintText="Exemple : 31/12/2025."
+                  hintText="Exemple : 31/12/2026."
                   nativeInputProps={{
                     required: true,
                     type: 'date',
@@ -387,9 +386,9 @@ export default function SimplifiedEligibilityTest({
               <p>Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club :</p>
 
               <ul className="fr-ml-2w">
-                <li>Régler l&apos;inscription avec la déduction immédiate de xx € ;</li>
+                <li>Régler l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                 <li>
-                  Fournir un chèque de xx € (non encaissé), restitué dès réception du code pass
+                  Fournir un chèque de 50 € (non encaissé), restitué dès réception du code pass
                   Sport.
                 </li>
               </ul>
@@ -424,7 +423,7 @@ export default function SimplifiedEligibilityTest({
                 </li>
                 <li>
                   Aux jeunes de moins de 28 ans bénéficiaires d&apos;une bourse attribuée avant le
-                  15 octobre 2025 :
+                  15 octobre 2026 :
                   <ul className="fr-ml-2w">
                     <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
                     <li>Bourse régionale pour une formation sanitaire et sociale.</li>

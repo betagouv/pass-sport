@@ -64,7 +64,7 @@ describe('eligibility-test service', () => {
       } catch (error) {
         expect(global.fetch as jest.Mock).toHaveBeenCalledTimes(1);
         expect((error as Error).message).toEqual(
-          'Request to LCA api on /search has failed. Response status is 400; Response body is {"message":"error"}',
+          'Request to LCA api on /search has failed. Response status is 400.',
         );
       }
     });
@@ -163,7 +163,7 @@ describe('eligibility-test service', () => {
       } catch (error) {
         expect(global.fetch as jest.Mock).toHaveBeenCalledTimes(1);
         expect((error as Error).message).toEqual(
-          'Request to LCA api on /confirm has failed. Response status is 400; Response body is {"message":"error"}.',
+          'Request to LCA api on /confirm has failed. Response status is 400.',
         );
       }
     });

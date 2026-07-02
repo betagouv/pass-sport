@@ -89,7 +89,7 @@ export default function Page() {
         {/*        </li>*/}
         {/*        <li>*/}
         {/*          Les étudiants boursiers de moins de 28 ans bénéficiaires d’une bourse attribuée*/}
-        {/*          avant le 15 octobre 2025 :*/}
+        {/*          avant le 15 octobre 2026 :*/}
         {/*          <ul className="list-style-type--circle">*/}
         {/*            <li>bourse du CROUS (y compris l’aide annuelle) ;</li>*/}
         {/*            <li>bourse régionale formations sanitaires et sociales.</li>*/}
@@ -233,7 +233,7 @@ export default function Page() {
               <span className="fr-text--bold">
                 présenter votre code à votre club ou salle de sport au moment de l&apos;inscription
               </span>
-              . Celui-ci déduira automatiquement xx € du prix de la licence ou de l&apos;abonnement
+              . Celui-ci déduira automatiquement 50 € du prix de la licence ou de l&apos;abonnement
               au moment de l&apos;inscription.
             </p>
 

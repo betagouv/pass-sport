@@ -31,7 +31,7 @@ import Link from 'next/link';
 //           <Image
 //             src={code}
 //             className={cn('fr-responsive-img', styles['activate-code-section__image'])}
-//             alt="Modèle pass Sport 2025"
+//             alt="Modèle pass Sport 2026"
 //           />
 //         </article>
 //       </Accordion>
@@ -352,15 +352,15 @@ export function AccordionsFaq() {
             Si devez régler votre inscription entre juin et août :
           </p>
           <p className="fr-mb-2w">
-            Le club peut vous appliquer la réduction immédiate de XX € en échange d&apos;un chèque
-            de caution de XX €. Ce chèque ne sera pas encaissé et vous sera restitué dès que vous
+            Le club peut vous appliquer la réduction immédiate de 50 € en échange d&apos;un chèque
+            de caution de 50 €. Ce chèque ne sera pas encaissé et vous sera restitué dès que vous
             aurez fourni le code pass Sport (à partir du 1er septembre).
           </p>
 
           <p className="fr-mb-0 fr-text--bold">Si vous avez déjà réglé votre inscription :</p>
           <p className="fr-mb-2w">
             Si vous avez réglé l&apos;intégralité de votre inscription, votre club peut vous
-            rembourser XX € en échange de votre code pass sport. Cela revient à vous appliquer la
+            rembourser 50 € en échange de votre code pass sport. Cela revient à vous appliquer la
             réduction.
           </p>
           <p>Chaque club reste libre d&apos;accepter ou non cette solution.</p>

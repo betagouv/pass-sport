@@ -1,7 +1,7 @@
 import cn from 'classnames';
 import styles from './styles.module.scss';
 import Image from 'next/image';
-import code from '@/images/code-2x.svg';
+import code from '@/images/code.svg';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import Link from 'next/link';
 import Actions from '@/app/components/actions/Actions';
@@ -95,7 +95,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
               )}
 
               <p className="fr-text--lg">
-                Code valable jusqu’au <span className="fr-text--bold">31 décembre 2025</span>{' '}
+                Code valable jusqu’au <span className="fr-text--bold">31 décembre 2026</span>{' '}
                 (strictement personnel).
               </p>
             </div>
@@ -172,7 +172,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                     </li>
                     <li>
                       Aux jeunes de moins de 28 ans bénéficiaires d&apos;une bourse attribuée avant
-                      le 15 octobre 2025 :
+                      le 15 octobre 2026 :
                       <ul className="fr-ml-2w">
                         <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
                         <li>Bourse régionale pour une formation sanitaire et sociale.</li>
