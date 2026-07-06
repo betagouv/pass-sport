@@ -30,8 +30,13 @@ interface VerificationResult {
 }
 
 export default function IdentityVerificationFallback() {
-  const { allowance, dob, searchedBeneficiary, benefIsEligible, performNewTest } =
+  const { allowance, dob, searchedBeneficiary, benefIsEligible, performNewTest, birthplaceInsee } =
     useContext(EligibilityTestContext);
+
+  // A step-two form (MSA/Crous) may already have collected the commune de
+  // naissance: reuse it and skip the question. Otherwise (CAF, search no-match)
+  // ask for it.
+  const hasBirthplace = Boolean(birthplaceInsee);
 
   const [gender, setGender] = useState<'M' | 'F' | ''>('');
   const [bornAbroad, setBornAbroad] = useState(false);
@@ -51,9 +56,11 @@ export default function IdentityVerificationFallback() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const birthplaceInsee = (formData.get('birthplaceInsee') ?? '').toString();
+    // Reuse the commune de naissance collected by a step-two form when present,
+    // otherwise read the one asked here.
+    const insee = birthplaceInsee ?? (formData.get('birthplaceInsee') ?? '').toString();
 
-    if (!birthplaceInsee) {
+    if (!insee) {
       setBirthPlaceState({ state: 'error', errorMsg: 'Sélectionnez une commune.' });
       return;
     }
@@ -69,7 +76,7 @@ export default function IdentityVerificationFallback() {
           firstname: searchedBeneficiary.firstname,
           gender,
           birthdate: dob,
-          birthplaceInsee,
+          birthplaceInsee: insee,
         }),
       });
 
@@ -200,15 +207,17 @@ export default function IdentityVerificationFallback() {
         orientation="horizontal"
       />
 
-      <CityFinder
-        legend="Commune de naissance"
-        inputName="birthplaceInsee"
-        inputState={birthPlaceState}
-        isDisabled={isLoading}
-        onChanged={() => setBirthPlaceState(DEFAULT_INPUT_STATE)}
-        onBlur={() => {}}
-        required
-      />
+      {!hasBirthplace && (
+        <CityFinder
+          legend="Commune de naissance"
+          inputName="birthplaceInsee"
+          inputState={birthPlaceState}
+          isDisabled={isLoading}
+          onChanged={() => setBirthPlaceState(DEFAULT_INPUT_STATE)}
+          onBlur={() => {}}
+          required
+        />
+      )}
 
       <Button priority="primary" type="submit" disabled={isLoading} className="fr-mt-2w">
         {isLoading ? 'Vérification en cours…' : 'Vérifier ma situation'}

@@ -56,6 +56,12 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
   const [searchedBeneficiary, setSearchedBeneficiary] = useState<SearchedBeneficiary | null>(null);
+  // POC embed only: commune de naissance already collected by a step-two form,
+  // so the pivot fallback can skip re-asking it.
+  const [birthplaceInsee, setBirthplaceInsee] = useState<string | undefined>(undefined);
+  // POC embed only: LCA-failure signal that routes to the identité-pivot fallback.
+  const [fallbackRequested, setFallbackRequested] = useState(false);
+  const requestFallback = useCallback(() => setFallbackRequested(true), []);
   const [, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AllowanceFormInputsState>(initialInputsState);
@@ -85,6 +91,8 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
     setEligibilityData(null);
     setPspCodeData(null);
     setSearchedBeneficiary(null);
+    setBirthplaceInsee(undefined);
+    setFallbackRequested(false);
     setDob('');
   };
 
@@ -159,7 +167,15 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
         // Injected only for the POC embed: the real page keeps an identical
         // context value (setter absent -> step-one capture is a no-op).
         ...(searchNoMatchFallback
-          ? { searchNoMatchFallback, searchedBeneficiary, setSearchedBeneficiary }
+          ? {
+              searchNoMatchFallback,
+              searchedBeneficiary,
+              setSearchedBeneficiary,
+              birthplaceInsee,
+              setBirthplaceInsee,
+              fallbackRequested,
+              requestFallback,
+            }
           : {}),
       }}
     >

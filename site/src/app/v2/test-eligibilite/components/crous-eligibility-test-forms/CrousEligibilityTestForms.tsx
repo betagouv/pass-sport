@@ -17,6 +17,7 @@ const CrousEligibilityTestForms = () => {
     pspCodeData,
     setPspCodeData,
     searchNoMatchFallback,
+    fallbackRequested,
   } = useContext(EligibilityTestContext);
 
   const onEligibilitySuccess = useCallback(() => {
@@ -78,13 +79,13 @@ const CrousEligibilityTestForms = () => {
       )}
 
       {((eligibilityData && eligibilityData.length === 0) ||
-        (pspCodeData && pspCodeData.length === 0)) &&
+        (pspCodeData && pspCodeData.length === 0) ||
+        fallbackRequested) &&
         portalNode &&
         createPortal(
           <div className="fr-mt-6w">
-            {/* POC embed: on a search no-match, render the provided fallback
-                instead of the default verdict. */}
-            {searchNoMatchFallback && eligibilityData && eligibilityData.length === 0 ? (
+            {searchNoMatchFallback &&
+            (fallbackRequested || (eligibilityData && eligibilityData.length === 0)) ? (
               searchNoMatchFallback
             ) : (
               <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />

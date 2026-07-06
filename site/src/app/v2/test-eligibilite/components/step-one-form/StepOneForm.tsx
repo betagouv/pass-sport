@@ -91,30 +91,39 @@ const StepOneForm = ({
       firstname: formData.get('beneficiaryFirstname')!.toString().trim(),
     });
 
-    await requestEligibilityTest().then(({ status, body }) => {
-      if (status !== 200) {
+    try {
+      const { status, body } = await requestEligibilityTest();
+
+      // LCA search error (non-200 or a `message` error payload): show the error.
+      // We do NOT fall back to identité-pivot here — a failed search means the
+      // LCA flow did not run cleanly, so we can't trust we have enough data.
+      // `body` on an error status may be a plain string, so check status first
+      // (`'message' in body` would throw on a non-object).
+      if (status !== 200 || (typeof body === 'object' && 'message' in body)) {
         notifyError(status, body as SearchResponseErrorBody);
-      } else {
-        if ('message' in body) {
-          notifyError(status, body);
-          return;
-        }
-
-        onDataReceived(body);
-
-        if (body?.length === 0) {
-          onEligibilityFailure();
-        } else {
-          setIsFormDisabled(true);
-          push([
-            'trackEvent',
-            'Eligibility Test',
-            'Eligibility test step 1',
-            `Eligibility test step 1 successful`,
-          ]);
-        }
+        return;
       }
-    });
+
+      onDataReceived(body);
+
+      if (body?.length === 0) {
+        // Clean no-match (HTTP 200, empty): the LCA search succeeded. The POC
+        // embed renders the identité-pivot fallback via the empty
+        // eligibilityData — nothing else to trigger here.
+        onEligibilityFailure();
+      } else {
+        setIsFormDisabled(true);
+        push([
+          'trackEvent',
+          'Eligibility Test',
+          'Eligibility test step 1',
+          `Eligibility test step 1 successful`,
+        ]);
+      }
+    } catch {
+      // Network error or non-JSON error body: still just an error, no pivot.
+      setError('Une erreur est apparue. Merci de réessayer ultérieurement.');
+    }
   };
 
   const notifyError = (status: number, body: SearchResponseErrorBody) => {

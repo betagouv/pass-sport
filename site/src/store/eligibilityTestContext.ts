@@ -25,6 +25,15 @@ type EligibilityTestContextProps = {
   searchNoMatchFallback?: ReactNode;
   searchedBeneficiary?: SearchedBeneficiary | null;
   setSearchedBeneficiary?: (beneficiary: SearchedBeneficiary) => void;
+  // Commune de naissance INSEE code already collected by a step-two form
+  // (MSA/Crous): lets the pivot fallback skip re-asking it. POC embed only.
+  birthplaceInsee?: string;
+  setBirthplaceInsee?: (insee: string | undefined) => void;
+  // Set by any LCA failure (search or confirm, error or no-match)
+  // routes the flow to the identité-pivot fallback instead of the
+  // Absent on /v2/test-eligibilite, only present on POC route
+  fallbackRequested?: boolean;
+  requestFallback?: () => void;
 };
 
 const EligibilityTestContext = React.createContext<EligibilityTestContextProps>({

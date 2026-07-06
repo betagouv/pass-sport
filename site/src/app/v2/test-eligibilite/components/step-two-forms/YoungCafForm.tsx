@@ -33,7 +33,7 @@ const YoungCafForm = ({
   onEligibilitySuccess,
   onEligibilityFailure,
 }: Props) => {
-  const { allowance } = useContext(EligibilityTestContext);
+  const { allowance, requestFallback } = useContext(EligibilityTestContext);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
@@ -120,9 +120,17 @@ const YoungCafForm = ({
         status: number;
       }) => {
         if (status !== 200) {
+          if (requestFallback) {
+            requestFallback();
+            return;
+          }
           notifyError();
         } else {
           if ('message' in body) {
+            if (requestFallback) {
+              requestFallback();
+              return;
+            }
             notifyError();
             return;
           }
@@ -133,6 +141,10 @@ const YoungCafForm = ({
             onEligibilitySuccess();
             setIsFormDisabled(true);
           } else {
+            if (requestFallback) {
+              requestFallback();
+              return;
+            }
             onEligibilityFailure();
           }
         }

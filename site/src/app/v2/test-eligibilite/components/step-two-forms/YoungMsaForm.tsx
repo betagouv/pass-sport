@@ -38,7 +38,7 @@ const YoungMsaForm = ({
   const [inputStates, setInputStates] = useState<YoungMsaInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
-  const { allowance } = useContext(EligibilityTestContext);
+  const { allowance, requestFallback, setBirthplaceInsee } = useContext(EligibilityTestContext);
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungMsaInputsState } => {
     let isValid = true;
@@ -107,6 +107,10 @@ const YoungMsaForm = ({
       return;
     }
 
+    // POC embed: remember the commune de naissance so the pivot fallback can
+    // reuse it instead of re-asking on a confirm failure.
+    setBirthplaceInsee?.(formData.get('recipientBirthPlace')?.toString() || undefined);
+
     await requestPassSportCode().then(
       ({
         status,
@@ -116,9 +120,17 @@ const YoungMsaForm = ({
         status: number;
       }) => {
         if (status !== 200) {
+          if (requestFallback) {
+            requestFallback();
+            return;
+          }
           notifyError();
         } else {
           if ('message' in body) {
+            if (requestFallback) {
+              requestFallback();
+              return;
+            }
             notifyError();
             return;
           }
@@ -129,6 +141,10 @@ const YoungMsaForm = ({
             onEligibilitySuccess();
             setIsFormDisabled(true);
           } else {
+            if (requestFallback) {
+              requestFallback();
+              return;
+            }
             onEligibilityFailure();
           }
         }
