@@ -1,4 +1,4 @@
-import { useCallback, useContext } from 'react';
+import { useCallback, useContext, useEffect } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
 import YoungCafForm from '../step-two-forms/YoungCafForm';
 import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
@@ -30,18 +30,24 @@ const EligibilityTestForms = () => {
       'trackEvent',
       'Eligibility Test',
       'Eligibility test completed',
-      'Eligibility test successful',
+      `Eligibility test successful - ${allowance ?? 'unknown'}`,
     ]);
-  }, []);
+  }, [allowance]);
 
   const onEligibilityFailure = useCallback((name = 'final step') => {
     push([
       'trackEvent',
       'Eligibility Test',
       'Eligibility test completed',
-      `Eligibility test unsuccessful - ${name}`,
+      `Eligibility test unsuccessful - ${name} - ${allowance ?? 'unknown'}`,
     ]);
-  }, []);
+  }, [allowance]);
+
+  useEffect(() => {
+    if (eligibilityData && eligibilityData.length > 0) {
+      push(['trackEvent', 'Eligibility Test', 'Step 2 viewed', allowance ?? 'unknown']);
+    }
+  }, [eligibilityData, allowance]);
 
   const getStepCheckerName = useCallback(() => {
     if (!eligibilityData || eligibilityData?.length <= 0) return '';
@@ -101,7 +107,7 @@ const EligibilityTestForms = () => {
                 eligibilityDataItem={eligibilityData[0]}
                 onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
                 onEligibilitySuccess={onEligibilitySuccess}
-                onEligibilityFailure={onEligibilityFailure}
+                onEligibilityFailure={() => onEligibilityFailure('YoungCAF')}
               />
             )}
 
@@ -111,7 +117,7 @@ const EligibilityTestForms = () => {
                 eligibilityDataItem={eligibilityData[0]}
                 onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
                 onEligibilitySuccess={onEligibilitySuccess}
-                onEligibilityFailure={onEligibilityFailure}
+                onEligibilityFailure={() => onEligibilityFailure('YoungMSA')}
               />
             )}
 
@@ -120,7 +126,7 @@ const EligibilityTestForms = () => {
               eligibilityDataItem={eligibilityData[0]}
               onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
               onEligibilitySuccess={onEligibilitySuccess}
-              onEligibilityFailure={onEligibilityFailure}
+              onEligibilityFailure={() => onEligibilityFailure('AahCAF')}
             />
           )}
 
@@ -129,7 +135,7 @@ const EligibilityTestForms = () => {
               eligibilityDataItem={eligibilityData[0]}
               onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
               onEligibilitySuccess={onEligibilitySuccess}
-              onEligibilityFailure={onEligibilityFailure}
+              onEligibilityFailure={() => onEligibilityFailure('AahMSA')}
             />
           )}
         </div>

@@ -1,6 +1,6 @@
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useCallback, useContext, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   SearchResponseBody,
   SearchResponseErrorBody,
@@ -37,6 +37,12 @@ const StepOneForm = ({
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
+
+  useEffect(() => {
+    push(['trackEvent', 'Eligibility Test', 'Step 1 viewed', allowance ?? 'unknown']);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isFormValid = (
     formData: FormData,
   ): { isValid: boolean; states: StepOneFormInputsState } => {
@@ -110,6 +116,7 @@ const StepOneForm = ({
         // Clean no-match (HTTP 200, empty): the LCA search succeeded. The POC
         // embed renders the identité-pivot fallback via the empty
         // eligibilityData — nothing else to trigger here.
+        push(['trackEvent', 'Eligibility Test', 'Step 1 no match', allowance ?? 'unknown']);
         onEligibilityFailure();
       } else {
         setIsFormDisabled(true);
@@ -117,7 +124,7 @@ const StepOneForm = ({
           'trackEvent',
           'Eligibility Test',
           'Eligibility test step 1',
-          `Eligibility test step 1 successful`,
+          `Eligibility test step 1 successful - ${allowance ?? 'unknown'}`,
         ]);
       }
     } catch {
@@ -127,6 +134,7 @@ const StepOneForm = ({
   };
 
   const notifyError = (status: number, body: SearchResponseErrorBody) => {
+    push(['trackEvent', 'Eligibility Test', 'Step 1 API error', `HTTP ${status} - ${allowance ?? 'unknown'}`]);
     if (
       status === 400 &&
       body.message ===

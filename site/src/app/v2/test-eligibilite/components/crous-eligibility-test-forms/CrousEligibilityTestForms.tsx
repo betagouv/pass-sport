@@ -1,4 +1,4 @@
-import { useCallback, useContext } from 'react';
+import { useCallback, useContext, useEffect } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
 import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
 import { push } from '@socialgouv/matomo-next';
@@ -11,6 +11,7 @@ import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/Ver
 const CrousEligibilityTestForms = () => {
   const {
     portalNode,
+    allowance,
     eligibilityData,
     setEligibilityData,
     benefIsEligible,
@@ -25,18 +26,24 @@ const CrousEligibilityTestForms = () => {
       'trackEvent',
       'Eligibility Test',
       'Eligibility test completed',
-      'Eligibility test successful',
+      `Eligibility test successful - ${allowance ?? 'unknown'}`,
     ]);
-  }, []);
+  }, [allowance]);
 
   const onEligibilityFailure = useCallback((name = 'final step') => {
     push([
       'trackEvent',
       'Eligibility Test',
       'Eligibility test completed',
-      `Eligibility test unsuccessful - ${name}`,
+      `Eligibility test unsuccessful - ${name} - ${allowance ?? 'unknown'}`,
     ]);
-  }, []);
+  }, [allowance]);
+
+  useEffect(() => {
+    if (eligibilityData && eligibilityData.length > 0) {
+      push(['trackEvent', 'Eligibility Test', 'Step 2 viewed', allowance ?? 'unknown']);
+    }
+  }, [eligibilityData, allowance]);
 
   return (
     <>
@@ -72,7 +79,7 @@ const CrousEligibilityTestForms = () => {
                 eligibilityDataItem={eligibilityData[0]}
                 onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
                 onEligibilitySuccess={onEligibilitySuccess}
-                onEligibilityFailure={onEligibilityFailure}
+                  onEligibilityFailure={() => onEligibilityFailure('CrousForm')}
               />
             )}
         </div>

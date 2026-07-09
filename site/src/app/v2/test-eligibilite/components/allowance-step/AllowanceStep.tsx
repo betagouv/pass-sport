@@ -84,7 +84,12 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
     formRef.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
   }, []);
 
+  useEffect(() => {
+    push(['trackEvent', 'Eligibility Test', 'Step 0 viewed', 'Allowance step']);
+  }, []);
+
   const restartTest = () => {
+    push(['trackEvent', 'Eligibility Test', 'Test restarted', allowance ?? 'unknown']);
     CustomButtonsGroupKey = Math.round(Math.random() * 1000);
     setAllowance(null);
     setIsValidated(null);
@@ -113,6 +118,7 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
 
     if (dob && allowance) {
       setIsValidated(true);
+      push(['trackEvent', 'Eligibility Test', 'Step 0 completed', allowance]);
     } else {
       setIsValidated(false);
 
