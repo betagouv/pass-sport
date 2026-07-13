@@ -8,6 +8,27 @@
   }
 }
 
+.orSeparator {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-default-grey);
+  }
+
+  span {
+    color: var(--text-mention-grey);
+    text-transform: uppercase;
+    font-size: 0.875rem;
+  }
+}
+
 .payload {
   background-color: var(--background-alt-grey);
   padding: 1rem;

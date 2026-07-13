@@ -1,7 +1,8 @@
 import './globals.scss';
 import SkipLinksWrapper from '@/app/components/skip-links-wrapper/SkipLinksWrapper';
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { POC_SESSION_COOKIE } from '@/app/v2/api/poc-fc-api-particulier/session';
 import React from 'react';
 import Matomo from './Matomo';
 import PassSportFooter from './components/pass-sport-footer/PassSportFooter';
@@ -26,6 +27,9 @@ export default async function RootLayout({
   const headerList = await headers();
   const nonce = headerList.get('X-Nonce') ?? undefined;
 
+  // Surface the POC "Se déconnecter" quick-access item only while its session lives.
+  const hasPocSession = (await cookies()).get(POC_SESSION_COOKIE)?.value != null;
+
   return (
     <html {...getHtmlAttributes({ lang })}>
       <head suppressHydrationWarning>
@@ -43,7 +47,7 @@ export default async function RootLayout({
       <body>
         <StartDsfrOnHydration />
         <SkipLinksWrapper />
-        <PassSportNavigationStandard />
+        <PassSportNavigationStandard showPocLogout={hasPocSession} />
         <PassSportBreadcrumbStandard />
         <DsfrProvider lang={lang}>{children}</DsfrProvider>
         <PassSportFooter />

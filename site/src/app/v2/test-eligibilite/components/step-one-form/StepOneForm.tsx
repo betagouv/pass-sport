@@ -1,6 +1,14 @@
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  ChangeEvent,
+  FormEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   SearchResponseBody,
   SearchResponseErrorBody,
@@ -134,7 +142,12 @@ const StepOneForm = ({
   };
 
   const notifyError = (status: number, body: SearchResponseErrorBody) => {
-    push(['trackEvent', 'Eligibility Test', 'Step 1 API error', `HTTP ${status} - ${allowance ?? 'unknown'}`]);
+    push([
+      'trackEvent',
+      'Eligibility Test',
+      'Step 1 API error',
+      `HTTP ${status} - ${allowance ?? 'unknown'}`,
+    ]);
     if (
       status === 400 &&
       body.message ===

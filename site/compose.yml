@@ -1,31 +1,31 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - '3000:3000'
-    env_file:
-      - ./.env.local
-    environment:
-      - DATABASE_URL=postgres://passsport:passsport@db:5432/passsport
-      - REDIS_URL=redis://redis:6379
-      - PGSSL_DISABLE=true
-    command: npm run dev
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    develop:
-      watch:
-        - action: sync
-          path: .
-          target: /site
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: package.json
+#  app:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    ports:
+#      - '3000:3000'
+#    env_file:
+#      - ./.env.local
+#    environment:
+#      - DATABASE_URL=postgres://passsport:passsport@db:5432/passsport
+#      - REDIS_URL=redis://redis:6379
+#      - PGSSL_DISABLE=true
+#    command: npm run dev
+#    depends_on:
+#      db:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#    develop:
+#      watch:
+#        - action: sync
+#          path: .
+#          target: /site
+#          ignore:
+#            - node_modules/
+#        - action: rebuild
+#          path: package.json
   db:
     image: postgres:17-alpine
     environment:

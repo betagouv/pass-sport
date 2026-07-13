@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { FocusEvent, FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import EligibilityTestContext, { SearchedBeneficiary } from '@/store/eligibilityTestContext';
@@ -48,9 +48,19 @@ interface AllowanceStepProps {
   // Optional slot (POC embed): rendered instead of the default VerdictPanel
   // when the LCA search finds no match. Absent on /v2/test-eligibilite.
   searchNoMatchFallback?: ReactNode;
+  // POC embed only: narrows the allowance radio choices to the aides harvested
+  // upstream. Empty/absent -> all options (unchanged on /v2/test-eligibilite).
+  preselectedAllowances?: ALLOWANCE[];
+  // Autofocus the DOB field on mount. Default true (standalone page); the POC
+  // embed disables it so confirming the aides doesn't yank focus to this form.
+  autoFocusFirstField?: boolean;
 }
 
-const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
+const AllowanceStep = ({
+  searchNoMatchFallback,
+  preselectedAllowances,
+  autoFocusFirstField = true,
+}: AllowanceStepProps = {}) => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
@@ -81,8 +91,10 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
   useAskConsentForSupport();
 
   useEffect(() => {
-    formRef.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
-  }, []);
+    if (autoFocusFirstField) {
+      formRef.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
+    }
+  }, [autoFocusFirstField]);
 
   useEffect(() => {
     push(['trackEvent', 'Eligibility Test', 'Step 0 viewed', 'Allowance step']);
@@ -155,6 +167,155 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
     }
   }, [allowance]);
 
+  // Each radio option tagged with its allowance so the POC gate can narrow the
+  // list. "Aucune" (NONE) is always kept for RGAA completeness.
+  const allowanceOptions = [
+    {
+      allowance: ALLOWANCE.AAH,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            AAH
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Allocation Adulte Handicapé
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.AAH);
+            setOriginalAllowance(ALLOWANCE.AAH);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.AEEH,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            AEEH
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Allocation d’Éducation de l’Enfant Handicapé
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.AEEH);
+            setOriginalAllowance(ALLOWANCE.AEEH);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.ARS,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            ARS
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Allocation de Rentrée Scolaire
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.ARS);
+            setOriginalAllowance(ALLOWANCE.ARS);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.CROUS,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            Étudiant boursier du CROUS
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Bourse annuelle du CROUS pour l&apos;enseignement supérieur
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.CROUS);
+            setOriginalAllowance(ALLOWANCE.CROUS);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            Étudiant boursier en formation sanitaire et sociale
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Bourse régionale pour la formation sanitaire et sociale
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
+            setOriginalAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.NONE,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            Aucune
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Aucune de ces propositions
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onBlur: (e: FocusEvent<HTMLInputElement>) => {
+            const inputIsValid = !!e.target?.checkValidity();
+
+            setInputStates({
+              ...inputStates,
+              allowance: {
+                state: inputIsValid ? 'default' : 'error',
+                errorMsg: !inputIsValid ? errorMapper['allowance'] : '',
+              },
+            });
+          },
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.NONE);
+            setOriginalAllowance(ALLOWANCE.NONE);
+          },
+        },
+      },
+    },
+  ];
+
+  const visibleAllowanceOptions = allowanceOptions
+    .filter(
+      ({ allowance: a }) =>
+        !preselectedAllowances?.length || a === ALLOWANCE.NONE || preselectedAllowances.includes(a),
+    )
+    .map(({ option }) => option);
+
   return (
     <EligibilityTestContext.Provider
       value={{
@@ -217,7 +378,7 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
                   </>
                 }
                 nativeInputProps={{
-                  autoFocus: true,
+                  autoFocus: autoFocusFirstField,
                   id: dobId,
                   type: 'date',
                   min: '1950-01-01',
@@ -257,127 +418,7 @@ const AllowanceStep = ({ searchNoMatchFallback }: AllowanceStepProps = {}) => {
                   </>
                 }
                 key={CustomButtonsGroupKey}
-                options={[
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        AAH
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Allocation Adulte Handicapé
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.AAH);
-                        setOriginalAllowance(ALLOWANCE.AAH);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        AEEH
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Allocation d’Éducation de l’Enfant Handicapé
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.AEEH);
-                        setOriginalAllowance(ALLOWANCE.AEEH);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        ARS
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Allocation de Rentrée Scolaire
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.ARS);
-                        setOriginalAllowance(ALLOWANCE.ARS);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        Étudiant boursier du CROUS
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse annuelle du CROUS pour l&apos;enseignement supérieur
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.CROUS);
-                        setOriginalAllowance(ALLOWANCE.CROUS);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        Étudiant boursier en formation sanitaire et sociale
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse régionale pour la formation sanitaire et sociale
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
-                        setOriginalAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        Aucune
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Aucune de ces propositions
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onBlur: (e) => {
-                        const inputIsValid = !!e.target?.checkValidity();
-
-                        setInputStates({
-                          ...inputStates,
-                          allowance: {
-                            state: inputIsValid ? 'default' : 'error',
-                            errorMsg: !inputIsValid ? errorMapper['allowance'] : '',
-                          },
-                        });
-                      },
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.NONE);
-                        setOriginalAllowance(ALLOWANCE.NONE);
-                      },
-                    },
-                  },
-                ]}
+                options={visibleAllowanceOptions}
               />
             </form>
           )}

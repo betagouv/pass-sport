@@ -25,6 +25,27 @@ export const storePocResult = async (result: PocResult): Promise<void> => {
   cookieStore.set(POC_SESSION_COOKIE, sessionId, sessionCookieOptions());
 };
 
+// Merges a patch into the current session (same session id, refreshed TTL). Used
+// by the collect step to add the API Particulier results / commune / aides to the
+// identity-only session created at login. Returns false when no live session.
+export const updatePocSession = async (patch: Partial<PocResult>): Promise<boolean> => {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(POC_SESSION_COOKIE)?.value;
+  if (!sessionId) {
+    return false;
+  }
+
+  const redis = await getRedis();
+  const raw = await redis.get(redisKey(sessionId));
+  if (!raw) {
+    return false;
+  }
+
+  const merged: PocResult = { ...(JSON.parse(raw) as PocResult), ...patch };
+  await redis.set(redisKey(sessionId), JSON.stringify(merged), 'EX', SESSION_TTL_SECONDS);
+  return true;
+};
+
 // Loads the result for the current session cookie. Null when the cookie is
 // missing, the session expired, or the payload cannot be parsed.
 export const loadPocResult = async (): Promise<PocResult | null> => {

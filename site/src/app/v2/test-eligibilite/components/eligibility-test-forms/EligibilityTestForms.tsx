@@ -34,14 +34,17 @@ const EligibilityTestForms = () => {
     ]);
   }, [allowance]);
 
-  const onEligibilityFailure = useCallback((name = 'final step') => {
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Eligibility test completed',
-      `Eligibility test unsuccessful - ${name} - ${allowance ?? 'unknown'}`,
-    ]);
-  }, [allowance]);
+  const onEligibilityFailure = useCallback(
+    (name = 'final step') => {
+      push([
+        'trackEvent',
+        'Eligibility Test',
+        'Eligibility test completed',
+        `Eligibility test unsuccessful - ${name} - ${allowance ?? 'unknown'}`,
+      ]);
+    },
+    [allowance],
+  );
 
   useEffect(() => {
     if (eligibilityData && eligibilityData.length > 0) {

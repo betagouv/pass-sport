@@ -55,7 +55,9 @@ const schema = z.object({
 export async function POST(request: Request): Promise<Response> {
   try {
     const pocResult = await loadPocResult();
-    if (!pocResult) {
+    // apiParticulier is set only once the aides + commune form is confirmed (the
+    // /collect step); this route is unreachable before that.
+    if (!pocResult || !pocResult.apiParticulier) {
       return NextResponse.json({ error: 'Session expirée.' }, { status: 401 });
     }
 

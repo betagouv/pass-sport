@@ -1,18 +1,17 @@
 'use client';
 
 // POC step 3: pick the beneficiary (a child from the quotient familial — the
-// connected user is the parent) and the commune de résidence, then run the LCA
-// search/confirm through /v2/api/poc-fc-api-particulier/eligibility.
+// connected user is the parent), then run the LCA search/confirm through
+// /v2/api/poc-fc-api-particulier/eligibility.
 //
-// The residence INSEE code is asked to the user on purpose: a postal code maps to
-// several communes, so it cannot be derived reliably from the QF address.
+// The commune de résidence (INSEE) is collected up front in the pre-login gate
+// and passed in as a prop — a postal code maps to several communes, so it cannot
+// be derived reliably from the QF address.
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import Button from '@codegouvfr/react-dsfr/Button';
-import CityFinder from '@/app/v2/test-eligibilite/components/city-finder/CityFinder';
 import { BeneficiaryCandidate } from '@/app/services/lca-bridge';
-import { InputState } from 'types/form';
 import { ConfirmResponseBodyItem, SearchResponseBodyItem } from 'types/EligibilityTest';
 import styles from '../styles.module.scss';
 
@@ -28,6 +27,8 @@ interface EligibilityResponse {
 
 interface Props {
   candidates: BeneficiaryCandidate[];
+  // Commune de résidence (INSEE) collected in the top gate form, before login.
+  residenceInsee: string;
 }
 
 const ALLOWANCE_LABELS: Record<string, string> = {
@@ -47,9 +48,8 @@ const eligibilitiesLabel = (candidate: BeneficiaryCandidate): string =>
         .join(', ')})`
     : 'pas éligible au pass Sport d’après les informations reçues';
 
-export default function EligibilitySection({ candidates }: Props) {
+export default function EligibilitySection({ candidates, residenceInsee }: Props) {
   const [candidateIndex, setCandidateIndex] = useState(0);
-  const [cityInputState, setCityInputState] = useState<InputState>({ state: 'default' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<EligibilityResponse | null>(null);
@@ -77,22 +77,15 @@ export default function EligibilitySection({ candidates }: Props) {
     }
   };
 
-  const [residenceInsee, setResidenceInsee] = useState('');
-
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const formData = new FormData(e.currentTarget);
-    const insee = (formData.get('residenceInsee') ?? residenceInsee).toString();
-
-    if (!insee) {
-      setCityInputState({ state: 'error', errorMsg: 'Sélectionnez une commune.' });
+    if (!residenceInsee) {
+      setError('Commune de résidence manquante. Recommencez la démarche.');
       return;
     }
 
-    setResidenceInsee(insee);
-    setCityInputState({ state: 'default' });
-    callEligibility(insee);
+    callEligibility(residenceInsee);
   };
 
   const confirmItems =
@@ -128,16 +121,6 @@ export default function EligibilitySection({ candidates }: Props) {
           </div>
         ))}
       </fieldset>
-
-      <CityFinder
-        legend="Commune où vous habitez"
-        inputName="residenceInsee"
-        inputState={cityInputState}
-        isDisabled={isLoading}
-        onChanged={() => setCityInputState({ state: 'default' })}
-        onBlur={() => {}}
-        required
-      />
 
       <Button priority="primary" type="submit" disabled={isLoading} className="fr-mt-2w">
         {isLoading ? 'Recherche en cours…' : 'Obtenir mon code pass Sport'}

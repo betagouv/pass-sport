@@ -10,6 +10,9 @@ import {
   transientCookieOptions,
 } from '@/app/v2/api/poc-fc-api-particulier/shared';
 
+// Reversed flow: FranceConnect comes first, before any form. This route only
+// starts the OIDC round-trip (state + nonce) — the aides + commune de résidence
+// are collected after login, on the page.
 export async function GET(request: Request): Promise<Response> {
   try {
     const config = getFranceConnectConfig();

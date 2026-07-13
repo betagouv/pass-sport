@@ -1,10 +1,9 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
+import Notice from '@codegouvfr/react-dsfr/Notice';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import FranceConnectSection from './components/FranceConnectSection';
-import EligibilitySection from './components/EligibilitySection';
-import IdentityVerificationFallback from './components/IdentityVerificationFallback';
-import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
+import NoFranceConnectSection from './components/NoFranceConnectSection';
+import PostLoginFlow from './components/PostLoginFlow';
 import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
 import { listBeneficiaryCandidates } from '@/app/services/lca-bridge';
 import styles from './styles.module.scss';
@@ -29,6 +28,8 @@ interface Props {
 export default async function PocFcApiParticulier({ searchParams }: Props) {
   const { error, status } = await searchParams;
   const result = await loadPocResult();
+  // Raw identity + API Particulier response dumps are debug-only.
+  const debuggingEnabled = process.env.API_PARTICULIER_DEBUGGING_ENABLED === 'true';
 
   return (
     <main
@@ -39,8 +40,9 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
     >
       <h1>POC FranceConnect + API Particulier</h1>
       <p className="fr-text--lead">
-        Démonstrateur : authentification via FranceConnect, puis appel à API Particulier réalisé
-        côté serveur une fois la connexion accordée.
+        Démonstrateur : authentification via FranceConnect, puis saisie des aides et de la commune ;
+        l&apos;appel à API Particulier n&apos;est réalisé côté serveur qu&apos;une fois ces
+        informations confirmées.
       </p>
 
       {error && (
@@ -50,27 +52,24 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
       )}
 
       {status === 'loggedout' && (
-        <div className="fr-alert fr-alert--info fr-my-3w">
-          <p>Vous avez été déconnecté.</p>
-        </div>
+        <Notice severity="info" className="fr-my-3w" isClosable title="Vous avez été déconnecté." />
       )}
 
       {!result ? (
         <section className={styles.section}>
-          <h2 className="fr-h4 fr-mb-2w">Connexion</h2>
+          <Notice
+            severity="info"
+            className="fr-mb-3w"
+            title="Connectez-vous avec FranceConnect"
+            description="Nous vous demanderons ensuite vos aides et votre commune, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
+          />
+
           <p className="fr-mb-2w">
             Connectez-vous avec FranceConnect pour récupérer les codes pass Sport.
           </p>
           <FranceConnectSection />
 
-          <hr className="fr-mt-3w" />
-
-          <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
-          {/* Existing eligibility-test journey, with an API Particulier
-              verification fallback when the LCA search finds no match. */}
-          <div className={styles['eligibility-embed']}>
-            <AllowanceStep searchNoMatchFallback={<IdentityVerificationFallback />} />
-          </div>
+          <NoFranceConnectSection />
         </section>
       ) : (
         <section className={styles.section}>
@@ -78,36 +77,41 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             <p>Connexion FranceConnect réussie.</p>
           </div>
 
-          <h2 className="fr-h4">Identité FranceConnect</h2>
-          <pre className={styles.payload}>{JSON.stringify(result.identity, null, 2)}</pre>
+          {debuggingEnabled && result.apiParticulier && (
+            <>
+              <h2 className="fr-h4">Identité FranceConnect</h2>
+              <pre className={styles.payload}>{JSON.stringify(result.identity, null, 2)}</pre>
 
-          <h2 className="fr-h4 fr-mt-3w">Réponses API Particulier</h2>
-          {result.apiParticulier.map((res) => (
-            <section key={res.resource} className="fr-mb-3w">
-              <h3 className="fr-h6">
-                {res.label} ({res.httpStatus ?? '—'})
-              </h3>
-              {res.error ? (
-                <div className="fr-alert fr-alert--warning fr-alert--sm">
-                  <p>{res.error}</p>
-                </div>
-              ) : (
-                <pre className={styles.payload}>{JSON.stringify(res.data, null, 2)}</pre>
-              )}
-            </section>
-          ))}
+              <h2 className="fr-h4 fr-mt-3w">Réponses API Particulier</h2>
+              {result.apiParticulier.map((res) => (
+                <section key={res.resource} className="fr-mb-3w">
+                  <h3 className="fr-h6">
+                    {res.label} ({res.httpStatus ?? '—'})
+                  </h3>
+                  {res.error ? (
+                    <div className="fr-alert fr-alert--warning fr-alert--sm">
+                      <p>{res.error}</p>
+                    </div>
+                  ) : (
+                    <pre className={styles.payload}>{JSON.stringify(res.data, null, 2)}</pre>
+                  )}
+                </section>
+              ))}
+            </>
+          )}
 
-          <h2 className="fr-h4 fr-mt-3w">Éligibilité pass Sport (LCA)</h2>
-          <EligibilitySection
-            candidates={listBeneficiaryCandidates(result.identity, result.apiParticulier)}
+          <PostLoginFlow
+            collected={Boolean(result.apiParticulier)}
+            candidates={
+              result.apiParticulier
+                ? listBeneficiaryCandidates(result.identity, result.apiParticulier)
+                : []
+            }
+            residenceInsee={result.residenceInsee ?? ''}
+            aides={result.aides ?? []}
           />
-
-          <Link
-            href="/v2/api/poc-fc-api-particulier/logout"
-            className="fr-btn fr-btn--secondary fr-mt-3w"
-          >
-            Terminer et me déconnecter
-          </Link>
+          {/* Logout moved to the header quick-access item ("Se déconnecter"),
+              shown while the POC session is live (see the root layout). */}
         </section>
       )}
     </main>

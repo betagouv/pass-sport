@@ -12,7 +12,19 @@ import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-repl
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 
-export default function PassSportNavigation() {
+interface Props {
+  // POC FranceConnect + API Particulier: a live session (httpOnly cookie, read
+  // server-side in the root layout) surfaces a "Se déconnecter" quick-access item.
+  showPocLogout?: boolean;
+}
+
+// Route that destroys the POC session then server-redirects to the FranceConnect
+// session/end endpoint (mode 2). Uses a Button quick-access item + a full-page
+// navigation on purpose: the registered DSFR Link is next/link, whose client-side
+// RSC fetch cannot follow the external FranceConnect redirect.
+const POC_LOGOUT_URL = '/v2/api/poc-fc-api-particulier/logout';
+
+export default function PassSportNavigation({ showPocLogout = false }: Props) {
   const paths: string | null = usePathname();
 
   const isActive = (path: string) => {
@@ -60,6 +72,21 @@ export default function PassSportNavigation() {
           href: '/v2/accueil',
           'aria-label': `Retourner sur la page d'accueil du pass Sport`,
         }}
+        quickAccessItems={
+          showPocLogout
+            ? [
+                {
+                  iconId: 'fr-icon-logout-box-r-line',
+                  text: 'Se déconnecter',
+                  buttonProps: {
+                    onClick: () => {
+                      window.location.assign(POC_LOGOUT_URL);
+                    },
+                  },
+                },
+              ]
+            : []
+        }
         navigation={navigationItemStandard.map((item) => ({
           isActive: isActive(item.link),
           linkProps: {

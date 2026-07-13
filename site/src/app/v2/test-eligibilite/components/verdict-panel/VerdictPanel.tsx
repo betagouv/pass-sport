@@ -50,12 +50,13 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   }, [isSuccess, isEligible]);
 
   useEffect(() => {
-    const verdict = isSuccess
-      ? 'Success'
-      : isEligible
-        ? 'Eligible - no match'
-        : 'Not eligible';
-    push(['trackEvent', 'Eligibility Test', 'Verdict displayed', `${verdict} - ${allowance ?? 'unknown'}`]);
+    const verdict = isSuccess ? 'Success' : isEligible ? 'Eligible - no match' : 'Not eligible';
+    push([
+      'trackEvent',
+      'Eligibility Test',
+      'Verdict displayed',
+      `${verdict} - ${allowance ?? 'unknown'}`,
+    ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

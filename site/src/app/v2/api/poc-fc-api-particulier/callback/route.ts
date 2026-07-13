@@ -7,9 +7,6 @@ import {
   getFranceConnectConfig,
   verifyIdToken,
 } from '@/app/services/france-connect';
-import { callApiParticulierFranceConnect } from '@/app/services/api-particulier';
-import { AuditContext } from '@/app/services/audit';
-import { getClientIp } from '@/utils/client-ip';
 import {
   FC_ID_TOKEN_COOKIE,
   FC_NONCE_COOKIE,
@@ -49,7 +46,6 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const config = getFranceConnectConfig();
-
     const tokens = await exchangeCodeForTokens({
       config,
       code,
@@ -61,22 +57,10 @@ export async function GET(request: Request): Promise<Response> {
 
     const identity = await fetchUserInfo({ config, accessToken: tokens.accessToken });
 
-    const audit: AuditContext = {
-      requestId: crypto.randomUUID(),
-      franceConnected: true,
-      clientIp: getClientIp(request.headers),
-      userAgent: request.headers.get('user-agent'),
-    };
-
-    // Mode "FranceConnecté" (mode 2): the FC access token authenticates the API
-    // Particulier calls directly — no identity params sent. Must happen here, while
-    // the token is fresh. `identity` (pivot from /userinfo) is still kept in the
-    // result for the downstream LCA calls (fetchEligible / fetchCode).
-    // Mode 1 (static token + identity params) lives in the /identite route, for
-    // users who cannot use FranceConnect.
-    const apiParticulier = await callApiParticulierFranceConnect(tokens.accessToken, audit);
-
-    const result: PocResult = { identity, apiParticulier };
+    // Reversed flow: FranceConnect only authenticates the user here. API Particulier
+    // is NOT called yet — it runs later, once the user confirms the aides + commune
+    // form (see the /collect route). Store an identity-only session for now.
+    const result: PocResult = { identity };
 
     // Personal data goes to the Redis session store; the browser only receives
     // the random session id (httpOnly cookie).

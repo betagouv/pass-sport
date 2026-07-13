@@ -1,5 +1,6 @@
 import { FranceConnectIdentity } from '@/app/services/france-connect';
 import { ApiParticulierResults } from '@/app/services/api-particulier';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 export const FC_STATE_COOKIE = 'fc_poc_state';
 export const FC_NONCE_COOKIE = 'fc_poc_nonce';
@@ -9,9 +10,18 @@ export const FC_LOGOUT_STATE_COOKIE = 'fc_poc_logout_state';
 const CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/callback';
 const LOGOUT_CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/logout/callback';
 
+// Reversed flow: FranceConnect authenticates first, so the callback stores an
+// identity-only session. The aides + commune form comes next; confirming it calls
+// API Particulier and augments the session (apiParticulier / residenceInsee / aides).
 export interface PocResult {
   identity: FranceConnectIdentity;
-  apiParticulier: ApiParticulierResults;
+  // Set only once the post-login aides + commune form is confirmed.
+  apiParticulier?: ApiParticulierResults;
+  // Commune de résidence (INSEE) collected after login, used by the LCA search.
+  residenceInsee?: string;
+  // Aides bénéficiées selected in the post-login form; kept to preselect the no-FC
+  // AllowanceStep and to prefill the form on re-edit.
+  aides?: ALLOWANCE[];
 }
 
 const isProd = process.env.NODE_ENV === 'production';

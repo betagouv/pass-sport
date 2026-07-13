@@ -53,13 +53,6 @@ const getClient = (): Client => {
   return new Client({ token, ...getClientConfig() });
 };
 
-// Mode "FranceConnecté": the FC access token replaces the static API key
-// (Authorization: Bearer <fc_token>). API Particulier introspects it with
-// FranceConnect and resolves the user's pivot identity itself — no identity
-// params are sent.
-const getFranceConnectClient = (fcAccessToken: string): Client =>
-  new Client({ token: fcAccessToken, ...getClientConfig() });
-
 // FranceConnect "male"/"female" -> API Particulier "M"/"F".
 const mapGender = (gender?: string): string | undefined => {
   if (gender === 'male') return 'M';
@@ -185,48 +178,77 @@ const callResource = async ({
   }
 };
 
-// Mode "FranceConnecté" (mode 2): authenticates each call with the FranceConnect
-// access token obtained during the OIDC callback. Must be called while that token
-// is still valid — i.e. within the callback flow, before any long-lived processing.
-// The pivot identity fetched from /userinfo stays available for downstream LCA
-// calls (fetchEligible / fetchCode); it is simply not sent to API Particulier.
-export const callApiParticulierFranceConnect = async (
-  fcAccessToken: string,
-  audit: AuditContext,
-): Promise<ApiParticulierResults> => {
-  const client = getFranceConnectClient(fcAccessToken);
-  const redis = await getRedis();
+// Mode "identité pivot" (used by the FranceConnect journey): FranceConnect only
+// authenticates the user and yields the pivot identity (/userinfo); API Particulier
+// is then called with the static API key + that identity as query params. Avoids the
+// buggy FC-token modality. The pivot identity also stays available for downstream LCA
+// calls (fetchEligible / fetchCode).
+// The 4 API Particulier resources, keyed. Order here is the output order.
+type ResourceKey = 'qf' | 'aah' | 'aeeh' | 'crous';
+const RESOURCE_ORDER: ResourceKey[] = ['qf', 'aah', 'aeeh', 'crous'];
 
-  return Promise.all([
-    callResource({
-      redis,
-      audit,
-      resource: 'dss.quotient_familial_france_connect',
-      label: 'Quotient familial CAF/MSA',
-      call: () => client.dss.quotient_familial(),
-    }),
-    callResource({
-      redis,
-      audit,
-      resource: 'dss.allocation_adulte_handicape_france_connect',
-      label: 'Allocation adulte handicapé (AAH)',
-      call: () => client.dss.allocation_adulte_handicape(),
-    }),
-    callResource({
-      redis,
-      audit,
-      resource: 'dss.allocation_enfant_handicape_france_connect',
-      label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
-      call: () => client.dss.allocation_enfant_handicape(),
-    }),
-    callResource({
-      redis,
-      audit,
-      resource: 'cnous.etudiant_boursier_france_connect',
-      label: 'Statut étudiant boursier',
-      call: () => client.cnous.etudiant_boursier(),
-    }),
-  ]);
+// Which resources each harvested aide requires. quotient_familial is pulled for
+// ARS/AEEH (allocataire + enfants), never for AAH-only / CROUS-only.
+const ALLOWANCE_RESOURCES: Record<ALLOWANCE, ResourceKey[]> = {
+  [ALLOWANCE.AAH]: ['aah'],
+  [ALLOWANCE.AEEH]: ['qf', 'aeeh'],
+  [ALLOWANCE.ARS]: ['qf'],
+  [ALLOWANCE.CROUS]: ['crous'],
+  [ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX]: ['crous'],
+  [ALLOWANCE.NONE]: [],
+};
+
+export const callApiParticulierIdentite = async (
+  identity: FranceConnectIdentity,
+  audit: AuditContext,
+  allowances: ALLOWANCE[] = [],
+): Promise<ApiParticulierResults> => {
+  const client = getClient();
+  const redis = await getRedis();
+  const dssParams = toDssParams(identity);
+  const cnousParams = toCnousParams(identity);
+
+  // Restrain to the resources implied by the harvested aides. Empty selection
+  // (defensive — the gate blocks it) falls back to all resources.
+  const wanted = new Set<ResourceKey>(allowances.flatMap((a) => ALLOWANCE_RESOURCES[a] ?? []));
+  const keys = wanted.size ? RESOURCE_ORDER.filter((k) => wanted.has(k)) : RESOURCE_ORDER;
+
+  const resourceCalls: Record<ResourceKey, () => Promise<ApiParticulierResourceResult>> = {
+    qf: () =>
+      callResource({
+        redis,
+        audit,
+        resource: 'dss.quotient_familial_identite',
+        label: 'Quotient familial CAF/MSA',
+        call: () => client.dss.quotient_familial_identite(dssParams),
+      }),
+    aah: () =>
+      callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_adulte_handicape_identite',
+        label: 'Allocation adulte handicapé (AAH)',
+        call: () => client.dss.allocation_adulte_handicape_identite(dssParams),
+      }),
+    aeeh: () =>
+      callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_enfant_handicape_identite',
+        label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
+        call: () => client.dss.allocation_enfant_handicape_identite(dssParams),
+      }),
+    crous: () =>
+      callResource({
+        redis,
+        audit,
+        resource: 'cnous.etudiant_boursier_identite',
+        label: 'Statut étudiant boursier',
+        call: () => client.cnous.etudiant_boursier_identite(cnousParams),
+      }),
+  };
+
+  return Promise.all(keys.map((k) => resourceCalls[k]()));
 };
 
 // Allowances verifiable through a single API Particulier "identité" endpoint.
