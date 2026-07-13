@@ -1,7 +1,8 @@
 version: '3.8'
 services:
   check-nginx-conf:
-    image: nginx:stable
+    image: owasp/modsecurity-crs:4.25.1-nginx-lts
+    user: root
     ports:
       - "80:80"
     environment:
@@ -11,3 +12,4 @@ services:
     volumes:
       - ./test-erb-nginx-conf.sh:/data/test-erb-nginx-conf.sh
       - ./servers.conf.erb:/data/servers.conf.erb
+      - ./waf_rules.conf:/app/waf_rules.conf

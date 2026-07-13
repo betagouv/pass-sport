@@ -25,6 +25,13 @@ export PORT=${PORT:-80}
 erb $nginx_servers_erb > /etc/nginx/conf.d/$nginx_servers_conf
 
 echo "# test nginx $nginx_servers_conf syntax"
-nginx -t -c /etc/nginx/nginx.conf 2>&1 || exit $?
+cat > /tmp/nginx-test.conf << 'EOF'
+load_module modules/ngx_http_modsecurity_module.so;
+events {}
+http {
+    include /etc/nginx/conf.d/*.conf;
+}
+EOF
+nginx -t -c /tmp/nginx-test.conf 2>&1 || exit $?
 
 echo "Test OK"
