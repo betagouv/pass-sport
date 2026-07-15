@@ -43,7 +43,6 @@ const getClientConfig = () => {
     environment: (process.env.API_PARTICULIER_ENV === 'production' ? 'production' : 'staging') as
       | 'production'
       | 'staging',
-    // recipient is also mandatory on FranceConnect-mode calls.
     defaultParams: { recipient },
   };
 };
@@ -57,13 +56,6 @@ const getClient = (): Client => {
 
   return new Client({ token, ...getClientConfig() });
 };
-
-// Mode "jeton FranceConnect": the FC access token replaces the API key AND the
-// identity params — API Particulier introspects it against FranceConnect to get
-// the pivot identity itself. The token must carry the business scopes of each
-// called endpoint (see DEFAULT_SCOPES in france-connect.ts).
-const getFranceConnectClient = (fcAccessToken: string): Client =>
-  new Client({ token: fcAccessToken, ...getClientConfig() });
 
 // FranceConnect "male"/"female" -> API Particulier "M"/"F".
 const mapGender = (gender?: string): string | undefined => {
@@ -98,7 +90,6 @@ const toDssParams = (identity: FranceConnectIdentity) => ({
 // generic client.get(), which skips the SDK's snake_case -> camelCase param mapping,
 // hence the camelCase query params here (recipient comes from defaultParams).
 const ARS_IDENTITE_PATH = '/v3/dss/allocation_rentree_scolaire/identite';
-const ARS_FRANCE_CONNECT_PATH = '/v3/dss/allocation_rentree_scolaire/france_connect';
 
 const toArsIdentiteParams = (identity: FranceConnectIdentity) => {
   const { annee_date_naissance, mois_date_naissance, jour_date_naissance } = splitBirthdate(
@@ -327,8 +318,6 @@ const enfantToIdentity = (enfant: PersonneQuotientFamilial): FranceConnectIdenti
 
 // ARS/AEEH beneficiaries are children: once quotient_familial returned the family
 // composition, each child is checked against the ARS + AEEH "identité" endpoints.
-// Always the static API key (getClient), whatever mode fetched the QF — the
-// FranceConnect token carries the parent's identity, not the children's.
 const callApiParticulierChildrenIdentite = async (
   enfants: PersonneQuotientFamilial[],
   redis: RedisLike,
@@ -384,115 +373,6 @@ const withChildrenResults = async (
   }
 
   return [...results, ...(await callApiParticulierChildrenIdentite(enfants, redis, audit))];
-};
-
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Staging rejects concurrent calls sharing the same token + params with a 409
-// ("requête déjà en cours de traitement"). In FranceConnect-token mode every call
-// carries the same token and the same params (recipient only), so parallel calls
-// collide — hence sequential execution with a retry on 409.
-const MAX_409_RETRIES = 2;
-const RETRY_409_DELAY_MS = 1500;
-
-const callResourceSequential = async (
-  args: CallResourceArgs,
-): Promise<ApiParticulierResourceResult> => {
-  let result = await callResource(args);
-  for (let attempt = 0; result.httpStatus === 409 && attempt < MAX_409_RETRIES; attempt++) {
-    await sleep(RETRY_409_DELAY_MS);
-    result = await callResource(args);
-  }
-  return result;
-};
-
-// Paths hit by the SDK in FranceConnect-token mode (default versions), used only
-// to log the equivalent curl for debugging.
-const FC_RESOURCE_PATHS: Record<ResourceKey, string> = {
-  qf: '/v3/dss/quotient_familial/france_connect',
-  aah: '/v3/dss/allocation_adulte_handicape/france_connect',
-  aeeh: '/v3/dss/allocation_enfant_handicape/france_connect',
-  ars: ARS_FRANCE_CONNECT_PATH,
-  crous: '/v4/cnous/etudiant_boursier/france_connect',
-};
-
-const logFranceConnectCurl = (key: ResourceKey, fcAccessToken: string) => {
-  const { environment, defaultParams } = getClientConfig();
-  const baseUrl =
-    environment === 'production'
-      ? 'https://particulier.api.gouv.fr'
-      : 'https://staging.particulier.api.gouv.fr';
-  const url = `${baseUrl}${FC_RESOURCE_PATHS[key]}?recipient=${encodeURIComponent(defaultParams.recipient)}`;
-
-  console.log(
-    `[api-particulier][fc-token] curl -X GET '${url}' -H 'Authorization: Bearer ${fcAccessToken}' -H 'Accept: application/json'`,
-  );
-};
-
-// Mode "jeton FranceConnect" (test): same resources as callApiParticulierIdentite,
-// but through the /france_connect endpoints — no identity params, API Particulier
-// derives the identity from the token introspection.
-export const callApiParticulierFranceConnect = async (
-  fcAccessToken: string,
-  audit: AuditContext,
-  allowances: ALLOWANCE[] = [],
-): Promise<ApiParticulierResults> => {
-  const client = getFranceConnectClient(fcAccessToken);
-  const redis = await getRedis();
-
-  const wanted = new Set<ResourceKey>(allowances.flatMap((a) => ALLOWANCE_RESOURCES[a] ?? []));
-  const keys = wanted.size ? RESOURCE_ORDER.filter((k) => wanted.has(k)) : RESOURCE_ORDER;
-
-  const resourceCalls: Record<ResourceKey, () => Promise<ApiParticulierResourceResult>> = {
-    qf: () =>
-      callResourceSequential({
-        redis,
-        audit,
-        resource: 'dss.quotient_familial',
-        label: 'Quotient familial CAF/MSA',
-        call: () => client.dss.quotient_familial(),
-      }),
-    aah: () =>
-      callResourceSequential({
-        redis,
-        audit,
-        resource: 'dss.allocation_adulte_handicape',
-        label: 'Allocation adulte handicapé (AAH)',
-        call: () => client.dss.allocation_adulte_handicape(),
-      }),
-    aeeh: () =>
-      callResourceSequential({
-        redis,
-        audit,
-        resource: 'dss.allocation_enfant_handicape',
-        label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
-        call: () => client.dss.allocation_enfant_handicape(),
-      }),
-    ars: () =>
-      callResourceSequential({
-        redis,
-        audit,
-        resource: 'dss.allocation_rentree_scolaire',
-        label: 'Allocation de rentrée scolaire (ARS)',
-        call: () => client.get(ARS_FRANCE_CONNECT_PATH),
-      }),
-    crous: () =>
-      callResourceSequential({
-        redis,
-        audit,
-        resource: 'cnous.etudiant_boursier',
-        label: 'Statut étudiant boursier',
-        call: () => client.cnous.etudiant_boursier(),
-      }),
-  };
-
-  // Sequential on purpose — see callResourceSequential (409 on concurrent calls).
-  const results: ApiParticulierResults = [];
-  for (const k of keys) {
-    logFranceConnectCurl(k, fcAccessToken);
-    results.push(await resourceCalls[k]());
-  }
-  return withChildrenResults(results, allowances, redis, audit);
 };
 
 // Allowances verifiable through a single API Particulier "identité" endpoint.

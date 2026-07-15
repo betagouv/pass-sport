@@ -59,9 +59,9 @@ export async function GET(request: Request): Promise<Response> {
 
     // Reversed flow: FranceConnect only authenticates the user here. API Particulier
     // is NOT called yet — it runs later, once the user confirms the aides + commune
-    // form (see the /collect route). The FC access token is kept in the session so
-    // the collect step can call API Particulier in FranceConnect-token mode.
-    const result: PocResult = { identity, accessToken: tokens.accessToken };
+    // form (see the /collect route), in "identité pivot" mode using this identity.
+    // The FC access token is not kept: only the pivot identity is needed.
+    const result: PocResult = { identity };
 
     // Personal data goes to the Redis session store; the browser only receives
     // the random session id (httpOnly cookie).

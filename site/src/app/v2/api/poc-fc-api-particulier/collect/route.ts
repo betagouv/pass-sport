@@ -9,10 +9,7 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import z, { ZodError } from 'zod';
-import {
-  callApiParticulierFranceConnect,
-  callApiParticulierIdentite,
-} from '@/app/services/api-particulier';
+import { callApiParticulierIdentite } from '@/app/services/api-particulier';
 import { AuditContext } from '@/app/services/audit';
 import { getClientIp } from '@/utils/client-ip';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
@@ -40,13 +37,11 @@ export async function POST(request: Request): Promise<Response> {
       userAgent: request.headers.get('user-agent'),
     };
 
-    // Mode "jeton FranceConnect" (test): the FC access token stored at login replaces
-    // the static API key — API Particulier introspects it to derive the identity.
-    // Falls back to the "identité pivot" mode for sessions created before the token
-    // was stored. Restrained to the resources implied by the selected aides.
-    const apiParticulier = pocResult.accessToken
-      ? await callApiParticulierFranceConnect(pocResult.accessToken, audit, aides)
-      : await callApiParticulierIdentite(pocResult.identity, audit, aides);
+    // Mode "identité pivot": API Particulier is called with the static API key and
+    // the FranceConnect pivot identity as query params (the FC-token modality is
+    // buggy — see api-particulier.ts). Restrained to the resources implied by the
+    // selected aides.
+    const apiParticulier = await callApiParticulierIdentite(pocResult.identity, audit, aides);
 
     const updated = await updatePocSession({ apiParticulier, residenceInsee, aides });
     if (!updated) {
