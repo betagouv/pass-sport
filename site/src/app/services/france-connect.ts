@@ -39,7 +39,22 @@ export interface FranceConnectIdentity {
 }
 
 const DEFAULT_BASE_URL = 'https://fcp-low.sbx.dev-franceconnect.fr/api/v2';
-const DEFAULT_SCOPES = 'openid identite_pivot preferred_username email';
+// Besides the identity scopes, the FranceConnect-token mode of API Particulier
+// requires the token to carry the business scopes of each called endpoint
+// (apistration commons/data/authorizations.yml) — otherwise the API answers 401:
+// - quotient familial: cnaf_quotient_familial
+// - AAH: allocation_adulte_handicape
+// - AEEH: cnav_allocation_enfant_handicape
+// - ARS: cnav_allocation_rentree_scolaire
+// - étudiant boursier: cnous_*
+const DEFAULT_SCOPES = [
+  'openid identite_pivot preferred_username email',
+  'cnaf_quotient_familial',
+  'allocation_adulte_handicape',
+  'cnav_allocation_enfant_handicape',
+  'cnav_allocation_rentree_scolaire',
+  'cnous_statut_boursier cnous_echelon_bourse cnous_email cnous_periode_versement cnous_statut_bourse cnous_ville_etudes cnous_identite',
+].join(' ');
 
 export const getFranceConnectConfig = (): FranceConnectConfig => {
   const clientId = process.env.FRANCE_CONNECT_CLIENT_ID;

@@ -15,6 +15,10 @@ const LOGOUT_CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/logout/callback';
 // API Particulier and augments the session (apiParticulier / residenceInsee / aides).
 export interface PocResult {
   identity: FranceConnectIdentity;
+  // FranceConnect access token, kept (Redis only, short TTL) to call API Particulier
+  // in FranceConnect-token mode instead of the static API key. FC tokens are
+  // short-lived: the collect step must happen quickly after login.
+  accessToken?: string;
   // Set only once the post-login aides + commune form is confirmed.
   apiParticulier?: ApiParticulierResults;
   // Commune de résidence (INSEE) collected after login, used by the LCA search.

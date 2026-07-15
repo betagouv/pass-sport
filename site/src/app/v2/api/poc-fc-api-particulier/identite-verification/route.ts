@@ -6,8 +6,6 @@
 // is user-typed (not verified) — the audit rows carry franceConnected: false.
 //
 // Response (200): { eligible: boolean, verified: boolean }
-// - verified: false only for ARS, which API Particulier cannot verify — the
-//   verdict is then presumed on age alone (12-17 ans révolus).
 
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
@@ -23,6 +21,7 @@ import { getClientIp } from '@/utils/client-ip';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import {
   AllocationEnfantHandicapeData,
+  AllocationRentreeScolaireData,
   EtudiantBoursierData,
   StatutBeneficiaireData,
 } from 'types/ApiParticulier';
@@ -53,6 +52,12 @@ const isEligibleFor = (allowance: VerifiableAllowance, age: number, data: unknow
         age >= 6 &&
         age <= 19
       );
+    case ALLOWANCE.ARS:
+      return (
+        ['allocataire', 'ouvrant_droit'].includes((data as AllocationRentreeScolaireData).status) &&
+        age >= 12 &&
+        age <= 17
+      );
     case ALLOWANCE.CROUS:
       return ((data as EtudiantBoursierData).est_boursier && age < 28) === true;
   }
@@ -62,12 +67,6 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = schema.parse(await request.json());
     const age = ageAtReferenceDate(body.birthdate);
-
-    // ARS is not exposed by API Particulier: presume on age alone, flagged as
-    // unverified so the client can nuance the message.
-    if (body.allowance === ALLOWANCE.ARS) {
-      return NextResponse.json({ eligible: age >= 12 && age <= 17, verified: false });
-    }
 
     // Same shape as the FranceConnect pivot identity so the API Particulier
     // params mapping is shared. Only people born in France are supported (the

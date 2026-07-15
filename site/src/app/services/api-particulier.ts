@@ -5,8 +5,10 @@ import { acquireToken, RateLimitedError, RedisLike } from '@/app/services/rate-l
 import { AuditContext, writeAuditEvent } from '@/app/services/audit';
 import {
   QuotientFamilialData,
+  PersonneQuotientFamilial,
   StatutBeneficiaireData,
   AllocationEnfantHandicapeData,
+  AllocationRentreeScolaireData,
   EtudiantBoursierData,
 } from '@/types/ApiParticulier';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
@@ -15,6 +17,7 @@ type ApiParticulierData =
   | QuotientFamilialData
   | StatutBeneficiaireData
   | AllocationEnfantHandicapeData
+  | AllocationRentreeScolaireData
   | EtudiantBoursierData;
 
 export interface ApiParticulierResourceResult {
@@ -24,6 +27,8 @@ export interface ApiParticulierResourceResult {
   success: boolean;
   data: ApiParticulierData | null;
   error?: string;
+  // Set on per-child rows: index into QuotientFamilialData.enfants the row belongs to.
+  childIndex?: number;
 }
 
 export type ApiParticulierResults = ApiParticulierResourceResult[];
@@ -52,6 +57,13 @@ const getClient = (): Client => {
 
   return new Client({ token, ...getClientConfig() });
 };
+
+// Mode "jeton FranceConnect": the FC access token replaces the API key AND the
+// identity params — API Particulier introspects it against FranceConnect to get
+// the pivot identity itself. The token must carry the business scopes of each
+// called endpoint (see DEFAULT_SCOPES in france-connect.ts).
+const getFranceConnectClient = (fcAccessToken: string): Client =>
+  new Client({ token: fcAccessToken, ...getClientConfig() });
 
 // FranceConnect "male"/"female" -> API Particulier "M"/"F".
 const mapGender = (gender?: string): string | undefined => {
@@ -82,6 +94,28 @@ const toDssParams = (identity: FranceConnectIdentity) => ({
   code_cog_insee_pays_naissance: identity.birthcountry || undefined,
 });
 
+// ARS (allocation de rentrée scolaire) is not in the SDK yet — called through the
+// generic client.get(), which skips the SDK's snake_case -> camelCase param mapping,
+// hence the camelCase query params here (recipient comes from defaultParams).
+const ARS_IDENTITE_PATH = '/v3/dss/allocation_rentree_scolaire/identite';
+const ARS_FRANCE_CONNECT_PATH = '/v3/dss/allocation_rentree_scolaire/france_connect';
+
+const toArsIdentiteParams = (identity: FranceConnectIdentity) => {
+  const { annee_date_naissance, mois_date_naissance, jour_date_naissance } = splitBirthdate(
+    identity.birthdate,
+  );
+  return {
+    nomNaissance: identity.family_name,
+    prenoms: splitPrenoms(identity.given_name),
+    anneeDateNaissance: annee_date_naissance,
+    moisDateNaissance: mois_date_naissance,
+    jourDateNaissance: jour_date_naissance,
+    sexeEtatCivil: mapGender(identity.gender),
+    codeCogInseeCommuneNaissance: identity.birthplace || undefined,
+    codeCogInseePaysNaissance: identity.birthcountry || undefined,
+  };
+};
+
 // CNOUS "_identite" params (no pays code).
 const toCnousParams = (identity: FranceConnectIdentity) => ({
   nom_naissance: identity.family_name,
@@ -99,6 +133,7 @@ interface CallResourceArgs {
   audit: AuditContext;
   resource: string;
   label: string;
+  childIndex?: number;
   call: () => Promise<ApiResponse>;
 }
 
@@ -107,6 +142,7 @@ const callResource = async ({
   audit,
   resource,
   label,
+  childIndex,
   call,
 }: CallResourceArgs): Promise<ApiParticulierResourceResult> => {
   const start = Date.now();
@@ -128,6 +164,7 @@ const callResource = async ({
       httpStatus: response.httpStatus,
       success: response.success,
       data: response.data as ApiParticulierData,
+      childIndex,
     };
   } catch (e) {
     if (e instanceof RateLimitedError) {
@@ -146,6 +183,7 @@ const callResource = async ({
         success: false,
         data: null,
         error: 'Service momentanément saturé, veuillez réessayer.',
+        childIndex,
       };
     }
 
@@ -165,6 +203,7 @@ const callResource = async ({
         success: false,
         data: null,
         error: e.firstErrorDetail ?? e.firstErrorTitle ?? e.message,
+        childIndex,
       };
     }
     await writeAuditEvent(audit, {
@@ -184,15 +223,15 @@ const callResource = async ({
 // buggy FC-token modality. The pivot identity also stays available for downstream LCA
 // calls (fetchEligible / fetchCode).
 // The 4 API Particulier resources, keyed. Order here is the output order.
-type ResourceKey = 'qf' | 'aah' | 'aeeh' | 'crous';
-const RESOURCE_ORDER: ResourceKey[] = ['qf', 'aah', 'aeeh', 'crous'];
+type ResourceKey = 'qf' | 'aah' | 'aeeh' | 'ars' | 'crous';
+const RESOURCE_ORDER: ResourceKey[] = ['qf', 'aah', 'aeeh', 'ars', 'crous'];
 
 // Which resources each harvested aide requires. quotient_familial is pulled for
 // ARS/AEEH (allocataire + enfants), never for AAH-only / CROUS-only.
 const ALLOWANCE_RESOURCES: Record<ALLOWANCE, ResourceKey[]> = {
   [ALLOWANCE.AAH]: ['aah'],
   [ALLOWANCE.AEEH]: ['qf', 'aeeh'],
-  [ALLOWANCE.ARS]: ['qf'],
+  [ALLOWANCE.ARS]: ['qf', 'ars'],
   [ALLOWANCE.CROUS]: ['crous'],
   [ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX]: ['crous'],
   [ALLOWANCE.NONE]: [],
@@ -238,6 +277,14 @@ export const callApiParticulierIdentite = async (
         label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
         call: () => client.dss.allocation_enfant_handicape_identite(dssParams),
       }),
+    ars: () =>
+      callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_rentree_scolaire_identite',
+        label: 'Allocation de rentrée scolaire (ARS)',
+        call: () => client.get(ARS_IDENTITE_PATH, { params: toArsIdentiteParams(identity) }),
+      }),
     crous: () =>
       callResource({
         redis,
@@ -248,11 +295,208 @@ export const callApiParticulierIdentite = async (
       }),
   };
 
-  return Promise.all(keys.map((k) => resourceCalls[k]()));
+  const results = await Promise.all(keys.map((k) => resourceCalls[k]()));
+  return withChildrenResults(results, allowances, redis, audit);
+};
+
+// QF dates come back as "AAAA-MM-JJ" or "JJ/MM/AAAA" depending on the provider
+// (CAF/MSA) — normalize to ISO so splitBirthdate works (mirrors lca-bridge).
+const toIsoBirthdate = (date?: string): string | undefined => {
+  if (!date) return undefined;
+  const frMatch = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (frMatch) return `${frMatch[3]}-${frMatch[2]}-${frMatch[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
+  return undefined;
+};
+
+// Synthetic pivot identity for a QF child, so the identité param builders can be
+// reused. QF children carry no birth COG — the endpoints accept its absence.
+const enfantToIdentity = (enfant: PersonneQuotientFamilial): FranceConnectIdentity | null => {
+  const familyName = enfant.nom_naissance || enfant.nom_usage;
+  const birthdate = toIsoBirthdate(enfant.date_naissance);
+  if (!familyName || !enfant.prenoms || !birthdate) return null;
+
+  return {
+    sub: 'qf-enfant',
+    family_name: familyName,
+    given_name: enfant.prenoms,
+    gender: enfant.sexe === 'F' ? 'female' : enfant.sexe === 'M' ? 'male' : undefined,
+    birthdate,
+  };
+};
+
+// ARS/AEEH beneficiaries are children: once quotient_familial returned the family
+// composition, each child is checked against the ARS + AEEH "identité" endpoints.
+// Always the static API key (getClient), whatever mode fetched the QF — the
+// FranceConnect token carries the parent's identity, not the children's.
+const callApiParticulierChildrenIdentite = async (
+  enfants: PersonneQuotientFamilial[],
+  redis: RedisLike,
+  audit: AuditContext,
+): Promise<ApiParticulierResults> => {
+  const client = getClient();
+
+  const calls = enfants.flatMap((enfant, childIndex) => {
+    const identity = enfantToIdentity(enfant);
+    if (!identity) return [];
+
+    const prenom = (identity.given_name ?? '').trim().split(/\s+/)[0] ?? '';
+    return [
+      callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_rentree_scolaire_identite',
+        label: `Allocation de rentrée scolaire (ARS) — ${prenom}`,
+        childIndex,
+        call: () => client.get(ARS_IDENTITE_PATH, { params: toArsIdentiteParams(identity) }),
+      }),
+      callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_enfant_handicape_identite',
+        label: `Allocation d'éducation de l'enfant handicapé (AEEH) — ${prenom}`,
+        childIndex,
+        call: () => client.dss.allocation_enfant_handicape_identite(toDssParams(identity)),
+      }),
+    ];
+  });
+
+  return Promise.all(calls);
+};
+
+// Appends the per-child ARS/AEEH rows when the selection involves children.
+const withChildrenResults = async (
+  results: ApiParticulierResults,
+  allowances: ALLOWANCE[],
+  redis: RedisLike,
+  audit: AuditContext,
+): Promise<ApiParticulierResults> => {
+  if (!allowances.includes(ALLOWANCE.ARS) && !allowances.includes(ALLOWANCE.AEEH)) {
+    return results;
+  }
+
+  const qf = results.find(
+    (r) => r.resource.startsWith('dss.quotient_familial') && r.success && r.data !== null,
+  );
+  const enfants = (qf?.data as QuotientFamilialData | undefined)?.enfants ?? [];
+  if (!enfants.length) {
+    return results;
+  }
+
+  return [...results, ...(await callApiParticulierChildrenIdentite(enfants, redis, audit))];
+};
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Staging rejects concurrent calls sharing the same token + params with a 409
+// ("requête déjà en cours de traitement"). In FranceConnect-token mode every call
+// carries the same token and the same params (recipient only), so parallel calls
+// collide — hence sequential execution with a retry on 409.
+const MAX_409_RETRIES = 2;
+const RETRY_409_DELAY_MS = 1500;
+
+const callResourceSequential = async (
+  args: CallResourceArgs,
+): Promise<ApiParticulierResourceResult> => {
+  let result = await callResource(args);
+  for (let attempt = 0; result.httpStatus === 409 && attempt < MAX_409_RETRIES; attempt++) {
+    await sleep(RETRY_409_DELAY_MS);
+    result = await callResource(args);
+  }
+  return result;
+};
+
+// Paths hit by the SDK in FranceConnect-token mode (default versions), used only
+// to log the equivalent curl for debugging.
+const FC_RESOURCE_PATHS: Record<ResourceKey, string> = {
+  qf: '/v3/dss/quotient_familial/france_connect',
+  aah: '/v3/dss/allocation_adulte_handicape/france_connect',
+  aeeh: '/v3/dss/allocation_enfant_handicape/france_connect',
+  ars: ARS_FRANCE_CONNECT_PATH,
+  crous: '/v4/cnous/etudiant_boursier/france_connect',
+};
+
+const logFranceConnectCurl = (key: ResourceKey, fcAccessToken: string) => {
+  const { environment, defaultParams } = getClientConfig();
+  const baseUrl =
+    environment === 'production'
+      ? 'https://particulier.api.gouv.fr'
+      : 'https://staging.particulier.api.gouv.fr';
+  const url = `${baseUrl}${FC_RESOURCE_PATHS[key]}?recipient=${encodeURIComponent(defaultParams.recipient)}`;
+
+  console.log(
+    `[api-particulier][fc-token] curl -X GET '${url}' -H 'Authorization: Bearer ${fcAccessToken}' -H 'Accept: application/json'`,
+  );
+};
+
+// Mode "jeton FranceConnect" (test): same resources as callApiParticulierIdentite,
+// but through the /france_connect endpoints — no identity params, API Particulier
+// derives the identity from the token introspection.
+export const callApiParticulierFranceConnect = async (
+  fcAccessToken: string,
+  audit: AuditContext,
+  allowances: ALLOWANCE[] = [],
+): Promise<ApiParticulierResults> => {
+  const client = getFranceConnectClient(fcAccessToken);
+  const redis = await getRedis();
+
+  const wanted = new Set<ResourceKey>(allowances.flatMap((a) => ALLOWANCE_RESOURCES[a] ?? []));
+  const keys = wanted.size ? RESOURCE_ORDER.filter((k) => wanted.has(k)) : RESOURCE_ORDER;
+
+  const resourceCalls: Record<ResourceKey, () => Promise<ApiParticulierResourceResult>> = {
+    qf: () =>
+      callResourceSequential({
+        redis,
+        audit,
+        resource: 'dss.quotient_familial',
+        label: 'Quotient familial CAF/MSA',
+        call: () => client.dss.quotient_familial(),
+      }),
+    aah: () =>
+      callResourceSequential({
+        redis,
+        audit,
+        resource: 'dss.allocation_adulte_handicape',
+        label: 'Allocation adulte handicapé (AAH)',
+        call: () => client.dss.allocation_adulte_handicape(),
+      }),
+    aeeh: () =>
+      callResourceSequential({
+        redis,
+        audit,
+        resource: 'dss.allocation_enfant_handicape',
+        label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
+        call: () => client.dss.allocation_enfant_handicape(),
+      }),
+    ars: () =>
+      callResourceSequential({
+        redis,
+        audit,
+        resource: 'dss.allocation_rentree_scolaire',
+        label: 'Allocation de rentrée scolaire (ARS)',
+        call: () => client.get(ARS_FRANCE_CONNECT_PATH),
+      }),
+    crous: () =>
+      callResourceSequential({
+        redis,
+        audit,
+        resource: 'cnous.etudiant_boursier',
+        label: 'Statut étudiant boursier',
+        call: () => client.cnous.etudiant_boursier(),
+      }),
+  };
+
+  // Sequential on purpose — see callResourceSequential (409 on concurrent calls).
+  const results: ApiParticulierResults = [];
+  for (const k of keys) {
+    logFranceConnectCurl(k, fcAccessToken);
+    results.push(await resourceCalls[k]());
+  }
+  return withChildrenResults(results, allowances, redis, audit);
 };
 
 // Allowances verifiable through a single API Particulier "identité" endpoint.
-export type VerifiableAllowance = ALLOWANCE.AAH | ALLOWANCE.AEEH | ALLOWANCE.CROUS;
+export type VerifiableAllowance = ALLOWANCE.AAH | ALLOWANCE.AEEH | ALLOWANCE.ARS | ALLOWANCE.CROUS;
 
 // Mode "identité pivot" for ONE allowance: used by the no-FranceConnect journey
 // when the LCA search found nothing — verifies the typed identity against the
@@ -281,6 +525,14 @@ export const callApiParticulierAllowanceIdentite = async (
         resource: 'dss.allocation_enfant_handicape_identite',
         label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
         call: () => client.dss.allocation_enfant_handicape_identite(toDssParams(identity)),
+      });
+    case ALLOWANCE.ARS:
+      return callResource({
+        redis,
+        audit,
+        resource: 'dss.allocation_rentree_scolaire_identite',
+        label: 'Allocation de rentrée scolaire (ARS)',
+        call: () => client.get(ARS_IDENTITE_PATH, { params: toArsIdentiteParams(identity) }),
       });
     case ALLOWANCE.CROUS:
       return callResource({

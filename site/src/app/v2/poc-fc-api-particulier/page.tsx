@@ -84,7 +84,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
 
               <h2 className="fr-h4 fr-mt-3w">Réponses API Particulier</h2>
               {result.apiParticulier.map((res) => (
-                <section key={res.resource} className="fr-mb-3w">
+                <section key={`${res.resource}:${res.childIndex ?? 'self'}`} className="fr-mb-3w">
                   <h3 className="fr-h6">
                     {res.label} ({res.httpStatus ?? '—'})
                   </h3>

@@ -17,7 +17,7 @@ export interface ApiParticulierAdresse {
   pays?: string;
 }
 
-interface PersonneQuotientFamilial {
+export interface PersonneQuotientFamilial {
   nom_naissance?: string;
   nom_usage?: string;
   prenoms?: string;
@@ -69,6 +69,12 @@ export interface StatutBeneficiaireData {
 export interface AllocationEnfantHandicapeData {
   status: string;
   date_debut_droit?: string;
+}
+
+// dss.allocation_rentree_scolaire_* (ARS) — not yet in the SDK, called via client.get()
+export interface AllocationRentreeScolaireData {
+  status: 'allocataire' | 'ouvrant_droit' | 'non_beneficiaire';
+  date_debut_droit?: string | null;
 }
 
 // dss.complementaire_sante_solidaire_* (C2S)

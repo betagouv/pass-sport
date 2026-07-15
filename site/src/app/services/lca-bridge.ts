@@ -8,11 +8,13 @@
 //
 // Eligibility rules (ages computed at AGE_REFERENCE_DATE):
 // - ARS:   jeunes de 12 à 17 ans révolus bénéficiant de l'allocation de rentrée
-//          scolaire — children from the QF response. ARS itself is not exposed by
-//          API Particulier: children in the age range are flagged as potentially
-//          eligible.
-// - AEEH:  jeunes de 6 à 19 ans — children from the QF response, when the
-//          connected parent is AEEH "allocataire".
+//          scolaire — children from the QF response, checked against their own
+//          per-child ARS "identité" row (childIndex). Age-only fallback when the
+//          row is missing or errored (non-404).
+// - AEEH:  jeunes de 6 à 19 ans — children from the QF response, checked against
+//          their own per-child AEEH "identité" row (childIndex). Fallback to the
+//          connected parent's AEEH "allocataire" status when the row is missing
+//          or errored (non-404).
 // - AAH:   jeunes de 16 à 30 ans bénéficiant de l'AAH — the connected user
 //          themselves (est_beneficiaire from API Particulier).
 // - CROUS: étudiants boursiers de moins de 28 ans — the connected user themselves
@@ -38,6 +40,7 @@ import {
 } from '@/app/services/api-particulier';
 import {
   AllocationEnfantHandicapeData,
+  AllocationRentreeScolaireData,
   EtudiantBoursierData,
   QuotientFamilialData,
   StatutBeneficiaireData,
@@ -61,11 +64,39 @@ export interface BeneficiaryCandidate {
   eligibilities: ALLOWANCE[];
 }
 
+// Parent-level rows only: per-child rows share the resource prefix (e.g.
+// dss.allocation_enfant_handicape_identite) but carry a childIndex.
 const findResource = (
   results: ApiParticulierResults,
   resourcePrefix: string,
 ): ApiParticulierResourceResult | undefined =>
-  results.find((r) => r.resource.startsWith(resourcePrefix) && r.success && r.data !== null);
+  results.find(
+    (r) =>
+      r.resource.startsWith(resourcePrefix) &&
+      r.childIndex === undefined &&
+      r.success &&
+      r.data !== null,
+  );
+
+const findChildResource = (
+  results: ApiParticulierResults,
+  resource: string,
+  childIndex: number,
+): ApiParticulierResourceResult | undefined =>
+  results.find((r) => r.resource === resource && r.childIndex === childIndex);
+
+// Verdict from a per-child ARS/AEEH status row: true/false when the API answered
+// (allocataire / ouvrant_droit, or 404 = dossier inexistant), null when there is
+// no usable row (not called, rate-limited, provider error) — callers then fall
+// back to the pre-existing heuristics.
+const childStatusVerdict = (row: ApiParticulierResourceResult | undefined): boolean | null => {
+  if (!row) return null;
+  if (row.success && row.data) {
+    const { status } = row.data as AllocationRentreeScolaireData | AllocationEnfantHandicapeData;
+    return status === 'allocataire' || status === 'ouvrant_droit';
+  }
+  return row.httpStatus === 404 ? false : null;
+};
 
 export const getQuotientFamilial = (results: ApiParticulierResults): QuotientFamilialData | null =>
   (findResource(results, 'dss.quotient_familial')?.data as QuotientFamilialData) ?? null;
@@ -134,10 +165,12 @@ export const listBeneficiaryCandidates = (
     });
   }
 
-  // QF children: ARS (12-17 ans révolus) and AEEH (6-19 ans, parent allocataire).
+  // QF children: ARS (12-17 ans révolus) and AEEH (6-19 ans), checked against
+  // their own per-child "identité" rows (matched by childIndex).
   const parentIsAeehAllocataire = getAeeh(apiParticulier)?.status === 'allocataire';
 
-  for (const enfant of getQuotientFamilial(apiParticulier)?.enfants ?? []) {
+  const enfants = getQuotientFamilial(apiParticulier)?.enfants ?? [];
+  for (const [childIndex, enfant] of enfants.entries()) {
     const lastname = enfant.nom_usage || enfant.nom_naissance;
     const firstname = firstToken(enfant.prenoms);
     const birthdate = toIsoDate(enfant.date_naissance);
@@ -147,12 +180,20 @@ export const listBeneficiaryCandidates = (
     const age = ageAtReferenceDate(birthdate);
     const eligibilities: ALLOWANCE[] = [];
 
-    // ARS is not verifiable through API Particulier; flagged on age alone.
-    if (age >= 12 && age <= 17) {
+    const arsVerdict = childStatusVerdict(
+      findChildResource(apiParticulier, 'dss.allocation_rentree_scolaire_identite', childIndex),
+    );
+    const aeehVerdict = childStatusVerdict(
+      findChildResource(apiParticulier, 'dss.allocation_enfant_handicape_identite', childIndex),
+    );
+
+    // No usable ARS row (missing / provider error): age-only fallback.
+    if (age >= 12 && age <= 17 && arsVerdict !== false) {
       eligibilities.push(ALLOWANCE.ARS);
     }
 
-    if (parentIsAeehAllocataire && age >= 6 && age <= 19) {
+    // No usable AEEH row: fallback to the parent's AEEH status.
+    if ((aeehVerdict ?? parentIsAeehAllocataire) && age >= 6 && age <= 19) {
       eligibilities.push(ALLOWANCE.AEEH);
     }
 

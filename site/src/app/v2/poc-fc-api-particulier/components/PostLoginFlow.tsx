@@ -56,8 +56,7 @@ export default function PostLoginFlow({ collected, candidates, residenceInsee, a
         Re-saisir les aides / la commune
       </Button>
 
-      <h2 className="fr-h4 fr-mt-3w">Éligibilité pass Sport (LCA)</h2>
-      <EligibilitySection candidates={candidates} residenceInsee={residenceInsee} />
+      <EligibilitySection candidates={candidates} />
 
       <NoFranceConnectSection preselectedAllowances={aides} />
     </div>
