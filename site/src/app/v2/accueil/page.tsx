@@ -1,14 +1,13 @@
-import styles from './styles.module.scss';
+import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import leftLines from '@/images/homepage/left-lines.svg';
+import lucie from '@/images/homepage/lucie.jpg';
+import rightLines from '@/images/homepage/right-lines.svg';
+import passSportLogoWhite from '@/images/pass-sport-logo-white.svg';
 import cn from 'classnames';
 import { Metadata } from 'next';
-import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Image from 'next/image';
-import passSportLogoWhite from '@/images/pass-sport-logo-white.svg';
-import leftLines from '@/images/homepage/left-lines.svg';
-import rightLines from '@/images/homepage/right-lines.svg';
-import lucie from '@/images/homepage/lucie.jpg';
 import Link from 'next/link';
-import Video from '@/app/v2/accueil/components/video/Video';
+import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',

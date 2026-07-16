@@ -87,10 +87,7 @@ export default function PassSportNavigation() {
       )}
 
       {displayOfficialClosingBanner() && (
-        <Notice
-          severity="info"
-          title="Le pass Sport est reconduit pour la saison 2026-2027. Les conditions d'éligibilité seront prochainement publiées."
-        />
+        <Notice severity="info" title="Le pass Sport est reconduit pour la saison 2026-2027." />
       )}
     </div>
   );
