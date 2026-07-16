@@ -1,3 +1,3 @@
 web: next start -H 0.0.0.0 -p $PORT
 
-app-next: next start -H $SCALINGO_CONTAINER_PRIVATE_IP -p 10000
+app: next start -H $SCALINGO_CONTAINER_PRIVATE_IP -p 10000
