@@ -30,7 +30,7 @@ export default function Page() {
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport permet de bénéficier d'une réduction immédiate de 70€ lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."
+            description="Le pass Sport permet de bénéficier d'une réduction immédiate lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."
             variant="yellow"
             fullWidth
             points={[
@@ -68,7 +68,7 @@ export default function Page() {
             knowMore={{
               title: 'A savoir',
               description:
-                'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 70€. Nous vous remercions pour votre mobilisation.',
+                'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution. Nous vous remercions pour votre mobilisation.',
             }}
           />
         </section>
@@ -188,7 +188,7 @@ export default function Page() {
           <ol className="fr-ml-2w" start={1}>
             <li>Le bénéficiaire vous présente son code alphanumérique (25-XXXX-XXXX).</li>
             <li>
-              Votre structure accorde une réduction immédiate de 70€ sur l&apos;inscription du
+              Votre structure accorde une réduction immédiate sur l&apos;inscription du
               bénéficiaire.
             </li>
             <li>
