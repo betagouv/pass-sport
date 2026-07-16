@@ -87,7 +87,10 @@ export default function PassSportNavigation() {
       )}
 
       {displayOfficialClosingBanner() && (
-        <Notice severity="info" title="La campagne pass Sport 2025 est terminée." />
+        <Notice
+          severity="info"
+          title="Le pass Sport est reconduit pour la saison 2026-2027. Les conditions d'éligibilité seront prochainement publiées."
+        />
       )}
     </div>
   );

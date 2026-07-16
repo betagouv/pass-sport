@@ -28,7 +28,7 @@ export default async function Accueil() {
               <section className={styles['top-section__content-title']}>
                 <Image src={passSportLogoWhite} alt="" />
                 <h1 className="fr-text--heavy">
-                  70 € de réduction immédiate
+                  Une réduction immédiate
                   <span className="display--block">sur l&apos;inscription sportive</span>
                 </h1>
               </section>
@@ -40,10 +40,9 @@ export default async function Accueil() {
           <div className={styles['benef-faq']}>
             <h2 className="fr-mb-5w fr-h1">Qu&apos;est-ce que le pass Sport ?</h2>
             <p className="fr-mb-2w">
-              Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou
-              partie des frais d&apos;inscription dans un club, association sportive ou salle de
-              sport partenaire. Il prend la forme d&apos;une réduction immédiate lors de
-              l&apos;inscription.
+              Le pass Sport est une aide financière destinée à couvrir tout ou partie des 
+              frais d&apos;inscription dans un club, une association sportive ou une salle de sport partenaire. 
+              Elle prend la forme d'une réduction immédiate lors de l&apos;inscription.
             </p>
 
             <p>
@@ -53,11 +52,6 @@ export default async function Accueil() {
               activité physique encadrée, au sein d’un environnement structurant, éducatif et
               sécurisé.
             </p>
-
-            <section className="fr-my-4w">
-              <h3>Vidéo de présentation du pass Sport</h3>
-              <Video videoFullUrl="https://vimeo.com/1113160982?share=copy#t=0" />
-            </section>
 
             <h2 className="fr-my-5w fr-h1">Une question ?</h2>
             <p className="fr-mb-2w">
