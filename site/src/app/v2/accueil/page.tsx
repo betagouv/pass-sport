@@ -40,9 +40,10 @@ export default async function Accueil() {
           <div className={styles['benef-faq']}>
             <h2 className="fr-mb-5w fr-h1">Qu&apos;est-ce que le pass Sport ?</h2>
             <p className="fr-mb-2w">
-              Le pass Sport est une aide financière destinée à couvrir tout ou partie des 
-              frais d&apos;inscription dans un club, une association sportive ou une salle de sport partenaire. 
-              Elle prend la forme d'une réduction immédiate lors de l&apos;inscription.
+              Le pass Sport est une aide financière destinée à couvrir tout ou partie des frais
+              d&apos;inscription dans un club, une association sportive ou une salle de sport
+              partenaire. Elle prend la forme d&apos;une réduction immédiate lors de
+              l&apos;inscription.
             </p>
 
             <p>
