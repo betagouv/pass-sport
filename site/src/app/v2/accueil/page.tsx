@@ -1,14 +1,13 @@
-import styles from './styles.module.scss';
+import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import leftLines from '@/images/homepage/left-lines.svg';
+import lucie from '@/images/homepage/lucie.jpg';
+import rightLines from '@/images/homepage/right-lines.svg';
+import passSportLogoWhite from '@/images/pass-sport-logo-white.svg';
 import cn from 'classnames';
 import { Metadata } from 'next';
-import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Image from 'next/image';
-import passSportLogoWhite from '@/images/pass-sport-logo-white.svg';
-import leftLines from '@/images/homepage/left-lines.svg';
-import rightLines from '@/images/homepage/right-lines.svg';
-import lucie from '@/images/homepage/lucie.jpg';
 import Link from 'next/link';
-import Video from '@/app/v2/accueil/components/video/Video';
+import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -28,7 +27,7 @@ export default async function Accueil() {
               <section className={styles['top-section__content-title']}>
                 <Image src={passSportLogoWhite} alt="" />
                 <h1 className="fr-text--heavy">
-                  70 € de réduction immédiate
+                  Une réduction immédiate
                   <span className="display--block">sur l&apos;inscription sportive</span>
                 </h1>
               </section>
@@ -40,9 +39,9 @@ export default async function Accueil() {
           <div className={styles['benef-faq']}>
             <h2 className="fr-mb-5w fr-h1">Qu&apos;est-ce que le pass Sport ?</h2>
             <p className="fr-mb-2w">
-              Le pass Sport est une aide financière de 70 € par jeune éligible pour couvrir tout ou
-              partie des frais d&apos;inscription dans un club, association sportive ou salle de
-              sport partenaire. Il prend la forme d&apos;une réduction immédiate lors de
+              Le pass Sport est une aide financière destinée à couvrir tout ou partie des frais
+              d&apos;inscription dans un club, une association sportive ou une salle de sport
+              partenaire. Elle prend la forme d&apos;une réduction immédiate lors de
               l&apos;inscription.
             </p>
 
@@ -53,11 +52,6 @@ export default async function Accueil() {
               activité physique encadrée, au sein d’un environnement structurant, éducatif et
               sécurisé.
             </p>
-
-            <section className="fr-my-4w">
-              <h3>Vidéo de présentation du pass Sport</h3>
-              <Video videoFullUrl="https://vimeo.com/1113160982?share=copy#t=0" />
-            </section>
 
             <h2 className="fr-my-5w fr-h1">Une question ?</h2>
             <p className="fr-mb-2w">
