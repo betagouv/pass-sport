@@ -5,7 +5,6 @@ import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
 import PostLoginFlow from './components/PostLoginFlow';
 import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
-import { listBeneficiaryCandidates, stripReasonsUnlessLocal } from '@/app/services/lca-bridge';
 import { IS_LOCAL_ENV } from '@/app/constants/env';
 import styles from './styles.module.scss';
 
@@ -104,15 +103,6 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
 
           <PostLoginFlow
             collected={Boolean(result.apiParticulier)}
-            candidates={
-              result.apiParticulier
-                ? // Props of a client component end up serialized in the page payload:
-                  // the debug reasons are stripped outside local.
-                  stripReasonsUnlessLocal(
-                    listBeneficiaryCandidates(result.identity, result.apiParticulier),
-                  )
-                : []
-            }
             residenceInsee={result.residenceInsee ?? ''}
             aides={result.aides ?? []}
           />

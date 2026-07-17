@@ -1,90 +1,129 @@
 'use client';
 
-// POC step 3: summary of the API Particulier per-child checks — shows which
-// children are eligible to the pass Sport. The LCA search/confirm UI (beneficiary
-// picker + code retrieval) has been removed from this flow.
+// POC step 3: per-beneficiary outcome of the automatic LCA processing. Code
+// delivered → success alert with the code; otherwise the API Particulier
+// fallback verdict decides between "eligible, contact us" and "not eligible".
+// The search/confirm mechanics are never surfaced to the user.
 
-import { BeneficiaryCandidate } from '@/app/services/lca-bridge';
+import Link from 'next/link';
 import { IS_LOCAL_ENV } from '@/app/constants/env';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import {
+  BatchEligibilityResponse,
+  BeneficiaryResult,
+} from '@/app/v2/api/poc-fc-api-particulier/eligibility/types';
 
-interface Props {
-  candidates: BeneficiaryCandidate[];
+const ALLOWANCE_LABELS: Partial<Record<ALLOWANCE, string>> = {
+  [ALLOWANCE.AAH]: 'AAH',
+  [ALLOWANCE.AEEH]: 'AEEH',
+  [ALLOWANCE.ARS]: 'ARS',
+  [ALLOWANCE.CROUS]: 'bourse CROUS',
+};
+
+const eligibilityLabel = (eligibilities: ALLOWANCE[]): string =>
+  eligibilities.map((allowance) => ALLOWANCE_LABELS[allowance] ?? allowance).join(', ');
+
+function ContactLink() {
+  return (
+    <Link className="fr-btn fr-btn--secondary fr-btn--sm fr-mt-1w" href="/v2/une-question">
+      Nous contacter
+    </Link>
+  );
 }
 
-export default function EligibilitySection({ candidates }: Props) {
-  if (candidates.length === 0) {
+// Debug aid: the API Particulier justification. Local environment only.
+function Reasons({ reasons }: { reasons: string[] }) {
+  if (!IS_LOCAL_ENV || reasons.length === 0) return null;
+  return (
+    <ul className="fr-text--xs fr-mb-0">
+      {reasons.map((reason) => (
+        <li key={reason}>{reason}</li>
+      ))}
+    </ul>
+  );
+}
+
+function ResultAlert({ result }: { result: BeneficiaryResult }) {
+  const { candidate, status, confirm, apiParticulierEligible } = result;
+  const name = `${candidate.firstname} ${candidate.lastname}`;
+
+  if (status === 'confirmed') {
     return (
-      <div className="fr-alert fr-alert--warning fr-alert--sm">
+      <div className="fr-alert fr-alert--success fr-alert--sm fr-mb-2w">
         <p>
-          Nous n’avons pas pu récupérer vos informations. Réessayez plus tard ou contactez-nous.
+          <strong>{name}</strong> : code pass Sport obtenu — <strong>{confirm?.[0]?.id_psp}</strong>
         </p>
+        <Reasons reasons={candidate.reasons} />
       </div>
     );
   }
 
-  // Connected user flagged eligible through the CNOUS check (boursier CROUS).
-  const selfCrous = candidates.find(
-    (candidate) => candidate.source === 'self' && candidate.eligibilities.includes(ALLOWANCE.CROUS),
-  );
+  if (status === 'error') {
+    return (
+      <div className="fr-alert fr-alert--warning fr-alert--sm fr-mb-2w">
+        <p>
+          <strong>{name}</strong> : la vérification n’a pas abouti. Réessayez plus tard.
+        </p>
+        {apiParticulierEligible && (
+          <>
+            <p>
+              D’après vos données ({eligibilityLabel(candidate.eligibilities)}), cette personne
+              semble éligible : contactez-nous si le problème persiste.
+            </p>
+            <ContactLink />
+          </>
+        )}
+        <Reasons reasons={candidate.reasons} />
+      </div>
+    );
+  }
 
-  // Children flagged eligible by the API Particulier per-child checks (ARS/AEEH).
-  const eligibleChildren = candidates.filter(
-    (candidate) => candidate.source === 'enfant' && candidate.eligibilities.length > 0,
-  );
+  // not_found
+  if (apiParticulierEligible) {
+    return (
+      <div className="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
+        <p>
+          <strong>{name}</strong> : éligible d’après vos données (
+          {eligibilityLabel(candidate.eligibilities)}), mais nous n’avons pas pu délivrer le code
+          automatiquement.
+        </p>
+        <ContactLink />
+        <Reasons reasons={candidate.reasons} />
+      </div>
+    );
+  }
 
-  if (!selfCrous && eligibleChildren.length === 0) {
-    return null;
+  return (
+    <div className="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
+      <p>
+        <strong>{name}</strong> : non éligible d’après les données récupérées.
+      </p>
+      <Reasons reasons={candidate.reasons} />
+    </div>
+  );
+}
+
+interface Props {
+  batch: BatchEligibilityResponse;
+}
+
+export default function EligibilitySection({ batch }: Props) {
+  if (batch.results.length === 0) {
+    return (
+      <div className="fr-alert fr-alert--warning fr-alert--sm fr-mb-2w">
+        <p>Aucun bénéficiaire éligible n’a été identifié d’après les données récupérées.</p>
+      </div>
+    );
   }
 
   return (
     <>
-      {selfCrous && (
-        <div className="fr-alert fr-alert--success fr-alert--sm fr-mb-2w">
-          <p>
-            Vous êtes éligible au pass Sport :{' '}
-            <strong>
-              {selfCrous.firstname} {selfCrous.lastname}
-            </strong>{' '}
-            (boursier CROUS)
-          </p>
-          {/* Debug aid: the API Particulier justification. Local environment only. */}
-          {IS_LOCAL_ENV && selfCrous.reasons.length > 0 && (
-            <ul className="fr-text--xs fr-mb-0">
-              {selfCrous.reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      {eligibleChildren.length > 0 && (
-        <div className="fr-alert fr-alert--success fr-alert--sm fr-mb-2w">
-          <p>
-            {eligibleChildren.length > 1
-              ? 'Enfants éligibles au pass Sport : '
-              : 'Enfant éligible au pass Sport : '}
-            <strong>
-              {eligibleChildren
-                .map((candidate) => `${candidate.firstname} ${candidate.lastname}`)
-                .join(', ')}
-            </strong>
-          </p>
-          {/* Debug aid: the API Particulier justification behind each eligibility.
-              Local environment only. */}
-          {IS_LOCAL_ENV && (
-            <ul className="fr-text--xs fr-mb-0">
-              {eligibleChildren.flatMap((candidate) =>
-                candidate.reasons.map((reason) => (
-                  <li key={`${candidate.firstname}-${candidate.lastname}-${reason}`}>
-                    {candidate.firstname} — {reason}
-                  </li>
-                )),
-              )}
-            </ul>
-          )}
-        </div>
-      )}
+      {batch.results.map((result) => (
+        <ResultAlert
+          key={`${result.candidate.firstname}-${result.candidate.lastname}-${result.candidate.birthdate}`}
+          result={result}
+        />
+      ))}
     </>
   );
 }

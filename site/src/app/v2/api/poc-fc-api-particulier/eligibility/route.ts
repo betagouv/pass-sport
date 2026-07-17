@@ -1,44 +1,43 @@
-// POC step 2: uses the FranceConnect identity + API Particulier results stored in
-// the result cookie to drive the LCA calls (fetchEligible, then fetchCode).
+// POC step 2: batch LCA processing, driven entirely by the session (FranceConnect
+// identity + API Particulier results + residence INSEE stored at /collect).
 //
-// POST body: { candidateIndex: number, residenceInsee: string, searchItemId?: number }
-// - candidateIndex selects the beneficiary among the candidates rebuilt
-//   server-side from the session (QF children for ARS/AEEH, connected user for
-//   AAH/CROUS).
-// - residenceInsee is the INSEE code of the commune de résidence, picked by the
-//   user (a postal code maps to several communes, so it cannot be derived from
-//   the QF address).
-// - searchItemId (optional) confirms a specific LCA search result. When omitted
-//   and the search returns exactly one match, it is confirmed automatically.
+// Bodyless POST. In one call, every beneficiary is searched then auto-confirmed
+// against LCA (first result): the connected user when eligible to AAH/CROUS, and
+// every child from the quotient familial. The user never sees the search/confirm
+// mechanics — the client only receives per-beneficiary outcomes.
 //
-// When the LCA search finds nothing, the response carries eligibilitySummary —
-// the API Particulier eligibility assessment for every gathered person — so the
-// client can show who is eligible and link to the contact form.
+// When LCA yields no code for a beneficiary, apiParticulierEligible carries the
+// API Particulier fallback verdict (AAH/CROUS/ARS/AEEH rules) so the client can
+// point eligible people to the contact form.
+//
+// The LCA API is temporarily unavailable: calls go through lca-client, which
+// mocks the responses unless LCA_API_ENABLED === 'true'.
 
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import z, { ZodError } from 'zod';
-import { fetchCode, fetchEligible } from '@/app/services/eligibility-test';
 import {
+  confirmBeneficiary,
+  searchBeneficiary,
+} from '@/app/v2/api/poc-fc-api-particulier/lca-client';
+import {
+  BeneficiaryCandidate,
   buildConfirmPayload,
   buildSearchPayload,
   listBeneficiaryCandidates,
   stripReasonsUnlessLocal,
 } from '@/app/services/lca-bridge';
 import { deletePocResult, loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
-import { SearchResponseBodyItem } from 'types/EligibilityTest';
+import { FranceConnectIdentity } from '@/app/services/france-connect';
+import { ApiParticulierResults } from '@/app/services/api-particulier';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { BatchEligibilityResponse, BeneficiaryResult } from './types';
 
 // Same default as the manual eligibility-test routes (CROUS students often have
 // no address on file).
 const DEFAULT_INSEE_CODE = '75113';
 
-// The matricule is kept server-side for the confirm call but must never reach
-// the browser.
-const sanitizeSearch = (items: SearchResponseBodyItem[]) =>
-  items.map(({ matricule: _matricule, ...remaining }) => remaining);
-
 // Unlike the manual flow (where the user typed their matricule themselves), here
-// the matricule comes from LCA: strip it from the confirm response too.
+// the matricule comes from LCA: strip it from the confirm response.
 const sanitizeConfirm = <T extends { allocataire?: { matricule?: string } }>(items: T[]): T[] =>
   items.map((item) =>
     item.allocataire
@@ -46,14 +45,63 @@ const sanitizeConfirm = <T extends { allocataire?: { matricule?: string } }>(ite
       : item,
   );
 
-const schema = z.object({
-  candidateIndex: z.number().int().min(0),
-  // INSEE commune code: 5 chars, digits except Corsica (2A/2B).
-  residenceInsee: z.string().regex(/^\d[\dAB]\d{3}$/),
-  searchItemId: z.number().int().optional(),
-});
+const processCandidate = async (
+  candidate: BeneficiaryCandidate,
+  identity: FranceConnectIdentity,
+  apiParticulier: ApiParticulierResults,
+  residenceInsee: string,
+): Promise<BeneficiaryResult> => {
+  // No code from LCA: fall back to the API Particulier eligibility verdict.
+  const fallback = (status: 'not_found' | 'error'): BeneficiaryResult => ({
+    candidate,
+    status,
+    apiParticulierEligible: candidate.eligibilities.length > 0,
+  });
 
-export async function POST(request: Request): Promise<Response> {
+  try {
+    const payload = buildSearchPayload(candidate, residenceInsee);
+    let search = await searchBeneficiary(payload);
+
+    // CROUS students often have no address on file: retry with the default INSEE
+    // code, mirroring the manual eligibility-test flow.
+    if (!('message' in search) && search.length === 0 && payload.isFromCrous) {
+      search = await searchBeneficiary({ ...payload, recipientResidencePlace: DEFAULT_INSEE_CODE });
+    }
+
+    if ('message' in search) {
+      return fallback('error');
+    }
+
+    if (search.length === 0) {
+      return fallback('not_found');
+    }
+
+    // Always confirm the first result: the search payload already carries the
+    // full FranceConnect-verified identity (name, birthdate, commune), so extra
+    // matches are duplicate records for the same person, not other people.
+    const confirm = await confirmBeneficiary(
+      buildConfirmPayload(search[0], identity, apiParticulier),
+      search[0],
+    );
+
+    if (!Array.isArray(confirm) || confirm.length === 0) {
+      // A search match that cannot be confirmed is anomalous.
+      return fallback('error');
+    }
+
+    return { candidate, status: 'confirmed', confirm: sanitizeConfirm(confirm) };
+  } catch (e) {
+    Sentry.withScope((scope) => {
+      scope.setLevel('warning');
+      scope.captureMessage('FranceConnect POC: LCA processing failed for a beneficiary');
+      scope.captureException(e);
+    });
+    // One failing beneficiary must not abort the rest of the batch.
+    return fallback('error');
+  }
+};
+
+export async function POST(): Promise<Response> {
   try {
     const pocResult = await loadPocResult();
     // apiParticulier is set only once the aides + commune form is confirmed (the
@@ -62,82 +110,40 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: 'Session expirée.' }, { status: 401 });
     }
 
-    const { identity, apiParticulier } = pocResult;
-    const { candidateIndex, residenceInsee, searchItemId } = schema.parse(await request.json());
+    const { identity, apiParticulier, residenceInsee } = pocResult;
+    if (!residenceInsee) {
+      return NextResponse.json({ error: 'Commune de résidence manquante.' }, { status: 409 });
+    }
 
     // Every JSON response below embeds candidate data: the debug reasons are
     // stripped outside local before anything reaches the client.
     const candidates = stripReasonsUnlessLocal(listBeneficiaryCandidates(identity, apiParticulier));
-    const candidate = candidates[candidateIndex];
-    if (!candidate) {
-      return NextResponse.json({ error: 'Bénéficiaire inconnu.' }, { status: 400 });
+
+    // Every QF child goes through LCA; the connected user only when the API
+    // Particulier data flags them AAH or CROUS.
+    const toProcess = candidates.filter(
+      (candidate) =>
+        candidate.source === 'enfant' ||
+        candidate.eligibilities.includes(ALLOWANCE.AAH) ||
+        candidate.eligibilities.includes(ALLOWANCE.CROUS),
+    );
+
+    const results: BeneficiaryResult[] = [];
+    for (const candidate of toProcess) {
+      // Sequential on purpose: no parallel load on the LCA API.
+      results.push(await processCandidate(candidate, identity, apiParticulier, residenceInsee));
     }
 
-    // keepMatricule: the matricule from the LCA search stays server-side and is
-    // forwarded to the confirm call; it is stripped from every JSON response.
-    const payload = buildSearchPayload(candidate, residenceInsee);
-    let result = await fetchEligible(payload, { keepMatricule: true });
-
-    // CROUS students often have no address on file: retry with the default INSEE
-    // code, mirroring the manual eligibility-test flow.
-    if (!('message' in result) && result.length === 0 && payload.isFromCrous) {
-      result = await fetchEligible(
-        { ...payload, recipientResidencePlace: DEFAULT_INSEE_CODE },
-        { keepMatricule: true },
-      );
-    }
-
-    if ('message' in result) {
-      return NextResponse.json({ candidate, error: result.message }, { status: 502 });
-    }
-
-    const search = result as SearchResponseBodyItem[];
-
-    if (search.length === 0) {
-      // No LCA match: fall back to the API Particulier eligibility rules and
-      // return the summary of who is eligible (the client shows it with a link
-      // to the contact form).
-      return NextResponse.json({ candidate, search: [], eligibilitySummary: candidates });
-    }
-
-    // Confirm: explicit searchItemId, or automatic when the match is unambiguous.
-    const itemToConfirm =
-      searchItemId !== undefined
-        ? search.find((item) => item.id === searchItemId)
-        : search.length === 1
-          ? search[0]
-          : undefined;
-
-    if (searchItemId !== undefined && !itemToConfirm) {
-      return NextResponse.json(
-        { candidate, search: sanitizeSearch(search), error: 'Résultat de recherche inconnu.' },
-        { status: 400 },
-      );
-    }
-
-    if (!itemToConfirm) {
-      // Several matches: let the client pick one and call back with searchItemId.
-      return NextResponse.json({ candidate, search: sanitizeSearch(search) });
-    }
-
-    const confirm = await fetchCode(buildConfirmPayload(itemToConfirm, identity, apiParticulier));
-
-    // Code delivered: destroy the session immediately — the personal data has
-    // served its purpose, no reason to keep it until the TTL.
-    if (Array.isArray(confirm) && confirm.length > 0) {
+    // Codes delivered for everyone: destroy the session immediately — the
+    // personal data has served its purpose. On partial failure the session is
+    // kept (bounded by its TTL) so the user can retry or re-edit.
+    if (results.length > 0 && results.every((result) => result.status === 'confirmed')) {
       await deletePocResult();
     }
 
-    return NextResponse.json({
-      candidate,
-      search: sanitizeSearch(search),
-      confirm: Array.isArray(confirm) ? sanitizeConfirm(confirm) : confirm,
-    });
+    const response: BatchEligibilityResponse = { results, eligibilitySummary: candidates };
+    return NextResponse.json(response);
   } catch (e) {
-    if (e instanceof ZodError || e instanceof SyntaxError) {
-      return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
-    }
-
     Sentry.withScope((scope) => {
       scope.setLevel('error');
       scope.captureMessage('FranceConnect POC eligibility step failed');
