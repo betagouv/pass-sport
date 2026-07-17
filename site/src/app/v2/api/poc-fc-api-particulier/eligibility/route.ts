@@ -23,6 +23,7 @@ import {
   buildConfirmPayload,
   buildSearchPayload,
   listBeneficiaryCandidates,
+  stripReasonsUnlessLocal,
 } from '@/app/services/lca-bridge';
 import { deletePocResult, loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
 import { SearchResponseBodyItem } from 'types/EligibilityTest';
@@ -64,7 +65,9 @@ export async function POST(request: Request): Promise<Response> {
     const { identity, apiParticulier } = pocResult;
     const { candidateIndex, residenceInsee, searchItemId } = schema.parse(await request.json());
 
-    const candidates = listBeneficiaryCandidates(identity, apiParticulier);
+    // Every JSON response below embeds candidate data: the debug reasons are
+    // stripped outside local before anything reaches the client.
+    const candidates = stripReasonsUnlessLocal(listBeneficiaryCandidates(identity, apiParticulier));
     const candidate = candidates[candidateIndex];
     if (!candidate) {
       return NextResponse.json({ error: 'Bénéficiaire inconnu.' }, { status: 400 });

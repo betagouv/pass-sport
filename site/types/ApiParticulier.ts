@@ -91,9 +91,13 @@ export interface PrestationAvecMajorationData {
   date_debut_droit?: string;
 }
 
-// cnous.etudiant_boursier_identite / _france_connect / ine (v3)
+// cnous.etudiant_boursier_identite / _france_connect / ine (v4)
 export interface EtudiantBoursierData {
-  est_boursier: boolean;
+  statut_boursier: {
+    est_boursier: boolean;
+    est_radie?: boolean;
+    date_radiation?: string | null;
+  };
   email?: string;
   periode_versement_bourse?: {
     date_rentree?: string;

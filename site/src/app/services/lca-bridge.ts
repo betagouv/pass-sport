@@ -18,7 +18,7 @@
 // - AAH:   jeunes de 16 à 30 ans bénéficiant de l'AAH — the connected user
 //          themselves (est_beneficiaire from API Particulier).
 // - CROUS: étudiants boursiers de moins de 28 ans — the connected user themselves
-//          (est_boursier from API Particulier).
+//          (statut_boursier.est_boursier from API Particulier, CNOUS v4).
 //
 // Sources used to build the LCA payloads:
 // - FranceConnect pivot identity (/userinfo): the connected user — beneficiary for
@@ -47,6 +47,7 @@ import {
 } from 'types/ApiParticulier';
 import { ConfirmPayload, SearchPayload, SearchResponseBodyItem } from 'types/EligibilityTest';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { IS_LOCAL_ENV } from '@/app/constants/env';
 
 // Reference date for all age computations of the 2026 campaign.
 export const AGE_REFERENCE_DATE = '2026-12-31';
@@ -62,6 +63,9 @@ export interface BeneficiaryCandidate {
   // Allowances this person may qualify for (fallback summary when LCA has no
   // match). Empty = not eligible according to the API Particulier data.
   eligibilities: ALLOWANCE[];
+  // One human-readable justification per entry of `eligibilities`, derived from
+  // the API Particulier responses. Debug aid — only ever displayed on local.
+  reasons: string[];
 }
 
 // Parent-level rows only: per-child rows share the resource prefix (e.g.
@@ -147,13 +151,16 @@ export const listBeneficiaryCandidates = (
   if (identity.family_name && identity.given_name && identity.birthdate) {
     const age = ageAtReferenceDate(identity.birthdate);
     const eligibilities: ALLOWANCE[] = [];
+    const reasons: string[] = [];
 
     if (getAah(apiParticulier)?.est_beneficiaire && age >= 16 && age <= 30) {
       eligibilities.push(ALLOWANCE.AAH);
+      reasons.push(`AAH : bénéficiaire selon API Particulier, ${age} ans (16-30 ans)`);
     }
 
-    if (getEtudiantBoursier(apiParticulier)?.est_boursier && age < 28) {
+    if (getEtudiantBoursier(apiParticulier)?.statut_boursier?.est_boursier && age < 28) {
       eligibilities.push(ALLOWANCE.CROUS);
+      reasons.push(`CROUS : boursier selon API Particulier, ${age} ans (< 28 ans)`);
     }
 
     candidates.push({
@@ -162,6 +169,7 @@ export const listBeneficiaryCandidates = (
       firstname: firstToken(identity.given_name),
       birthdate: identity.birthdate,
       eligibilities,
+      reasons,
     });
   }
 
@@ -179,6 +187,7 @@ export const listBeneficiaryCandidates = (
 
     const age = ageAtReferenceDate(birthdate);
     const eligibilities: ALLOWANCE[] = [];
+    const reasons: string[] = [];
 
     const arsVerdict = childStatusVerdict(
       findChildResource(apiParticulier, 'dss.allocation_rentree_scolaire_identite', childIndex),
@@ -190,18 +199,37 @@ export const listBeneficiaryCandidates = (
     // No usable ARS row (missing / provider error): age-only fallback.
     if (age >= 12 && age <= 17 && arsVerdict !== false) {
       eligibilities.push(ALLOWANCE.ARS);
+      reasons.push(
+        arsVerdict === true
+          ? `ARS : droit confirmé par API Particulier, ${age} ans (12-17 ans)`
+          : `ARS : ${age} ans (12-17 ans), pas de réponse API Particulier exploitable`,
+      );
     }
 
     // No usable AEEH row: fallback to the parent's AEEH status.
     if ((aeehVerdict ?? parentIsAeehAllocataire) && age >= 6 && age <= 19) {
       eligibilities.push(ALLOWANCE.AEEH);
+      reasons.push(
+        aeehVerdict === true
+          ? `AEEH : droit confirmé par API Particulier, ${age} ans (6-19 ans)`
+          : `AEEH : parent allocataire AEEH selon API Particulier, ${age} ans (6-19 ans)`,
+      );
     }
 
-    candidates.push({ source: 'enfant', lastname, firstname, birthdate, eligibilities });
+    candidates.push({ source: 'enfant', lastname, firstname, birthdate, eligibilities, reasons });
   }
 
   return candidates;
 };
+
+// The reasons are a local-only debug aid: strip them wherever candidates cross to
+// the client (server component props, JSON responses) so they are never exposed
+// on a deployed environment. isLocal is injectable for tests.
+export const stripReasonsUnlessLocal = (
+  candidates: BeneficiaryCandidate[],
+  isLocal: boolean = IS_LOCAL_ENV,
+): BeneficiaryCandidate[] =>
+  isLocal ? candidates : candidates.map((candidate) => ({ ...candidate, reasons: [] }));
 
 export const buildSearchPayload = (
   candidate: BeneficiaryCandidate,

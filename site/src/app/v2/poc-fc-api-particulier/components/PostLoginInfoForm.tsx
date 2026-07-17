@@ -13,9 +13,11 @@ import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import CityFinder from '@/app/v2/test-eligibilite/components/city-finder/CityFinder';
 import { InputState } from 'types/form';
 
-// "ARS/AEEH" maps to both allowances.
+// ARS and AEEH are distinct aides: each one triggers its own per-child API
+// Particulier calls, and both can be selected together.
 const AIDE_OPTIONS: { label: string; allowances: ALLOWANCE[] }[] = [
-  { label: 'ARS/AEEH', allowances: [ALLOWANCE.ARS, ALLOWANCE.AEEH] },
+  { label: 'ARS', allowances: [ALLOWANCE.ARS] },
+  { label: 'AEEH', allowances: [ALLOWANCE.AEEH] },
   { label: 'AAH', allowances: [ALLOWANCE.AAH] },
   { label: 'CROUS', allowances: [ALLOWANCE.CROUS] },
 ];

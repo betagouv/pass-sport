@@ -5,7 +5,8 @@ import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
 import PostLoginFlow from './components/PostLoginFlow';
 import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
-import { listBeneficiaryCandidates } from '@/app/services/lca-bridge';
+import { listBeneficiaryCandidates, stripReasonsUnlessLocal } from '@/app/services/lca-bridge';
+import { IS_LOCAL_ENV } from '@/app/constants/env';
 import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
@@ -28,8 +29,9 @@ interface Props {
 export default async function PocFcApiParticulier({ searchParams }: Props) {
   const { error, status } = await searchParams;
   const result = await loadPocResult();
-  // Raw identity + API Particulier response dumps are debug-only.
-  const debuggingEnabled = process.env.API_PARTICULIER_DEBUGGING_ENABLED === 'true';
+  // Raw FranceConnect identity + API Particulier response dumps (including their
+  // errors) are debug-only and restricted to the local environment.
+  const debuggingEnabled = IS_LOCAL_ENV && process.env.API_PARTICULIER_DEBUGGING_ENABLED === 'true';
 
   return (
     <main
@@ -104,7 +106,11 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             collected={Boolean(result.apiParticulier)}
             candidates={
               result.apiParticulier
-                ? listBeneficiaryCandidates(result.identity, result.apiParticulier)
+                ? // Props of a client component end up serialized in the page payload:
+                  // the debug reasons are stripped outside local.
+                  stripReasonsUnlessLocal(
+                    listBeneficiaryCandidates(result.identity, result.apiParticulier),
+                  )
                 : []
             }
             residenceInsee={result.residenceInsee ?? ''}

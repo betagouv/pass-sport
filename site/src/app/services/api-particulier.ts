@@ -12,6 +12,15 @@ import {
   EtudiantBoursierData,
 } from '@/types/ApiParticulier';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { ChildCheck, planChildrenChecks } from '@/app/services/api-particulier-children';
+import { IS_LOCAL_ENV } from '@/app/constants/env';
+
+// Debug traces (request params, curl replays, raw responses) are local-only:
+// they carry pivot identities and allowance data that must not land in logs
+// of deployed environments.
+const debugLog = (...args: unknown[]): void => {
+  if (IS_LOCAL_ENV) console.log(...args);
+};
 
 type ApiParticulierData =
   | QuotientFamilialData
@@ -79,6 +88,7 @@ const splitPrenoms = (givenName?: string): string[] | undefined =>
 // DSS "_identite" params (AAH, AEEH, quotient familial).
 const toDssParams = (identity: FranceConnectIdentity) => ({
   nom_naissance: identity.family_name,
+  nom_usage: identity.preferred_username || undefined,
   prenoms: splitPrenoms(identity.given_name),
   ...splitBirthdate(identity.birthdate),
   sexe_etat_civil: mapGender(identity.gender),
@@ -97,6 +107,7 @@ const toArsIdentiteParams = (identity: FranceConnectIdentity) => {
   );
   return {
     nomNaissance: identity.family_name,
+    nomUsage: identity.preferred_username || undefined,
     prenoms: splitPrenoms(identity.given_name),
     anneeDateNaissance: annee_date_naissance,
     moisDateNaissance: mois_date_naissance,
@@ -107,14 +118,56 @@ const toArsIdentiteParams = (identity: FranceConnectIdentity) => {
   };
 };
 
+// Debug: reconstruct the curl equivalent of an API Particulier GET. Mirrors the
+// SDK's buildUrl (camelCase query keys, arrays as `key[]=`, recipient from
+// defaultParams). The token is referenced as a shell variable so the secret
+// never lands in the logs — export API_PARTICULIER_TOKEN before replaying.
+const toCurl = (path: string, params: Record<string, unknown>): string => {
+  const { environment, defaultParams } = getClientConfig();
+  const base =
+    environment === 'production'
+      ? 'https://particulier.api.gouv.fr'
+      : 'https://staging.particulier.api.gouv.fr';
+  const url = new URL(`${base}${path}`);
+  for (const [key, value] of Object.entries({ ...defaultParams, ...params })) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      value.forEach((item) => url.searchParams.append(`${key}[]`, String(item)));
+    } else {
+      url.searchParams.set(key, String(value));
+    }
+  }
+  return `curl -H "Authorization: Bearer $API_PARTICULIER_TOKEN" '${url.toString()}'`;
+};
+
 // CNOUS "_identite" params (no pays code).
 const toCnousParams = (identity: FranceConnectIdentity) => ({
+  version: 4 as const,
   nom_naissance: identity.family_name,
   prenoms: splitPrenoms(identity.given_name),
   ...splitBirthdate(identity.birthdate),
   sexe_etat_civil: mapGender(identity.gender),
   code_cog_insee_commune_naissance: identity.birthplace || undefined,
 });
+
+// Path used by the SDK's cnous.etudiant_boursier_identite with version: 4.
+const CNOUS_IDENTITE_PATH = '/v4/cnous/etudiant_boursier/identite';
+
+// toCnousParams in the camelCase form the SDK puts on the wire — for toCurl only.
+const toCnousCurlParams = (identity: FranceConnectIdentity) => {
+  const { annee_date_naissance, mois_date_naissance, jour_date_naissance } = splitBirthdate(
+    identity.birthdate,
+  );
+  return {
+    nomNaissance: identity.family_name,
+    prenoms: splitPrenoms(identity.given_name),
+    anneeDateNaissance: annee_date_naissance,
+    moisDateNaissance: mois_date_naissance,
+    jourDateNaissance: jour_date_naissance,
+    sexeEtatCivil: mapGender(identity.gender),
+    codeCogInseeCommuneNaissance: identity.birthplace || undefined,
+  };
+};
 
 // Wraps one SDK call: acquires a rate-limit token first, then normalizes success,
 // ApiGouvError, and RateLimitedError into a result row. Each outcome is written to the
@@ -213,16 +266,21 @@ const callResource = async ({
 // is then called with the static API key + that identity as query params. Avoids the
 // buggy FC-token modality. The pivot identity also stays available for downstream LCA
 // calls (fetchEligible / fetchCode).
-// The 4 API Particulier resources, keyed. Order here is the output order.
-type ResourceKey = 'qf' | 'aah' | 'aeeh' | 'ars' | 'crous';
-const RESOURCE_ORDER: ResourceKey[] = ['qf', 'aah', 'aeeh', 'ars', 'crous'];
+// The API Particulier resources callable with the FranceConnect (allocataire)
+// pivot, keyed. Order here is the output order. ARS/AEEH are absent on purpose:
+// their beneficiaries are children, queried per child after quotient_familial.
+type ResourceKey = 'qf' | 'aah' | 'crous';
+const RESOURCE_ORDER: ResourceKey[] = ['qf', 'aah', 'crous'];
 
 // Which resources each harvested aide requires. quotient_familial is pulled for
 // ARS/AEEH (allocataire + enfants), never for AAH-only / CROUS-only.
 const ALLOWANCE_RESOURCES: Record<ALLOWANCE, ResourceKey[]> = {
   [ALLOWANCE.AAH]: ['aah'],
-  [ALLOWANCE.AEEH]: ['qf', 'aeeh'],
-  [ALLOWANCE.ARS]: ['qf', 'ars'],
+  // ARS/AEEH beneficiaries are children: only quotient_familial is called with the
+  // FranceConnect (allocataire) pivot; ARS/AEEH identité are then called per child
+  // (see callApiParticulierChildrenIdentite).
+  [ALLOWANCE.AEEH]: ['qf'],
+  [ALLOWANCE.ARS]: ['qf'],
   [ALLOWANCE.CROUS]: ['crous'],
   [ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX]: ['crous'],
   [ALLOWANCE.NONE]: [],
@@ -250,7 +308,17 @@ export const callApiParticulierIdentite = async (
         audit,
         resource: 'dss.quotient_familial_identite',
         label: 'Quotient familial CAF/MSA',
-        call: () => client.dss.quotient_familial_identite(dssParams),
+        call: async () => {
+          debugLog('[api-particulier] quotient_familial request params:', dssParams);
+          // The QF identité endpoint takes the same camelCase query keys as ARS.
+          debugLog(
+            '[api-particulier] quotient_familial curl:',
+            toCurl('/v3/dss/quotient_familial/identite', toArsIdentiteParams(identity)),
+          );
+          const res = await client.dss.quotient_familial_identite(dssParams);
+          debugLog('[api-particulier] quotient_familial response:', JSON.stringify(res, null, 2));
+          return res;
+        },
       }),
     aah: () =>
       callResource({
@@ -260,102 +328,120 @@ export const callApiParticulierIdentite = async (
         label: 'Allocation adulte handicapé (AAH)',
         call: () => client.dss.allocation_adulte_handicape_identite(dssParams),
       }),
-    aeeh: () =>
-      callResource({
-        redis,
-        audit,
-        resource: 'dss.allocation_enfant_handicape_identite',
-        label: "Allocation d'éducation de l'enfant handicapé (AEEH)",
-        call: () => client.dss.allocation_enfant_handicape_identite(dssParams),
-      }),
-    ars: () =>
-      callResource({
-        redis,
-        audit,
-        resource: 'dss.allocation_rentree_scolaire_identite',
-        label: 'Allocation de rentrée scolaire (ARS)',
-        call: () => client.get(ARS_IDENTITE_PATH, { params: toArsIdentiteParams(identity) }),
-      }),
     crous: () =>
       callResource({
         redis,
         audit,
         resource: 'cnous.etudiant_boursier_identite',
         label: 'Statut étudiant boursier',
-        call: () => client.cnous.etudiant_boursier_identite(cnousParams),
+        call: async () => {
+          debugLog('[api-particulier] etudiant_boursier request params:', cnousParams);
+          debugLog(
+            '[api-particulier] etudiant_boursier curl:',
+            toCurl(CNOUS_IDENTITE_PATH, toCnousCurlParams(identity)),
+          );
+          const res = await client.cnous.etudiant_boursier_identite(cnousParams);
+          debugLog('[api-particulier] etudiant_boursier response:', JSON.stringify(res, null, 2));
+          return res;
+        },
       }),
   };
 
-  const results = await Promise.all(keys.map((k) => resourceCalls[k]()));
-  return withChildrenResults(results, allowances, redis, audit);
+  // API Particulier calls are made sequentially, never concurrently.
+  const results: ApiParticulierResults = [];
+  for (const key of keys) {
+    results.push(await resourceCalls[key]());
+  }
+  return withChildrenResults(results, identity, allowances, redis, audit);
 };
 
-// QF dates come back as "AAAA-MM-JJ" or "JJ/MM/AAAA" depending on the provider
-// (CAF/MSA) — normalize to ISO so splitBirthdate works (mirrors lca-bridge).
-const toIsoBirthdate = (date?: string): string | undefined => {
-  if (!date) return undefined;
-  const frMatch = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (frMatch) return `${frMatch[3]}-${frMatch[2]}-${frMatch[1]}`;
-  if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
-  return undefined;
-};
+// One per-child ARS or AEEH call, from a ChildCheck planned by planChildrenChecks.
+const callChildCheck = (
+  client: Client,
+  { childIndex, identity, allowance }: ChildCheck,
+  redis: RedisLike,
+  audit: AuditContext,
+): Promise<ApiParticulierResourceResult> => {
+  const prenom = (identity.given_name ?? '').trim().split(/\s+/)[0] ?? '';
 
-// Synthetic pivot identity for a QF child, so the identité param builders can be
-// reused. QF children carry no birth COG — the endpoints accept its absence.
-const enfantToIdentity = (enfant: PersonneQuotientFamilial): FranceConnectIdentity | null => {
-  const familyName = enfant.nom_naissance || enfant.nom_usage;
-  const birthdate = toIsoBirthdate(enfant.date_naissance);
-  if (!familyName || !enfant.prenoms || !birthdate) return null;
+  if (allowance === ALLOWANCE.ARS) {
+    return callResource({
+      redis,
+      audit,
+      resource: 'dss.allocation_rentree_scolaire_identite',
+      label: `Allocation de rentrée scolaire (ARS) — ${prenom}`,
+      childIndex,
+      call: async () => {
+        const params = toArsIdentiteParams(identity);
+        debugLog(
+          `[api-particulier] allocation_rentree_scolaire (enfant ${prenom}) request params:`,
+          params,
+        );
+        debugLog(
+          `[api-particulier] allocation_rentree_scolaire (enfant ${prenom}) curl:`,
+          toCurl(ARS_IDENTITE_PATH, params),
+        );
+        const res = await client.get(ARS_IDENTITE_PATH, { params });
+        debugLog(
+          `[api-particulier] allocation_rentree_scolaire (enfant ${prenom}) response:`,
+          JSON.stringify(res, null, 2),
+        );
+        return res;
+      },
+    });
+  }
 
-  return {
-    sub: 'qf-enfant',
-    family_name: familyName,
-    given_name: enfant.prenoms,
-    gender: enfant.sexe === 'F' ? 'female' : enfant.sexe === 'M' ? 'male' : undefined,
-    birthdate,
-  };
+  return callResource({
+    redis,
+    audit,
+    resource: 'dss.allocation_enfant_handicape_identite',
+    label: `Allocation d'éducation de l'enfant handicapé (AEEH) — ${prenom}`,
+    childIndex,
+    call: async () => {
+      const dssParams = toDssParams(identity);
+      debugLog(
+        `[api-particulier] allocation_enfant_handicape (enfant ${prenom}) request params:`,
+        dssParams,
+      );
+      debugLog(
+        `[api-particulier] allocation_enfant_handicape (enfant ${prenom}) curl:`,
+        toCurl('/v3/dss/allocation_enfant_handicape/identite', toArsIdentiteParams(identity)),
+      );
+      const res = await client.dss.allocation_enfant_handicape_identite(dssParams);
+      debugLog(
+        `[api-particulier] allocation_enfant_handicape (enfant ${prenom}) response:`,
+        JSON.stringify(res, null, 2),
+      );
+      return res;
+    },
+  });
 };
 
 // ARS/AEEH beneficiaries are children: once quotient_familial returned the family
-// composition, each child is checked against the ARS + AEEH "identité" endpoints.
+// composition, each child is checked against the "identité" endpoints of the
+// harvested aides — restricted to the children whose birthdate falls inside the
+// aide's pass Sport window (see planChildrenChecks).
 const callApiParticulierChildrenIdentite = async (
   enfants: PersonneQuotientFamilial[],
+  parent: FranceConnectIdentity,
+  allowances: ALLOWANCE[],
   redis: RedisLike,
   audit: AuditContext,
 ): Promise<ApiParticulierResults> => {
   const client = getClient();
 
-  const calls = enfants.flatMap((enfant, childIndex) => {
-    const identity = enfantToIdentity(enfant);
-    if (!identity) return [];
-
-    const prenom = (identity.given_name ?? '').trim().split(/\s+/)[0] ?? '';
-    return [
-      callResource({
-        redis,
-        audit,
-        resource: 'dss.allocation_rentree_scolaire_identite',
-        label: `Allocation de rentrée scolaire (ARS) — ${prenom}`,
-        childIndex,
-        call: () => client.get(ARS_IDENTITE_PATH, { params: toArsIdentiteParams(identity) }),
-      }),
-      callResource({
-        redis,
-        audit,
-        resource: 'dss.allocation_enfant_handicape_identite',
-        label: `Allocation d'éducation de l'enfant handicapé (AEEH) — ${prenom}`,
-        childIndex,
-        call: () => client.dss.allocation_enfant_handicape_identite(toDssParams(identity)),
-      }),
-    ];
-  });
-
-  return Promise.all(calls);
+  // API Particulier calls are made sequentially, never concurrently.
+  const results: ApiParticulierResults = [];
+  for (const check of planChildrenChecks(enfants, parent, allowances)) {
+    results.push(await callChildCheck(client, check, redis, audit));
+  }
+  return results;
 };
 
 // Appends the per-child ARS/AEEH rows when the selection involves children.
 const withChildrenResults = async (
   results: ApiParticulierResults,
+  identity: FranceConnectIdentity,
   allowances: ALLOWANCE[],
   redis: RedisLike,
   audit: AuditContext,
@@ -372,7 +458,10 @@ const withChildrenResults = async (
     return results;
   }
 
-  return [...results, ...(await callApiParticulierChildrenIdentite(enfants, redis, audit))];
+  return [
+    ...results,
+    ...(await callApiParticulierChildrenIdentite(enfants, identity, allowances, redis, audit)),
+  ];
 };
 
 // Allowances verifiable through a single API Particulier "identité" endpoint.
@@ -420,7 +509,17 @@ export const callApiParticulierAllowanceIdentite = async (
         audit,
         resource: 'cnous.etudiant_boursier_identite',
         label: 'Statut étudiant boursier',
-        call: () => client.cnous.etudiant_boursier_identite(toCnousParams(identity)),
+        call: async () => {
+          const cnousParams = toCnousParams(identity);
+          debugLog('[api-particulier] etudiant_boursier request params:', cnousParams);
+          debugLog(
+            '[api-particulier] etudiant_boursier curl:',
+            toCurl(CNOUS_IDENTITE_PATH, toCnousCurlParams(identity)),
+          );
+          const res = await client.cnous.etudiant_boursier_identite(cnousParams);
+          debugLog('[api-particulier] etudiant_boursier response:', JSON.stringify(res, null, 2));
+          return res;
+        },
       });
   }
 };

@@ -19,6 +19,7 @@ import { AuditContext } from '@/app/services/audit';
 import { ageAtReferenceDate } from '@/app/services/lca-bridge';
 import { getClientIp } from '@/utils/client-ip';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { IS_LOCAL_ENV } from '@/app/constants/env';
 import {
   AllocationEnfantHandicapeData,
   AllocationRentreeScolaireData,
@@ -59,7 +60,7 @@ const isEligibleFor = (allowance: VerifiableAllowance, age: number, data: unknow
         age <= 17
       );
     case ALLOWANCE.CROUS:
-      return ((data as EtudiantBoursierData).est_boursier && age < 28) === true;
+      return ((data as EtudiantBoursierData).statut_boursier?.est_boursier && age < 28) === true;
   }
 };
 
@@ -96,9 +97,12 @@ export async function POST(request: Request): Promise<Response> {
       if (result.httpStatus === 404) {
         return NextResponse.json({ eligible: false, verified: true });
       }
-      // Rate-limited, provider errors...: no verdict possible.
+      // Rate-limited, provider errors...: no verdict possible. The raw API
+      // Particulier error detail is only exposed on local — deployed
+      // environments get the generic message.
+      const genericError = 'Vérification momentanément indisponible.';
       return NextResponse.json(
-        { error: result.error ?? 'Vérification momentanément indisponible.' },
+        { error: IS_LOCAL_ENV ? (result.error ?? genericError) : genericError },
         { status: 502 },
       );
     }
