@@ -24,7 +24,17 @@ echo "# generate nginx $nginx_servers_conf file"
 export PORT=${PORT:-80}
 erb $nginx_servers_erb > /etc/nginx/conf.d/$nginx_servers_conf
 
+echo "# mock upstream hostnames for nginx config test"
+echo "127.0.0.1 app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal" >> /etc/hosts
+
 echo "# test nginx $nginx_servers_conf syntax"
-nginx -t -c /etc/nginx/nginx.conf 2>&1 || exit $?
+cat > /tmp/nginx-test.conf << 'EOF'
+
+events {}
+http {
+    include /etc/nginx/conf.d/*.conf;
+}
+EOF
+nginx -t -c /tmp/nginx-test.conf 2>&1 || exit $?
 
 echo "Test OK"
