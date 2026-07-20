@@ -1,4 +1,12 @@
 server {
+  server_name app.pass-sport.beta.gouv.fr;
+  listen <%= ENV['PORT'] %>;
+  charset utf-8;
+
+  return 301 https://pass.sports.gouv.fr$request_uri;
+}
+
+server {
   
   server_name localhost;
   listen <%= ENV['PORT'] %>;
