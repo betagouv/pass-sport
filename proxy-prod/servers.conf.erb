@@ -76,7 +76,6 @@ server {
     proxy_set_header        X-Forwarded-For      $proxy_add_x_forwarded_for;
     proxy_set_header        X-Forwarded-Protocol $scheme;
     limit_req zone=next_v2_nav_req_limit burst=5;
-    access_log off;
   }
 
   location /api {
