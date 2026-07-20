@@ -61,7 +61,7 @@ server {
   }
 
   location /v2/ {
-    proxy_pass  https://pass-sport-prod.osc-secnum-fr1.scalingo.io;
+    proxy_pass  http://app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal:10000;
     proxy_intercept_errors  on;
     proxy_set_header        Host                 app.pass-sport.beta.gouv.fr;
     proxy_set_header        X-Real-IP            $remote_addr;
@@ -72,7 +72,7 @@ server {
   }
 
   location /api {
-    proxy_pass  https://pass-sport-prod.osc-secnum-fr1.scalingo.io;
+    proxy_pass  http://app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal:10000;
     proxy_intercept_errors  on;
     proxy_set_header        Host                 app.pass-sport.beta.gouv.fr;
     proxy_set_header        X-Real-IP            $remote_addr;
@@ -82,7 +82,7 @@ server {
   }
 
   location /_next {
-    proxy_pass  https://pass-sport-prod.osc-secnum-fr1.scalingo.io/_next;
+    proxy_pass  http://app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal:10000/_next;
     proxy_intercept_errors  on;
     proxy_set_header        Host                 app.pass-sport.beta.gouv.fr;
     proxy_set_header        X-Real-IP            $remote_addr;
@@ -91,7 +91,7 @@ server {
   }
 
   location /images {
-    proxy_pass  https://pass-sport-prod.osc-secnum-fr1.scalingo.io/images;
+    proxy_pass  http://app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal:10000/images;
     proxy_intercept_errors  on;
     proxy_set_header        Host                 app.pass-sport.beta.gouv.fr;
     proxy_set_header        X-Real-IP            $remote_addr;
@@ -100,7 +100,7 @@ server {
   }
 
   location /assets {
-    proxy_pass  https://pass-sport-prod.osc-secnum-fr1.scalingo.io/assets;
+    proxy_pass  http://app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal:10000/assets;
     proxy_intercept_errors  on;
     proxy_set_header        Host                 app.pass-sport.beta.gouv.fr;
     proxy_set_header        X-Real-IP            $remote_addr;
@@ -109,7 +109,7 @@ server {
   }
 
   location / {
-    proxy_pass https://pass-sport-prod.osc-secnum-fr1.scalingo.io;
+    proxy_pass http://app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal:10000;
     proxy_redirect default;
     proxy_intercept_errors  on;
     proxy_set_header        Host                 app.pass-sport.beta.gouv.fr;
