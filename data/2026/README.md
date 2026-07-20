@@ -1,0 +1,125 @@
+# Data flow
+
+
+```mermaid
+flowchart TB
+    classDef rawFile fill:#d4e6f1,stroke:#2980b9,color:#000
+    classDef cleanedFile fill:#d5f5e3,stroke:#27ae60,color:#000
+    classDef finalFile fill:#a9dfbf,stroke:#1e8449,color:#000
+    classDef campaignFile fill:#fdebd0,stroke:#e67e22,color:#000
+    classDef sharedInput fill:#e8daef,stroke:#8e44ad,color:#000
+
+    RGPD_LIST[("RGPD emails\nexclusion list")]:::sharedInput
+    EXISTING_CODES[("Existing codes\n2026")]:::sharedInput
+
+    CNAF_RAW[("CNAF_PATHFILE_2026\nCSV / ASCII / sep=;")]:::rawFile
+    MSA_RAW[("MSA_PATHFILE_2026\nExcel")]:::rawFile
+    CNOUS_RAWS[("CNOUS raw files\nCSV / UTF-8 / sep=,")]:::rawFile
+    FSS_RAW[("FSS_PATHFILE_2026\nCSV / UTF-8 / sep=;")]:::rawFile
+
+    subgraph CNAF_NB["① clean_cnaf.ipynb"]
+        c1["Load CSV · drop last row\nstrip whitespace\nextract postal + commune from ADRLIG5"]
+        c2["Map columns → PSP schema\norganisme='CAF'\nclassify jeune / AAH\nby DOB + name match"]
+        c3["Remove rows missing nom/prenom/dob/genre\nRGPD email filter · age > 30 filter\nfix phone numbers · drop duplicates"]
+        c4["Serialize allocataire + adresse_allocataire → JSON"]
+        c5{"Split\nby age"}
+        c1-->c2-->c3-->c4-->c5
+    end
+
+    CNAF_RAW --> c1
+    RGPD_LIST -.->|"exclusion"| c3
+
+    c5 -->|"jeune 14-17 + AAH"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
+    c5 -->|"backup 6-13 y.o."| BACKUP_CNAF[("DB_BACKUP_CNAF\nCSV")]:::cleanedFile
+
+    subgraph MSA_NB["② clean_msa.ipynb"]
+        m1["Load Excel · map 29 columns → PSP schema\norganisme='MSA'\nclassify ARS→jeune / AAH by DOB"]
+        m2["Remove rows missing nom/prenom/dob/genre\nRGPD email filter · fix phone numbers\ndrop duplicates"]
+        m3["Serialize allocataire + adresse_allocataire → JSON"]
+        m4{"Split\nby age"}
+        m1-->m2-->m3-->m4
+    end
+
+    MSA_RAW --> m1
+    RGPD_LIST -.->|"exclusion"| m2
+
+    m4 -->|"jeune 14-17 + AAH"| DB_MSA[("DB_MSA_EXPORT_2026\nCSV")]:::cleanedFile
+    m4 -->|"backup 6-13 y.o."| BACKUP_MSA[("DB_BACKUP_MSA\nCSV")]:::cleanedFile
+
+    subgraph MERGE_NB["③ merge_cnaf_msa.ipynb"]
+        mg1["Concat CNAF + MSA (production)\nConcat CNAF + MSA (backup)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
+        mg2["Generate unique id_psp codes\nformat: YY-XXXX-XXXX\nassign to each row"]
+        mg1-->mg2
+    end
+
+    DB_CNAF --> mg1
+    DB_MSA --> mg1
+    BACKUP_CNAF --> mg1
+    BACKUP_MSA --> mg1
+
+    mg2 -->|"production"| FINAL_DB[("FINAL_DB_EXPORT_2026\nCSV + id_psp")]:::finalFile
+    mg2 -->|"backup"| FINAL_BACKUP[("FINAL_DB_BACKUP_EXPORT\nCSV")]:::cleanedFile
+
+    subgraph CNOUS_NB["④ clean_cnous.ipynb  ·  run once per wave"]
+        cn1["Load CSV · dedup on allocataire-matricule (INE)\nclean + uppercase names\norganisme='cnous' · situation='boursier'"]
+        cn2["Parse dates · filter DOB 1997-2026\nremove invalid rows · add 4h to birthdates\nserialize allocataire + adresse_allocataire → JSON\nadd default DB columns · dedup on email"]
+        cn1-->cn2
+    end
+
+    CNOUS_RAWS --> cn1
+    cn2 --> CNOUS_CLEANED[("CNOUS cleaned files\nCSV per wave  —  no id_psp")]:::cleanedFile
+
+    subgraph DEDUP_NB["⑤ deduplication_cnous.ipynb"]
+        dd1["Unwrap allocataire JSON\nexpose matricule / INE field"]
+        dd2["Right join on allocataire-matricule\nkeep wave 2 rows NOT in wave 1"]
+        dd3["Dedup on nom + prenom + date_naissance\nGenerate id_psp codes\nexcluding existing codes"]
+        dd1-->dd2-->dd3
+    end
+
+    CNOUS_CLEANED -->|"wave 1"| dd1
+    CNOUS_CLEANED -->|"wave 2"| dd1
+    EXISTING_CODES -.->|"seed"| dd3
+    dd3 --> CNOUS_OUT[("CNOUS_2_OUTPUT\nCSV + id_psp")]:::finalFile
+
+    subgraph DEDUP_OCC_NB["⑥ deduplication_cnous_for_occitanie.ipynb"]
+        do1["Unwrap allocataire JSON\nexpose matricule / INE field"]
+        do2["Right join on allocataire-matricule\nkeep Occitanie rows NOT in wave 1"]
+        do3["Dedup on nom + prenom + date_naissance\nGenerate id_psp codes\nexcluding existing codes"]
+        do1-->do2-->do3
+    end
+
+    CNOUS_CLEANED -->|"wave 1 merged"| do1
+    CNOUS_CLEANED -->|"Occitanie"| do1
+    EXISTING_CODES -.->|"seed"| do3
+    do3 --> CNOUS_OCC_OUT[("CNOUS_OCCITANIE_OUTPUT\nCSV + id_psp")]:::finalFile
+
+    subgraph FSS_NB["⑦ cnous/fss/clean_fss.ipynb"]
+        f1["Load CSV · clean + uppercase names\nparse dates · organisme='cnous'\nsituation='boursier'"]
+        f2["Filter DOB 1997-2026 · remove invalid rows\ndedup on email · add 4h to birthdates\nserialize allocataire + adresse_allocataire → JSON"]
+        f3["Generate id_psp codes\nexcluding existing codes\nadd default DB columns"]
+        f1-->f2-->f3
+    end
+
+    FSS_RAW --> f1
+    EXISTING_CODES -.->|"seed"| f3
+    f3 --> DB_FSS[("DB_FSS_EXPORT_2026\nCSV + id_psp")]:::finalFile
+
+    subgraph PARQUET_NB["⑧ csv_to_parquet.ipynb"]
+        p1["Read CSV · define PyArrow schema\n(all columns as string)\nWrite Parquet"]
+    end
+
+    FINAL_DB --> p1
+    p1 --> BENEF_PARQUET[("BENEF_2026\nParquet")]:::finalFile
+
+    subgraph EMAIL_NB["⑨ linkmobility/1_email_campaign.ipynb"]
+        e1["Load Parquet · unwrap allocataire JSON\nfilter: keep rows with email only"]
+        e2["Map + rename columns\nformat names & birth date text\ngenerate AES-CBC encrypted QR code URL per row"]
+        e3{"Split by\nallocataire vs benef"}
+        e1-->e2-->e3
+    end
+
+    BENEF_PARQUET --> e1
+    e3 -->|"allocataire = benef"| CAMP_B[("Campaign CSV B\ndirect beneficiaries")]:::campaignFile
+    e3 -->|"allocataire ≠ benef"| CAMP_BA[("Campaign CSV B+A\nindirect beneficiaries")]:::campaignFile
+
+```
