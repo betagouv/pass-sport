@@ -129,8 +129,10 @@ server {
     proxy_set_header        X-Forwarded-Protocol $scheme;
   }
 
+<% if ENV['ENABLE_MODSECURITY'] == 'true' %>
   modsecurity on;
-  modsecurity_rules_file /app/waf_rules.conf; 
+  modsecurity_rules_file /app/waf_rules.conf;
+<% end %>
 }
 
 limit_req_zone $binary_remote_addr zone=api_req_limit:10m rate=20r/m;
