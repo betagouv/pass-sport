@@ -13,6 +13,7 @@ import ObtainCodeButton from '@/app/v2/jeunes-et-parents/components/ObtainCodeBu
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
 import { AccordionsFaq } from '@/app/v2/jeunes-et-parents/components/AccordionsFaq';
+import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
