@@ -1,31 +1,58 @@
 services:
-#  app:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    ports:
-#      - '3000:3000'
-#    env_file:
-#      - ./.env.local
-#    environment:
-#      - DATABASE_URL=postgres://passsport:passsport@db:5432/passsport
-#      - REDIS_URL=redis://redis:6379
-#      - PGSSL_DISABLE=true
-#    command: npm run dev
-#    depends_on:
-#      db:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    develop:
-#      watch:
-#        - action: sync
-#          path: .
-#          target: /site
-#          ignore:
-#            - node_modules/
-#        - action: rebuild
-#          path: package.json
+  nginx-waf:
+    image: owasp/modsecurity-crs:4.23-nginx-alpine-202602250702
+    environment:
+      - PARANOIA=1
+      - BACKEND=http://app:3000
+      # Allow specific content types only (JSON, Form Data) - Bans XML
+      - ALLOWED_REQUEST_CONTENT_TYPE=|application/x-www-form-urlencoded| |multipart/form-data| |application/json|
+      # Limit Body Size to 10MB
+      - MODSEC_REQ_BODY_LIMIT=10485760
+      - MAX_FILE_SIZE=10485760
+      # Block PHP extensions via CRS Restricted Extensions
+      - RESTRICTED_EXTENSIONS=.asa/ .asax/ .ascx/ .axd/ .backup/ .bak/ .bat/ .cdx/ .cer/ .cfg/ .cmd/ .com/ .config/ .conf/ .cs/ .csproj/ .csr/ .dat/ .db/ .dbf/ .dll/ .dos/ .htr/ .htw/ .ida/ .idc/ .idq/ .inc/ .ini/ .key/ .licx/ .lnk/ .log/ .mdb/ .old/ .pass/ .pdb/ .pol/ .printer/ .pwd/ .rdb/ .resources/ .resx/ .sql/ .swp/ .sys/ .vb/ .vbs/ .vbproj/ .vsdisco/ .webinfo/ .xsd/ .xsx/ .php/
+    ports:
+      - 3000:8080
+    volumes:
+      - ../proxy-prod/waf_rules.conf:/etc/modsecurity.d/waf_rules.conf:ro
+    depends_on:
+      app:
+        condition: service_started
+  app:
+    image: node:25-alpine
+    working_dir: /site
+    ports:
+      - '3001:3000'
+    env_file:
+      - ./.env.local
+    environment:
+      - DATABASE_URL=postgres://passsport:passsport@db:5432/passsport
+      - REDIS_URL=redis://redis:6379
+      - PGSSL_DISABLE=true
+    command: >
+      sh -c "
+        npm install -g pnpm@11.4.0 &&
+        CI=true pnpm install --frozen-lockfile --ignore-scripts &&
+        npm run dev
+      "
+    volumes:
+      - ./:/site
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /site
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: src
   db:
     image: postgres:17-alpine
     environment:
