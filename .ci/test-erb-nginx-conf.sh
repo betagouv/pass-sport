@@ -29,7 +29,7 @@ echo "127.0.0.1 app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd
 
 echo "# test nginx $nginx_servers_conf syntax"
 cat > /tmp/nginx-test.conf << 'EOF'
-
+load_module modules/ngx_http_modsecurity_module.so;
 events {}
 http {
     include /etc/nginx/conf.d/*.conf;
