@@ -13,7 +13,6 @@ import ObtainCodeButton from '@/app/v2/jeunes-et-parents/components/ObtainCodeBu
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
 import { AccordionsFaq } from '@/app/v2/jeunes-et-parents/components/AccordionsFaq';
-import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -27,43 +26,43 @@ export default function Page() {
       <PageTitle title="Jeunes et parents" height={100} />
 
       <div className="fr-container">
-        <section className={styles['guiding-block__container']}>
-          <GuidingBlock
-            description="Le pass Sport permet de bénéficier d'une réduction immédiate lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."
-            variant="purple"
-            fullWidth
-            points={[
-              {
-                title: 'Testez votre éligibilité en 1 min',
-                linkProps: {
-                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
-                },
-              },
-              {
-                title: 'Trouvez une structure sportive partenaire',
-                linkProps: {
-                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
-                },
-              },
-              {
-                title: 'Recevez ou demandez votre pass Sport',
-                linkProps: {
-                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
-                },
-              },
-              {
-                title: 'Utilisez votre code',
-                linkProps: {
-                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
-                },
-              },
-            ]}
-            knowMore={{
-              title: 'A savoir',
-              description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre 2025.',
-            }}
-          />
-        </section>
+        {/*<section className={styles['guiding-block__container']}>*/}
+        {/*  <GuidingBlock*/}
+        {/*    description="Le pass Sport permet de bénéficier d'une réduction immédiate de 50€ lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."*/}
+        {/*    variant="purple"*/}
+        {/*    fullWidth*/}
+        {/*    points={[*/}
+        {/*      {*/}
+        {/*        title: 'Testez votre éligibilité en 1 min',*/}
+        {/*        linkProps: {*/}
+        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,*/}
+        {/*        },*/}
+        {/*      },*/}
+        {/*      {*/}
+        {/*        title: 'Trouvez une structure sportive partenaire',*/}
+        {/*        linkProps: {*/}
+        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,*/}
+        {/*        },*/}
+        {/*      },*/}
+        {/*      {*/}
+        {/*        title: 'Recevez ou demandez votre pass Sport',*/}
+        {/*        linkProps: {*/}
+        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,*/}
+        {/*        },*/}
+        {/*      },*/}
+        {/*      {*/}
+        {/*        title: 'Utilisez votre code',*/}
+        {/*        linkProps: {*/}
+        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,*/}
+        {/*        },*/}
+        {/*      },*/}
+        {/*    ]}*/}
+        {/*    knowMore={{*/}
+        {/*      title: 'A savoir',*/}
+        {/*      description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre 2026.',*/}
+        {/*    }}*/}
+        {/*  />*/}
+        {/*</section>*/}
 
         {/*<section id={JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}>*/}
         {/*  <div className={styles['eligibility-section__description']}>*/}

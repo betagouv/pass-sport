@@ -268,18 +268,17 @@ export default function Page() {
           </p>
         </section>
 
-        {/*todo: enable later*/}
-        {/*<section className={styles['decret-section']}>*/}
-        {/*  <h2 className="fr-h4">Texte de référence</h2>*/}
-        {/*  <Link*/}
-        {/*    href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"*/}
-        {/*    target="_blank"*/}
-        {/*    className="align-self--baseline fr-link"*/}
-        {/*    aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2026-630 du 8 juillet 2026 relatif au « Pass'Sport » 2026"*/}
-        {/*  >*/}
-        {/*    Décret n° 2026-630 du 8 juillet 2026 relatif au « Pass&apos;Sport » 2026*/}
-        {/*  </Link>*/}
-        {/*</section>*/}
+        <section className={styles['decret-section']}>
+          <h2 className="fr-h4">Texte de référence</h2>
+          <Link
+            href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
+            target="_blank"
+            className="align-self--baseline fr-link"
+            aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"
+          >
+            Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025
+          </Link>
+        </section>
       </div>
     </main>
   );

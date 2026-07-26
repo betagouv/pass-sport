@@ -11,7 +11,6 @@ import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
 import Notice from '@codegouvfr/react-dsfr/Notice';
-import { displayOfficialClosingBanner } from '@/utils/date';
 
 interface Props {
   // POC FranceConnect + API Particulier: a live session (httpOnly cookie, read
@@ -100,9 +99,7 @@ export default function PassSportNavigation({ showPocLogout = false }: Props) {
         }))}
       />
 
-      {displayOfficialClosingBanner() && (
-        <Notice severity="info" title="La campagne 2026-2027 sera prochainement lancée." />
-      )}
+      <Notice severity="info" title="La campagne 2026-2027 sera prochainement lancée." />
     </div>
   );
 }
