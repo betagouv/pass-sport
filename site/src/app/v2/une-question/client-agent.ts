@@ -23,5 +23,9 @@ export const postContact = async (request: FormData, isProRequest: boolean): Pro
   if (rna) {
     body.rna = rna;
   }
-  return fetch('/api/contact', { method: 'POST', body: JSON.stringify(body) });
+  return fetch('/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 };

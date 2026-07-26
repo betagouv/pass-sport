@@ -233,8 +233,8 @@ export default function Page() {
               <span className="fr-text--bold">
                 présenter votre code à votre club ou salle de sport au moment de l&apos;inscription
               </span>
-              . Celui-ci déduira automatiquement 50 € du prix de la licence ou de l&apos;abonnement
-              au moment de l&apos;inscription.
+              . Celui-ci déduira automatiquement la valeur faciale du prix de la licence ou de
+              l&apos;abonnement au moment de l&apos;inscription.
             </p>
 
             <p>
