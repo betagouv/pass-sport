@@ -55,7 +55,6 @@ export function middleware(request: NextRequest) {
     '/v2/jeunes-et-parents',
     '/v2/structures',
     '/v2/partenaires',
-    '/v2/trouver-un-club',
     ...(displayOfficialClosingBanner() ? ['/v2/communication'] : []),
   ];
 
