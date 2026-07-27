@@ -48,12 +48,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  const jsonBody = JSON.parse(req.body);
-
   let body: ContactRequestBody;
 
   try {
-    body = contactFormSchema.parse(jsonBody);
+    body = contactFormSchema.parse(req.body);
   } catch (e) {
     return res.status(400).send((e as Error).message);
   }
