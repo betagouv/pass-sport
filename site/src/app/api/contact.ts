@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let body: ContactRequestBody;
 
   try {
-    body = contactFormSchema.parse(JSON.parse(req.body));
+    body = contactFormSchema.parse(req.body);
   } catch (e) {
     return res.status(400).send((e as Error).message);
   }
