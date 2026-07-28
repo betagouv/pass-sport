@@ -173,6 +173,12 @@ export default async function Accueil() {
               </Link>
             </p>
 
+            <p className="fr-mb-2w">
+              Si le club qui vous intéresse ne figure pas sur la liste, il est possible qu&apos;il
+              soit partenaire mais non référencé. N&apos;hésitez pas à vérifier directement auprès
+              du club.
+            </p>
+
             <h2 className="fr-my-5w fr-h1">Une question ?</h2>
             <p className="fr-mb-2w">
               Vous avez consulté les différentes pages sans trouver l’information que vous cherchiez
