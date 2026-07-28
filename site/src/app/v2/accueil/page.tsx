@@ -160,6 +160,19 @@ export default async function Accueil() {
               sécurisé.
             </p>
 
+            <h2 className="fr-h1 fr-mb-2w">Où utiliser le pass Sport ?</h2>
+            <p className="fr-mb-2w">
+              Le pass Sport peut être utilisé dans plus de 85 000 clubs et salles de sport partout
+              en France. Vous pouvez{' '}
+              <Link
+                href="/v2/trouver-un-club"
+                target="_blank"
+                title="consulter une liste indicative des établissements - nouvelle fenêtre"
+              >
+                consulter une liste indicative des établissements.
+              </Link>
+            </p>
+
             <h2 className="fr-my-5w fr-h1">Une question ?</h2>
             <p className="fr-mb-2w">
               Vous avez consulté les différentes pages sans trouver l’information que vous cherchiez
