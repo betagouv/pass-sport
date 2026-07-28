@@ -1,11 +1,11 @@
 import { fetchCode } from '@/app/services/eligibility-test';
-import { ConfirmPayload, ConfirmResponseBodyItem } from 'types/EligibilityTest';
 import { zfd } from 'zod-form-data';
 import z, { ZodError } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 import { handleSupportCookie } from '@/utils/cookie';
 import { generatePdfBuffer } from '@/app/v2/api/eligibility-test/confirm/generate-pdf-buffer';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { ConfirmPayload, ConfirmResponseBodyItem } from '@/types/EligibilityTest';
 
 const DEFAULT_INSEE_CODE = '75113';
 
@@ -87,6 +87,8 @@ export async function POST(request: Request): Promise<Response> {
 
     Sentry.withScope((scope) => {
       scope.setLevel('error');
+      scope.setTag('component', 'lca');
+      scope.setTag('app', 'site');
       scope.captureMessage('Technical error on LCA POST api/eligibility-test/confirm');
       scope.captureException(e);
     });

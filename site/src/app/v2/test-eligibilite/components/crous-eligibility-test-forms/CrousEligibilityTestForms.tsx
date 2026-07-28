@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
-import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
+import { EnhancedConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
 import { push } from '@socialgouv/matomo-next';
 import CrousForm from '@/app/v2/test-eligibilite/components/step-two-forms/CrousForm';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
@@ -17,8 +17,6 @@ const CrousEligibilityTestForms = () => {
     benefIsEligible,
     pspCodeData,
     setPspCodeData,
-    searchNoMatchFallback,
-    fallbackRequested,
   } = useContext(EligibilityTestContext);
 
   const onEligibilitySuccess = useCallback(() => {
@@ -89,17 +87,11 @@ const CrousEligibilityTestForms = () => {
       )}
 
       {((eligibilityData && eligibilityData.length === 0) ||
-        (pspCodeData && pspCodeData.length === 0) ||
-        fallbackRequested) &&
+        (pspCodeData && pspCodeData.length === 0)) &&
         portalNode &&
         createPortal(
           <div className="fr-mt-6w">
-            {searchNoMatchFallback &&
-            (fallbackRequested || (eligibilityData && eligibilityData.length === 0)) ? (
-              searchNoMatchFallback
-            ) : (
-              <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
-            )}
+            <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
           </div>,
           portalNode,
         )}

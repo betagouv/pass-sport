@@ -1,5 +1,5 @@
 import Tag from '@codegouvfr/react-dsfr/Tag';
-import { Club } from 'types/Club';
+import { Club } from '@/types/Club';
 import { DisabilityTag } from '../disability-tag/DisabilityTag';
 
 interface Props {

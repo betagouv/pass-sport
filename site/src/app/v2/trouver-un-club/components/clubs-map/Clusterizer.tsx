@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
-import { ExportedClub } from 'types/Club';
+import { ExportedClub } from '@/types/Club';
 import L from 'leaflet';
 import 'leaflet.markercluster/dist/leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';

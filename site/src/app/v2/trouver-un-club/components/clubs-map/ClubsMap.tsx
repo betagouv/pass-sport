@@ -3,7 +3,7 @@
 import { MapContainer, TileLayer, Circle, ZoomControl } from 'react-leaflet';
 import { LatLngLiteral } from 'leaflet';
 import styles from './styles.module.scss';
-import { ExportedClub } from 'types/Club';
+import { ExportedClub } from '@/types/Club';
 import Clusterizer from './Clusterizer';
 import MapEventHandler from './MapEventHandler';
 import { useLeafletAccessibility } from '@/app/hooks/useLeafletAccessibility';

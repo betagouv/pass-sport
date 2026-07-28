@@ -1,7 +1,7 @@
 'use client';
 
 import cn from 'classnames';
-import { ActivityResponse } from 'types/Club';
+import { ActivityResponse } from '@/types/Club';
 import styles from './styles.module.scss';
 import CityFilter from '@/app/v2/trouver-un-club/components/club-filters/city-filter/CityFilter';
 import ActivityFilter from '@/app/v2/trouver-un-club/components/club-filters/activity-filter/ActivityFilter';

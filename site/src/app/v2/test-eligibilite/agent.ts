@@ -3,7 +3,7 @@ import {
   EnhancedConfirmResponseBody,
   SearchResponseBody,
   SearchResponseErrorBody,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 
 export const fetchEligible = (
   formData: FormData,

@@ -4,7 +4,7 @@ import {
   ConfirmResponseErrorBody,
   EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import ErrorAlert from '../error-alert/ErrorAlert';
@@ -34,7 +34,7 @@ const AahCafForm = ({
   const [inputStates, setInputStates] = useState<AahCafInputsState>(initialInputsState);
   const [error, setError] = useState<string | null>();
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-  const { allowance, requestFallback } = useContext(EligibilityTestContext);
+  const { allowance } = useContext(EligibilityTestContext);
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: AahCafInputsState } => {
     let isValid = true;
@@ -114,17 +114,9 @@ const AahCafForm = ({
         status: number;
       }) => {
         if (status !== 200) {
-          if (requestFallback) {
-            requestFallback();
-            return;
-          }
           notifyError();
         } else {
           if ('message' in body) {
-            if (requestFallback) {
-              requestFallback();
-              return;
-            }
             notifyError();
             return;
           }
@@ -135,10 +127,6 @@ const AahCafForm = ({
             onEligibilitySuccess();
             setIsFormDisabled(true);
           } else {
-            if (requestFallback) {
-              requestFallback();
-              return;
-            }
             onEligibilityFailure();
           }
         }

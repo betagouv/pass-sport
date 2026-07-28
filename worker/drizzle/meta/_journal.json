@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785836316691,
+      "tag": "0000_swift_omega_red",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785851461728,
+      "tag": "0001_add_verdict_and_results_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785853297236,
+      "tag": "0002_add_pass_sport_code",
+      "breakpoints": true
+    }
+  ]
+}

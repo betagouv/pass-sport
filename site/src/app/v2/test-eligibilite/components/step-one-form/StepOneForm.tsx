@@ -13,7 +13,7 @@ import {
   SearchResponseBody,
   SearchResponseErrorBody,
   StepOneFormInputsState,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import CityFinder from '../city-finder/CityFinder';
 import { mapper } from '../../helpers/helper';
 import ErrorAlert from '../error-alert/ErrorAlert';
@@ -41,7 +41,7 @@ const StepOneForm = ({
   isDirectBeneficiary = false,
 }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
-  const { allowance, dob, setSearchedBeneficiary } = useContext(EligibilityTestContext);
+  const { allowance, dob } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
@@ -97,13 +97,6 @@ const StepOneForm = ({
 
       return;
     }
-
-    // POC embed only (setter absent otherwise): keep the typed identity around
-    // for the no-match fallback — this form unmounts when the search is empty.
-    setSearchedBeneficiary?.({
-      lastname: formData.get('beneficiaryLastname')!.toString().trim(),
-      firstname: formData.get('beneficiaryFirstname')!.toString().trim(),
-    });
 
     try {
       const { status, body } = await requestEligibilityTest();
@@ -208,7 +201,6 @@ const StepOneForm = ({
           </>
         );
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
         return (
           <>
             Nom de famille de l&apos;enfant <span className="text--required">*</span>
@@ -233,7 +225,6 @@ const StepOneForm = ({
           </>
         );
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
         return (
           <>
             Prénom de l&apos;enfant <span className="text--required">*</span>
@@ -251,12 +242,6 @@ const StepOneForm = ({
   const getRecipientResidencePlace = useCallback(() => {
     switch (allowance) {
       case ALLOWANCE.AAH:
-        return (
-          <>
-            Commune de résidence de l’allocataire <span className="text--required">*</span>
-          </>
-        );
-      case ALLOWANCE.ARS:
         return (
           <>
             Commune de résidence de l’allocataire <span className="text--required">*</span>

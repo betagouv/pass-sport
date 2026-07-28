@@ -4,7 +4,7 @@ import {
   StepOneFormInputsState,
   YoungCafInputsState,
   YoungMsaInputsState,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 
 export const mapper: Record<
   | keyof StepOneFormInputsState

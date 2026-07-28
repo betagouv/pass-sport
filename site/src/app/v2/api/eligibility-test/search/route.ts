@@ -1,10 +1,10 @@
 import { fetchEligible } from '@/app/services/eligibility-test';
-import { SearchPayload } from 'types/EligibilityTest';
 import { zfd } from 'zod-form-data';
 import z, { ZodError } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 import { handleSupportCookie } from '@/utils/cookie';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { SearchPayload } from '@/types/EligibilityTest';
 
 const schema = zfd.formData({
   beneficiaryLastname: z.string(),
@@ -50,6 +50,8 @@ export async function POST(request: Request): Promise<Response> {
 
     Sentry.withScope((scope) => {
       scope.setLevel('error');
+      scope.setTag('component', 'lca');
+      scope.setTag('app', 'site');
       scope.captureMessage('Technical error on LCA POST api/eligibility-test/search');
       scope.captureException(e);
     });

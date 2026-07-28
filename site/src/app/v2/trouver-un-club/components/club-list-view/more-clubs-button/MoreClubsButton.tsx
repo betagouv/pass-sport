@@ -1,5 +1,5 @@
 import Button from '@codegouvfr/react-dsfr/Button';
-import { SportGouvJSONRecordsResponse } from 'types/Club';
+import { SportGouvJSONRecordsResponse } from '@/types/Club';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 

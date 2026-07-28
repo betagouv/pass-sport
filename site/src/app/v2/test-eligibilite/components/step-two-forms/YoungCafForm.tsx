@@ -5,7 +5,7 @@ import {
   EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
   YoungCafInputsState,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import CustomInput from '../custom-input/CustomInput';
@@ -33,7 +33,7 @@ const YoungCafForm = ({
   onEligibilitySuccess,
   onEligibilityFailure,
 }: Props) => {
-  const { allowance, requestFallback } = useContext(EligibilityTestContext);
+  const { allowance } = useContext(EligibilityTestContext);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
@@ -120,17 +120,9 @@ const YoungCafForm = ({
         status: number;
       }) => {
         if (status !== 200) {
-          if (requestFallback) {
-            requestFallback();
-            return;
-          }
           notifyError();
         } else {
           if ('message' in body) {
-            if (requestFallback) {
-              requestFallback();
-              return;
-            }
             notifyError();
             return;
           }
@@ -141,10 +133,6 @@ const YoungCafForm = ({
             onEligibilitySuccess();
             setIsFormDisabled(true);
           } else {
-            if (requestFallback) {
-              requestFallback();
-              return;
-            }
             onEligibilityFailure();
           }
         }
@@ -183,7 +171,7 @@ const YoungCafForm = ({
               type: 'text',
               required: true,
               onBlur: (e) => {
-                const inputIsValid = !!e.target?.checkValidity();
+                const inputIsValid = e.target?.checkValidity();
 
                 setInputStates({
                   ...inputStates,
@@ -222,7 +210,7 @@ const YoungCafForm = ({
             placeholder: 'ex: Dupont',
             required: true,
             onBlur: (e) => {
-              const inputIsValid = !!e.target?.checkValidity();
+              const inputIsValid = e.target?.checkValidity();
 
               setInputStates({
                 ...inputStates,
@@ -257,7 +245,7 @@ const YoungCafForm = ({
             placeholder: 'ex: Marie',
             required: true,
             onBlur: (e) => {
-              const inputIsValid = !!e.target?.checkValidity();
+              const inputIsValid = e.target?.checkValidity();
 
               setInputStates({
                 ...inputStates,

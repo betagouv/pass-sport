@@ -11,11 +11,11 @@ import {
   FC_ID_TOKEN_COOKIE,
   FC_NONCE_COOKIE,
   FC_STATE_COOKIE,
-  PocResult,
   getRedirectUri,
   transientCookieOptions,
 } from '@/app/v2/api/poc-fc-api-particulier/shared';
 import { storePocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
+import { toPivotIdentity } from '@/app/v2/api/poc-fc-api-particulier/pivot';
 
 const PAGE_PATH = '/v2/poc-fc-api-particulier';
 
@@ -61,11 +61,19 @@ export async function GET(request: Request): Promise<Response> {
     // is NOT called yet — it runs later, once the user confirms the aides + commune
     // form (see the /collect route), in "identité pivot" mode using this identity.
     // The FC access token is not kept: only the pivot identity is needed.
-    const result: PocResult = { identity };
+    const pivot = toPivotIdentity(identity);
+    if (!pivot) {
+      return redirectToPage(request, '?error=identity');
+    }
+    // Used as the BullMQ job id, which must not contain ':'. FranceConnect subs are
+    // hex-ish, but reject rather than silently mangle the dedup key.
+    if (!identity.sub || identity.sub.includes(':')) {
+      return redirectToPage(request, '?error=identity');
+    }
 
-    // Personal data goes to the Redis session store; the browser only receives
-    // the random session id (httpOnly cookie).
-    await storePocResult(result);
+    // The browser only receives the random session id (httpOnly cookie); the identity
+    // itself stays server-side in Redis under the session's 10-minute TTL.
+    await storePocResult({ identity: pivot, sub: identity.sub });
 
     const response = redirectToPage(request, '?status=ok');
     response.cookies.set(FC_ID_TOKEN_COOKIE, tokens.idToken, transientCookieOptions());

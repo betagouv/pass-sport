@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect } from 'react';
 import StepOneForm from '../step-one-form/StepOneForm';
 import YoungCafForm from '../step-two-forms/YoungCafForm';
-import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
+import { EnhancedConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
 import YoungMsaForm from '../step-two-forms/YoungMsaForm';
 import AahCafForm from '../step-two-forms/AahCafForm';
 import AahMsaForm from '../step-two-forms/AahMsaForm';
@@ -21,8 +21,6 @@ const EligibilityTestForms = () => {
     pspCodeData,
     setPspCodeData,
     benefIsEligible,
-    searchNoMatchFallback,
-    fallbackRequested,
   } = useContext(EligibilityTestContext);
 
   const onEligibilitySuccess = useCallback(() => {
@@ -145,18 +143,11 @@ const EligibilityTestForms = () => {
       )}
 
       {((eligibilityData && eligibilityData.length === 0) ||
-        (pspCodeData && pspCodeData.length === 0) ||
-        fallbackRequested) &&
+        (pspCodeData && pspCodeData.length === 0)) &&
         portalNode &&
         createPortal(
           <div className="fr-mt-6w">
-            {/* the fallbackRequested is to call API Particulier with the identite pivot */}
-            {searchNoMatchFallback &&
-            (fallbackRequested || (eligibilityData && eligibilityData.length === 0)) ? (
-              searchNoMatchFallback
-            ) : (
-              <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
-            )}
+            <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
           </div>,
           portalNode,
         )}

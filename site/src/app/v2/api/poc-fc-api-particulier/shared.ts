@@ -1,6 +1,4 @@
-import { FranceConnectIdentity } from '@/app/services/france-connect';
-import { ApiParticulierResults } from '@/app/services/api-particulier';
-import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import type { PivotIdentity } from '@/app/services/queue';
 
 export const FC_STATE_COOKIE = 'fc_poc_state';
 export const FC_NONCE_COOKIE = 'fc_poc_nonce';
@@ -11,17 +9,18 @@ const CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/callback';
 const LOGOUT_CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/logout/callback';
 
 // Reversed flow: FranceConnect authenticates first, so the callback stores an
-// identity-only session. The aides + commune form comes next; confirming it calls
-// API Particulier and augments the session (apiParticulier / residenceInsee / aides).
+// identity-only session. The aides + commune form comes next; confirming it enqueues
+// an eligibility job (the worker owns the API Particulier + LCA work), so the session
+// holds nothing beyond the FranceConnect identity.
+//
+// Lives in Redis under a 10-minute TTL (session.ts), keyed by an httpOnly session id
+// cookie — the browser never receives the identity itself.
 export interface PocResult {
-  identity: FranceConnectIdentity;
-  // Set only once the post-login aides + commune form is confirmed.
-  apiParticulier?: ApiParticulierResults;
-  // Commune de résidence (INSEE) collected after login, used by the LCA search.
-  residenceInsee?: string;
-  // Aides bénéficiées selected in the post-login form; kept to preselect the no-FC
-  // AllowanceStep and to prefill the form on re-edit.
-  aides?: ALLOWANCE[];
+  identity: PivotIdentity;
+  // FranceConnect pairwise pseudonym. The site needs it to recognise a returning user
+  // across sessions — it becomes the BullMQ job id, so a reconnecting user cannot
+  // enqueue a second job.
+  sub: string;
 }
 
 const isProd = process.env.NODE_ENV === 'production';

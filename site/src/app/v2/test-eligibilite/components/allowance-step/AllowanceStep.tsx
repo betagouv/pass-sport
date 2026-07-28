@@ -1,9 +1,9 @@
 'use client';
 
-import { FocusEvent, FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { FocusEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
-import EligibilityTestContext, { SearchedBeneficiary } from '@/store/eligibilityTestContext';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
 import CustomRadioButtons from '@/app/v2/test-eligibilite-base/components/customRadioButtons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crous-eligibility-test-forms/CrousEligibilityTestForms';
@@ -45,9 +45,6 @@ const initialInputsState: AllowanceFormInputsState = {
 };
 
 interface AllowanceStepProps {
-  // Optional slot (POC embed): rendered instead of the default VerdictPanel
-  // when the LCA search finds no match. Absent on /v2/test-eligibilite.
-  searchNoMatchFallback?: ReactNode;
   // POC embed only: narrows the allowance radio choices to the aides harvested
   // upstream. Empty/absent -> all options (unchanged on /v2/test-eligibilite).
   preselectedAllowances?: ALLOWANCE[];
@@ -57,7 +54,6 @@ interface AllowanceStepProps {
 }
 
 const AllowanceStep = ({
-  searchNoMatchFallback,
   preselectedAllowances,
   autoFocusFirstField = true,
 }: AllowanceStepProps = {}) => {
@@ -65,13 +61,6 @@ const AllowanceStep = ({
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
-  const [searchedBeneficiary, setSearchedBeneficiary] = useState<SearchedBeneficiary | null>(null);
-  // POC embed only: commune de naissance already collected by a step-two form,
-  // so the pivot fallback can skip re-asking it.
-  const [birthplaceInsee, setBirthplaceInsee] = useState<string | undefined>(undefined);
-  // POC embed only: LCA-failure signal that routes to the identité-pivot fallback.
-  const [fallbackRequested, setFallbackRequested] = useState(false);
-  const requestFallback = useCallback(() => setFallbackRequested(true), []);
   const [, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AllowanceFormInputsState>(initialInputsState);
@@ -107,9 +96,6 @@ const AllowanceStep = ({
     setIsValidated(null);
     setEligibilityData(null);
     setPspCodeData(null);
-    setSearchedBeneficiary(null);
-    setBirthplaceInsee(undefined);
-    setFallbackRequested(false);
     setDob('');
   };
 
@@ -158,7 +144,6 @@ const AllowanceStep = ({
     switch (allowance) {
       case ALLOWANCE.AAH:
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
       case ALLOWANCE.CROUS:
       case ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX:
         return 'Vos informations d’éligibilité';
@@ -208,27 +193,6 @@ const AllowanceStep = ({
             setIsValidated(false);
             setAllowance(ALLOWANCE.AEEH);
             setOriginalAllowance(ALLOWANCE.AEEH);
-          },
-        },
-      },
-    },
-    {
-      allowance: ALLOWANCE.ARS,
-      option: {
-        label: (
-          <p className="fr-text--bold">
-            ARS
-            <br />
-            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-              Allocation de Rentrée Scolaire
-            </span>
-          </p>
-        ),
-        nativeInputProps: {
-          onChange: () => {
-            setIsValidated(false);
-            setAllowance(ALLOWANCE.ARS);
-            setOriginalAllowance(ALLOWANCE.ARS);
           },
         },
       },
@@ -289,7 +253,7 @@ const AllowanceStep = ({
         ),
         nativeInputProps: {
           onBlur: (e: FocusEvent<HTMLInputElement>) => {
-            const inputIsValid = !!e.target?.checkValidity();
+            const inputIsValid = e.target?.checkValidity();
 
             setInputStates({
               ...inputStates,
@@ -331,19 +295,6 @@ const AllowanceStep = ({
         setBenefIsEligible,
         setEligibilityData,
         setPspCodeData,
-        // Injected only for the POC embed: the real page keeps an identical
-        // context value (setter absent -> step-one capture is a no-op).
-        ...(searchNoMatchFallback
-          ? {
-              searchNoMatchFallback,
-              searchedBeneficiary,
-              setSearchedBeneficiary,
-              birthplaceInsee,
-              setBirthplaceInsee,
-              fallbackRequested,
-              requestFallback,
-            }
-          : {}),
       }}
     >
       <div className={cn(styles.background)}>
@@ -388,7 +339,7 @@ const AllowanceStep = ({
                   onBlur: (e) => {
                     if (!e.target.value) return;
 
-                    const inputIsValid = !!e.target?.checkValidity();
+                    const inputIsValid = e.target?.checkValidity();
 
                     setInputStates({
                       ...inputStates,
@@ -425,9 +376,7 @@ const AllowanceStep = ({
 
           {isValidated && benefIsEligible && (
             <>
-              {allowance && [ALLOWANCE.ARS, ALLOWANCE.AAH].includes(allowance) && (
-                <EligibilityTestForms />
-              )}
+              {allowance === ALLOWANCE.AAH && <EligibilityTestForms />}
 
               {allowance === ALLOWANCE.AEEH &&
                 dob &&

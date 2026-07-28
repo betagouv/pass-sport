@@ -5,7 +5,7 @@ import {
   SearchPayload,
   SearchResponseBody,
   SearchResponseErrorBody,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 
 import * as Sentry from '@sentry/nextjs';
 

@@ -4,7 +4,10 @@ import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
 import PostLoginFlow from './components/PostLoginFlow';
+import BeneficiaryRecap from './components/BeneficiaryRecap';
 import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
+import { findJobForSub } from '@/app/services/queue';
+import { findResultsForSub } from '@/app/services/applications';
 import { IS_LOCAL_ENV } from '@/app/constants/env';
 import styles from './styles.module.scss';
 
@@ -21,6 +24,24 @@ const ERROR_MESSAGES: Record<string, string> = {
   logout_state: 'Vous avez été déconnecté (vérification de sécurité incomplète).',
 };
 
+// Rendered on the server, where the container clock is UTC — so pin the timezone
+// explicitly, otherwise the displayed hour is off for the user. fr-FR `short` gives
+// DD/MM/YYYY, `medium` gives HH:MM:SS.
+const formatJobDate = (ms: number | undefined): { iso: string; label: string } | null => {
+  if (ms === undefined || Number.isNaN(ms)) {
+    return null;
+  }
+  const date = new Date(ms);
+  return {
+    iso: date.toISOString(),
+    label: new Intl.DateTimeFormat('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'medium',
+      timeZone: 'Europe/Paris',
+    }).format(date),
+  };
+};
+
 interface Props {
   searchParams: Promise<{ error?: string; status?: string }>;
 }
@@ -28,9 +49,22 @@ interface Props {
 export default async function PocFcApiParticulier({ searchParams }: Props) {
   const { error, status } = await searchParams;
   const result = await loadPocResult();
+  // A returning FranceConnect user keeps the same `sub`, which is the job id — so a
+  // request submitted in an earlier session is still findable after reconnecting.
+  const existingJob = result ? await findJobForSub(result.sub) : null;
+  // Empty while the job is still queued — the generic status block below covers that.
+  const results = result ? await findResultsForSub(result.sub) : [];
+
   // Raw FranceConnect identity + API Particulier response dumps (including their
   // errors) are debug-only and restricted to the local environment.
   const debuggingEnabled = IS_LOCAL_ENV && process.env.API_PARTICULIER_DEBUGGING_ENABLED === 'true';
+  const existingJobDate = formatJobDate(existingJob?.createdAt);
+
+  // The two sources carry different instants: the BullMQ record holds the enqueue
+  // time, while Postgres holds the moment the rows were committed. Word the line to
+  // match rather than calling both "enregistrée".
+  const existingJobDateLabel =
+    existingJob?.state === 'processed' ? 'Demande traitée le' : 'Demande enregistrée le';
 
   return (
     <main
@@ -78,34 +112,39 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             <p>Connexion FranceConnect réussie.</p>
           </div>
 
-          {debuggingEnabled && result.apiParticulier && (
+          {debuggingEnabled && (
             <>
               <h2 className="fr-h4">Identité FranceConnect</h2>
               <pre className={styles.payload}>{JSON.stringify(result.identity, null, 2)}</pre>
-
-              <h2 className="fr-h4 fr-mt-3w">Réponses API Particulier</h2>
-              {result.apiParticulier.map((res) => (
-                <section key={`${res.resource}:${res.childIndex ?? 'self'}`} className="fr-mb-3w">
-                  <h3 className="fr-h6">
-                    {res.label} ({res.httpStatus ?? '—'})
-                  </h3>
-                  {res.error ? (
-                    <div className="fr-alert fr-alert--warning fr-alert--sm">
-                      <p>{res.error}</p>
-                    </div>
-                  ) : (
-                    <pre className={styles.payload}>{JSON.stringify(res.data, null, 2)}</pre>
-                  )}
-                </section>
-              ))}
             </>
           )}
 
-          <PostLoginFlow
-            collected={Boolean(result.apiParticulier)}
-            residenceInsee={result.residenceInsee ?? ''}
-            aides={result.aides ?? []}
-          />
+          {existingJob ? (
+            <>
+              {/* Rows exist only once the worker committed, so this is the verdict itself
+                  rather than a status. Same component the polling panel renders, so a
+                  returning user and a just-submitted one read exactly the same thing. */}
+              {results.length > 0 ? (
+                <BeneficiaryRecap beneficiaries={results} />
+              ) : (
+                <div className="fr-alert fr-alert--info fr-mb-3w" role="status">
+                  <h2 className="fr-alert__title">Demande déjà enregistrée</h2>
+                  <p>
+                    Votre demande est en cours de traitement. Le résultat vous sera envoyé par
+                    email.
+                  </p>
+                </div>
+              )}
+              {existingJobDate && (
+                <p>
+                  {existingJobDateLabel}{' '}
+                  <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+                </p>
+              )}
+            </>
+          ) : (
+            <PostLoginFlow />
+          )}
           {/* Logout moved to the header quick-access item ("Se déconnecter"),
               shown while the POC session is live (see the root layout). */}
         </section>
