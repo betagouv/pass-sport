@@ -230,11 +230,15 @@ export function AccordionsFaq() {
     <>
       <Accordion label="Pourquoi n'ai-je plus le droit au pass Sport ?" onExpandedChange={() => {}}>
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-2w">Le pass Sport évolue en 2026.</p>
-
           <p className="fr-mb-2w">
-            Nous comprenons que ce changement puisse être difficile, notamment pour les familles qui
-            en bénéficiaient jusqu&apos;ici.
+            Les modalités d&apos;éligibilité au pass Sport sont étendues en 2026, afin
+            d&apos;inclure les jeunes de 12 et 13 ans bénéficiaires de l&apos;Allocation de Rentrée
+            Scolaire. Si vous n&apos;avez plus droit au pass Sport, cela signifie donc que vous ne
+            remplissez plus les critères d&apos;éligibilité, soit parce que vous n&apos;avez plus
+            l&apos;âge permettant de bénéficier du pass Sport, soit parce que vous ne remplissez
+            plus les critères sociaux permettant d&apos;obtenir le pass Sport (bénéficiaire de
+            l&apos;ARS, l&apos;AEEH, l&apos;AAH, d&apos;une bourse du CROUS ou d&apos;une bourse
+            régionale pour une formation sanitaire et sociale).
           </p>
 
           <p className="fr-mb-0">
@@ -310,10 +314,10 @@ export function AccordionsFaq() {
           </p>
 
           <p className="fr-mb-2w">
-            Cependant, selon le degré de handicap, le club peut manquer de matériel ou
-            d&apos;encadrement nécessaire pour assurer une pratique en toute sécurité. Une fois le
-            club trouvé, prenez contact préalablement avec lui pour vérifier sa capacité à vous
-            accueillir dans les meilleures conditions.
+            Cependant, selon votre handicap, le club peut manquer de matériel ou d&apos;encadrement
+            nécessaire pour assurer une pratique en toute sécurité. Une fois le club trouvé, prenez
+            contact préalablement avec lui pour vérifier sa capacité à vous accueillir dans les
+            meilleures conditions.
           </p>
 
           <p className="fr-mb-2w">
@@ -341,6 +345,10 @@ export function AccordionsFaq() {
               </Link>
             </li>
           </ul>
+
+          <p className="fr-mb-0">
+            Pour rappel, le pass Sport est utilisable jusqu&apos;au 31 décembre 2026.
+          </p>
         </article>
       </Accordion>
       <Accordion
@@ -371,7 +379,7 @@ export function AccordionsFaq() {
         onExpandedChange={() => {}}
       >
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-2w">Votre club n’est pas obligé d’adhérer au dispositif.</p>
+          <p className="fr-mb-2w">Votre club n&apos;est pas obligé d&apos;adhérer au dispositif.</p>
           <p className="fr-mb-2w">
             Votre code peut être utilisé dans plus de 85 000 autres clubs et salles de sport à
             travers toute la France. Vous pouvez consulter la{' '}

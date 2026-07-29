@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 //     description: 'Comment bénéficier du pass Sport pour votre inscription sportive ?',
 //     knowMore: {
 //       title: 'A savoir',
-//       description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre.',
+//       description: 'Vous pouvez utiliser votre pass Sport jusqu&apos;au 31 décembre.',
 //     },
 //     points: [
 //       {
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
 //     knowMore: {
 //       title: 'A savoir',
 //       description:
-//         'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 50€. Nous vous remercions pour votre mobilisation.',
+//         'Tous les bénéficiaires n&apos;ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 50€. Nous vous remercions pour votre mobilisation.',
 //     },
 //     points: [
 //       {
@@ -110,7 +110,7 @@ export default async function Accueil() {
               <section className={styles['top-section__content-title']}>
                 <Image src={passSportLogoWhite} alt="" loading="eager" />
                 <h1 className="fr-text--heavy">
-                  Une réduction immédiate
+                  50€ de réduction immédiate
                   <span className="display--block">sur l&apos;inscription sportive</span>
                 </h1>
               </section>
@@ -151,15 +151,42 @@ export default async function Accueil() {
               partenaire. Elle prend la forme d&apos;une réduction immédiate lors de
               l&apos;inscription.
             </p>
-
+            <h2 className="fr-mb-5w fr-h1">Qui peut bénéficier du pass Sport ?</h2>
+            <p className="fr-mb-2w">Pour la saison 2026-2027, le dispositif est ouvert aux :</p>
+            <ul>
+              <li>
+                Jeunes de 12 à 17 ans révolus bénéficiaires de l&apos;ARS (Allocation de rentrée
+                scolaire)
+              </li>
+              <li>
+                Jeunes en situation de handicap :
+                <ul>
+                  <li>
+                    de 6 à 19 ans révolus bénéficiaires de l&apos;AEEH (Allocation d&apos;éducation
+                    de l&apos;enfant handicapé) ;
+                  </li>
+                  <li>
+                    de 16 à 30 ans révolus bénéficiaires de l&apos;AAH (Allocation aux adultes
+                    handicapés).
+                  </li>
+                </ul>
+              </li>
+              <li>
+                Boursiers au plus de 28 ans révolus, titulaires d&apos;une bourse attribuée avant le
+                15 octobre 2026 :
+                <ul>
+                  <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
+                  <li>Bourse régionale pour une formation sanitaire et sociale.</li>
+                </ul>
+              </li>
+            </ul>
             <p className="fr-mb-4w">
               Cette aide du ministère chargé des Sports s&apos;adresse aux enfants et aux jeunes qui
-              rencontrent des obstacles à la pratique sportive – qu’ils soient d’ordre financier,
-              social ou liés à un handicap. L’objectif : leur permettre d’accéder durablement à une
-              activité physique encadrée, au sein d’un environnement structurant, éducatif et
-              sécurisé.
+              rencontrent des obstacles à la pratique sportive – qu&apos;ils soient d&apos;ordre
+              financier, social ou liés à un handicap. L&apos;objectif : leur permettre
+              d&apos;accéder durablement à une activité physique encadrée, au sein d&apos;un
+              environnement structurant, éducatif et sécurisé.
             </p>
-
             <h2 className="fr-h1 fr-mb-2w">Où utiliser le pass Sport ?</h2>
             <p className="fr-mb-2w">
               Le pass Sport peut être utilisé dans plus de 85 000 clubs et salles de sport partout
@@ -172,22 +199,19 @@ export default async function Accueil() {
                 consulter une liste indicative des établissements.
               </Link>
             </p>
-
             <p className="fr-mb-2w">
               Si le club qui vous intéresse ne figure pas sur la liste, il est possible qu&apos;il
               soit partenaire mais non référencé. N&apos;hésitez pas à vérifier directement auprès
               du club.
             </p>
-
             <h2 className="fr-my-5w fr-h1">Une question ?</h2>
             <p className="fr-mb-2w">
-              Vous avez consulté les différentes pages sans trouver l’information que vous cherchiez
-              ? Vous vous posez des questions sur le pass Sport ?
+              Vous avez consulté les différentes pages sans trouver l&apos;information que vous
+              cherchiez ? Vous vous posez des questions sur le pass Sport ?
             </p>
             <Link href="/v2/une-question" className="fr-icon-arrow-right-line fr-link--icon-right">
               Consulter la liste des questions fréquemment posées
             </Link>
-
             {!isPasSportClosed() && (
               <section className="fr-my-5w">
                 <MainTiles titleAs="h3" />
@@ -215,8 +239,8 @@ export default async function Accueil() {
             </span>
 
             <p className={cn(['fr-text--sm', styles['handiguide-section__legend']])}>
-              Sur la photo : Lucie Hautiere, médaillée d’or des championnats d’Europe en 2023 et
-              participation aux Jeux Paralympiques de Paris 2024 en para tennis de table.
+              Sur la photo : Lucie Hautiere, médaillée d&apos;or des championnats d&apos;Europe en
+              2023 et participation aux Jeux Paralympiques de Paris 2024 en para tennis de table.
             </p>
           </div>
 

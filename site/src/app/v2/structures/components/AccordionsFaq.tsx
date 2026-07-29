@@ -226,7 +226,7 @@ export function AccordionsFaq() {
   return (
     <>
       <Accordion
-        label="Inscription entre juin et fin août 2026 : comment procéder ?"
+        label="Inscriptions avant septembre : comment procéder ?"
         onExpandedChange={() => {}}
       >
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
@@ -269,7 +269,7 @@ export function AccordionsFaq() {
           </p>
           <ol className="fr-pl-4w fr-list fr-mb-2w">
             <li>
-              Affiliation : vous devez être affilié pour la saison 2025-2026 à l&apos;une des
+              Affiliation : vous devez être affilié pour la saison 2026-2027 à l&apos;une des
               fédérations sportives agréées par le ministère chargé des Sports, de la Jeunesse et de
               la Vie associative (à l&apos;exclusion des fédérations scolaires).
               <DownloadLink
@@ -280,7 +280,7 @@ export function AccordionsFaq() {
             </li>
             <li>
               Agrément : votre structure doit disposer d’un agrément Sport (délivré après 2016) ou
-              Jeunesse Éducation Populaire – JEP (délivré après 2020) ET proposer une activité
+              Jeunesse Éducation Populaire – JEP (délivré après 2021) ET proposer une activité
               physique et sportive tout au long de l&apos;année.
             </li>
             <li>
@@ -288,7 +288,7 @@ export function AccordionsFaq() {
               marchand, vous devez signer la charte d’engagement du ministère chargé des Sports et
               relever d&apos;un des codes NAF suivants :
               <ul>
-                <li>9311Z : gestion d&apos;installations sportives 9312Z ;</li>
+                <li>9311Z : gestion d&apos;installations sportives ;</li>
                 <li>9312Z : activités des clubs de sports ;</li>
                 <li>9329Z : autres activités récréatives et de loisirs ;</li>
                 <li>9313Z : activités des centres de culture physique ;</li>
@@ -309,10 +309,11 @@ export function AccordionsFaq() {
           <p className="fr-mb-2w">
             Si vous ne remplissez pas l&apos;une de ces trois conditions, le dispositif ne vous est
             pas ouvert. Le justificatif d’éligibilité (attestation d&apos;affiliation ou agrément ou
-            charte d’engagement) seront vérifiés.
+            charte d’engagement) seront vérifiés. En cas de non-éligibilité, les pass Sport saisis
+            ne vous seront pas remboursés.
           </p>
 
-          <p>En cas de non-éligibilité, les pass Sport saisis ne vous seront pas remboursés.</p>
+          <p>Pour rappel, vous devez enregistrer les codes pass Sport avant le 31 décembre 2026.</p>
         </article>
       </Accordion>
       <Accordion
@@ -334,25 +335,33 @@ export function AccordionsFaq() {
 
           <ul className="fr-pl-0">
             <li>
-              Jeunes de 12 à 17 ans bénéficiaires de l&apos;
-              <ARS />* ;
+              Jeunes de 12 à 17 ans révolus bénéficiaires de l&apos;
+              <ARS /> (Allocation de rentrée scolaire) ;
             </li>
             <li>
-              Jeunes en situation de handicap : De 6 à 19 ans bénéficiaires de l&apos;
-              <AEEH />* , de 16 à 30 ans bénéficiaires de l&apos;
-              <AAH />* ;
+              Jeunes en situation de handicap :
+              <ul>
+                <li>
+                  de 6 à 19 ans révolus bénéficiaires de l&apos; <AEEH /> (Allocation d’éducation de
+                  l’enfant handicapé) ;
+                </li>
+                <li>
+                  de 16 à 30 ans révolus bénéficiaires de l&apos;
+                  <AAH /> (Allocation aux adultes handicapés).
+                </li>
+              </ul>
             </li>
             <li>
-              Jeunes de moins de 28 ans bénéficiaires d’une bourse attribuée avant le 15 octobre
-              2026 : Bourse du <CROUS />* (y compris l’aide annuelle), Bourse régionale pour une
-              formation sanitaire ou sociale.
+              Boursiers au plus de 28 ans révolus, titulaires d’une bourse attribuée avant le 15
+              octobre 2026 :
+              <ul>
+                <li>
+                  bourse du <CROUS /> (y compris l’aide annuelle) ;
+                </li>
+                <li>bourse régionale pour une formation sanitaire et sociale.</li>
+              </ul>
             </li>
           </ul>
-
-          <p>
-            *ARS = Allocation de Rentrée Scolaire, AEEH = Allocation d’Education de l’Enfant
-            Handicapé, AAH = Allocation aux Adultes Handicapés
-          </p>
         </article>
       </Accordion>
     </>
