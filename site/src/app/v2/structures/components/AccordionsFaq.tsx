@@ -3,7 +3,7 @@
 import Accordion from '@codegouvfr/react-dsfr/Accordion';
 import cn from 'classnames';
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
-import { AAH, AEEH, ARS, CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import { AAH, AEEH, CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 // old
 // export function AccordionsFaq() {
@@ -335,8 +335,8 @@ export function AccordionsFaq() {
 
           <ul className="fr-pl-0">
             <li>
-              Jeunes de 12 à 17 ans révolus bénéficiaires de l&apos;
-              <ARS /> (Allocation de rentrée scolaire) ;
+              Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient familial
+              est inférieur ou égal à 699 ;
             </li>
             <li>
               Jeunes en situation de handicap :

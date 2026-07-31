@@ -155,8 +155,8 @@ export default async function Accueil() {
             <p className="fr-mb-2w">Pour la saison 2026-2027, le dispositif est ouvert aux :</p>
             <ul>
               <li>
-                Jeunes de 12 à 17 ans révolus bénéficiaires de l&apos;ARS (Allocation de rentrée
-                scolaire)
+                Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
+                familial est inférieur ou égal à 699 ;
               </li>
               <li>
                 Jeunes en situation de handicap :
