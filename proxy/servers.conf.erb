@@ -1,0 +1,122 @@
+
+# Force dns resolution to handle upstream ip changes (Scalingo private network IPs can change on restart/scale)
+resolver 127.0.0.11 valid=5s ipv6=off;
+
+upstream app_backend {
+  server <%= ENV['SCALINGO_PRIVATE_BACKEND_HOSTNAME'] %>:10000 resolve;
+  keepalive 16;
+  zone app_backend 64k;
+}
+
+server {
+  server_name localhost;
+  listen <%= ENV['PORT'] %>;
+  charset utf-8;
+
+  # Common proxy headers/settings, inherited by every location below
+  proxy_intercept_errors  on;
+  proxy_set_header        Host                 <%= ENV['PUBLIC_FQDN'] %>;
+  proxy_set_header        X-Real-IP            $remote_addr;
+  proxy_set_header        X-Forwarded-For      $proxy_add_x_forwarded_for;
+  proxy_set_header        X-Forwarded-Protocol $scheme;
+  
+  # Performances improvment
+  proxy_http_version 1.1;
+  proxy_set_header Connection "";
+
+<% if ENV['ENABLE_MODSECURITY'] == 'true' %>
+  modsecurity on;
+  modsecurity_rules_file /app/waf_rules.conf;
+<% end %>
+
+  location /nous-contacter {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/une-question;
+  }
+
+  location /decouvrir-le-passsport {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/tout-savoir-sur-le-pass-sport;
+  }
+
+  location /obtenir-mon-code {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/test-ou-code;
+  }
+
+  location /jeunes-et-familles/faq {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/une-question;
+  }
+
+  location /jeunes-et-familles/obtenir-mon-code {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/test-ou-code;
+  }
+
+  location /structures-daccueil {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/trouver-un-club;
+  }
+
+  location /faq/passsport-quest-ce-que-cest {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/une-question;
+  }
+
+  location /ressources-et-relais-dinformations/le-club-de-ton-choix/ {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/trouver-un-club;
+  }
+
+  location /decouvrir-le-passsport/ {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/jeunes-et-parents;
+  }
+
+  location /clubs-et-structures-daccueil/le-passport-pour-les-clubs {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/structures;
+  }
+
+  location /clubs-et-structures-daccueil/comment-me-faire-rembourser-des-deductions-passsport-consenties {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/structures;
+  }
+
+  location /clubs-et-structures-daccueil/les-outils-de-communication-a-destination-des-clubs {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/partenaires;
+  }
+
+  location /le-passsport-reconduit-pour-la-saison-2023-2024 {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/accueil;
+  }
+
+  location /v2/test-eligibilite-mai {
+    return 301 https://<%= ENV['PUBLIC_FQDN'] %>/v2/test-eligibilite-base;
+  }
+
+  location /v2/ {
+    proxy_pass http://app_backend;
+    limit_req zone=next_v2_nav_req_limit burst=10;
+  }
+
+  location /api {
+    proxy_pass http://app_backend;
+    limit_req zone=api_req_limit burst=4;
+  }
+
+  location /_next {
+    proxy_pass http://app_backend/_next;
+    access_log off;
+  }
+
+  location /images {
+    proxy_pass http://app_backend/images;
+    access_log off;
+  }
+
+  location /assets {
+    proxy_pass http://app_backend/assets;
+    access_log off;
+  }
+
+  location / {
+    proxy_pass http://app_backend;
+    proxy_redirect off;
+  }
+
+}
+
+limit_req_zone $binary_remote_addr zone=api_req_limit:100m rate=20r/m;
+limit_req_zone $binary_remote_addr zone=eligibility_req_limit:100m rate=20r/m;
+limit_req_zone $binary_remote_addr zone=next_v2_nav_req_limit:100m rate=300r/m;
