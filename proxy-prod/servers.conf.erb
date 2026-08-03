@@ -66,7 +66,7 @@ server {
     proxy_set_header        X-Real-IP            $remote_addr;
     proxy_set_header        X-Forwarded-For      $proxy_add_x_forwarded_for;
     proxy_set_header        X-Forwarded-Protocol $scheme;
-    limit_req zone=next_v2_nav_req_limit burst=5;
+    limit_req zone=next_v2_nav_req_limit burst=10;
   }
 
   location /api {
@@ -76,7 +76,7 @@ server {
     proxy_set_header        X-Real-IP            $remote_addr;
     proxy_set_header        X-Forwarded-For      $proxy_add_x_forwarded_for;
     proxy_set_header        X-Forwarded-Protocol $scheme;
-    limit_req zone=api_req_limit burst=5;
+    limit_req zone=api_req_limit burst=4;
   }
 
   location /_next {
@@ -109,7 +109,7 @@ server {
     access_log off;
   }
 
-  location / {
+  location / {  
     proxy_pass http://app.ap-3c07e5a0-d7ff-4e88-b27e-3513b34b15e3.pn-17a0fab5-61c6-4fd5-b072-9e2da749b2ef.private-network.internal:10000;
     proxy_redirect off;
     proxy_intercept_errors  on;
@@ -125,6 +125,6 @@ server {
 <% end %>
 }
 
-limit_req_zone $binary_remote_addr zone=api_req_limit:10m rate=20r/m;
-limit_req_zone $binary_remote_addr zone=eligibility_req_limit:10m rate=20r/m;
-limit_req_zone $binary_remote_addr zone=next_v2_nav_req_limit:10m rate=150r/m;
+limit_req_zone $binary_remote_addr zone=api_req_limit:100m rate=20r/m;
+limit_req_zone $binary_remote_addr zone=eligibility_req_limit:100m rate=20r/m;
+limit_req_zone $binary_remote_addr zone=next_v2_nav_req_limit:100m rate=300r/m;
