@@ -87,7 +87,7 @@ server {
 
   location /v2/ {
     proxy_pass http://app_backend;
-    limit_req zone=next_v2_nav_req_limit burst=10;
+    limit_req zone=next_v2_nav_req_limit burst=30 nodelay;
   }
 
   location /api {
