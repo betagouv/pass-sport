@@ -3,7 +3,6 @@ import PageTitle from '../../../../components/PageTitle/PageTitle';
 import styles from './style.module.scss';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Accessibilité - pass Sport',

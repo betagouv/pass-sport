@@ -1,13 +1,13 @@
-@import '../../sassVariables.module';
+@use '../../variables';
 
 .wrapper {
-  max-width: $max-width;
+  max-width: variables.$max-width;
   margin: auto;
   margin-top: 50px;
   margin-bottom: 80px;
   padding: 0 2rem;
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     padding: 0 1rem;
   }
 

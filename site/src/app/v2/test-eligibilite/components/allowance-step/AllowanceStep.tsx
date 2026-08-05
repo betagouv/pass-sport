@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
@@ -45,7 +45,7 @@ const initialInputsState: AllowanceFormInputsState = {
 };
 
 const AllowanceStep = () => {
-  const portalRef = useRef<HTMLDivElement>(null);
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
@@ -57,7 +57,7 @@ const AllowanceStep = () => {
   const [isValidated, setIsValidated] = useState<boolean | null>(null);
   const dobId = 'dob-id';
   const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
-  const [dob, setDob] = useState<string | undefined>(undefined);
+  const [dob, setDob] = useState<string>('');
   const fieldsetId = 'allowanceStep-fieldset';
 
   const onAeehFormClick = useCallback(() => {
@@ -67,13 +67,17 @@ const AllowanceStep = () => {
   useRemoveAttributeById(fieldsetId, 'aria-labelledby');
   useAskConsentForSupport();
 
+  useEffect(() => {
+    formRef.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
+  }, []);
+
   const restartTest = () => {
     CustomButtonsGroupKey = Math.round(Math.random() * 1000);
     setAllowance(null);
     setIsValidated(null);
     setEligibilityData(null);
     setPspCodeData(null);
-    setDob(undefined);
+    setDob('');
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -138,7 +142,8 @@ const AllowanceStep = () => {
         eligibilityData,
         pspCodeData,
         performNewTest: restartTest,
-        portalRef,
+        portalNode,
+        setPortalNode,
         setAllowance,
         setBenefIsEligible,
         setEligibilityData,
@@ -177,14 +182,16 @@ const AllowanceStep = () => {
                   </>
                 }
                 nativeInputProps={{
+                  autoFocus: true,
                   id: dobId,
                   type: 'date',
                   min: '1950-01-01',
                   max: '2099-12-31',
                   required: true,
                   value: dob,
-                  autoFocus: true,
                   onBlur: (e) => {
+                    if (!e.target.value) return;
+
                     const inputIsValid = !!e.target?.checkValidity();
 
                     setInputStates({
@@ -196,10 +203,10 @@ const AllowanceStep = () => {
                     });
                   },
                   onChange: (e) => {
-                    setDob(e.target.value ?? undefined);
+                    setDob(e.target.value ?? '');
                   },
                 }}
-                hintText="Exemple : 31/12/2025, Personne à qui le pass Sport est destiné."
+                hintText="Exemple : 31/12/2026, Personne à qui le pass Sport est destiné."
                 state={inputStates.dob.state}
                 stateRelatedMessage={inputStates.dob.errorMsg}
               />
@@ -360,7 +367,7 @@ const AllowanceStep = () => {
         </div>
       </div>
 
-      <div ref={portalRef}>
+      <div ref={setPortalNode}>
         {isValidated &&
           benefIsEligible &&
           (allowance === ALLOWANCE.CROUS ||
@@ -422,9 +429,9 @@ const AllowanceStep = () => {
                   </p>
 
                   <ul className="fr-ml-2w">
-                    <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
+                    <li>Régler l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                     <li>
-                      Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass
+                      Fournir un chèque de 50 € (non encaissé), restitué dès réception du code pass
                       Sport.
                     </li>
                   </ul>

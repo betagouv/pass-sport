@@ -10,7 +10,7 @@ import {
   getAeehCodeObtentionType,
   isEligible,
 } from '@/utils/eligibility-test';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
@@ -19,7 +19,6 @@ import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { InputState } from '@/types/form';
-import { Heading } from '@/app/components/heading/Heading';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -78,7 +77,6 @@ export default function SimplifiedEligibilityTest({
   display = 'row',
   buttonVariant = 'primary',
   onCompletion,
-  headingLevel,
   jeDonneMonAvisBtnPadding,
   displaySeparator,
   hasBackground = false,
@@ -108,7 +106,6 @@ export default function SimplifiedEligibilityTest({
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
-  const [formHasInvalidInput, setFormHasInvalidInput] = useState(false);
 
   function resetStates() {
     setDisplayEligibilityConditions(false);
@@ -118,11 +115,6 @@ export default function SimplifiedEligibilityTest({
     setAlertMeta(null);
     setKnowMoreMeta(null);
   }
-
-  useEffect(() => {
-    // Boolean to apply margin to align the button "Verifier" ........
-    setFormHasInvalidInput(Object.values(inputStates).some((state) => state.errorMsg));
-  }, [inputStates]);
 
   return (
     <>
@@ -211,7 +203,7 @@ export default function SimplifiedEligibilityTest({
                       });
                       setKnowMoreMeta({
                         title: 'A savoir',
-                        description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
+                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
                       });
                       break;
                     case ALLOCATION.CROUS:
@@ -222,7 +214,7 @@ export default function SimplifiedEligibilityTest({
                       });
                       setKnowMoreMeta({
                         title: 'A savoir',
-                        description: `Le pass Sport 2025 sera progressivement disponible par mail ou SMS à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
+                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
                       });
                       break;
                   }
@@ -260,17 +252,12 @@ export default function SimplifiedEligibilityTest({
                   : styles['eligibility-test__fields--column'],
               )}
             >
-              <div
-                className={cn(
-                  'fr-fieldset__element align-self--baseline',
-                  styles['eligibility-test__fields-date'],
-                )}
-              >
+              <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
                 <Input
                   label="Date de naissance"
                   state={inputStates.dob?.state}
                   stateRelatedMessage={inputStates.dob?.errorMsg}
-                  hintText="Exemple : 31/12/2025."
+                  hintText="Exemple : 31/12/2026."
                   nativeInputProps={{
                     required: true,
                     type: 'date',
@@ -280,7 +267,7 @@ export default function SimplifiedEligibilityTest({
                       setTargetDate(e.target.value);
                     },
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
 
                       setInputStates({
                         ...inputStates,
@@ -296,7 +283,7 @@ export default function SimplifiedEligibilityTest({
                 />
               </div>
 
-              <div className="fr-fieldset__element align-self--baseline">
+              <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
                 <Select
                   label="Êtes-vous bénéficiaire d'une aide ?"
                   hint="Sélectionner l'aide dont vous bénéficiez."
@@ -310,7 +297,7 @@ export default function SimplifiedEligibilityTest({
                       setAllocationName(e.target.value as ALLOCATION);
                     },
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
                       setInputStates({
                         ...inputStates,
                         allowance: {
@@ -336,14 +323,10 @@ export default function SimplifiedEligibilityTest({
                   })}
                 </Select>
               </div>
-              <div className="fr-fieldset__element flex--min-content">
-                <Button
-                  type="submit"
-                  priority={buttonVariant}
-                  className={cn({
-                    [styles['button-margin--error']]: formHasInvalidInput,
-                  })}
-                >
+              <div
+                className={cn('fr-fieldset__element', styles['eligibility-test__confirm-button'])}
+              >
+                <Button type="submit" priority={buttonVariant}>
                   Vérifier
                 </Button>
               </div>
@@ -403,9 +386,9 @@ export default function SimplifiedEligibilityTest({
               <p>Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club :</p>
 
               <ul className="fr-ml-2w">
-                <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
+                <li>Régler l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                 <li>
-                  Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass
+                  Fournir un chèque de 50 € (non encaissé), restitué dès réception du code pass
                   Sport.
                 </li>
               </ul>
@@ -440,7 +423,7 @@ export default function SimplifiedEligibilityTest({
                 </li>
                 <li>
                   Aux jeunes de moins de 28 ans bénéficiaires d&apos;une bourse attribuée avant le
-                  15 octobre 2025 :
+                  15 octobre 2026 :
                   <ul className="fr-ml-2w">
                     <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
                     <li>Bourse régionale pour une formation sanitaire et sociale.</li>

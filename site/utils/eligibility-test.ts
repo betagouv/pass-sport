@@ -48,9 +48,7 @@ function isBetween({
 /**
  * Get the way to obtain code for AEEH
  * <ul>
- * <li>For 18 to 20 years old, it should display the link (01/01/2005 to 31/12/2007)</li>
- * <li>For 14 to 17 years old, it should display the form (01/01/2008 to 31/12/2011)</li>
- * <li>For 6 to 13 years old, it should display the link (01/01/2012 to 31/12/2019)</li>
+ * <li>For 6 to 19 years old, it should display the link (01/01/2007 to 31/12/2020)</li>
  * </ul>
  * @param targetDate
  */
@@ -78,16 +76,16 @@ export function isEligible({
       return isBetween({
         inputDates: {
           targetDate,
-          startDate: '01/01/2005',
-          endDate: '31/12/2019',
+          startDate: '01/01/2007',
+          endDate: '31/12/2020',
         },
       });
     case ALLOCATION.ARS:
       return isBetween({
         inputDates: {
           targetDate,
-          startDate: '01/01/2008',
-          endDate: '31/12/2011',
+          startDate: '01/01/2009',
+          endDate: '31/12/2014',
         },
       });
     case ALLOCATION.CROUS:
@@ -95,16 +93,16 @@ export function isEligible({
       return isBetween({
         inputDates: {
           targetDate,
-          startDate: '01/01/1997',
-          endDate: '31/12/2025',
+          startDate: '01/01/1998',
+          endDate: '31/12/2026',
         },
       });
     case ALLOCATION.AAH:
       return isBetween({
         inputDates: {
           targetDate,
-          startDate: '01/01/1995',
-          endDate: '31/12/2009',
+          startDate: '01/01/1996',
+          endDate: '31/12/2010',
         },
       });
     case ALLOCATION.NONE:

@@ -1,4 +1,4 @@
-@import '../../sassVariables.module.scss';
+@use '../../variables';
 
 .main {
   display: flex;
@@ -14,17 +14,18 @@
     justify-content: center;
     overflow: hidden;
 
-    @media screen and (max-width: $lg) {
+    @media screen and (max-width: variables.$lg) {
       padding: 0 24px;
     }
 
-    &-left-image, &-right-image {
+    &-left-image,
+    &-right-image {
       position: absolute;
       left: 0;
       top: 0;
       bottom: 0;
 
-      @media screen and (max-width: $lg) {
+      @media screen and (max-width: variables.$lg) {
         height: 100%;
       }
     }
@@ -44,7 +45,7 @@
     padding: 80px;
     gap: 80px;
 
-    @media screen and (max-width: $lg) {
+    @media screen and (max-width: variables.$lg) {
       flex-direction: column;
       gap: 60px;
       height: 100%;
@@ -58,7 +59,7 @@
       flex-direction: column;
       text-align: center;
 
-      h1{
+      h1 {
         color: white;
         line-height: 48px;
         font-weight: 800;
@@ -74,17 +75,17 @@
   flex-direction: row-reverse;
   margin-bottom: 80px;
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     flex-direction: column-reverse;
     height: auto;
   }
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     flex-direction: column-reverse;
   }
 
   &__legend {
-    color: #3A3A3A;
+    color: #3a3a3a;
   }
 
   &__description {
@@ -99,7 +100,7 @@
     color: black;
     border-radius: 0 8px 8px 0;
 
-    @media screen and (max-width: $lg) {
+    @media screen and (max-width: variables.$lg) {
       width: 100%;
       border-radius: 0 0 8px 8px;
       padding: 24px;
@@ -107,7 +108,7 @@
       justify-content: initial;
     }
 
-    @media screen and (max-width: $xl) {
+    @media screen and (max-width: variables.$xl) {
       padding: 32px;
       height: 400px;
     }
@@ -118,7 +119,7 @@
     border-radius: 8px;
     max-width: 588px;
 
-    @media screen and (max-width: $lg) {
+    @media screen and (max-width: variables.$lg) {
       max-width: 100%;
       width: 100%;
       height: auto;
@@ -135,7 +136,7 @@
     max-width: 840px;
   }
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     width: 100%;
     border-radius: 0;
   }
@@ -147,7 +148,7 @@
   padding: 40px;
   margin-bottom: 24px;
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     padding: 40px 8px;
     width: 100%;
     margin-bottom: 0;
@@ -167,7 +168,7 @@
     flex: 1;
   }
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     flex-direction: column;
     align-items: center;
     padding: 24px;

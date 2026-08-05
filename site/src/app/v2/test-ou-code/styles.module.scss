@@ -1,4 +1,4 @@
-@import '../../sassVariables.module.scss';
+@use '../../variables';
 
 .main {
   background-color: var(--background-action-low-pink-tuile);

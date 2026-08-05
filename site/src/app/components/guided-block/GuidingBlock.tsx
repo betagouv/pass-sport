@@ -48,7 +48,7 @@ export default function GuidingBlock({
 
       {points && (
         <ul className={styles.list}>
-          {points.map((point, index, i) => (
+          {points.map((point, index) => (
             <li className={styles['list__bullet']} key={point.title}>
               <span className={styles['list__bullet-index']}>{index + 1}</span>
               <Link

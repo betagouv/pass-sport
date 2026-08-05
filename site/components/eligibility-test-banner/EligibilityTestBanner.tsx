@@ -19,7 +19,7 @@ const EligibilityTestBanner = () => {
       <div className={styles['text-container']}>
         <h1 className={styles.text}>Puis-je bénéficier du pass Sport ?</h1>
         <p className={`fr-text--lead fr-px-2w ${styles.text}`}>
-          50€ pour aider les jeunes à faire du sport entre 6 et 30 ans
+          xx € pour aider les jeunes à faire du sport entre 6 et 30 ans
         </p>
       </div>
 

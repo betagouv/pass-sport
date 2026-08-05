@@ -1,10 +1,11 @@
-import React, { Dispatch, RefObject, SetStateAction } from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 
 type EligibilityTestContextProps = {
   performNewTest: VoidFunction;
-  portalRef: RefObject<Element | DocumentFragment> | null;
+  portalNode: HTMLElement | null;
+  setPortalNode: (node: HTMLElement | null) => void;
   eligibilityData: SearchResponseBody | null;
   pspCodeData: ConfirmResponseBody | null;
   setEligibilityData: Dispatch<SetStateAction<SearchResponseBody | null>>;
@@ -18,7 +19,8 @@ type EligibilityTestContextProps = {
 
 const EligibilityTestContext = React.createContext<EligibilityTestContextProps>({
   performNewTest: () => {},
-  portalRef: null,
+  portalNode: null,
+  setPortalNode: () => {},
   eligibilityData: null,
   pspCodeData: null,
   setEligibilityData: () => {},

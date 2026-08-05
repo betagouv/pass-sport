@@ -1,4 +1,4 @@
-@import '../../sassVariables.module.scss';
+@use '../../variables';
 
 .main {
   background-color: white;
@@ -61,7 +61,7 @@
     white-space: break-spaces;
   }
 
-  @media screen and (max-width: $lg) {
+  @media screen and (max-width: variables.$lg) {
     flex-direction: column;
     top: -60px;
 
@@ -69,7 +69,8 @@
       max-width: 100%;
     }
 
-    &__description p, &__description ul {
+    &__description p,
+    &__description ul {
       margin: 0;
     }
   }

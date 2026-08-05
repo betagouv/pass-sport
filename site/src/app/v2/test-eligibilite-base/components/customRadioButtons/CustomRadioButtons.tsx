@@ -6,11 +6,10 @@ import Button from '@codegouvfr/react-dsfr/Button';
 type Props = Omit<RadioButtonsProps, 'legend'> & {
   id: string;
   legend: string | ReactNode;
-  legendDescription?: ReactNode;
 };
 
-const CustomRadioButtons: React.FC<Props> = (props) => {
-  const { legend, legendDescription, ...onlyRadioButtonsProps } = props;
+const CustomRadioButtons = (props: Props) => {
+  const { legend, ...onlyRadioButtonsProps } = props;
 
   return (
     <div>

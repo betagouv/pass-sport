@@ -13,7 +13,6 @@ interface Props {
 }
 const ClubListView = ({ clubs, onSeeMoreClubsClicked }: Props) => {
   const pathname = usePathname();
-  const isLastPage = clubs.total_count === clubs.results.length;
 
   return (
     <>

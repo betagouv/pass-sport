@@ -1,10 +1,10 @@
-@import '../../../../sassVariables.module.scss';
+@use '../../../../variables';
 
 .text {
   font-size: 1rem;
   line-height: 1.5rem;
 
-  @media (min-width: $md) {
+  @media (min-width: variables.$md) {
     font-size: 1.75rem;
     line-height: 2.25rem;
   }
@@ -15,7 +15,7 @@
     &::after {
       content: '\a';
       white-space: pre;
-      @media (min-width: $md) {
+      @media (min-width: variables.$md) {
         content: none;
         white-space: unset;
       }

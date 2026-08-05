@@ -1,4 +1,4 @@
-@import '../../sassVariables.module.scss';
+@use '../../variables';
 
 .container {
   display: flex;
@@ -11,7 +11,7 @@
 }
 
 .card-body {
-  @media (min-width: $md) {
+  @media (min-width: variables.$md) {
     padding-right: 1rem;
   }
 }

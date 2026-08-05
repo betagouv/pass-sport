@@ -31,8 +31,12 @@ export default async function POST(
     throw new Error('BASE_64_KEY missing');
   }
 
-  const jsonBody = JSON.parse(req.body);
-  const { encrypted } = payloadSchema.parse(jsonBody);
+  let encrypted: string;
+  try {
+    ({ encrypted } = payloadSchema.parse(JSON.parse(req.body)));
+  } catch {
+    return res.status(400).json({ error: true });
+  }
 
   const base64Key = process.env.BASE_64_KEY;
   const encryptedDecoded = decodeURIComponent(encrypted.replace(/\+/g, ' '));

@@ -1,0 +1,16 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`POST /eligibility-test/search should return fetched data 1`] = `
+[
+  {
+    "date_naissance": "2011-01-01T23:00:00.000Z",
+    "hasMatricule": true,
+    "id": 123,
+    "matricule": "9999999999999",
+    "nom": "DUPOND",
+    "organisme": "MSA",
+    "prenom": "MANON",
+    "situation": "jeune",
+  },
+]
+`;

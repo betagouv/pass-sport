@@ -1,4 +1,4 @@
-@import '../../src/app/sassVariables.module.scss';
+@use '../../src/app/variables';
 
 .banner {
   background-color: var(--blue-cumulus-850-200);
@@ -7,7 +7,7 @@
     width: 100%;
     justify-content: center;
 
-    @media (min-width: $sm) {
+    @media (min-width: variables.$sm) {
       width: fit-content;
       justify-content: left;
     }

@@ -27,6 +27,7 @@ export default function Page() {
             src={athletism}
             className={cn('fr-responsive-img', styles['resources__main-section-image'])}
             alt=""
+            loading="eager"
           />
           <p
             className={cn(['fr-text--xl text--title-grey', styles['resources__main-section-text']])}

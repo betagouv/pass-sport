@@ -6,15 +6,11 @@ import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 import cn from 'classnames';
 import Link from 'next/link';
 import Image from 'next/image';
-import athletism from '@/images/structures/athletism.webp';
 import simonRunning from '@/images/structures/simon-running.webp';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
-import { AccordionsKitCommunication } from '@/app/v2/structures/components/AccordionsKitCommunication';
-import { AccordionsBecomePartner } from '@/app/v2/structures/components/AccordionsBecomePartner';
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
-import KnowMore from '@/app/components/know-more/KnowMore';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -34,36 +30,36 @@ export default function Page() {
             variant="yellow"
             fullWidth
             points={[
-              {
-                title: 'Consultez les outils pour les structures sportives',
-                linkProps: {
-                  href: `#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
-                },
-              },
-              {
-                title: 'Téléchargez votre kit de communication',
-                linkProps: {
-                  href: `#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
-                },
-              },
+              // {
+              //   title: 'Consultez les outils pour les structures sportives',
+              //   linkProps: {
+              //     href: `#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
+              //   },
+              // },
+              // {
+              //   title: 'Téléchargez votre kit de communication',
+              //   linkProps: {
+              //     href: `#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
+              //   },
+              // },
               {
                 title: 'Créez votre Compte Asso',
                 linkProps: {
                   href: `#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
                 },
               },
-              {
-                title: 'Saisissez les codes des bénéficiaires',
-                linkProps: {
-                  href: `#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
-                },
-              },
-              {
-                title: 'Recevez le remboursement',
-                linkProps: {
-                  href: `#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
-                },
-              },
+              // {
+              //   title: 'Saisissez les codes des bénéficiaires',
+              //   linkProps: {
+              //     href: `#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
+              //   },
+              // },
+              // {
+              //   title: 'Recevez le remboursement',
+              //   linkProps: {
+              //     href: `#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
+              //   },
+              // },
             ]}
             knowMore={{
               title: 'A savoir',
@@ -73,53 +69,49 @@ export default function Page() {
           />
         </section>
 
-        <section
-          id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}
-          className={styles['become-partner-section']}
-        >
-          <h2 className="fr-mb-0 fr-h1">Consultez les outils pour les structures sportives</h2>
-        </section>
+        {/*<section*/}
+        {/*  id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}*/}
+        {/*  className={styles['become-partner-section']}*/}
+        {/*>*/}
+        {/*  <h2 className="fr-mb-0 fr-h1">Consultez les outils pour les structures sportives</h2>*/}
+        {/*</section>*/}
 
-        <section className={styles['become-partner-section__accordions']}>
-          <AccordionsBecomePartner />
-        </section>
+        {/*<section className={styles['become-partner-section__accordions']}>*/}
+        {/*  <AccordionsBecomePartner />*/}
+        {/*</section>*/}
 
-        <section
-          id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
-          className={styles['communication-kit-section']}
-        >
-          <Image
-            src={athletism}
-            className={cn('fr-responsive-img', styles['communication-kit-section__image'])}
-            alt=""
-          />
+        {/*<section*/}
+        {/*  id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}*/}
+        {/*  className={styles['communication-kit-section']}*/}
+        {/*>*/}
+        {/*  <Image*/}
+        {/*    src={athletism}*/}
+        {/*    className={cn('fr-responsive-img', styles['communication-kit-section__image'])}*/}
+        {/*    alt=""*/}
+        {/*  />*/}
 
-          <div className={styles['communication-kit-section__description']}>
-            <h2>Téléchargez votre kit de communication</h2>
-            <p>
-              Le ministère chargé des Sports a élaboré un ensemble d&apos;outils et supports de
-              communication qui sont mis à disposition des acteurs et peuvent être utilisés pour
-              assurer la promotion du dispositif.
-            </p>
-          </div>
-        </section>
+        {/*  <div className={styles['communication-kit-section__description']}>*/}
+        {/*    <h2>Téléchargez votre kit de communication</h2>*/}
+        {/*    <p>*/}
+        {/*      Le ministère chargé des Sports a élaboré un ensemble d&apos;outils et supports de*/}
+        {/*      communication qui sont mis à disposition des acteurs et peuvent être utilisés pour*/}
+        {/*      assurer la promotion du dispositif.*/}
+        {/*    </p>*/}
+        {/*  </div>*/}
+        {/*</section>*/}
 
-        <section className={styles['communication-kit-section__accordions']}>
-          <AccordionsKitCommunication />
-        </section>
+        {/*<section className={styles['communication-kit-section__accordions']}>*/}
+        {/*  <AccordionsKitCommunication />*/}
+        {/*</section>*/}
 
         <section
           id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
           className={styles['lca-section']}
+          style={{
+            marginTop: '-48px',
+          }}
         >
-          <h2 className="fr-h1">Créez votre Compte Asso</h2>
-          {/*<KnowMore*/}
-          {/*  variant="yellow"*/}
-          {/*  knowMore={{*/}
-          {/*    title: 'A savoir',*/}
-          {/*    description: `Vous pouvez suivre la procédure de création pas à pas en visionnant cette vidéo tutoriel.`,*/}
-          {/*  }}*/}
-          {/*/>*/}
+          <h2 className="fr-h1 fr-mb-0">Créez votre Compte Asso</h2>
           <p>
             Sur Le Compte Asso, vous pourrez créer un compte pour devenir partenaire du dispositif,
             entrer les codes pass Sport et suivre vos remboursements.
@@ -133,9 +125,9 @@ export default function Page() {
             Le Compte Asso
           </Link>
           <p>
-            Si vous avez déjà un compte sur Le Compte Asso, actualisez votre profil en téléversant
-            votre justificatif d&apos;éligibilité dans la section « affiliations et adhérents
-            personnes morales » :
+            Si vous avez déjà un compte sur Le Compte Asso, actualisez votre profil (informations de
+            contact, coordonnées bancaires) et déposez votre justificatif d&apos;éligibilité dans la
+            section « affiliations et adhérents personnes morales » :
           </p>
           <ul className="fr-ml-2w fr-mt-n3w">
             <li>
@@ -146,7 +138,7 @@ export default function Page() {
               Associations agréées Jeunesse Education Populaire (JEP) ou Sport : agrément JEP ou
               Sport valide ;
             </li>
-            <li>Structures des loisirs sportifs marchands : charte d&apos;engagement 2025.</li>
+            <li>Structures des loisirs sportifs marchands : charte d&apos;engagement 2026.</li>
           </ul>
 
           <section>
@@ -183,10 +175,10 @@ export default function Page() {
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.INPUT_CODES} className={styles['input-codes-section']}>
-          <h2 className="fr-h1">Saisissez les codes des bénéficiaires</h2>
+          <h2 className="fr-h1 fr-mb-0">Saisissez les codes des bénéficiaires</h2>
 
           <ol className="fr-ml-2w" start={1}>
-            <li>Le bénéficiaire vous présente son code alphanumérique (25-XXXX-XXXX).</li>
+            <li>Le bénéficiaire vous présente son code alphanumérique (26-XXXX-XXXX).</li>
             <li>
               Votre structure accorde une réduction immédiate sur l&apos;inscription du
               bénéficiaire.
@@ -199,7 +191,7 @@ export default function Page() {
           </ol>
           <p className="fr-mb-0">
             Vous pouvez saisir les codes des bénéficiaires{' '}
-            <span className="fr-text--bold">du 1er septembre jusqu&apos;au 31 décembre 2025</span>.
+            <span className="fr-text--bold">du 1er septembre jusqu&apos;au 31 décembre 2026</span>.
           </p>
 
           <p className="fr-mb-0">
@@ -222,24 +214,31 @@ export default function Page() {
           />
 
           <div className={styles['get-refunds-section__description']}>
-            <h2 className="fr-h1">Recevez le remboursement</h2>
+            <h2 className="fr-h1 fr-mb-0">Modalités de remboursement du pass Sport</h2>
+            {/*todo: enable later*/}
+            {/*<KnowMore*/}
+            {/*  variant="yellow"*/}
+            {/*  knowMore={{*/}
+            {/*    title: 'A savoir',*/}
+            {/*    description: `Une 2ème vague de paiement est en cours. Les structures concernées recevront un remboursement le 31 octobre.`,*/}
+            {/*  }}*/}
+            {/*/>*/}
 
-            <KnowMore
-              variant="yellow"
-              knowMore={{
-                title: 'A savoir',
-                description: `Une 2ème vague de paiement est en cours. Les structures concernées recevront un remboursement le 31 octobre.`,
-              }}
-            />
-
-            <p>
-              Si votre dossier est correct, les remboursements arriveront dans le mois suivant la
-              saisie des codes dans votre compte Asso.
-            </p>
+            <ol>
+              <li>
+                Saisissez vos pass Sport sur Le Compte Asso entre le 1er septembre et le 31 décembre
+                2026.
+              </li>
+              <li>Une fois les pass Sport saisis, votre dossier est instruit.</li>
+              <li>
+                Après vérification et validation du dossier, le paiement vous sera versé le mois
+                suivant.
+              </li>
+            </ol>
 
             <p>
               Vous pouvez saisir les codes des bénéficiaires{' '}
-              <span className="fr-text--bold">du 1er septembre jusqu’au 31 décembre 2025</span>.
+              <span className="fr-text--bold">du 1er septembre jusqu’au 31 décembre 2026</span>.
             </p>
 
             <p className="fr-mb-0">

@@ -141,7 +141,7 @@ export const createCustomInput = (placeholder: string, ariaDescribedby?: string)
 };
 
 // Override the built-in Placeholder, it was used as a placeholder in a div instead of inside the input[placeholder]
-export const CustomPlaceholder: typeof components.Placeholder = (props) => {
+export const CustomPlaceholder: typeof components.Placeholder = () => {
   return <></>;
 };
 
@@ -150,8 +150,6 @@ function CustomSelect<
   IsMulti extends boolean = false,
   Group extends GroupBase<Option> = GroupBase<Option>,
 >(props: ReactSelectProps<Option, IsMulti, Group>) {
-  const { styles, screenReaderStatus, ...otherProps } = props;
-
   return (
     <Select
       ariaLiveMessages={{
@@ -162,7 +160,7 @@ function CustomSelect<
       }}
       styles={selectStyles}
       screenReaderStatus={customScreenReaderStatus}
-      {...otherProps}
+      {...props}
     />
   );
 }

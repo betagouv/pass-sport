@@ -1,5 +1,3 @@
-import MissionCards from '../../../../components/mission-cards/MissionCards';
-
 import ButtonChoiceGroup from '../button-choice-group/ButtonChoiceGroup';
 
 interface Props {}
