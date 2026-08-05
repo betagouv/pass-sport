@@ -203,7 +203,7 @@ export default function SimplifiedEligibilityTest({
                       });
                       setKnowMoreMeta({
                         title: 'A savoir',
-                        description: `Le pass Sport 2026 sera progressivement disponible par mail ou SMS à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
+                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
                       });
                       break;
                     case ALLOCATION.CROUS:
@@ -214,7 +214,7 @@ export default function SimplifiedEligibilityTest({
                       });
                       setKnowMoreMeta({
                         title: 'A savoir',
-                        description: `Le pass Sport 2026 sera progressivement disponible par mail ou SMS à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
+                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
                       });
                       break;
                   }
