@@ -81,7 +81,7 @@ export async function GET(request: Request): Promise<Response> {
   } catch (e) {
     Sentry.withScope((scope) => {
       scope.setLevel('error');
-      scope.captureMessage('FranceConnect POC callback failed');
+      scope.captureMessage('FranceConnect callback failed');
       scope.captureException(e);
     });
 

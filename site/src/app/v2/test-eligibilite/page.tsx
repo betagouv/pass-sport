@@ -5,7 +5,6 @@ import PageTitle from '@/components/PageTitle/PageTitle';
 import Image from 'next/image';
 import breakdance from '@/images/eligibility-test/break-dance.webp';
 import cn from 'classnames';
-import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 import KnowMore from '@/app/components/know-more/KnowMore';
@@ -34,19 +33,15 @@ const EligibilityTest = () => {
           />
           <div className={styles['top-section-tile__description']}>
             <p className="fr-text--xl fr-mb-1w">
-              Si vous êtes éligible, vous recevrez un courriel ou un SMS avec votre pass Sport :
+              Si vous êtes éligible, vous recevrez un courriel avec votre pass Sport :
             </p>
             <ul className="fr-text--xl fr-ml-2w">
               <li>
-                26-28 août : pour les bénéficiaires de l&apos;ARS, de l&apos;AEEH et de l&apos;AAH ;
+                xx septembre : pour les bénéficiaires de l&apos;AEEH, de l&apos;AAH et les jeunes
+                faisant partie d&apos;un foyer dont le quotient familial est inférieur ou égal à 699
+                fin août ;
               </li>
-              <li>Entre fin octobre et fin novembre : pour les étudiants boursiers.</li>
             </ul>
-            <p className="fr-text--xl">
-              Exception pour les bénéficiaires de l’
-              <AEEH /> entre 6 et 13 ans : demandez votre pass Sport directement sur notre site à
-              partir du 1er septembre.
-            </p>
           </div>
         </div>
       </section>

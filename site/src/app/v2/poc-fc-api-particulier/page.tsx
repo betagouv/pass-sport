@@ -12,7 +12,7 @@ import { IS_LOCAL_ENV } from '@/app/constants/env';
 import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
-  title: 'POC FranceConnect + API Particulier - pass Sport',
+  title: 'Récupération du code | pass Sport',
   description: 'Démonstrateur : connexion FranceConnect puis appel API Particulier côté serveur.',
 };
 
@@ -73,12 +73,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
       id={SKIP_LINKS_ID.mainContent}
       role="main"
     >
-      <h1>POC FranceConnect + API Particulier</h1>
-      <p className="fr-text--lead">
-        Démonstrateur : authentification via FranceConnect, puis saisie des aides et de la commune ;
-        l&apos;appel à API Particulier n&apos;est réalisé côté serveur qu&apos;une fois ces
-        informations confirmées.
-      </p>
+      <h1>Récupération du code pass Sport</h1>
 
       {error && (
         <div className="fr-alert fr-alert--error fr-my-3w">
@@ -99,12 +94,26 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             description="Nous vous demanderons ensuite vos aides et votre commune, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
           />
 
-          <p className="fr-mb-2w">
-            Connectez-vous avec FranceConnect pour récupérer les codes pass Sport.
-          </p>
-          <FranceConnectSection />
+          <div className={styles.choiceGrid}>
+            <div className={styles.choice}>
+              <h2 className="fr-h4">S’identifier avec FranceConnect</h2>
+              <p>
+                Nous vérifions vos droits directement auprès des administrations : aucun
+                justificatif à fournir.
+              </p>
+              <FranceConnectSection />
+            </div>
 
-          <NoFranceConnectSection />
+            <div className={styles.choiceSeparator} role="presentation">
+              <span>Ou</span>
+            </div>
+
+            <div className={styles.choice}>
+              <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
+              <p>Renseignez vous-même vos informations pour vérifier votre éligibilité.</p>
+              <NoFranceConnectSection />
+            </div>
+          </div>
         </section>
       ) : (
         <section className={styles.section}>

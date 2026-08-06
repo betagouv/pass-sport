@@ -24,6 +24,7 @@ export async function GET(request: Request): Promise<Response> {
       nonce,
     });
 
+    console.log({ config, authorizeUrl });
     const cookieStore = await cookies();
     cookieStore.set(FC_STATE_COOKIE, state, transientCookieOptions());
     cookieStore.set(FC_NONCE_COOKIE, nonce, transientCookieOptions());

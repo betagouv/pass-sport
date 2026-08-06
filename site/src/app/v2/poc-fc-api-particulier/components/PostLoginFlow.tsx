@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import PostLoginInfoForm from './PostLoginInfoForm';
-import NoFranceConnectSection from './NoFranceConnectSection';
 import ResultPanel from './ResultPanel';
 
 export default function PostLoginFlow() {
@@ -20,8 +19,6 @@ export default function PostLoginFlow() {
         code pass Sport par email.
       </p>
       <PostLoginInfoForm onQueued={() => setQueued(true)} />
-
-      <NoFranceConnectSection />
     </>
   );
 }
