@@ -15,6 +15,7 @@ export interface EligibilityFormInputsState {
   recipientResidencePlace: InputState;
   recipientLastname: InputState;
   recipientFirstname: InputState;
+  recipientGenre: InputState;
   recipientCafNumber: InputState;
   recipientIneNumber: InputState;
   recipientBirthDate: InputState;

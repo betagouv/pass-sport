@@ -1,4 +1,5 @@
 import Input from '@codegouvfr/react-dsfr/Input';
+import Select from '@codegouvfr/react-dsfr/Select';
 import {
   ChangeEvent,
   FocusEvent,
@@ -39,12 +40,36 @@ const BENEFICIARY_FIELDS: EligibilityFieldName[] = [
   'recipientResidencePlace',
 ];
 
+// Required on screen, absent from every payload. Only fields getBranchFields doesn't already send.
+// It is for later (api particulier job)
+const getUnsentRequiredFields = (
+  situation: SituationType | null,
+  caisse: CAISSE | null,
+): EligibilityFieldName[] => {
+  const fields: EligibilityFieldName[] = ['recipientGenre'];
+
+  if (situation === 'boursier') {
+    return fields;
+  }
+
+  if (caisse === CAISSE.CAF) {
+    fields.push('recipientBirthCountry');
+  }
+
+  if (situation === 'AAH') {
+    fields.push('recipientLastname', 'recipientFirstname');
+  }
+
+  return fields;
+};
+
 const initialInputsState: EligibilityFormInputsState = {
   beneficiaryLastname: { state: 'default' },
   beneficiaryFirstname: { state: 'default' },
   recipientResidencePlace: { state: 'default' },
   recipientLastname: { state: 'default' },
   recipientFirstname: { state: 'default' },
+  recipientGenre: { state: 'default' },
   recipientCafNumber: { state: 'default' },
   recipientIneNumber: { state: 'default' },
   recipientBirthDate: { state: 'default' },
@@ -148,6 +173,10 @@ const MergedEligibilityForm = () => {
   const situation = getExpectedSituation(allowance);
   const isBoursier = situation === 'boursier';
   const isCaf = caisse === CAISSE.CAF;
+  const alwaysRequiredFields: EligibilityFieldName[] = [
+    ...BENEFICIARY_FIELDS,
+    ...getUnsentRequiredFields(situation, caisse),
+  ];
 
   const getBeneficiaryKey = (formData: FormData) =>
     BENEFICIARY_FIELDS.map((field) => (formData.get(field) ?? '').toString().trim()).join('|');
@@ -160,7 +189,7 @@ const MergedEligibilityForm = () => {
   };
 
   const isRequiredOnBlur = (field: EligibilityFieldName, formData: FormData): boolean => {
-    if (BENEFICIARY_FIELDS.includes(field)) {
+    if (withBirthPlace(alwaysRequiredFields, formData).includes(field)) {
       return true;
     }
 
@@ -377,8 +406,8 @@ const MergedEligibilityForm = () => {
 
     // Boursiers can't be fully validated yet: hasMatricule decides between INE and birthplace
     const upfrontFields = isBoursier
-      ? BENEFICIARY_FIELDS
-      : [...BENEFICIARY_FIELDS, ...withBirthPlace(getBranchFields(situation, caisse), formData)];
+      ? alwaysRequiredFields
+      : withBirthPlace([...alwaysRequiredFields, ...getBranchFields(situation, caisse)], formData);
 
     const upfrontCheck = validate(formData, upfrontFields);
     setInputStates(upfrontCheck.states);
@@ -510,6 +539,67 @@ const MergedEligibilityForm = () => {
 
   const caisseAcronym = isCaf ? <CAF /> : <MSA />;
 
+  /* Boursiers are their own beneficiary, so they get the bare wording, as CommonInputs already does */
+  const genreField = (
+    <Select
+      label={
+        <>
+          {isBoursier ? 'Genre' : 'Genre de l’allocataire'}{' '}
+          <span className="text--required">*</span>
+        </>
+      }
+      state={inputStates.recipientGenre.state}
+      stateRelatedMessage={inputStates.recipientGenre.errorMsg}
+      disabled={isFormDisabled}
+      nativeSelectProps={{
+        name: 'recipientGenre',
+        defaultValue: '',
+        required: true,
+        onBlur: onFieldBlur('recipientGenre'),
+        onChange: (e: ChangeEvent<HTMLSelectElement>) =>
+          setFieldState('recipientGenre', e.target.value),
+        'aria-label': isBoursier ? 'Saisir votre genre' : "Saisir le genre de l'allocataire",
+      }}
+    >
+      <option value="" disabled hidden>
+        Selectionnez une option
+      </option>
+      <option value="F">Féminin</option>
+      <option value="M">Masculin</option>
+    </Select>
+  );
+
+  const firstnameField = (
+    <Input
+      label={getFirstnameLabel()}
+      state={inputStates.beneficiaryFirstname.state}
+      stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
+      disabled={isFormDisabled}
+      nativeInputProps={{
+        name: 'beneficiaryFirstname',
+        onBlur: onFieldBlur('beneficiaryFirstname'),
+        onChange: (e: ChangeEvent<HTMLInputElement>) =>
+          setFieldState('beneficiaryFirstname', e.target.value),
+        autoComplete: 'given-name',
+        'aria-autocomplete': 'none',
+        required: true,
+      }}
+      hintText={
+        <>
+          Format attendu : Prénom tel qu’il est écrit sur vos papiers{' '}
+          {isBoursier ? (
+            <>
+              du <CROUS />
+            </>
+          ) : (
+            <>de la {caisseAcronym}</>
+          )}
+          .
+        </>
+      }
+    />
+  );
+
   const isFailure =
     (eligibilityData && eligibilityData.length === 0) || (pspCodeData && pspCodeData.length === 0);
   const isSuccess = pspCodeData && pspCodeData.length > 0;
@@ -551,34 +641,15 @@ const MergedEligibilityForm = () => {
           }
         />
 
-        <Input
-          label={getFirstnameLabel()}
-          state={inputStates.beneficiaryFirstname.state}
-          stateRelatedMessage={inputStates.beneficiaryFirstname.errorMsg}
-          disabled={isFormDisabled}
-          nativeInputProps={{
-            name: 'beneficiaryFirstname',
-            onBlur: onFieldBlur('beneficiaryFirstname'),
-            onChange: (e: ChangeEvent<HTMLInputElement>) =>
-              setFieldState('beneficiaryFirstname', e.target.value),
-            autoComplete: 'given-name',
-            'aria-autocomplete': 'none',
-            required: true,
-          }}
-          hintText={
-            <>
-              Format attendu : Prénom tel qu’il est écrit sur vos papiers{' '}
-              {isBoursier ? (
-                <>
-                  du <CROUS />
-                </>
-              ) : (
-                <>de la {caisseAcronym}</>
-              )}
-              .
-            </>
-          }
-        />
+        {/* A boursier has no allocataire, so the genre sits beside their own prénom instead */}
+        {isBoursier ? (
+          <div className="fr-grid-row fr-grid-row--gutters">
+            <div className="fr-col-12 fr-col-md-8">{firstnameField}</div>
+            <div className="fr-col-12 fr-col-md-4">{genreField}</div>
+          </div>
+        ) : (
+          firstnameField
+        )}
 
         <CityFinder
           legend={getResidencePlaceLabel()}
@@ -640,7 +711,7 @@ const MergedEligibilityForm = () => {
           </>
         )}
 
-        {situation === 'jeune' && (
+        {!isBoursier && (
           <>
             <Input
               label={
@@ -693,6 +764,8 @@ const MergedEligibilityForm = () => {
                 </>
               }
             />
+
+            {genreField}
           </>
         )}
 
@@ -754,7 +827,7 @@ const MergedEligibilityForm = () => {
           />
         )}
 
-        {!isBoursier && !isCaf && (
+        {!isBoursier && (
           <CommonInputs
             birthCountryInputName="recipientBirthCountry"
             birthPlaceInputName="recipientBirthPlace"
