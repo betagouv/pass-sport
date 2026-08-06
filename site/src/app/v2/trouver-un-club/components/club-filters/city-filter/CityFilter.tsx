@@ -99,6 +99,7 @@ const CityFilter = ({ isDisabled, onCityChanged }: Props) => {
         }
       });
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValue(allCitiesOption);
       setInputValue('');
     }

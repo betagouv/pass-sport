@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import { useUpdateTitleIframe } from '@/app/hooks/accessibility/use-update-title-iframe';
@@ -96,8 +95,8 @@ const Video = ({ videoFullUrl }: Props) => {
                         <div>
                           <p>Lucie : Bonne nouvelle, la campagne pass Sport est lancée. </p>
                           <p>
-                            Simon : Cette année, c&apos;est 70€ pour aider les jeunes à pratiquer un
-                            sport, sous conditions d&apos;éligibilité.
+                            Simon : Cette année, c&apos;est 50 € pour aider les jeunes à pratiquer
+                            un sport, sous conditions d&apos;éligibilité.
                           </p>
                           <p>Lucie : C&apos;est super simple à utiliser.</p>
                           <p>

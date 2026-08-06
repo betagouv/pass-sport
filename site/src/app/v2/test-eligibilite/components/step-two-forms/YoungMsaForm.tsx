@@ -5,7 +5,7 @@ import {
   EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
   YoungMsaInputsState,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import { convertDate, mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import ErrorAlert from '../error-alert/ErrorAlert';
@@ -223,7 +223,7 @@ const YoungMsaForm = ({
               Date de naissance de l’allocataire <span className="text--required">*</span>
             </>
           }
-          hintText="Exemple : 31/12/2025."
+          hintText="Exemple : 31/12/2026."
           nativeInputProps={{
             name: 'recipientBirthDate',
             type: 'date',

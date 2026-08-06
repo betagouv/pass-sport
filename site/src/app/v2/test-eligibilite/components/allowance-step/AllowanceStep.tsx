@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useRef, useState } from 'react';
+import { FocusEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
@@ -44,8 +44,20 @@ const initialInputsState: AllowanceFormInputsState = {
   allowance: { state: 'default' },
 };
 
-const AllowanceStep = () => {
-  const portalRef = useRef<HTMLDivElement>(null);
+interface AllowanceStepProps {
+  // POC embed only: narrows the allowance radio choices to the aides harvested
+  // upstream. Empty/absent -> all options (unchanged on /v2/test-eligibilite).
+  preselectedAllowances?: ALLOWANCE[];
+  // Autofocus the DOB field on mount. Default true (standalone page); the POC
+  // embed disables it so confirming the aides doesn't yank focus to this form.
+  autoFocusFirstField?: boolean;
+}
+
+const AllowanceStep = ({
+  preselectedAllowances,
+  autoFocusFirstField = true,
+}: AllowanceStepProps = {}) => {
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
   const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
@@ -57,7 +69,7 @@ const AllowanceStep = () => {
   const [isValidated, setIsValidated] = useState<boolean | null>(null);
   const dobId = 'dob-id';
   const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
-  const [dob, setDob] = useState<string | undefined>(undefined);
+  const [dob, setDob] = useState<string>('');
   const fieldsetId = 'allowanceStep-fieldset';
 
   const onAeehFormClick = useCallback(() => {
@@ -67,13 +79,24 @@ const AllowanceStep = () => {
   useRemoveAttributeById(fieldsetId, 'aria-labelledby');
   useAskConsentForSupport();
 
+  useEffect(() => {
+    if (autoFocusFirstField) {
+      formRef.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
+    }
+  }, [autoFocusFirstField]);
+
+  useEffect(() => {
+    push(['trackEvent', 'Eligibility Test', 'Step 0 viewed', 'Allowance step']);
+  }, []);
+
   const restartTest = () => {
+    push(['trackEvent', 'Eligibility Test', 'Test restarted', allowance ?? 'unknown']);
     CustomButtonsGroupKey = Math.round(Math.random() * 1000);
     setAllowance(null);
     setIsValidated(null);
     setEligibilityData(null);
     setPspCodeData(null);
-    setDob(undefined);
+    setDob('');
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -93,6 +116,7 @@ const AllowanceStep = () => {
 
     if (dob && allowance) {
       setIsValidated(true);
+      push(['trackEvent', 'Eligibility Test', 'Step 0 completed', allowance]);
     } else {
       setIsValidated(false);
 
@@ -120,7 +144,6 @@ const AllowanceStep = () => {
     switch (allowance) {
       case ALLOWANCE.AAH:
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
       case ALLOWANCE.CROUS:
       case ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX:
         return 'Vos informations d’éligibilité';
@@ -128,6 +151,134 @@ const AllowanceStep = () => {
         return '';
     }
   }, [allowance]);
+
+  // Each radio option tagged with its allowance so the POC gate can narrow the
+  // list. "Aucune" (NONE) is always kept for RGAA completeness.
+  const allowanceOptions = [
+    {
+      allowance: ALLOWANCE.AAH,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            AAH
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Allocation Adulte Handicapé
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.AAH);
+            setOriginalAllowance(ALLOWANCE.AAH);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.AEEH,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            AEEH
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Allocation d’Éducation de l’Enfant Handicapé
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.AEEH);
+            setOriginalAllowance(ALLOWANCE.AEEH);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.CROUS,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            Étudiant boursier du CROUS
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Bourse annuelle du CROUS pour l&apos;enseignement supérieur
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.CROUS);
+            setOriginalAllowance(ALLOWANCE.CROUS);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            Étudiant boursier en formation sanitaire et sociale
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Bourse régionale pour la formation sanitaire et sociale
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
+            setOriginalAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
+          },
+        },
+      },
+    },
+    {
+      allowance: ALLOWANCE.NONE,
+      option: {
+        label: (
+          <p className="fr-text--bold">
+            Aucune
+            <br />
+            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+              Aucune de ces propositions
+            </span>
+          </p>
+        ),
+        nativeInputProps: {
+          onBlur: (e: FocusEvent<HTMLInputElement>) => {
+            const inputIsValid = e.target?.checkValidity();
+
+            setInputStates({
+              ...inputStates,
+              allowance: {
+                state: inputIsValid ? 'default' : 'error',
+                errorMsg: !inputIsValid ? errorMapper['allowance'] : '',
+              },
+            });
+          },
+          onChange: () => {
+            setIsValidated(false);
+            setAllowance(ALLOWANCE.NONE);
+            setOriginalAllowance(ALLOWANCE.NONE);
+          },
+        },
+      },
+    },
+  ];
+
+  const visibleAllowanceOptions = allowanceOptions
+    .filter(
+      ({ allowance: a }) =>
+        !preselectedAllowances?.length || a === ALLOWANCE.NONE || preselectedAllowances.includes(a),
+    )
+    .map(({ option }) => option);
 
   return (
     <EligibilityTestContext.Provider
@@ -138,7 +289,8 @@ const AllowanceStep = () => {
         eligibilityData,
         pspCodeData,
         performNewTest: restartTest,
-        portalRef,
+        portalNode,
+        setPortalNode,
         setAllowance,
         setBenefIsEligible,
         setEligibilityData,
@@ -177,15 +329,17 @@ const AllowanceStep = () => {
                   </>
                 }
                 nativeInputProps={{
+                  autoFocus: autoFocusFirstField,
                   id: dobId,
                   type: 'date',
                   min: '1950-01-01',
                   max: '2099-12-31',
                   required: true,
                   value: dob,
-                  autoFocus: true,
                   onBlur: (e) => {
-                    const inputIsValid = !!e.target?.checkValidity();
+                    if (!e.target.value) return;
+
+                    const inputIsValid = e.target?.checkValidity();
 
                     setInputStates({
                       ...inputStates,
@@ -196,10 +350,10 @@ const AllowanceStep = () => {
                     });
                   },
                   onChange: (e) => {
-                    setDob(e.target.value ?? undefined);
+                    setDob(e.target.value ?? '');
                   },
                 }}
-                hintText="Exemple : 31/12/2025, Personne à qui le pass Sport est destiné."
+                hintText="Exemple : 31/12/2026, Personne à qui le pass Sport est destiné."
                 state={inputStates.dob.state}
                 stateRelatedMessage={inputStates.dob.errorMsg}
               />
@@ -215,136 +369,14 @@ const AllowanceStep = () => {
                   </>
                 }
                 key={CustomButtonsGroupKey}
-                options={[
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        AAH
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Allocation Adulte Handicapé
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.AAH);
-                        setOriginalAllowance(ALLOWANCE.AAH);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        AEEH
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Allocation d’Éducation de l’Enfant Handicapé
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.AEEH);
-                        setOriginalAllowance(ALLOWANCE.AEEH);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        ARS
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Allocation de Rentrée Scolaire
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.ARS);
-                        setOriginalAllowance(ALLOWANCE.ARS);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        Étudiant boursier du CROUS
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse annuelle du CROUS pour l&apos;enseignement supérieur
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.CROUS);
-                        setOriginalAllowance(ALLOWANCE.CROUS);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        Étudiant boursier en formation sanitaire et sociale
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse régionale pour la formation sanitaire et sociale
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
-                        setOriginalAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        Aucune
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Aucune de ces propositions
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onBlur: (e) => {
-                        const inputIsValid = !!e.target?.checkValidity();
-
-                        setInputStates({
-                          ...inputStates,
-                          allowance: {
-                            state: inputIsValid ? 'default' : 'error',
-                            errorMsg: !inputIsValid ? errorMapper['allowance'] : '',
-                          },
-                        });
-                      },
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.NONE);
-                        setOriginalAllowance(ALLOWANCE.NONE);
-                      },
-                    },
-                  },
-                ]}
+                options={visibleAllowanceOptions}
               />
             </form>
           )}
 
           {isValidated && benefIsEligible && (
             <>
-              {allowance && [ALLOWANCE.ARS, ALLOWANCE.AAH].includes(allowance) && (
-                <EligibilityTestForms />
-              )}
+              {allowance === ALLOWANCE.AAH && <EligibilityTestForms />}
 
               {allowance === ALLOWANCE.AEEH &&
                 dob &&
@@ -360,7 +392,7 @@ const AllowanceStep = () => {
         </div>
       </div>
 
-      <div ref={portalRef}>
+      <div ref={setPortalNode}>
         {isValidated &&
           benefIsEligible &&
           (allowance === ALLOWANCE.CROUS ||
@@ -422,9 +454,9 @@ const AllowanceStep = () => {
                   </p>
 
                   <ul className="fr-ml-2w">
-                    <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
+                    <li>Régler l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                     <li>
-                      Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass
+                      Fournir un chèque de 50 € (non encaissé), restitué dès réception du code pass
                       Sport.
                     </li>
                   </ul>

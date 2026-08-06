@@ -1,9 +1,9 @@
-import { City } from 'types/City';
+import { City } from '@/types/City';
 import {
   ActivityResponse,
   SportGouvJSONExportsResponse,
   SportGouvJSONRecordsResponse,
-} from 'types/Club';
+} from '@/types/Club';
 import * as Sentry from '@sentry/nextjs';
 import { MAP_LIMIT } from '@/utils/club-finder';
 
@@ -67,7 +67,7 @@ export const getClubs = async (param: SqlSearchParams): Promise<SportGouvJSONRec
     }
 
     return response.json();
-  } catch (err) {
+  } catch {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
       scope.captureMessage('Open datasoft API is down');
@@ -121,7 +121,7 @@ export const getClubsWithoutLimit = async (
       results,
       total_count: results.length,
     };
-  } catch (err) {
+  } catch {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
       scope.captureMessage('Open datasoft API is down');
@@ -167,7 +167,7 @@ export const getFranceCitiesByPostalCodeAndCityName = async (
     }
 
     return response.json();
-  } catch (e) {
+  } catch {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
       scope.captureMessage('geo.api.gouv.fr API is down');
@@ -209,7 +209,7 @@ export const getFranceCitiesByName = async (
     }
 
     return response.json();
-  } catch (err) {
+  } catch {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
       scope.captureMessage('geo.api.gouv.fr API is down');
@@ -266,7 +266,7 @@ const getClubsActivitiesBatch = async (
     }
 
     return response.json();
-  } catch (err) {
+  } catch {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
       scope.captureMessage('Open datasoft API is down');
@@ -289,7 +289,7 @@ export const getAllClubActivities = async (): Promise<ActivityResponse> => {
       const activitiesBatch = (await getClubsActivitiesBatch(limit, offset)).results;
       activities.results = activities.results.concat(activitiesBatch);
       offset += limit;
-    } catch (e) {
+    } catch {
       keepLooping = false;
     }
   }

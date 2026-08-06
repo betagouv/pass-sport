@@ -213,7 +213,7 @@ export default function PdfPassSport({
             <Text style={styles.codeTitle}>Code</Text>
             <Text style={styles.codeValue}>{code}</Text>
             <Text style={styles.codeHintText}>Présentez ce pass à votre club</Text>
-            <Text style={styles.codeHintText}>Code valable jusqu&apos;au 31 décembre 2025</Text>
+            <Text style={styles.codeHintText}>Code valable jusqu&apos;au 31 décembre 2026</Text>
             <Text style={styles.codeHintText}>(strictement personnel)</Text>
           </View>
         </View>

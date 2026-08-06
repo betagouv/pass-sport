@@ -9,54 +9,57 @@ import {
   isEligible,
 } from './eligibility-test';
 
-// nés entre le 1er janvier 1995 et le 31 décembre 2009 et bénéficient de l'allocation aux adultes handicapés
 describe('Eligibility tests suite', () => {
   describe('isEligible() tests suite', () => {
     describe('Should be eligible for', () => {
       it('AAH', () => {
-        // nés entre le 1er janvier 1995 et le 31 décembre 2009 et bénéficient de l'allocation aux adultes handicapés
+        // Between 16 and 30 years old
+        // nés entre le 1er janvier 1996 et le 31 décembre 2010 et bénéficient de l'allocation aux adultes handicapés
         expect(
-          isEligible({ targetDate: '1995-01-01', allocationName: ALLOCATION.AAH }),
+          isEligible({ targetDate: '1996-01-01', allocationName: ALLOCATION.AAH }),
         ).toBeTruthy();
         expect(
-          isEligible({ targetDate: '2009-12-31', allocationName: ALLOCATION.AAH }),
+          isEligible({ targetDate: '2010-12-31', allocationName: ALLOCATION.AAH }),
         ).toBeTruthy();
       });
       it('AEEH', () => {
-        // nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
+        // Between 6 and 19 years old
+        // nés entre le 1er janvier 2007 et le 31 décembre 2020 et bénéficient de l'allocation d'éducation de l'enfant handicapé
         expect(
-          isEligible({ targetDate: '2005-01-01', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2007-01-01', allocationName: ALLOCATION.AEEH }),
         ).toBeTruthy();
         expect(
-          isEligible({ targetDate: '2019-12-31', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2020-12-31', allocationName: ALLOCATION.AEEH }),
         ).toBeTruthy();
       });
       it('ARS', () => {
-        // nés entre le 1er janvier 2008 et le 31 décembre 2011 et bénéficient de l'allocation de rentrée scolaire
+        // Between 12 and 17 years old
+        // nés entre le 1er janvier 2009 et le 31 décembre 2014 et bénéficient de l'allocation de rentrée scolaire
         expect(
-          isEligible({ targetDate: '2008-01-01', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2009-01-01', allocationName: ALLOCATION.ARS }),
         ).toBeTruthy();
         expect(
-          isEligible({ targetDate: '2011-12-31', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2014-12-31', allocationName: ALLOCATION.ARS }),
         ).toBeTruthy();
       });
       it('CROUS, Formation sanitaires et sociales', () => {
+        // Up to 28 years old
         expect(
-          isEligible({ targetDate: '1997-01-01', allocationName: ALLOCATION.CROUS }),
+          isEligible({ targetDate: '1998-01-01', allocationName: ALLOCATION.CROUS }),
         ).toBeTruthy();
         expect(
-          isEligible({ targetDate: '2025-12-31', allocationName: ALLOCATION.CROUS }),
+          isEligible({ targetDate: '2026-12-31', allocationName: ALLOCATION.CROUS }),
         ).toBeTruthy();
 
         expect(
           isEligible({
-            targetDate: '1997-01-01',
+            targetDate: '1998-01-01',
             allocationName: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
           }),
         ).toBeTruthy();
         expect(
           isEligible({
-            targetDate: '2025-12-31',
+            targetDate: '2026-12-31',
             allocationName: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
           }),
         ).toBeTruthy();
@@ -71,49 +74,47 @@ describe('Eligibility tests suite', () => {
       });
 
       it('AAH', () => {
-        // nés entre le 1er janvier 1995 et le 31 décembre 2009 et bénéficient de l'allocation aux adultes handicapés
+        // 31 years old
         expect(
-          isEligible({ targetDate: '1994-12-31', allocationName: ALLOCATION.AAH }),
+          isEligible({ targetDate: '1995-01-01', allocationName: ALLOCATION.AAH }),
         ).toBeFalsy();
+
+        // 15 years old
         expect(
-          isEligible({ targetDate: '2010-01-01', allocationName: ALLOCATION.AAH }),
+          isEligible({ targetDate: '2011-12-31', allocationName: ALLOCATION.AAH }),
         ).toBeFalsy();
       });
       it('AEEH', () => {
-        // nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
+        // 20 years old
         expect(
-          isEligible({ targetDate: '2004-12-31', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2006-01-01', allocationName: ALLOCATION.AEEH }),
         ).toBeFalsy();
+
+        // 5 years old
         expect(
-          isEligible({ targetDate: '2020-01-01', allocationName: ALLOCATION.AEEH }),
+          isEligible({ targetDate: '2021-12-31', allocationName: ALLOCATION.AEEH }),
         ).toBeFalsy();
       });
       it('ARS', () => {
-        // nés entre le 1er janvier 2008 et le 31 décembre 2011 et bénéficient de l'allocation de rentrée scolaire
+        // 11 years old
         expect(
-          isEligible({ targetDate: '2007-12-31', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2015-12-31', allocationName: ALLOCATION.ARS }),
         ).toBeFalsy();
+
+        // 18 years old
         expect(
-          isEligible({ targetDate: '2012-01-01', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2008-01-01', allocationName: ALLOCATION.ARS }),
         ).toBeFalsy();
       });
+
       it('CROUS, Formation sanitaires et sociales', () => {
         expect(
-          isEligible({ targetDate: '1996-12-31', allocationName: ALLOCATION.CROUS }),
-        ).toBeFalsy();
-        expect(
-          isEligible({ targetDate: '2026-01-01', allocationName: ALLOCATION.CROUS }),
+          isEligible({ targetDate: '1997-01-01', allocationName: ALLOCATION.CROUS }),
         ).toBeFalsy();
 
         expect(
           isEligible({
-            targetDate: '1996-12-31',
-            allocationName: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
-          }),
-        ).toBeFalsy();
-        expect(
-          isEligible({
-            targetDate: '2026-01-01',
+            targetDate: '1997-12-31',
             allocationName: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
           }),
         ).toBeFalsy();
@@ -121,43 +122,40 @@ describe('Eligibility tests suite', () => {
     });
   });
 
-  // <li>For 6 to 13 years old, it should display the link</li>
-  // <li>For 14 to 17 years old, it should display the form</li>
-  // <li>For 18 to 20 years old, it should display the link</li>
   describe('getAeehCodeObtentionType() tests suite', () => {
-    it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.LINK}`, () => {
-      // 13 years old
-      expect(getAeehCodeObtentionType('2012-01-01')).toEqual({
-        isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-      });
-
+    it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.FORM}`, () => {
       // 6 years old
-      expect(getAeehCodeObtentionType('2019-12-31')).toEqual({
+      expect(getAeehCodeObtentionType('2020-12-31')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
 
-      // 20 years old
-      expect(getAeehCodeObtentionType('2005-01-01')).toEqual({
+      // 13 years old
+      expect(getAeehCodeObtentionType('2013-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
 
       // 18 years old
-      expect(getAeehCodeObtentionType('2007-12-31')).toEqual({
+      expect(getAeehCodeObtentionType('2008-01-01')).toEqual({
+        isEligible: true,
+        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
+      });
+
+      // 19 years old
+      expect(getAeehCodeObtentionType('2007-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
     });
 
     it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.FORM}`, () => {
-      expect(getAeehCodeObtentionType('2008-01-01')).toEqual({
+      expect(getAeehCodeObtentionType('2010-01-01')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
 
-      expect(getAeehCodeObtentionType('2011-12-31')).toEqual({
+      expect(getAeehCodeObtentionType('2013-12-31')).toEqual({
         isEligible: true,
         displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });

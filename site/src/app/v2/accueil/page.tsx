@@ -7,12 +7,95 @@ import cn from 'classnames';
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { isPasSportClosed } from '@/utils/date';
+import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
+import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
   description: "Page d'accueil du site pass.sports.gouv.fr pour les particuliers",
 };
+//
+// const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
+//   {
+//     variant: 'purple',
+//     title: 'Pour les jeunes',
+//     description: 'Comment bénéficier du pass Sport pour votre inscription sportive ?',
+//     knowMore: {
+//       title: 'A savoir',
+//       description: 'Vous pouvez utiliser votre pass Sport jusqu&apos;au 31 décembre.',
+//     },
+//     points: [
+//       {
+//         title: 'Testez votre éligibilité en 1 min',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
+//         },
+//       },
+//       {
+//         title: 'Trouvez une structure sportive partenaire',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
+//         },
+//       },
+//       {
+//         title: 'Recevez ou demandez votre pass Sport',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
+//         },
+//       },
+//       {
+//         title: 'Activez votre code',
+//         linkProps: {
+//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
+//         },
+//       },
+//     ],
+//   },
+//   {
+//     variant: 'yellow',
+//     title: 'Pour les structures',
+//     description: 'Comment devenir partenaire et accompagner vos adhérents ?',
+//     knowMore: {
+//       title: 'A savoir',
+//       description:
+//         'Tous les bénéficiaires n&apos;ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 50€. Nous vous remercions pour votre mobilisation.',
+//     },
+//     points: [
+//       {
+//         title: 'Consultez les outils pour les structures sportives',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
+//         },
+//       },
+//       {
+//         title: 'Téléchargez votre kit de communication',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
+//         },
+//       },
+//       {
+//         title: 'Créez votre Compte Asso',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
+//         },
+//       },
+//       {
+//         title: 'Saisissez les codes des bénéficiaires',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
+//         },
+//       },
+//       {
+//         title: 'Obtenez le remboursement',
+//         linkProps: {
+//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
+//         },
+//       },
+//     ],
+//   },
+// ];
 
 export default async function Accueil() {
   return (
@@ -25,15 +108,39 @@ export default async function Accueil() {
 
             <div className={styles['top-section__content']}>
               <section className={styles['top-section__content-title']}>
-                <Image src={passSportLogoWhite} alt="" />
+                <Image src={passSportLogoWhite} alt="" loading="eager" />
                 <h1 className="fr-text--heavy">
-                  Une réduction immédiate
+                  50€ de réduction immédiate
                   <span className="display--block">sur l&apos;inscription sportive</span>
                 </h1>
               </section>
+              {!isPasSportClosed() && (
+                <section id={SKIP_LINKS_ID.eligibilityTestButton}>
+                  <div className={styles['eligibility-section']}>
+                    <div className={cn(styles['eligibility-section__wrapper'])}>
+                      <SimplifiedEligibilityTest
+                        display="row"
+                        buttonVariant="primary"
+                        headingLevel="h2"
+                        jeDonneMonAvisBtnPadding={false}
+                        displaySeparator={false}
+                        hasBackground
+                        hasBorder
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
           </div>
         </section>
+
+        {/*{!isPasSportClosed() && (*/}
+        {/*  <section className={styles['guiding-blocks']}>*/}
+        {/*    <GuidingBlock {...guidingBlocks1} headingLevel={2} />*/}
+        {/*    <GuidingBlock {...guidingBlocks2} headingLevel={2} />*/}
+        {/*  </section>*/}
+        {/*)}*/}
 
         <section className="fr-container">
           <div className={styles['benef-faq']}>
@@ -44,23 +151,72 @@ export default async function Accueil() {
               partenaire. Elle prend la forme d&apos;une réduction immédiate lors de
               l&apos;inscription.
             </p>
-
-            <p>
+            <h2 className="fr-mb-5w fr-h1">Qui peut bénéficier du pass Sport ?</h2>
+            <p className="fr-mb-2w">Pour la saison 2026-2027, le dispositif est ouvert aux :</p>
+            <ul>
+              <li>
+                Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
+                familial est inférieur ou égal à 699 ;
+              </li>
+              <li>
+                Jeunes en situation de handicap :
+                <ul>
+                  <li>
+                    de 6 à 19 ans révolus bénéficiaires de l&apos;AEEH (Allocation d&apos;éducation
+                    de l&apos;enfant handicapé) ;
+                  </li>
+                  <li>
+                    de 16 à 30 ans révolus bénéficiaires de l&apos;AAH (Allocation aux adultes
+                    handicapés).
+                  </li>
+                </ul>
+              </li>
+              <li>
+                Boursiers au plus de 28 ans révolus, titulaires d&apos;une bourse attribuée avant le
+                15 octobre 2026 :
+                <ul>
+                  <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
+                  <li>Bourse régionale pour une formation sanitaire et sociale.</li>
+                </ul>
+              </li>
+            </ul>
+            <p className="fr-mb-4w">
               Cette aide du ministère chargé des Sports s&apos;adresse aux enfants et aux jeunes qui
-              rencontrent des obstacles à la pratique sportive – qu’ils soient d’ordre financier,
-              social ou liés à un handicap. L’objectif : leur permettre d’accéder durablement à une
-              activité physique encadrée, au sein d’un environnement structurant, éducatif et
-              sécurisé.
+              rencontrent des obstacles à la pratique sportive – qu&apos;ils soient d&apos;ordre
+              financier, social ou liés à un handicap. L&apos;objectif : leur permettre
+              d&apos;accéder durablement à une activité physique encadrée, au sein d&apos;un
+              environnement structurant, éducatif et sécurisé.
             </p>
-
+            <h2 className="fr-h1 fr-mb-2w">Où utiliser le pass Sport ?</h2>
+            <p className="fr-mb-2w">
+              Le pass Sport peut être utilisé dans plus de 85 000 clubs et salles de sport partout
+              en France. Vous pouvez{' '}
+              <Link
+                href="/v2/trouver-un-club"
+                target="_blank"
+                title="consulter une liste indicative des établissements - nouvelle fenêtre"
+              >
+                consulter une liste indicative des établissements.
+              </Link>
+            </p>
+            <p className="fr-mb-2w">
+              Si le club qui vous intéresse ne figure pas sur la liste, il est possible qu&apos;il
+              soit partenaire mais non référencé. N&apos;hésitez pas à vérifier directement auprès
+              du club.
+            </p>
             <h2 className="fr-my-5w fr-h1">Une question ?</h2>
             <p className="fr-mb-2w">
-              Vous avez consulté les différentes pages sans trouver l’information que vous cherchiez
-              ? Vous vous posez des questions sur le pass Sport ?
+              Vous avez consulté les différentes pages sans trouver l&apos;information que vous
+              cherchiez ? Vous vous posez des questions sur le pass Sport ?
             </p>
             <Link href="/v2/une-question" className="fr-icon-arrow-right-line fr-link--icon-right">
               Consulter la liste des questions fréquemment posées
             </Link>
+            {!isPasSportClosed() && (
+              <section className="fr-my-5w">
+                <MainTiles titleAs="h3" />
+              </section>
+            )}
           </div>
         </section>
 
@@ -83,8 +239,8 @@ export default async function Accueil() {
             </span>
 
             <p className={cn(['fr-text--sm', styles['handiguide-section__legend']])}>
-              Sur la photo : Lucie Hautiere, médaillée d’or des championnats d’Europe en 2023 et
-              participation aux Jeux Paralympiques de Paris 2024 en para tennis de table.
+              Sur la photo : Lucie Hautiere, médaillée d&apos;or des championnats d&apos;Europe en
+              2023 et participation aux Jeux Paralympiques de Paris 2024 en para tennis de table.
             </p>
           </div>
 

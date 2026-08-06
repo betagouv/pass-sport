@@ -3,10 +3,9 @@ import rootStyles from '../../../../utilities.module.scss';
 import styles from './styles.module.scss';
 import AsyncSelect from 'react-select/async';
 import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';
-import { City } from 'types/City';
+import { City } from '@/types/City';
 import { Props as ReactSelectProps, SingleValue } from 'react-select';
-import { sortCities } from 'utils/city';
-import { InputState } from 'types/form';
+import { InputState } from '@/types/form';
 import {
   createCustomInput,
   CustomPlaceholder,
@@ -18,6 +17,7 @@ import {
   selectStyles,
 } from '@/app/v2/trouver-un-club/components/club-filters/custom-select/CustomSelect';
 import React, { ReactNode, useState } from 'react';
+import { sortCities } from '@/utils/city';
 
 interface Option {
   label: string;

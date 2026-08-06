@@ -37,7 +37,7 @@ const TestOuCode = () => {
               </li>
               <li>
                 Les étudiants boursiers de moins de 28 ans bénéficiaires d’une bourse attribuée
-                avant le 15 octobre 2025 :
+                avant le 15 octobre 2026 :
                 <ul className="list-style-type--circle">
                   <li>bourse du CROUS (y compris l’aide annuelle) ;</li>
                   <li>bourse régionale formations sanitaires et sociales.</li>

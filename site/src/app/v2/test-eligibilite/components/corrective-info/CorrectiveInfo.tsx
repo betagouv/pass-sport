@@ -8,7 +8,7 @@ type CorrectiveInfoProps = {
 };
 
 // Component that is mainly use to autocorrect beneficiary's allowance
-// Example: User is beneficiary of AAH, but selects ARS and fill in the information
+// Example: User is beneficiary of AAH, but selects AEEH and fill in the information
 // is correct but the allowance is incorrect, we display an alert information saying that
 // The allowance has been automatically corrected as to not interrupt the beneficiary's flow
 export default function CorrectiveInfo({ situation, originalAllowance }: CorrectiveInfoProps) {
@@ -26,13 +26,12 @@ export default function CorrectiveInfo({ situation, originalAllowance }: Correct
         </div>
       )}
 
-      {/* Since we cannot differentiate ARS and AEEH, we display the same message for both */}
-      {situation === 'jeune' && ![ALLOWANCE.ARS, ALLOWANCE.AEEH].includes(originalAllowance) && (
+      {situation === 'jeune' && originalAllowance !== ALLOWANCE.AEEH && (
         <div className="fr-mb-3w fr-ml-n1v">
           <Alert
             severity="info"
             title="Informations"
-            description={`Vous avez indiqué êtes bénéficiaire de l'aide ${originalAllowance}. D'après les informations dont nous disposons, vous êtes bénéficiaire de l'ARS (Allocation de Rentrée Scolaire), nous avons modifié cette information pour que vous puissiez demander votre code.`}
+            description={`Vous avez indiqué êtes bénéficiaire de l'aide ${originalAllowance}. D'après les informations dont nous disposons, vous êtes bénéficiaire de l'AEEH (Allocation d'Education de l'Enfant Handicapé), nous avons modifié cette information pour que vous puissiez demander votre code.`}
           />
         </div>
       )}

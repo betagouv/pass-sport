@@ -1,11 +1,19 @@
 import Button from '@codegouvfr/react-dsfr/Button';
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useCallback, useContext, useRef, useState } from 'react';
+import {
+  ChangeEvent,
+  FormEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   SearchResponseBody,
   SearchResponseErrorBody,
   StepOneFormInputsState,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import CityFinder from '../city-finder/CityFinder';
 import { mapper } from '../../helpers/helper';
 import ErrorAlert from '../error-alert/ErrorAlert';
@@ -37,6 +45,12 @@ const StepOneForm = ({
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
+
+  useEffect(() => {
+    push(['trackEvent', 'Eligibility Test', 'Step 1 viewed', allowance ?? 'unknown']);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isFormValid = (
     formData: FormData,
   ): { isValid: boolean; states: StepOneFormInputsState } => {
@@ -84,33 +98,49 @@ const StepOneForm = ({
       return;
     }
 
-    await requestEligibilityTest().then(({ status, body }) => {
-      if (status !== 200) {
+    try {
+      const { status, body } = await requestEligibilityTest();
+
+      // LCA search error (non-200 or a `message` error payload): show the error.
+      // We do NOT fall back to identité-pivot here — a failed search means the
+      // LCA flow did not run cleanly, so we can't trust we have enough data.
+      // `body` on an error status may be a plain string, so check status first
+      // (`'message' in body` would throw on a non-object).
+      if (status !== 200 || (typeof body === 'object' && 'message' in body)) {
         notifyError(status, body as SearchResponseErrorBody);
-      } else {
-        if ('message' in body) {
-          notifyError(status, body);
-          return;
-        }
-
-        onDataReceived(body);
-
-        if (body?.length === 0) {
-          onEligibilityFailure();
-        } else {
-          setIsFormDisabled(true);
-          push([
-            'trackEvent',
-            'Eligibility Test',
-            'Eligibility test step 1',
-            `Eligibility test step 1 successful`,
-          ]);
-        }
+        return;
       }
-    });
+
+      onDataReceived(body);
+
+      if (body?.length === 0) {
+        // Clean no-match (HTTP 200, empty): the LCA search succeeded. The POC
+        // embed renders the identité-pivot fallback via the empty
+        // eligibilityData — nothing else to trigger here.
+        push(['trackEvent', 'Eligibility Test', 'Step 1 no match', allowance ?? 'unknown']);
+        onEligibilityFailure();
+      } else {
+        setIsFormDisabled(true);
+        push([
+          'trackEvent',
+          'Eligibility Test',
+          'Eligibility test step 1',
+          `Eligibility test step 1 successful - ${allowance ?? 'unknown'}`,
+        ]);
+      }
+    } catch {
+      // Network error or non-JSON error body: still just an error, no pivot.
+      setError('Une erreur est apparue. Merci de réessayer ultérieurement.');
+    }
   };
 
   const notifyError = (status: number, body: SearchResponseErrorBody) => {
+    push([
+      'trackEvent',
+      'Eligibility Test',
+      'Step 1 API error',
+      `HTTP ${status} - ${allowance ?? 'unknown'}`,
+    ]);
     if (
       status === 400 &&
       body.message ===
@@ -171,7 +201,6 @@ const StepOneForm = ({
           </>
         );
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
         return (
           <>
             Nom de famille de l&apos;enfant <span className="text--required">*</span>
@@ -196,7 +225,6 @@ const StepOneForm = ({
           </>
         );
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
         return (
           <>
             Prénom de l&apos;enfant <span className="text--required">*</span>
@@ -214,12 +242,6 @@ const StepOneForm = ({
   const getRecipientResidencePlace = useCallback(() => {
     switch (allowance) {
       case ALLOWANCE.AAH:
-        return (
-          <>
-            Commune de résidence de l’allocataire <span className="text--required">*</span>
-          </>
-        );
-      case ALLOWANCE.ARS:
         return (
           <>
             Commune de résidence de l’allocataire <span className="text--required">*</span>

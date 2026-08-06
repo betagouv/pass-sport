@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import TechnicalError from '@codegouvfr/react-dsfr/dsfr/artwork/pictograms/system/technical-error.svg';
 import Ovoid from '@codegouvfr/react-dsfr/dsfr/artwork/background/ovoid.svg';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
@@ -23,9 +24,9 @@ export default function Page() {
             </p>
             <ul className="fr-btns-group fr-btns-group--inline-md">
               <li>
-                <a className="fr-btn" href="/">
+                <Link className="fr-btn" href="/">
                   Page d&apos;accueil
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

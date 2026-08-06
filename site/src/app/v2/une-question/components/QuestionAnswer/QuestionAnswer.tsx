@@ -1,4 +1,3 @@
-import PopularityLevel from '../PopularityLevel/PopularityLevel';
 import styles from './styles.module.scss';
 
 interface QuestionAnswer {

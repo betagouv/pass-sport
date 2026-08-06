@@ -6,11 +6,6 @@
   &--left-border {
     max-width: 760px;
     background-size: 1px 100%;
-    background-image: linear-gradient(
-      0deg,
-      var(--border-default-grey),
-      var(--border-default-grey)
-    );
+    background-image: linear-gradient(0deg, var(--border-default-grey), var(--border-default-grey));
   }
 }
-

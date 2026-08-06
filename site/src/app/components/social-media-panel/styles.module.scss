@@ -1,4 +1,4 @@
-@import '../../sassVariables.module.scss';
+@use '../../variables';
 
 .container {
   display: flex;
@@ -14,7 +14,7 @@
     //background-color: var(--green-menthe-925-125-hover);
     padding-top: 40px;
 
-    @media screen and (max-width: $lg) {
+    @media screen and (max-width: variables.$lg) {
       padding-top: 40px;
     }
   }

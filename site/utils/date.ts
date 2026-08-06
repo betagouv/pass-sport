@@ -18,17 +18,19 @@ export const getAnHourFromNow = () => {
 };
 
 export const isPasSportClosed = () => {
-  const currentDate = new Date();
-  const cutOffDate = new Date('2025-12-31T23:01:00Z'); // 00H01 January 1st 2026
-
-  return currentDate >= cutOffDate;
+  // const currentDate = new Date();
+  // const cutOffDate = new Date('2026-12-31T23:01:00Z'); // 00H01 January 1st 2027
+  //
+  // return currentDate >= cutOffDate;
+  return process.env.NEXT_PUBLIC_PASS_SPORT_IS_CLOSED === 'yes';
 };
 
 export const displayOfficialClosingBanner = () => {
-  const currentDate = new Date();
-  const cutOffDate = new Date('2026-01-15T23:01:00Z'); // 00H01 January 16th 2026
-
-  return currentDate >= cutOffDate;
+  // const currentDate = new Date();
+  // const cutOffDate = new Date('2026-01-15T23:01:00Z'); // 00H01 January 16th 2026
+  //
+  // return currentDate >= cutOffDate;
+  return process.env.NEXT_PUBLIC_PASS_SPORT_DISPLAY_OFFICIEL_CLOSING_BANNER === 'yes';
 };
 
 export const shouldDisplayChatbot = () => {

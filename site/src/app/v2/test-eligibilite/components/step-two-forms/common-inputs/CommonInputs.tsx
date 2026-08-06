@@ -1,6 +1,6 @@
 import Select from '@codegouvfr/react-dsfr/Select';
 import { ChangeEvent } from 'react';
-import { AahMsaInputsState, CrousInputsState } from 'types/EligibilityTest';
+import { AahMsaInputsState, CrousInputsState } from '@/types/EligibilityTest';
 import { countries } from '../../../helpers/countries';
 import CityFinder from '../../city-finder/CityFinder';
 

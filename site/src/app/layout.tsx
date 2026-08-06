@@ -1,7 +1,8 @@
 import './globals.scss';
 import SkipLinksWrapper from '@/app/components/skip-links-wrapper/SkipLinksWrapper';
 import { Metadata } from 'next';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { POC_SESSION_COOKIE } from '@/app/v2/api/poc-fc-api-particulier/session';
 import React from 'react';
 import Matomo from './Matomo';
 import PassSportFooter from './components/pass-sport-footer/PassSportFooter';
@@ -17,17 +18,21 @@ export const metadata: Metadata = {
   description: "Page d'accueil du site pass.sports.gouv.fr pour les particuliers",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const lang = 'fr';
-  const nonce = headers().get('X-Nonce') ?? undefined;
+  const headerList = await headers();
+  const nonce = headerList.get('X-Nonce') ?? undefined;
+
+  // Surface the POC "Se déconnecter" quick-access item only while its session lives.
+  const hasPocSession = (await cookies()).get(POC_SESSION_COOKIE)?.value != null;
 
   return (
     <html {...getHtmlAttributes({ lang })}>
-      <head>
+      <head suppressHydrationWarning>
         <DsfrHead nonce={nonce} />
         <link
           rel="stylesheet"
@@ -35,14 +40,14 @@ export default function RootLayout({
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossOrigin=""
         />
-        <Matomo />
-        <TarteAuCitron />
+        {process.env.NEXT_PUBLIC_ENV === 'production' && <Matomo />}
+        <TarteAuCitron nonce={nonce} />
       </head>
 
       <body>
         <StartDsfrOnHydration />
         <SkipLinksWrapper />
-        <PassSportNavigationStandard />
+        <PassSportNavigationStandard showPocLogout={hasPocSession} />
         <PassSportBreadcrumbStandard />
         <DsfrProvider lang={lang}>{children}</DsfrProvider>
         <PassSportFooter />

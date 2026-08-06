@@ -4,7 +4,7 @@ import {
   CrousInputsState,
   EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import CustomInput from '../custom-input/CustomInput';

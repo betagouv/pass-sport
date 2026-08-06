@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
 import { LatLngLiteral } from 'leaflet';
 import styles from './styles.module.scss';
-import { Club } from 'types/Club';
+import { Club } from '@/types/Club';
 import { useRef } from 'react';
 import { useLeafletAccessibility } from '@/app/hooks/useLeafletAccessibility';
 import MapZoomHandler from '../../../components/clubs-map/MapZoomHandler';

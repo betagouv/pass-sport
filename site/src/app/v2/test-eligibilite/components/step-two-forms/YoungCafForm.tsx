@@ -5,7 +5,7 @@ import {
   EnhancedConfirmResponseBody,
   SearchResponseBodyItem,
   YoungCafInputsState,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import FormButton from './FormButton';
 import CustomInput from '../custom-input/CustomInput';
@@ -171,7 +171,7 @@ const YoungCafForm = ({
               type: 'text',
               required: true,
               onBlur: (e) => {
-                const inputIsValid = !!e.target?.checkValidity();
+                const inputIsValid = e.target?.checkValidity();
 
                 setInputStates({
                   ...inputStates,
@@ -210,7 +210,7 @@ const YoungCafForm = ({
             placeholder: 'ex: Dupont',
             required: true,
             onBlur: (e) => {
-              const inputIsValid = !!e.target?.checkValidity();
+              const inputIsValid = e.target?.checkValidity();
 
               setInputStates({
                 ...inputStates,
@@ -245,7 +245,7 @@ const YoungCafForm = ({
             placeholder: 'ex: Marie',
             required: true,
             onBlur: (e) => {
-              const inputIsValid = !!e.target?.checkValidity();
+              const inputIsValid = e.target?.checkValidity();
 
               setInputStates({
                 ...inputStates,

@@ -1,8 +1,8 @@
-@import '../../../../../sassVariables.module.scss';
+@use '../../../../../variables';
 
 .map {
   height: 440px;
-  @media (min-width: $xl) {
+  @media (min-width: variables.$xl) {
     height: 670px;
   }
 }

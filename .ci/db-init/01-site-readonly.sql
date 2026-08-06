@@ -1,0 +1,14 @@
+-- Local dev only. Creates the SELECT-only role the site uses to read
+-- applications_by_sub and application_results_by_sub (APPLICATIONS_DATABASE_URL in
+-- compose.yml).
+--
+-- In production this is an operator step: creating a role needs privileges the app
+-- user does not have on a managed addon, which is why the migrations grant to this
+-- role only `IF EXISTS` rather than creating it (worker/drizzle/0000 for the schema
+-- and applications_by_sub, 0001 for application_results_by_sub, 0002 to restore that
+-- last grant after rebuilding the view). Runs before the worker's migrations, so that
+-- IF EXISTS check passes and the grants land.
+--
+-- Only executed by the postgres image on a FRESH data volume — after
+-- `docker compose down -v`, or on a first `up`.
+CREATE ROLE site_readonly LOGIN PASSWORD 'passsport';

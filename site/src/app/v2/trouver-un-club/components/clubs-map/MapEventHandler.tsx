@@ -10,7 +10,7 @@ const MapEventHandler = () => {
 
   const appendQueryString = useAppendQueryString();
 
-  map.on('moveend', (e) => {
+  map.on('moveend', () => {
     const center = map.getCenter();
     const zoom = map.getZoom();
     const queryString = appendQueryString([

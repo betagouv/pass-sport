@@ -8,7 +8,7 @@ import {
   SUPPORT_COOKIE_KEY,
   SUPPORT_COOKIE_NAME,
   SUPPORT_COOKIE_READ_MORE_URL,
-  WAITING_STATE,
+  WAIT_STATE,
 } from '@/app/constants/cookie-manager';
 import { useEnhanceCookieManagerAccessibility } from '@/app/hooks/accessibility/use-enhance-cookie-manager-accessibility';
 
@@ -16,7 +16,7 @@ import { useEnhanceCookieManagerAccessibility } from '@/app/hooks/accessibility/
 export const EXTERNAL_SHEET_DATA_KEY = 'tac';
 export const EXTERNAL_SHEET_IDENTIFIER = 'external-sheet';
 
-export const TarteAuCitron = () => {
+export const TarteAuCitron = ({ nonce }: { nonce?: string }) => {
   const domain = process.env.NEXT_PUBLIC_TARTEAUCITRON_DOMAIN;
   const pathname = usePathname();
 
@@ -40,6 +40,7 @@ export const TarteAuCitron = () => {
     <Script
       src={`https://tarteaucitron.io/load.js?domain=${domain}&uuid=19b13211bfb1bd1efd6f804a26674ed864265114`}
       strategy="afterInteractive"
+      nonce={nonce}
       onLoad={() => {
         const tac = window.tarteaucitron;
 
@@ -50,7 +51,7 @@ export const TarteAuCitron = () => {
             name: SUPPORT_COOKIE_NAME,
             needConsent: true,
             cookies: [SUPPORT_COOKIE_KEY],
-            defaultState: WAITING_STATE,
+            defaultState: WAIT_STATE,
             readmoreLink: SUPPORT_COOKIE_READ_MORE_URL,
             uri: PASS_SPORT_URI,
             js: () => {},

@@ -1,4 +1,4 @@
-@import '../../sassVariables.module';
+@use '../../variables';
 
 .resources {
   &__main-section {
@@ -18,7 +18,7 @@
       padding: 24px 24px 24px 0;
     }
 
-    @media screen and (max-width: $lg) {
+    @media screen and (max-width: variables.$lg) {
       margin-bottom: -70px;
       flex-direction: column;
 
@@ -47,7 +47,7 @@
     gap: 48px;
     margin: 48px auto 72px auto;
 
-    @media screen and (max-width: $lg) {
+    @media screen and (max-width: variables.$lg) {
       margin-bottom: 48px;
       margin-top: 24px;
     }

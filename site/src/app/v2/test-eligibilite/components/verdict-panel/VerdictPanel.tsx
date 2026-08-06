@@ -1,7 +1,7 @@
 import cn from 'classnames';
 import styles from './styles.module.scss';
 import Image from 'next/image';
-import code from '@/images/code-2x.svg';
+import code from '@/images/code.svg';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import Link from 'next/link';
 import Actions from '@/app/components/actions/Actions';
@@ -35,9 +35,9 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
     push(['trackEvent', 'Eligibility Test', 'Link clicked', 'Download link clicked']);
   }, []);
 
-  const onAeehLinkClick = useCallback(() => {
-    push(['trackEvent', 'Simplified Eligibility Test', 'Clicked', 'Button to open AEEH form']);
-  }, []);
+  // const onAeehLinkClick = useCallback(() => {
+  //   push(['trackEvent', 'Simplified Eligibility Test', 'Clicked', 'Button to open AEEH form']);
+  // }, []);
 
   useEffect(() => {
     if (isSuccess && successRef.current) {
@@ -48,6 +48,17 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
       errorRef.current.focus();
     }
   }, [isSuccess, isEligible]);
+
+  useEffect(() => {
+    const verdict = isSuccess ? 'Success' : isEligible ? 'Eligible - no match' : 'Not eligible';
+    push([
+      'trackEvent',
+      'Eligibility Test',
+      'Verdict displayed',
+      `${verdict} - ${allowance ?? 'unknown'}`,
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -95,7 +106,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
               )}
 
               <p className="fr-text--lg">
-                Code valable jusqu’au <span className="fr-text--bold">31 décembre 2025</span>{' '}
+                Code valable jusqu’au <span className="fr-text--bold">31 décembre 2026</span>{' '}
                 (strictement personnel).
               </p>
             </div>
@@ -154,10 +165,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                   <p>Le dispositif est ouvert :</p>
                   <ul className="fr-ml-2w">
                     <li>
-                      Aux jeunes de 14 à 17 ans bénéficiaires de l&apos;ARS (Allocation de Rentrée
-                      Scolaire) ;
-                    </li>
-                    <li>
                       Aux jeunes en situation de handicap :
                       <ul className="fr-ml-2w">
                         <li>
@@ -172,7 +179,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                     </li>
                     <li>
                       Aux jeunes de moins de 28 ans bénéficiaires d&apos;une bourse attribuée avant
-                      le 15 octobre 2025 :
+                      le 15 octobre 2026 :
                       <ul className="fr-ml-2w">
                         <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
                         <li>Bourse régionale pour une formation sanitaire et sociale.</li>

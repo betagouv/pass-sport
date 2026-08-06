@@ -1,6 +1,6 @@
 'use client';
 
-import { ContactRequestBody } from 'pages/api/contact';
+import { ContactRequestBody } from '@/app/api/contact';
 
 export const postContact = async (request: FormData, isProRequest: boolean): Promise<Response> => {
   // type casting because at this point no value are null
@@ -23,5 +23,9 @@ export const postContact = async (request: FormData, isProRequest: boolean): Pro
   if (rna) {
     body.rna = rna;
   }
-  return fetch('/api/contact', { method: 'POST', body: JSON.stringify(body) });
+  return fetch('/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 };
