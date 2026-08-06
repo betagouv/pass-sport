@@ -5,10 +5,6 @@ import type { BeneficiaryResult } from '@/app/services/applications';
 import BeneficiaryRecap from './BeneficiaryRecap';
 
 const POLL_INTERVAL_MS = 2_000;
-// 2 minutes. The nominal job is a few seconds (sequential HTTP, no fan-out), but a 429
-// requeues it for the full API Particulier reset window and a real failure retries at
-// 1/2/3 min — neither is worth waiting for on screen. Well inside the 10-minute session
-// TTL, so an expired session stays an edge case rather than the usual ending.
 const MAX_POLLS = 60;
 
 type State =

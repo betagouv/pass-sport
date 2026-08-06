@@ -8,7 +8,9 @@ import {
   verifyIdToken,
 } from '@/app/services/france-connect';
 import {
+  BASE_DOMAIN,
   FC_ID_TOKEN_COOKIE,
+  FC_INTERNAL_PAGE_PATH,
   FC_NONCE_COOKIE,
   FC_STATE_COOKIE,
   getRedirectUri,
@@ -17,10 +19,13 @@ import {
 import { storePocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
 import { toPivotIdentity } from '@/app/v2/api/poc-fc-api-particulier/pivot';
 
-const PAGE_PATH = '/v2/poc-fc-api-particulier';
+const redirectToPage = (params: Record<string, string> = {}): NextResponse => {
+  const url = new URL(FC_INTERNAL_PAGE_PATH, BASE_DOMAIN);
 
-const redirectToPage = (request: Request, query = ''): NextResponse =>
-  NextResponse.redirect(new URL(`${PAGE_PATH}${query}`, request.url));
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+
+  return NextResponse.redirect(url);
+};
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -37,11 +42,11 @@ export async function GET(request: Request): Promise<Response> {
   cookieStore.delete(FC_NONCE_COOKIE);
 
   if (fcError) {
-    return redirectToPage(request, `?error=${encodeURIComponent(fcError)}`);
+    return redirectToPage({ error: fcError });
   }
 
   if (!code || !state || !expectedState || state !== expectedState || !expectedNonce) {
-    return redirectToPage(request, '?error=state');
+    return redirectToPage({ error: 'state' });
   }
 
   try {
@@ -49,33 +54,27 @@ export async function GET(request: Request): Promise<Response> {
     const tokens = await exchangeCodeForTokens({
       config,
       code,
-      redirectUri: getRedirectUri(request),
+      redirectUri: getRedirectUri(),
     });
 
     // Verify the id_token ES256 signature (issuer, audience, nonce) before trusting it.
     await verifyIdToken({ config, idToken: tokens.idToken, nonce: expectedNonce });
 
     const identity = await fetchUserInfo({ config, accessToken: tokens.accessToken });
-
-    // Reversed flow: FranceConnect only authenticates the user here. API Particulier
-    // is NOT called yet — it runs later, once the user confirms the aides + commune
-    // form (see the /collect route), in "identité pivot" mode using this identity.
-    // The FC access token is not kept: only the pivot identity is needed.
     const pivot = toPivotIdentity(identity);
+
     if (!pivot) {
-      return redirectToPage(request, '?error=identity');
-    }
-    // Used as the BullMQ job id, which must not contain ':'. FranceConnect subs are
-    // hex-ish, but reject rather than silently mangle the dedup key.
-    if (!identity.sub || identity.sub.includes(':')) {
-      return redirectToPage(request, '?error=identity');
+      return redirectToPage({ error: 'identity' });
     }
 
-    // The browser only receives the random session id (httpOnly cookie); the identity
-    // itself stays server-side in Redis under the session's 10-minute TTL.
+    if (!identity.sub || identity.sub.includes(':')) {
+      return redirectToPage({ error: 'identity' });
+    }
+
     await storePocResult({ identity: pivot, sub: identity.sub });
 
-    const response = redirectToPage(request, '?status=ok');
+    const response = redirectToPage({ status: 'ok' });
+
     response.cookies.set(FC_ID_TOKEN_COOKIE, tokens.idToken, transientCookieOptions());
 
     return response;
@@ -85,6 +84,7 @@ export async function GET(request: Request): Promise<Response> {
       scope.captureMessage('FranceConnect POC callback failed');
       scope.captureException(e);
     });
-    return redirectToPage(request, '?error=callback');
+
+    return redirectToPage({ error: 'callback' });
   }
 }

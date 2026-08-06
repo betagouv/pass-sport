@@ -1,26 +1,12 @@
 'use client';
 
-// Reversed-flow info form, shown AFTER FranceConnect login: collects the aides
-// bénéficiées + commune de résidence, then POSTs to /collect, which enqueues an
-// eligibility job (202). On success it signals the parent to show the "code sent by
-// email" confirmation — the code is delivered off-request by the worker.
-
 import { FormEvent, useState } from 'react';
 import Checkbox from '@codegouvfr/react-dsfr/Checkbox';
 import Button from '@codegouvfr/react-dsfr/Button';
 import CityFinder from '@/app/v2/test-eligibilite/components/city-finder/CityFinder';
 import { InputState } from '@/types/form';
-// The worker's Allowance union, NOT the test-eligibilite ALLOWANCE enum: the POC has
-// its own set of routes (QF has no counterpart in that parcours, and its exhaustive
-// ALLOWANCE_MAPPING_TO_ALLOCATION would have to invent an ALLOCATION for it).
-// Type-only import, so nothing from the server-side queue module reaches the bundle.
 import type { Allowance } from '@/app/services/queue';
 
-// QF et AEEH tiennent en une seule case: tous deux portent sur les ENFANTS du foyer et
-// déclenchent l'appel quotient_familial (QF couvre les 6-17 ans sur le seuil, AEEH les
-// 17-19 ans par un appel par enfant), d'où la fenêtre 6-19 ans annoncée. Demander son
-// quotient à l'usager était un obstacle — personne ne connaît ce chiffre — alors que le
-// worker lit de toute façon la valeur réelle. Les autres portent sur l'usager connecté.
 const AIDE_OPTIONS: { label: string; hint?: string; allowances: Allowance[] }[] = [
   {
     label: 'J’ai un ou plusieurs enfants de 6 à 19 ans',

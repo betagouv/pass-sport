@@ -6,6 +6,7 @@ import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
 export async function GET(): Promise<Response> {
   try {
     const pocResult = await loadPocResult();
+
     if (!pocResult) {
       return NextResponse.json({ error: 'Session expirée.' }, { status: 401 });
     }
@@ -23,6 +24,7 @@ export async function GET(): Promise<Response> {
       scope.captureMessage('FranceConnect POC result lookup failed');
       scope.captureException(e);
     });
+
     return NextResponse.json({ error: 'Erreur interne.' }, { status: 500 });
   }
 }

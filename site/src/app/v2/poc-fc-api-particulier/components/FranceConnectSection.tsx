@@ -2,8 +2,6 @@
 
 import { FranceConnectButton } from '@codegouvfr/react-dsfr/FranceConnectButton';
 
-// Reversed flow: FranceConnect first, no data harvested beforehand. The button
-// only starts the OIDC round-trip; aides + commune are collected after login.
 export default function FranceConnectSection() {
   return (
     <FranceConnectButton

@@ -4,15 +4,13 @@ import { randomUUID } from 'crypto';
 import * as Sentry from '@sentry/nextjs';
 import { buildAuthorizeUrl, getFranceConnectConfig } from '@/app/services/france-connect';
 import {
+  FC_INTERNAL_PAGE_PATH,
   FC_NONCE_COOKIE,
   FC_STATE_COOKIE,
   getRedirectUri,
   transientCookieOptions,
 } from '@/app/v2/api/poc-fc-api-particulier/shared';
 
-// Reversed flow: FranceConnect comes first, before any form. This route only
-// starts the OIDC round-trip (state + nonce) — the aides + commune de résidence
-// are collected after login, on the page.
 export async function GET(request: Request): Promise<Response> {
   try {
     const config = getFranceConnectConfig();
@@ -21,7 +19,7 @@ export async function GET(request: Request): Promise<Response> {
 
     const authorizeUrl = buildAuthorizeUrl({
       config,
-      redirectUri: getRedirectUri(request),
+      redirectUri: getRedirectUri(),
       state,
       nonce,
     });
@@ -37,6 +35,6 @@ export async function GET(request: Request): Promise<Response> {
       scope.captureMessage('FranceConnect POC login failed');
       scope.captureException(e);
     });
-    return NextResponse.redirect(new URL('/v2/poc-fc-api-particulier?error=login', request.url));
+    return NextResponse.redirect(new URL(`${FC_INTERNAL_PAGE_PATH}?error=login`, request.url));
   }
 }

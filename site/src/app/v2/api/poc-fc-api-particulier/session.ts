@@ -22,6 +22,7 @@ export const storePocResult = async (result: PocResult): Promise<void> => {
   await redis.set(redisKey(sessionId), JSON.stringify(result), 'EX', SESSION_TTL_SECONDS);
 
   const cookieStore = await cookies();
+
   cookieStore.set(POC_SESSION_COOKIE, sessionId, sessionCookieOptions());
 };
 
@@ -30,6 +31,7 @@ export const storePocResult = async (result: PocResult): Promise<void> => {
 export const loadPocResult = async (): Promise<(PocResult & { sessionId: string }) | null> => {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(POC_SESSION_COOKIE)?.value;
+
   if (!sessionId) {
     return null;
   }
@@ -37,9 +39,11 @@ export const loadPocResult = async (): Promise<(PocResult & { sessionId: string 
   try {
     const redis = await getRedis();
     const raw = await redis.get(redisKey(sessionId));
+
     if (!raw) {
       return null;
     }
+
     return { ...(JSON.parse(raw) as PocResult), sessionId };
   } catch {
     return null;

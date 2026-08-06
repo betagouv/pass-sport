@@ -1,8 +1,3 @@
-// FranceConnect OpenID Connect helpers.
-// Implements the authorization-code flow by hand (no full oidc client lib in the repo).
-// id_token and userinfo JWTs are signed by FranceConnect with ES256 and verified here
-// against the provider JWKS (issuer + audience + nonce checks included).
-
 import { createRemoteJWKSet, jwtVerify, type JWTPayload, type JWTVerifyGetKey } from 'jose';
 
 // FranceConnect v2 signs id_token / userinfo with ES256 (ECDSA P-256 + SHA-256).
@@ -39,9 +34,6 @@ export interface FranceConnectIdentity {
 }
 
 const DEFAULT_BASE_URL = 'https://fcp-low.sbx.dev-franceconnect.fr/api/v2';
-// API Particulier is called in "identité pivot" mode (static API key + pivot
-// identity as query params), so the FC token only needs the identity scopes.
-// The business scopes required by the FC-token modality are no longer requested.
 const DEFAULT_SCOPES = 'openid identite_pivot preferred_username email';
 
 export const getFranceConnectConfig = (): FranceConnectConfig => {
@@ -57,7 +49,6 @@ export const getFranceConnectConfig = (): FranceConnectConfig => {
   return {
     clientId,
     clientSecret,
-    // FranceConnect v2 issuer is the API base URL; override only if the provider differs.
     issuer: process.env.FRANCE_CONNECT_ISSUER ?? baseUrl,
     authorizationEndpoint:
       process.env.FRANCE_CONNECT_AUTHORIZATION_ENDPOINT ?? `${baseUrl}/authorize`,
@@ -69,8 +60,6 @@ export const getFranceConnectConfig = (): FranceConnectConfig => {
   };
 };
 
-// Remote JWKS sets, cached per endpoint. jose handles key caching + rotation
-// (re-fetch on unknown kid) internally behind this function.
 const jwksByEndpoint = new Map<string, JWTVerifyGetKey>();
 
 const getJwks = (jwksEndpoint: string): JWTVerifyGetKey => {
@@ -136,9 +125,6 @@ export const exchangeCodeForTokens = async (params: {
   return { accessToken: json.access_token, idToken: json.id_token };
 };
 
-// Verifies the id_token ES256 signature against the FranceConnect JWKS and asserts
-// issuer, audience (client_id) and the nonce bound to this authorization request.
-// Throws if any check fails. Returns the verified claims.
 export const verifyIdToken = async (params: {
   config: FranceConnectConfig;
   idToken: string;
@@ -173,7 +159,6 @@ export const fetchUserInfo = async (params: {
     throw new Error(`FranceConnect userinfo request failed. Status: ${response.status}`);
   }
 
-  // FranceConnect v2 returns userinfo as a signed JWT (application/jwt).
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/jwt')) {
     const jwt = await response.text();
