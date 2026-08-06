@@ -41,8 +41,8 @@ const initialInputsState: Record<keyof FormInputsState, InputState> = {
 };
 
 const caisseOptions = [
-  { value: CAISSE.CAF, label: 'CAF — Caisse d’Allocations Familiales' },
-  { value: CAISSE.MSA, label: 'MSA — Mutualité Sociale Agricole' },
+  { value: CAISSE.CAF, label: 'CAF (Caisse d’Allocations Familiales)' },
+  { value: CAISSE.MSA, label: 'MSA (Mutualité Sociale Agricole)' },
 ];
 
 const defaultOptions = [

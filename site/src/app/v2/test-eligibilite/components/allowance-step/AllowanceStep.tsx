@@ -19,7 +19,6 @@ import {
   CAISSE,
   isEligible,
 } from '@/utils/eligibility-test';
-import RadioButtons from '@codegouvfr/react-dsfr/RadioButtons';
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
@@ -389,10 +388,11 @@ const AllowanceStep = () => {
                 ]}
               >
                 {isCaisseNeeded && (
-                  <RadioButtons
+                  <CustomRadioButtons
                     id={caisseFieldsetId}
                     className="fr-mt-3w"
                     name="caisse"
+                    hideSubmitButton
                     state={inputStates.caisse.state}
                     stateRelatedMessage={inputStates.caisse.errorMsg}
                     legend={
@@ -403,7 +403,15 @@ const AllowanceStep = () => {
                     }
                     options={[
                       {
-                        label: 'CAF (Caisse d’Allocations Familiales)',
+                        label: (
+                          <p className="fr-text--bold">
+                            CAF
+                            <br />
+                            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                              Caisse d’Allocations Familiales
+                            </span>
+                          </p>
+                        ),
                         nativeInputProps: {
                           checked: caisse === CAISSE.CAF,
                           onChange: () => {
@@ -413,7 +421,15 @@ const AllowanceStep = () => {
                         },
                       },
                       {
-                        label: 'MSA (Mutualité Sociale Agricole)',
+                        label: (
+                          <p className="fr-text--bold">
+                            MSA
+                            <br />
+                            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                              Mutualité Sociale Agricole
+                            </span>
+                          </p>
+                        ),
                         nativeInputProps: {
                           checked: caisse === CAISSE.MSA,
                           onChange: () => {

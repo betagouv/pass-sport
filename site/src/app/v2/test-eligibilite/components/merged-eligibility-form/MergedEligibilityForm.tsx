@@ -159,19 +159,56 @@ const MergedEligibilityForm = () => {
     }));
   };
 
-  /**
-   * Blur only flags a field the browser considers required. The optional ones a given caisse may
-   * still need are settled on submit, once /search has answered.
-   */
+  const isRequiredOnBlur = (field: EligibilityFieldName, formData: FormData): boolean => {
+    if (BENEFICIARY_FIELDS.includes(field)) {
+      return true;
+    }
+
+    if (!isBoursier) {
+      return withBirthPlace(getBranchFields(situation, caisse), formData).includes(field);
+    }
+
+    const hasIne = !!(formData.get('recipientIneNumber') ?? '').toString().trim();
+    const hasCountry = !!(formData.get('recipientBirthCountry') ?? '').toString().trim();
+
+    switch (field) {
+      case 'recipientIneNumber':
+        return !hasCountry;
+      case 'recipientBirthCountry':
+        return !hasIne;
+      default:
+        return false;
+    }
+  };
+
   const onFieldBlur =
     (field: EligibilityFieldName) => (e: FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
-      const errorMsg = getFieldError(field, e.target.value.trim(), e.target.required);
+      const form = e.currentTarget.form;
+      const formData = form ? new FormData(form) : new FormData();
+      const errorMsg = getFieldError(
+        field,
+        e.target.value.trim(),
+        isRequiredOnBlur(field, formData),
+      );
 
       setInputStates((states) => ({
         ...states,
         [field]: errorMsg ? { state: 'error', errorMsg } : { state: 'default' },
       }));
     };
+
+  /**
+   * A boursier gives either an INE or a pays de naissance. Answering one makes the other optional,
+   * so drop the error blur may have left on it while it still counted as required.
+   */
+  const clearIneOrBirthCountryError = (answeredField: EligibilityFieldName, value: string) => {
+    if (!isBoursier || !value) return;
+
+    const fieldToClear =
+      answeredField === 'recipientIneNumber' ? 'recipientBirthCountry' : 'recipientIneNumber';
+
+    setInputStates((states) => ({ ...states, [fieldToClear]: { state: 'default' } }));
+  };
 
   const focusFirstError = (states: EligibilityFormInputsState, fields: EligibilityFieldName[]) => {
     const firstInvalid = fields.find((field) => states[field].state === 'error');
@@ -400,6 +437,7 @@ const MergedEligibilityForm = () => {
   const onCountryChanged = (e: ChangeEvent<HTMLSelectElement>) => {
     setIsBirthPlaceRequired(e.target.value.toUpperCase() === 'FR');
     setFieldState('recipientBirthCountry', e.target.value);
+    clearIneOrBirthCountryError('recipientBirthCountry', e.target.value);
   };
 
   const getNameLabel = useCallback((): ReactNode => {
@@ -571,8 +609,10 @@ const MergedEligibilityForm = () => {
                   placeholder: 'ex: 0000000000X ou 00000000XX',
                   type: 'text',
                   onBlur: onFieldBlur('recipientIneNumber'),
-                  onChange: (e: ChangeEvent<HTMLInputElement>) =>
-                    setFieldState('recipientIneNumber', e.target.value),
+                  onChange: (e: ChangeEvent<HTMLInputElement>) => {
+                    setFieldState('recipientIneNumber', e.target.value);
+                    clearIneOrBirthCountryError('recipientIneNumber', e.target.value);
+                  },
                   'aria-label': 'Saisir le numéro INE',
                 },
                 state: inputStates.recipientIneNumber.state,
