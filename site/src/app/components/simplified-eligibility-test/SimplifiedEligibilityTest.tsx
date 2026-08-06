@@ -6,7 +6,6 @@ import { Select } from '@codegouvfr/react-dsfr/Select';
 import Button, { ButtonProps } from '@codegouvfr/react-dsfr/Button';
 import { ALLOCATION, ALLOCATIONS_WITH_CAISSE, CAISSE, isEligible } from '@/utils/eligibility-test';
 import { useCallback, useEffect, useState } from 'react';
-import { format } from 'date-fns';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
@@ -111,13 +110,7 @@ export default function SimplifiedEligibilityTest({
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
-  const [maxDob, setMaxDob] = useState<string | undefined>(undefined);
   const { save } = useEligibilityTestStorage();
-
-  // Resolved client-side: a server rendering in UTC would emit a different day than a Paris client
-  useEffect(() => {
-    setMaxDob(format(new Date(), 'yyyy-MM-dd'));
-  }, []);
 
   const isCaisseNeeded =
     allocationName !== null && ALLOCATIONS_WITH_CAISSE.includes(allocationName);
@@ -285,21 +278,18 @@ export default function SimplifiedEligibilityTest({
                     required: true,
                     type: 'date',
                     min: '1950-01-01',
-                    max: maxDob,
+                    max: '2099-12-31',
                     onChange: (e) => {
                       setTargetDate(e.target.value);
                     },
                     onBlur: (e) => {
                       const inputIsValid = e.target?.checkValidity();
-                      const errorMsg = e.target?.validity.rangeOverflow
-                        ? 'La date de naissance ne peut pas être dans le futur'
-                        : 'La date de naissance est invalide';
 
                       setInputStates({
                         ...inputStates,
                         dob: {
                           state: inputIsValid ? 'default' : 'error',
-                          errorMsg: !inputIsValid ? errorMsg : '',
+                          errorMsg: !inputIsValid ? 'La date de naissance est invalide' : '',
                         },
                       });
 
