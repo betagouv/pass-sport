@@ -171,7 +171,7 @@ const StepOneForm = ({
           </>
         );
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
+      case ALLOWANCE.QF:
         return (
           <>
             Nom de famille de l&apos;enfant <span className="text--required">*</span>
@@ -196,7 +196,7 @@ const StepOneForm = ({
           </>
         );
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
+      case ALLOWANCE.QF:
         return (
           <>
             Prénom de l&apos;enfant <span className="text--required">*</span>
@@ -219,7 +219,7 @@ const StepOneForm = ({
             Commune de résidence de l’allocataire <span className="text--required">*</span>
           </>
         );
-      case ALLOWANCE.ARS:
+      case ALLOWANCE.QF:
         return (
           <>
             Commune de résidence de l’allocataire <span className="text--required">*</span>

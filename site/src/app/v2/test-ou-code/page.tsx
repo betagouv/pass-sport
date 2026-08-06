@@ -19,28 +19,30 @@ const TestOuCode = () => {
         <div className={`fr-pb-2w fr-mx-auto fr-px-2w fr-pt-4w ${styles.background}`}>
           <section className={cn('fr-mb-2w', styles.description)}>
             <h2 className="fr-h4">Qui est concerné par le pass Sport ?</h2>
-            <ul className="fr-mt-2w fr-pl-4w">
+            <ul>
               <li>
-                Les jeunes de 14 à 17 ans bénéficiaires de l’Allocation de Rentrée Scolaire (ARS) ;
+                Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
+                familial est inférieur ou égal à 699 ;
               </li>
               <li>
-                Les jeunes en situation de handicap :
-                <ul className="list-style-type--circle">
+                Jeunes en situation de handicap :
+                <ul>
                   <li>
-                    de 6 à 19 ans bénéficiaires de l’Allocation d’Éducation de l’Enfant Handicapé
-                    (AEEH) ;
+                    de 6 à 19 ans révolus bénéficiaires de l&apos;AEEH (Allocation d&apos;éducation
+                    de l&apos;enfant handicapé) ;
                   </li>
                   <li>
-                    de 16 à 30 ans bénéficiaires de l’Allocation aux Adultes Handicapés (AAH) ;
+                    de 16 à 30 ans révolus bénéficiaires de l&apos;AAH (Allocation aux adultes
+                    handicapés).
                   </li>
                 </ul>
               </li>
               <li>
-                Les étudiants boursiers de moins de 28 ans bénéficiaires d’une bourse attribuée
-                avant le 15 octobre 2026 :
-                <ul className="list-style-type--circle">
-                  <li>bourse du CROUS (y compris l’aide annuelle) ;</li>
-                  <li>bourse régionale formations sanitaires et sociales.</li>
+                Boursiers au plus de 28 ans révolus, titulaires d&apos;une bourse attribuée avant le
+                15 octobre 2026 :
+                <ul>
+                  <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
+                  <li>Bourse régionale pour une formation sanitaire et sociale.</li>
                 </ul>
               </li>
             </ul>

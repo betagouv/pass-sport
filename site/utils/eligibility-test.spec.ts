@@ -1,7 +1,3 @@
-// Context
-// nés entre le 1er janvier 2008 et le 31 décembre 2011 et bénéficient de l'allocation de rentrée scolaire
-// nés entre le 1er janvier 2006 et le 31 décembre 2019 et bénéficient de l'allocation d'éducation de l'enfant handicapé
-
 import {
   AEEH_CODE_OBTENTION_TYPE,
   ALLOCATION,
@@ -32,14 +28,14 @@ describe('Eligibility tests suite', () => {
           isEligible({ targetDate: '2020-12-31', allocationName: ALLOCATION.AEEH }),
         ).toBeTruthy();
       });
-      it('ARS', () => {
-        // Between 12 and 17 years old
-        // nés entre le 1er janvier 2009 et le 31 décembre 2014 et bénéficient de l'allocation de rentrée scolaire
+      it('QF', () => {
+        // Between 6 and 17 years old
+        // nés entre le 1er janvier 2009 et le 31 décembre 2020 et éligibles au quotient familial
         expect(
-          isEligible({ targetDate: '2009-01-01', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2009-01-01', allocationName: ALLOCATION.QF }),
         ).toBeTruthy();
         expect(
-          isEligible({ targetDate: '2014-12-31', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2020-12-31', allocationName: ALLOCATION.QF }),
         ).toBeTruthy();
       });
       it('CROUS, Formation sanitaires et sociales', () => {
@@ -95,15 +91,15 @@ describe('Eligibility tests suite', () => {
           isEligible({ targetDate: '2021-12-31', allocationName: ALLOCATION.AEEH }),
         ).toBeFalsy();
       });
-      it('ARS', () => {
-        // 11 years old
+      it('QF', () => {
+        // 5 years old
         expect(
-          isEligible({ targetDate: '2015-12-31', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2021-12-31', allocationName: ALLOCATION.QF }),
         ).toBeFalsy();
 
         // 18 years old
         expect(
-          isEligible({ targetDate: '2008-01-01', allocationName: ALLOCATION.ARS }),
+          isEligible({ targetDate: '2008-01-01', allocationName: ALLOCATION.QF }),
         ).toBeFalsy();
       });
 
