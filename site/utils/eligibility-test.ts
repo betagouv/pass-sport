@@ -10,10 +10,18 @@ export enum ALLOCATION {
   FORMATIONS_SANITAIRES_SOCIAUX = 'formations-sanitaires-sociaux',
 }
 
-export enum AEEH_CODE_OBTENTION_TYPE {
-  FORM = 'form',
-  LINK = 'link',
+/* Values match OrganismType so they can be compared to the organisme /search answers with */
+export enum CAISSE {
+  CAF = 'CAF',
+  MSA = 'MSA',
 }
+
+/* The caisse question only makes sense for these: boursiers are always affiliated to the cnous */
+export const ALLOCATIONS_WITH_CAISSE: ALLOCATION[] = [
+  ALLOCATION.AAH,
+  ALLOCATION.AEEH,
+  ALLOCATION.QF,
+];
 
 export const ALLOWANCE_MAPPING_TO_ALLOCATION: { [key in ALLOWANCE]: ALLOCATION } = {
   [ALLOWANCE.NONE]: ALLOCATION.NONE,
@@ -52,18 +60,6 @@ function isBetween({
     start: startDate,
     end: endDate,
   });
-}
-
-export function getAeehCodeObtentionType(targetDate: string): {
-  isEligible: boolean;
-  displayType: AEEH_CODE_OBTENTION_TYPE;
-} {
-  const _isEligible = isEligible({ targetDate, allocationName: ALLOCATION.AEEH });
-
-  return {
-    isEligible: _isEligible,
-    displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-  };
 }
 
 export function isEligible({

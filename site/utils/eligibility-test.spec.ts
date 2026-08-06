@@ -1,9 +1,4 @@
-import {
-  AEEH_CODE_OBTENTION_TYPE,
-  ALLOCATION,
-  getAeehCodeObtentionType,
-  isEligible,
-} from './eligibility-test';
+import { ALLOCATION, isEligible } from './eligibility-test';
 
 describe('Eligibility tests suite', () => {
   describe('isEligible() tests suite', () => {
@@ -93,14 +88,10 @@ describe('Eligibility tests suite', () => {
       });
       it('QF', () => {
         // 5 years old
-        expect(
-          isEligible({ targetDate: '2021-12-31', allocationName: ALLOCATION.QF }),
-        ).toBeFalsy();
+        expect(isEligible({ targetDate: '2021-12-31', allocationName: ALLOCATION.QF })).toBeFalsy();
 
         // 18 years old
-        expect(
-          isEligible({ targetDate: '2008-01-01', allocationName: ALLOCATION.QF }),
-        ).toBeFalsy();
+        expect(isEligible({ targetDate: '2008-01-01', allocationName: ALLOCATION.QF })).toBeFalsy();
       });
 
       it('CROUS, Formation sanitaires et sociales', () => {
@@ -114,46 +105,6 @@ describe('Eligibility tests suite', () => {
             allocationName: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
           }),
         ).toBeFalsy();
-      });
-    });
-  });
-
-  describe('getAeehCodeObtentionType() tests suite', () => {
-    it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.FORM}`, () => {
-      // 6 years old
-      expect(getAeehCodeObtentionType('2020-12-31')).toEqual({
-        isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-      });
-
-      // 13 years old
-      expect(getAeehCodeObtentionType('2013-01-01')).toEqual({
-        isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-      });
-
-      // 18 years old
-      expect(getAeehCodeObtentionType('2008-01-01')).toEqual({
-        isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-      });
-
-      // 19 years old
-      expect(getAeehCodeObtentionType('2007-01-01')).toEqual({
-        isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-      });
-    });
-
-    it(`should return obtention type ${AEEH_CODE_OBTENTION_TYPE.FORM}`, () => {
-      expect(getAeehCodeObtentionType('2010-01-01')).toEqual({
-        isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-      });
-
-      expect(getAeehCodeObtentionType('2013-12-31')).toEqual({
-        isEligible: true,
-        displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
       });
     });
   });

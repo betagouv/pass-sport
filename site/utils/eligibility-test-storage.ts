@@ -1,4 +1,4 @@
-import { ALLOCATION } from './eligibility-test';
+import { ALLOCATION, CAISSE } from './eligibility-test';
 
 // Referenced inline so Next can statically replace it at build time
 const ENV_PREFIX = (process.env.NEXT_PUBLIC_ENV ?? 'local').toUpperCase();
@@ -9,15 +9,20 @@ export const PASS_SPORT_ELIGIBILITY_TEST_KEY = `PASS_SPORT_${ENV_PREFIX}_ELIGIBI
 export type StoredEligibilityTest = {
   dob: string | null;
   situation: ALLOCATION | null;
+  caisse: CAISSE | null;
 };
 
-const EMPTY: StoredEligibilityTest = { dob: null, situation: null };
+const EMPTY: StoredEligibilityTest = { dob: null, situation: null, caisse: null };
 
 // Prefilling a type="date" input with anything else leaves the field blank while the state holds a value
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isAllocation(value: unknown): value is ALLOCATION {
   return Object.values(ALLOCATION).includes(value as ALLOCATION);
+}
+
+function isCaisse(value: unknown): value is CAISSE {
+  return Object.values(CAISSE).includes(value as CAISSE);
 }
 
 // sessionStorage throws (not returns null) under Safari private browsing and hardened privacy settings
@@ -53,11 +58,12 @@ export function readEligibilityTest(): StoredEligibilityTest | null {
       return null;
     }
 
-    const { dob, situation } = parsed as Record<keyof StoredEligibilityTest, unknown>;
+    const { dob, situation, caisse } = parsed as Record<keyof StoredEligibilityTest, unknown>;
 
     return {
       dob: typeof dob === 'string' && ISO_DATE.test(dob) ? dob : null,
       situation: isAllocation(situation) ? situation : null,
+      caisse: isCaisse(caisse) ? caisse : null,
     };
   } catch {
     return null;

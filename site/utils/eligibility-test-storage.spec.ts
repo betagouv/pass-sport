@@ -1,4 +1,4 @@
-import { ALLOCATION } from './eligibility-test';
+import { ALLOCATION, CAISSE } from './eligibility-test';
 import {
   clearEligibilityTest,
   PASS_SPORT_ELIGIBILITY_TEST_KEY,
@@ -40,7 +40,20 @@ describe('Eligibility test storage suite', () => {
         JSON.stringify({ dob: '2015-12-31', situation: 'ars' }),
       );
 
-      expect(readEligibilityTest()).toEqual({ dob: '2015-12-31', situation: null });
+      expect(readEligibilityTest()).toEqual({ dob: '2015-12-31', situation: null, caisse: null });
+    });
+
+    it('should null out an unknown caisse', () => {
+      sessionStorage.setItem(
+        PASS_SPORT_ELIGIBILITY_TEST_KEY,
+        JSON.stringify({ dob: '2015-12-31', situation: ALLOCATION.QF, caisse: 'cnous' }),
+      );
+
+      expect(readEligibilityTest()).toEqual({
+        dob: '2015-12-31',
+        situation: ALLOCATION.QF,
+        caisse: null,
+      });
     });
 
     it('should null out a non-string dob', () => {
@@ -49,7 +62,7 @@ describe('Eligibility test storage suite', () => {
         JSON.stringify({ dob: 20151231, situation: ALLOCATION.QF }),
       );
 
-      expect(readEligibilityTest()).toEqual({ dob: null, situation: ALLOCATION.QF });
+      expect(readEligibilityTest()).toEqual({ dob: null, situation: ALLOCATION.QF, caisse: null });
     });
 
     it('should null out a dob that is not an ISO date', () => {
@@ -58,37 +71,48 @@ describe('Eligibility test storage suite', () => {
         JSON.stringify({ dob: '31/12/2015', situation: ALLOCATION.QF }),
       );
 
-      expect(readEligibilityTest()).toEqual({ dob: null, situation: ALLOCATION.QF });
+      expect(readEligibilityTest()).toEqual({ dob: null, situation: ALLOCATION.QF, caisse: null });
     });
   });
 
   describe('writeEligibilityTest()', () => {
     it('should round trip both values', () => {
-      writeEligibilityTest({ dob: '2015-12-31', situation: ALLOCATION.QF });
+      writeEligibilityTest({ dob: '2015-12-31', situation: ALLOCATION.QF, caisse: CAISSE.CAF });
 
-      expect(readEligibilityTest()).toEqual({ dob: '2015-12-31', situation: ALLOCATION.QF });
+      expect(readEligibilityTest()).toEqual({
+        dob: '2015-12-31',
+        situation: ALLOCATION.QF,
+        caisse: CAISSE.CAF,
+      });
     });
 
     it('should store both values under a single key', () => {
-      writeEligibilityTest({ dob: '2015-12-31', situation: ALLOCATION.AAH });
+      writeEligibilityTest({ dob: '2015-12-31', situation: ALLOCATION.AAH, caisse: CAISSE.MSA });
 
       expect(JSON.parse(sessionStorage.getItem(PASS_SPORT_ELIGIBILITY_TEST_KEY)!)).toEqual({
         dob: '2015-12-31',
         situation: ALLOCATION.AAH,
+        caisse: CAISSE.MSA,
       });
     });
 
     it('should merge a partial patch instead of replacing', () => {
       writeEligibilityTest({ dob: '2015-12-31' });
       writeEligibilityTest({ situation: ALLOCATION.AEEH });
+      writeEligibilityTest({ caisse: CAISSE.CAF });
 
-      expect(readEligibilityTest()).toEqual({ dob: '2015-12-31', situation: ALLOCATION.AEEH });
+      expect(readEligibilityTest()).toEqual({
+        dob: '2015-12-31',
+        situation: ALLOCATION.AEEH,
+        caisse: CAISSE.CAF,
+      });
     });
 
     it('should fill missing fields with null', () => {
       expect(writeEligibilityTest({ dob: '2015-12-31' })).toEqual({
         dob: '2015-12-31',
         situation: null,
+        caisse: null,
       });
     });
 
@@ -98,6 +122,7 @@ describe('Eligibility test storage suite', () => {
       expect(writeEligibilityTest({ situation: ALLOCATION.CROUS })).toEqual({
         dob: '2015-12-31',
         situation: ALLOCATION.CROUS,
+        caisse: null,
       });
     });
   });

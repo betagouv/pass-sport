@@ -1,6 +1,7 @@
 import React, { Dispatch, SetStateAction } from 'react';
 import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { CAISSE } from '@/utils/eligibility-test';
 
 type EligibilityTestContextProps = {
   performNewTest: VoidFunction;
@@ -15,6 +16,7 @@ type EligibilityTestContextProps = {
   setBenefIsEligible: Dispatch<SetStateAction<boolean>>;
   setAllowance: Dispatch<SetStateAction<ALLOWANCE | null>>;
   allowance: ALLOWANCE | null;
+  caisse: CAISSE | null;
 };
 
 const EligibilityTestContext = React.createContext<EligibilityTestContextProps>({
@@ -30,6 +32,7 @@ const EligibilityTestContext = React.createContext<EligibilityTestContextProps>(
   setBenefIsEligible: () => {},
   setAllowance: () => {},
   allowance: null,
+  caisse: null,
 });
 
 export default EligibilityTestContext;

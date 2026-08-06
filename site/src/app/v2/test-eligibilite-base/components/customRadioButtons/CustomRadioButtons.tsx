@@ -6,10 +6,12 @@ import Button from '@codegouvfr/react-dsfr/Button';
 type Props = Omit<RadioButtonsProps, 'legend'> & {
   id: string;
   legend: string | ReactNode;
+  /* Rendered between the radios and the submit button, which this component owns */
+  children?: ReactNode;
 };
 
 const CustomRadioButtons = (props: Props) => {
-  const { legend, ...onlyRadioButtonsProps } = props;
+  const { legend, children, ...onlyRadioButtonsProps } = props;
 
   return (
     <div>
@@ -26,6 +28,7 @@ const CustomRadioButtons = (props: Props) => {
           )
         }
       />
+      {children}
       <div className={styles['button-container']}>
         <Button type="submit">Valider les informations</Button>
       </div>
