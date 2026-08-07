@@ -4,7 +4,7 @@ import styles from './styles.module.scss';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import Button, { ButtonProps } from '@codegouvfr/react-dsfr/Button';
-import { ALLOCATION, ALLOCATIONS_WITH_CAISSE, CAISSE, isEligible } from '@/utils/eligibility-test';
+import { ALLOCATION, isEligible } from '@/utils/eligibility-test';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
@@ -30,19 +30,12 @@ type SimplifiedEligibilityTestProps = {
 type FormInputsState = {
   dob: InputState;
   allowance: InputState;
-  caisse: InputState;
 };
 
 const initialInputsState: Record<keyof FormInputsState, InputState> = {
   dob: { state: 'default' },
   allowance: { state: 'default' },
-  caisse: { state: 'default' },
 };
-
-const caisseOptions = [
-  { value: CAISSE.CAF, label: 'CAF (Caisse d’Allocations Familiales)' },
-  { value: CAISSE.MSA, label: 'MSA (Mutualité Sociale Agricole)' },
-];
 
 const defaultOptions = [
   {
@@ -88,7 +81,6 @@ export default function SimplifiedEligibilityTest({
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [allocationName, setAllocationName] = useState<ALLOCATION | null>(null);
-  const [caisse, setCaisse] = useState<CAISSE | null>(null);
   const [knowMoreMeta, setKnowMoreMeta] = useState<{ title: string; description: string } | null>(
     null,
   );
@@ -112,9 +104,6 @@ export default function SimplifiedEligibilityTest({
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
   const { save } = useEligibilityTestStorage();
 
-  const isCaisseNeeded =
-    allocationName !== null && ALLOCATIONS_WITH_CAISSE.includes(allocationName);
-
   useEffect(() => {
     // Skip the mount pass, otherwise a previously stored entry gets wiped before any user input
     if (targetDate === null && allocationName === null) {
@@ -124,17 +113,8 @@ export default function SimplifiedEligibilityTest({
     save({
       dob: targetDate,
       situation: allocationName,
-      caisse: isCaisseNeeded ? caisse : null,
     });
-  }, [targetDate, allocationName, caisse, isCaisseNeeded, save]);
-
-  function onAllocationSelected(value: ALLOCATION) {
-    setAllocationName(value);
-
-    if (!ALLOCATIONS_WITH_CAISSE.includes(value)) {
-      setCaisse(null);
-    }
-  }
+  }, [targetDate, allocationName, save]);
 
   function resetStates() {
     setDisplayEligibilityConditions(false);
@@ -309,7 +289,7 @@ export default function SimplifiedEligibilityTest({
                     required: true,
                     defaultValue: '',
                     onChange: (e) => {
-                      onAllocationSelected(e.target.value as ALLOCATION);
+                      setAllocationName(e.target.value as ALLOCATION);
                     },
                     onBlur: (e) => {
                       const inputIsValid = e.target?.checkValidity();
@@ -321,7 +301,7 @@ export default function SimplifiedEligibilityTest({
                         },
                       });
 
-                      onAllocationSelected(e.target.value as ALLOCATION);
+                      setAllocationName(e.target.value as ALLOCATION);
                     },
                   }}
                 >
@@ -338,43 +318,6 @@ export default function SimplifiedEligibilityTest({
                   })}
                 </Select>
               </div>
-
-              {isCaisseNeeded && (
-                <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
-                  <Select
-                    label="À quelle caisse l’allocataire est-il affilié ?"
-                    state={inputStates.caisse.state}
-                    stateRelatedMessage={inputStates.caisse?.errorMsg}
-                    nativeSelectProps={{
-                      name: 'caisse-select',
-                      required: true,
-                      value: caisse ?? '',
-                      onChange: (e) => {
-                        setCaisse(e.target.value as CAISSE);
-                      },
-                      onBlur: (e) => {
-                        const inputIsValid = e.target?.checkValidity();
-                        setInputStates({
-                          ...inputStates,
-                          caisse: {
-                            state: inputIsValid ? 'default' : 'error',
-                            errorMsg: !inputIsValid ? `Le choix de la caisse est requis` : '',
-                          },
-                        });
-                      },
-                    }}
-                  >
-                    <option value="" disabled hidden>
-                      Sélectionner une option
-                    </option>
-                    {caisseOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
 
               <div
                 className={cn('fr-fieldset__element', styles['eligibility-test__confirm-button'])}
