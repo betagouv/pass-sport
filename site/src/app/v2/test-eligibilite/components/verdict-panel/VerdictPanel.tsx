@@ -49,17 +49,6 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
     }
   }, [isSuccess, isEligible]);
 
-  useEffect(() => {
-    const verdict = isSuccess ? 'Success' : isEligible ? 'Eligible - no match' : 'Not eligible';
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Verdict displayed',
-      `${verdict} - ${allowance ?? 'unknown'}`,
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <>
       {isSuccess ? (
@@ -164,6 +153,10 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                 <section className="fr-mt-3w">
                   <p>Le dispositif est ouvert :</p>
                   <ul className="fr-ml-2w">
+                    <li>
+                      Aux jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le
+                      quotient familial est inférieur ou égal à 699 ;
+                    </li>
                     <li>
                       Aux jeunes en situation de handicap :
                       <ul className="fr-ml-2w">

@@ -8,6 +8,7 @@ import cn from 'classnames';
 import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 import KnowMore from '@/app/components/know-more/KnowMore';
+import { AAH, AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",
@@ -37,10 +38,12 @@ const EligibilityTest = () => {
             </p>
             <ul className="fr-text--xl fr-ml-2w">
               <li>
-                xx septembre : pour les bénéficiaires de l&apos;AEEH, de l&apos;AAH et les jeunes
-                faisant partie d&apos;un foyer dont le quotient familial est inférieur ou égal à 699
-                fin août ;
+                26-28 août : pour les bénéficiaires de l&apos;
+                <AEEH />, de l&apos;
+                <AAH />, et les jeunes faisant partie d&apos;un foyer dont le quotient familial est
+                inférieur ou égal à 699 fin août ;
               </li>
+              <li>Entre fin août et fin novembre : pour les étudiants boursiers.</li>
             </ul>
           </div>
         </div>

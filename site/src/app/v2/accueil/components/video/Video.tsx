@@ -101,7 +101,7 @@ const Video = ({ videoFullUrl }: Props) => {
                           <p>Lucie : C&apos;est super simple à utiliser.</p>
                           <p>
                             Simon : T&apos;as rien à faire. Si tu es éligible, tu recevras un code
-                            directement par mail ou par SMS.
+                            directement par mail.
                           </p>
                           <p>
                             Lucie : Ensuite, Il suffit de le montrer à ton club ou à ta salle de

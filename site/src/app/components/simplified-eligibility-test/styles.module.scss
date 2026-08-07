@@ -8,6 +8,8 @@
   padding: 40px;
   flex-direction: column;
   border-radius: 8px;
+  max-width: 100%;
+  margin-inline: auto;
 
   &--has-background {
     background-color: var(--background-alt-pink-tuile);
@@ -21,10 +23,6 @@
     width: 100%;
   }
 
-  @media screen and (max-width: variables.$lg) {
-    padding: 24px;
-  }
-
   h2 {
     white-space: break-spaces;
   }
@@ -35,36 +33,36 @@
     grid-template-columns: 1fr;
     margin-top: 2rem;
     width: 100%;
-    min-height: 80px;
-
-    @media screen and (min-width: variables.$lg) {
-      grid-template-columns: 1fr 3fr 1fr;
-    }
   }
 
   &__confirm-button {
     margin-top: 0px;
-    align-self: center;
+    width: 100%;
 
-    @media screen and (min-width: variables.$lg) {
-      margin-top: 12px;
+    button {
+      width: 100%;
+      justify-content: center;
     }
   }
 
   &__field {
     height: auto;
-
-    @media screen and (min-width: variables.$lg) {
-      height: 140px;
-    }
+    width: 100%;
   }
 
   .button-margin--error {
-    //margin-bottom: 3.2rem;
-
     @media screen and (max-width: variables.$lg) {
       margin: 0 !important;
     }
+  }
+
+  @media screen and (min-width: variables.$lg) {
+    padding: 24px;
+    width: 850px;
+  }
+
+  @media screen and (max-width: variables.$lg) {
+    padding: 24px;
   }
 }
 

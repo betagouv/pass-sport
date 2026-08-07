@@ -5,22 +5,40 @@ export enum ALLOCATION {
   NONE = 'none',
   AAH = 'aah',
   AEEH = 'aeeh',
-  ARS = 'ars',
+  QF = 'qf',
   CROUS = 'crous',
   FORMATIONS_SANITAIRES_SOCIAUX = 'formations-sanitaires-sociaux',
 }
 
-export enum AEEH_CODE_OBTENTION_TYPE {
-  FORM = 'form',
-  LINK = 'link',
+/* Values match OrganismType so they can be compared to the organisme /search answers with */
+export enum CAISSE {
+  CAF = 'CAF',
+  MSA = 'MSA',
 }
+
+/* The caisse question only makes sense for these: boursiers are always affiliated to the cnous */
+export const ALLOCATIONS_WITH_CAISSE: ALLOCATION[] = [
+  ALLOCATION.AAH,
+  ALLOCATION.AEEH,
+  ALLOCATION.QF,
+];
 
 export const ALLOWANCE_MAPPING_TO_ALLOCATION: { [key in ALLOWANCE]: ALLOCATION } = {
   [ALLOWANCE.NONE]: ALLOCATION.NONE,
   [ALLOWANCE.AAH]: ALLOCATION.AAH,
   [ALLOWANCE.AEEH]: ALLOCATION.AEEH,
+  [ALLOWANCE.QF]: ALLOCATION.QF,
   [ALLOWANCE.CROUS]: ALLOCATION.CROUS,
   [ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX]: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
+};
+
+export const ALLOCATION_MAPPING_TO_ALLOWANCE: { [key in ALLOCATION]: ALLOWANCE } = {
+  [ALLOCATION.NONE]: ALLOWANCE.NONE,
+  [ALLOCATION.AAH]: ALLOWANCE.AAH,
+  [ALLOCATION.AEEH]: ALLOWANCE.AEEH,
+  [ALLOCATION.QF]: ALLOWANCE.QF,
+  [ALLOCATION.CROUS]: ALLOWANCE.CROUS,
+  [ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX]: ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX,
 };
 
 const DATE_FORMAT = 'dd/MM/yyyy';
@@ -44,25 +62,6 @@ function isBetween({
   });
 }
 
-/**
- * Get the way to obtain code for AEEH
- * <ul>
- * <li>For 6 to 19 years old, it should display the link (01/01/2007 to 31/12/2020)</li>
- * </ul>
- * @param targetDate
- */
-export function getAeehCodeObtentionType(targetDate: string): {
-  isEligible: boolean;
-  displayType: AEEH_CODE_OBTENTION_TYPE;
-} {
-  const _isEligible = isEligible({ targetDate, allocationName: ALLOCATION.AEEH });
-
-  return {
-    isEligible: _isEligible,
-    displayType: AEEH_CODE_OBTENTION_TYPE.FORM,
-  };
-}
-
 export function isEligible({
   targetDate,
   allocationName,
@@ -79,12 +78,12 @@ export function isEligible({
           endDate: '31/12/2020',
         },
       });
-    case ALLOCATION.ARS:
+    case ALLOCATION.QF:
       return isBetween({
         inputDates: {
           targetDate,
           startDate: '01/01/2009',
-          endDate: '31/12/2014',
+          endDate: '31/12/2020',
         },
       });
     case ALLOCATION.CROUS:
@@ -105,6 +104,8 @@ export function isEligible({
         },
       });
     case ALLOCATION.NONE:
+      return false;
+    default:
       return false;
   }
 }
