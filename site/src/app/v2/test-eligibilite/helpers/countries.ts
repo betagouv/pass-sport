@@ -2,8 +2,9 @@
 // Sources (copiées telles quelles dans __fixtures__, cf. countries.spec.ts) :
 // https://www.insee.fr/fr/statistiques/fichier/8740222/v_pays_territoire_2026.csv
 // https://www.insee.fr/fr/statistiques/fichier/8740222/v_pays_et_territoire_depuis_1943.csv
-// Les territoires français d'outre-mer portent le COG de la France (99100), l'Insee
-// les identifiant par leur code commune. Les États disparus portent leur COG historique.
+// L'Insee donne le COG de la France (99100) aux territoires d'outre-mer ; on leur met
+// plutôt leur code département / collectivité (971-988). Les États disparus portent
+// leur COG historique.
 export const countries = [
   {
     isoCode: 'KH',
@@ -33,7 +34,7 @@ export const countries = [
   {
     isoCode: 'GF',
     label: 'Guyane française',
-    cog: '99100',
+    cog: '973',
   },
   {
     isoCode: 'DE',
@@ -58,7 +59,7 @@ export const countries = [
   {
     isoCode: 'RE',
     label: 'Réunion',
-    cog: '99100',
+    cog: '974',
   },
   {
     isoCode: 'GY',
@@ -198,7 +199,7 @@ export const countries = [
   {
     isoCode: 'NC',
     label: 'Nouvelle-Calédonie',
-    cog: '99100',
+    cog: '988',
   },
   {
     isoCode: 'KS',
@@ -703,7 +704,7 @@ export const countries = [
   {
     isoCode: 'WF',
     label: 'Iles Wallis et Futuna',
-    cog: '99100',
+    cog: '986',
   },
   {
     isoCode: 'TH',
@@ -898,7 +899,7 @@ export const countries = [
   {
     isoCode: 'MQ',
     label: 'Martinique',
-    cog: '99100',
+    cog: '972',
   },
   {
     isoCode: 'SR',
@@ -928,7 +929,7 @@ export const countries = [
   {
     isoCode: 'GP',
     label: 'Guadeloupe',
-    cog: '99100',
+    cog: '971',
   },
   {
     isoCode: 'MX',
@@ -1083,7 +1084,7 @@ export const countries = [
   {
     isoCode: 'PF',
     label: 'Polynésie française',
-    cog: '99100',
+    cog: '987',
   },
   {
     isoCode: 'EG',
@@ -1148,7 +1149,7 @@ export const countries = [
   {
     isoCode: 'PM',
     label: 'Saint-Pierre-et-Miquelon',
-    cog: '99100',
+    cog: '975',
   },
   {
     isoCode: 'SI',
@@ -1284,5 +1285,25 @@ export const countries = [
     isoCode: 'AQ',
     label: 'Antarctique',
     cog: '99699',
+  },
+  {
+    isoCode: 'YT',
+    label: 'Mayotte',
+    cog: '976',
+  },
+  {
+    isoCode: 'BL',
+    label: 'Saint-Barthélemy',
+    cog: '977',
+  },
+  {
+    isoCode: 'MF',
+    label: 'Saint-Martin',
+    cog: '978',
+  },
+  {
+    isoCode: 'TF',
+    label: 'Terres australes et antarctiques françaises',
+    cog: '984',
   },
 ];
