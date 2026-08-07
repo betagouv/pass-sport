@@ -22,6 +22,27 @@
       "when": 1785853297236,
       "tag": "0002_add_pass_sport_code",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786111941604,
+      "tag": "0003_add_applications_by_job_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786112843729,
+      "tag": "0004_add_results_by_job_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786135167577,
+      "tag": "0005_add_email_verifications",
+      "breakpoints": true
     }
   ]
 }

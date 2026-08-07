@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { EligibilityFieldName } from 'types/EligibilityTest';
+import { EligibilityFieldName } from '@/types/EligibilityTest';
 
 export const mapper: Record<EligibilityFieldName, ReactNode> = {
   beneficiaryLastname: 'Le nom est requis',
@@ -13,6 +13,7 @@ export const mapper: Record<EligibilityFieldName, ReactNode> = {
   recipientBirthCountry: 'Le pays de naissance est requis',
   recipientIneNumber: 'Le numéro de matricule INE est requis',
   recipientCafNumber: <>Le matricule CAF est requis</>,
+  email: 'L’adresse électronique est requise',
 };
 
 export const convertDate = (date: string): string | null => {

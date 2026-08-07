@@ -13,16 +13,29 @@ import {
 // Worker code under test — imported from src (extensionless; Vitest/Vite resolve
 // the .ts sources directly, matching the tsconfig "bundler" moduleResolution).
 import {
-  CODES_JOB_NAME,
-  CODES_QUEUE_NAME,
+  API_PARTICULIER_JOB_NAME,
+  API_PARTICULIER_QUEUE_NAME,
+  EMAIL_VERIFICATION_JOB_NAME,
+  EMAIL_VERIFICATION_QUEUE_NAME,
+  FRANCE_CONNECT_JOB_NAME,
+  FRANCE_CONNECT_QUEUE_NAME,
   linearBackoff,
-  processEligibilityJob,
-  type WorkerDeps,
-} from "../../src";
+} from "../../src/queues";
+import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
+import {
+  processApiParticulierJob,
+  type ApiParticulierDeps,
+} from "../../src/jobs/api-particulier";
+import {
+  processEmailVerificationJob,
+  type EmailVerificationJobData,
+} from "../../src/jobs/email-verification";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
 import type { LcaClient } from "../../src/lca/client";
 import { runMigrations } from "../../src/db/migrate";
 import type {
+  ApiParticulierJobData,
+  ApiParticulierJobPayload,
   EligibilityJobData,
   EligibilityJobPayload,
   PivotIdentity,
@@ -30,16 +43,19 @@ import type {
 } from "../../src/eligibility/types";
 import type {
   ConfirmItem,
+  ConfirmPayload,
   LcaError,
+  OrganismType,
   SearchItem,
   SearchPayload,
+  SituationType,
 } from "../../src/lca/types";
 
 // The real mock clients were removed with the real-only port: the worker now only
 // ships real API Particulier / LCA clients. These e2e tests still exercise the REAL
 // orchestration — Testcontainers Redis + Postgres, a real BullMQ Worker running the
 // actual processEligibilityJob — but the upstream APIs are faked at the client
-// interface (the WorkerDeps seam) so outcomes are deterministic and no network /
+// interface (the FranceConnectDeps seam) so outcomes are deterministic and no network /
 // credentials are needed. Email goes to a tiny in-process HTTP server that always
 // answers success, so the real Link Mobility client path is still covered.
 
@@ -69,7 +85,7 @@ class FakeApiClient implements ApiParticulierClient {
 
   // Last name of the fake children. "Nomatch…" makes FakeLcaClient return no result, so
   // is_eligible reflects OUR routes alone — a confirmed LCA match sets it true whatever
-  // the routes concluded (index.ts), which would otherwise mask the rule under test.
+  // the routes concluded (jobs/france-connect.ts), which would otherwise mask the rule under test.
   childrenLastname = "Enfant";
 
   constructor(private readonly first429RetryAfter?: number) {}
@@ -126,14 +142,26 @@ class FakeApiClient implements ApiParticulierClient {
     );
   }
 
+  aahBeneficiaire = false;
+
   async aah(): Promise<ResourceResult> {
-    return this.take429(RESOURCE_META.aah) ?? okRow(RESOURCE_META.aah, { est_beneficiaire: false });
+    return (
+      this.take429(RESOURCE_META.aah) ??
+      okRow(RESOURCE_META.aah, { est_beneficiaire: this.aahBeneficiaire })
+    );
   }
 
   async cnous(): Promise<ResourceResult> {
     return (
       this.take429(RESOURCE_META.cnous) ??
       okRow(RESOURCE_META.cnous, { statut_boursier: { est_boursier: true } })
+    );
+  }
+
+  async cnousByIne(): Promise<ResourceResult> {
+    return (
+      this.take429(RESOURCE_META.cnousIne) ??
+      okRow(RESOURCE_META.cnousIne, { statut_boursier: { est_boursier: true } })
     );
   }
 
@@ -152,6 +180,14 @@ class FakeApiClient implements ApiParticulierClient {
 class FakeLcaClient implements LcaClient {
   private searchCalls = 0;
 
+  // Null derives the answer from isFromCrous; the combined-form suites pin it, since it is
+  // what declarationMatches compares the usager's step 1 against.
+  answerAs: { situation: SituationType; organisme: OrganismType } | null = null;
+
+  searchHttpStatus: number | null = null;
+
+  readonly confirmPayloads: ConfirmPayload[] = [];
+
   constructor(private readonly failOnSearchCall?: number) {}
 
   async search(payload: SearchPayload): Promise<SearchItem[] | LcaError> {
@@ -161,23 +197,42 @@ class FakeLcaClient implements LcaClient {
       throw new Error("LCA /search failed: 502");
     }
 
+    if (this.searchHttpStatus) {
+      return {
+        message: `LCA /search failed: ${this.searchHttpStatus}`,
+        httpStatus: this.searchHttpStatus,
+      };
+    }
+
     if (payload.beneficiaryLastname.toLowerCase().startsWith("nomatch")) return [];
     const isCrous = !!payload.isFromCrous;
+    const answer = this.answerAs ?? {
+      situation: (isCrous ? "boursier" : "jeune") as SituationType,
+      organisme: (isCrous ? "cnous" : "CAF") as OrganismType,
+    };
     return [
       {
         id: 1,
         nom: payload.beneficiaryLastname,
         prenom: payload.beneficiaryFirstname,
         date_naissance: payload.beneficiaryBirthDate,
-        situation: isCrous ? "boursier" : "jeune",
-        organisme: isCrous ? "cnous" : "CAF",
+        situation: answer.situation,
+        organisme: answer.organisme,
         matricule: "SECRET-MATRICULE",
         hasMatricule: true,
       },
     ];
   }
 
-  async confirm(): Promise<ConfirmItem[] | LcaError> {
+  // Make /confirm answer with an empty array: LCA matched the person on /search but has
+  // no code for them.
+  confirmEmpty = false;
+
+  async confirm(payload: ConfirmPayload): Promise<ConfirmItem[] | LcaError> {
+    this.confirmPayloads.push(payload);
+
+    if (this.confirmEmpty) return [];
+
     return [
       {
         id: 1,
@@ -199,11 +254,31 @@ class FakeLcaClient implements LcaClient {
 export type Stack = {
   pool: pg.Pool;
   redis: Redis;
-  db: WorkerDeps["db"];
+  db: FranceConnectDeps["db"];
   queue: Queue<EligibilityJobData>;
   enqueueAndWait: (data: EligibilityJobPayload) => Promise<unknown>;
   // Enqueue a payload and wait for the worker to reject it. Returns the failure reason.
   enqueueAndWaitFailure: (data: EligibilityJobPayload) => Promise<string>;
+
+  // The combined-form flow, on its own queue and worker exactly as in production.
+  apQueue: Queue<ApiParticulierJobData>;
+  enqueueApAndWait: (data: ApiParticulierJobPayload, jobId?: string) => Promise<unknown>;
+  enqueueApAndWaitFailure: (data: ApiParticulierJobPayload) => Promise<string>;
+
+  // The email-verification gate that now precedes the combined-form flow.
+  verificationQueue: Queue<EmailVerificationJobData>;
+  enqueueVerificationAndWait: (
+    data: EmailVerificationJobData,
+    jobId?: string,
+  ) => Promise<unknown>;
+  // Raw form bodies received by the fake Link Mobility server, newest last.
+  sentEmails: () => string[];
+
+  setLcaAnswer: (answer: { situation: SituationType; organisme: OrganismType } | null) => void;
+  setLcaSearchHttpStatus: (status: number | null) => void;
+  setLcaConfirmEmpty: (value: boolean) => void;
+  lcaConfirmPayloads: () => ConfirmPayload[];
+  setAahBeneficiaire: (value: boolean) => void;
   // Household quotient the fake QF reports, so a test can cross the 700 threshold
   // without paying for a second container stack.
   setQfValeur: (valeur: number) => void;
@@ -228,9 +303,17 @@ export async function startStack(
   // Fake Link Mobility endpoint: always answers success ({resultat:1, id}). The real
   // link-mobility client (email/link-mobility.ts) POSTs here, so sendTransactionalEmail
   // returns sent:true and email_sent lands true in the persisted rows.
-  const emailServer: Server = createServer((_req, res) => {
-    res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify({ resultat: 1, id: 123 }));
+  // Bodies are kept so a test can assert on what was actually mailed — the verification
+  // link only exists here, never in the database.
+  const sentEmails: string[] = [];
+  const emailServer: Server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      sentEmails.push(Buffer.concat(chunks).toString("utf8"));
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ resultat: 1, id: 123 }));
+    });
   });
   await new Promise<void>((resolve) => emailServer.listen(0, "127.0.0.1", () => resolve()));
 
@@ -243,7 +326,7 @@ export async function startStack(
 
   const pool = new pg.Pool({ connectionString: pgC.getConnectionUri() });
   await runMigrations(pool);
-  const db = drizzle(pool) as WorkerDeps["db"];
+  const db = drizzle(pool) as FranceConnectDeps["db"];
 
   const redisUrl = redisC.getConnectionUrl();
   // Track the raw connections so we can quit them before stopping the container.
@@ -257,16 +340,16 @@ export async function startStack(
     return c;
   };
 
-  const queue = new Queue<EligibilityJobData>(CODES_QUEUE_NAME, { connection: conn() });
+  const queue = new Queue<EligibilityJobData>(FRANCE_CONNECT_QUEUE_NAME, { connection: conn() });
   await queue.setGlobalConcurrency(1);
 
   const guardConn = conn();
   const apiClient = new FakeApiClient(opts.first429RetryAfter);
   const lcaClient = new FakeLcaClient(opts.lcaFailOnSearchCall);
-  const deps: WorkerDeps = { apiClient, lcaClient, db, queue };
+  const deps: FranceConnectDeps = { apiClient, lcaClient, db, queue };
 
   const worker = new Worker<EligibilityJobData>(
-    CODES_QUEUE_NAME,
+    FRANCE_CONNECT_QUEUE_NAME,
     async (job) => processEligibilityJob(job, job.data, deps),
     // Same settings as production, so the producer's "linear" backoff resolves here
     // too if a test ever enqueues with attempts > 1.
@@ -275,7 +358,7 @@ export async function startStack(
   await worker.waitUntilReady();
 
   const enqueueAndWait = async (data: EligibilityJobPayload): Promise<unknown> => {
-    const job = await queue.add(CODES_JOB_NAME, data);
+    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data);
     for (let i = 0; i < 100; i++) {
       const state = await job.getState();
       if (state === "completed") return (await queue.getJob(job.id!))?.returnvalue;
@@ -289,11 +372,91 @@ export async function startStack(
   };
 
   const enqueueAndWaitFailure = async (data: EligibilityJobPayload): Promise<string> => {
-    const job = await queue.add(CODES_JOB_NAME, data);
+    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data);
     for (let i = 0; i < 100; i++) {
       const state = await job.getState();
       if (state === "failed") return (await queue.getJob(job.id!))?.failedReason ?? "";
       if (state === "completed") throw new Error(`job ${job.id} was ACCEPTED but should have been rejected`);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error(`job ${job.id} did not finish in time`);
+  };
+
+  const apQueue = new Queue<ApiParticulierJobData>(API_PARTICULIER_QUEUE_NAME, {
+    connection: conn(),
+  });
+  await apQueue.setGlobalConcurrency(1);
+
+  const apDeps: ApiParticulierDeps = { apiClient, lcaClient, db, queue: apQueue };
+
+  const apWorker = new Worker<ApiParticulierJobData>(
+    API_PARTICULIER_QUEUE_NAME,
+    async (job) => processApiParticulierJob(job, job.data, apDeps),
+    { connection: conn(), settings: { backoffStrategy: linearBackoff } },
+  );
+  await apWorker.waitUntilReady();
+
+  const waitFor = async (
+    q: Queue<ApiParticulierJobData>,
+    jobId: string,
+    want: "completed" | "failed",
+  ): Promise<unknown> => {
+    for (let i = 0; i < 100; i++) {
+      const fresh = await q.getJob(jobId);
+      const state = await fresh?.getState();
+      if (state === want) return want === "failed" ? (fresh?.failedReason ?? "") : fresh?.returnvalue;
+      if (state === "completed" || state === "failed") {
+        throw new Error(`job ${jobId} ended as ${state}, expected ${want}: ${fresh?.failedReason ?? ""}`);
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error(`job ${jobId} did not finish in time`);
+  };
+
+  const enqueueApAndWait = async (
+    data: ApiParticulierJobPayload,
+    jobId?: string,
+  ): Promise<unknown> => {
+    const job = await apQueue.add(API_PARTICULIER_JOB_NAME, data, jobId ? { jobId } : undefined);
+    return waitFor(apQueue, job.id!, "completed");
+  };
+
+  const enqueueApAndWaitFailure = async (data: ApiParticulierJobPayload): Promise<string> => {
+    const job = await apQueue.add(API_PARTICULIER_JOB_NAME, data);
+    return (await waitFor(apQueue, job.id!, "failed")) as string;
+  };
+
+  // Base of the link the verification job builds; the job refuses to run without it.
+  process.env.PUBLIC_SITE_URL = "https://pass-sport.test";
+
+  const verificationQueue = new Queue<EmailVerificationJobData>(EMAIL_VERIFICATION_QUEUE_NAME, {
+    connection: conn(),
+  });
+  await verificationQueue.setGlobalConcurrency(1);
+
+  const verificationWorker = new Worker<EmailVerificationJobData>(
+    EMAIL_VERIFICATION_QUEUE_NAME,
+    async (job) => processEmailVerificationJob(job, job.data, { db }),
+    { connection: conn(), settings: { backoffStrategy: linearBackoff } },
+  );
+  await verificationWorker.waitUntilReady();
+
+  const enqueueVerificationAndWait = async (
+    data: EmailVerificationJobData,
+    jobId?: string,
+  ): Promise<unknown> => {
+    const job = await verificationQueue.add(
+      EMAIL_VERIFICATION_JOB_NAME,
+      data,
+      jobId ? { jobId } : undefined,
+    );
+    for (let i = 0; i < 100; i++) {
+      const fresh = await verificationQueue.getJob(job.id!);
+      const state = await fresh?.getState();
+      if (state === "completed") return fresh?.returnvalue;
+      if (state === "failed") {
+        throw new Error(`job ${job.id} failed: ${fresh?.failedReason ?? "<no reason>"}`);
+      }
       await new Promise((r) => setTimeout(r, 100));
     }
     throw new Error(`job ${job.id} did not finish in time`);
@@ -304,6 +467,10 @@ export async function startStack(
     // connections, THEN stop the containers — so nothing reconnects to a dead port.
     await worker.close();
     await queue.close();
+    await apWorker.close();
+    await apQueue.close();
+    await verificationWorker.close();
+    await verificationQueue.close();
     await Promise.all(connections.map((c) => c.quit().catch(() => {})));
     await pool.end();
     await new Promise<void>((resolve) => emailServer.close(() => resolve()));
@@ -318,6 +485,25 @@ export async function startStack(
     redis: guardConn,
     enqueueAndWait,
     enqueueAndWaitFailure,
+    apQueue,
+    enqueueApAndWait,
+    enqueueApAndWaitFailure,
+    verificationQueue,
+    enqueueVerificationAndWait,
+    sentEmails: () => sentEmails,
+    setLcaAnswer: (answer) => {
+      lcaClient.answerAs = answer;
+    },
+    setLcaSearchHttpStatus: (status) => {
+      lcaClient.searchHttpStatus = status;
+    },
+    setLcaConfirmEmpty: (value: boolean) => {
+      lcaClient.confirmEmpty = value;
+    },
+    lcaConfirmPayloads: () => lcaClient.confirmPayloads,
+    setAahBeneficiaire: (value: boolean) => {
+      apiClient.aahBeneficiaire = value;
+    },
     setQfValeur: (valeur: number) => {
       apiClient.qfValeur = valeur;
     },

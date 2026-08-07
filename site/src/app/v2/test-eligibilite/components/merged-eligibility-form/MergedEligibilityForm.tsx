@@ -1,5 +1,6 @@
 import Input from '@codegouvfr/react-dsfr/Input';
 import Select from '@codegouvfr/react-dsfr/Select';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import {
   ChangeEvent,
   FocusEvent,
@@ -7,6 +8,7 @@ import {
   ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -15,12 +17,9 @@ import { push } from '@socialgouv/matomo-next';
 import {
   EligibilityFieldName,
   EligibilityFormInputsState,
-  EnhancedConfirmResponseBody,
-  SearchResponseBody,
-  SearchResponseBodyItem,
-  SearchResponseErrorBody,
+  LCA_SITUATION,
   SituationType,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import CityFinder from '../city-finder/CityFinder';
@@ -28,40 +27,19 @@ import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import CommonInputs from './common-inputs/CommonInputs';
 import FormButton from './FormButton';
-import VerdictPanel from '../verdict-panel/VerdictPanel';
-import { convertDate, mapper } from '../../helpers/helper';
-import { fetchEligible, fetchPspCode } from '../../agent';
+import { mapper } from '../../helpers/helper';
+import { submitEligibilityRequest } from '../../agent';
 import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import { CAISSE } from '@/utils/eligibility-test';
+import { FRANCE_ISO_CODE } from '../../helpers/countries';
+import { formDefaultsFor } from '../../helpers/test-defaults';
+import styles from './styles.module.scss';
 
 const BENEFICIARY_FIELDS: EligibilityFieldName[] = [
   'beneficiaryLastname',
   'beneficiaryFirstname',
   'recipientResidencePlace',
 ];
-
-// Required on screen, absent from every payload. Only fields getBranchFields doesn't already send.
-// It is for later (api particulier job)
-const getUnsentRequiredFields = (
-  situation: SituationType | null,
-  caisse: CAISSE | null,
-): EligibilityFieldName[] => {
-  const fields: EligibilityFieldName[] = ['recipientGenre'];
-
-  if (situation === 'boursier') {
-    return fields;
-  }
-
-  if (caisse === CAISSE.CAF) {
-    fields.push('recipientBirthCountry');
-  }
-
-  if (situation === 'AAH') {
-    fields.push('recipientLastname', 'recipientFirstname');
-  }
-
-  return fields;
-};
 
 const initialInputsState: EligibilityFormInputsState = {
   beneficiaryLastname: { state: 'default' },
@@ -75,6 +53,7 @@ const initialInputsState: EligibilityFormInputsState = {
   recipientBirthDate: { state: 'default' },
   recipientBirthCountry: { state: 'default' },
   recipientBirthPlace: { state: 'default' },
+  email: { state: 'default' },
 };
 
 const CAF_NUMBER_ERROR = (
@@ -82,6 +61,11 @@ const CAF_NUMBER_ERROR = (
     Le numéro&nbsp; <CAF /> &nbsp;doit être composé de 7 chiffres
   </>
 );
+
+const EMAIL_ERROR = 'Saisissez une adresse électronique valide';
+
+const BOURSIER_IDENTIFICATION_ERROR =
+  'Renseignez votre numéro INE, ou à défaut vos pays et commune de naissance.';
 
 /* Single source of truth for the field rules, shared by the blur handler and the submit validation */
 const getFieldError = (
@@ -97,89 +81,95 @@ const getFieldError = (
     return CAF_NUMBER_ERROR;
   }
 
+  if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    return EMAIL_ERROR;
+  }
+
   return null;
 };
-
-const MISMATCH_ERROR =
-  'Les informations transmises ne correspondent pas à la situation et à la caisse que vous avez indiquées. Cliquez sur « Modifier » pour les corriger.';
 
 /* The allowance already determines the situation the API will answer with */
 const getExpectedSituation = (allowance: ALLOWANCE | null): SituationType | null => {
   switch (allowance) {
     case ALLOWANCE.QF:
     case ALLOWANCE.AEEH:
-      return 'jeune';
+      return LCA_SITUATION.JEUNE;
     case ALLOWANCE.AAH:
-      return 'AAH';
+      return LCA_SITUATION.AAH;
     case ALLOWANCE.CROUS:
     case ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX:
-      return 'boursier';
+      return LCA_SITUATION.BOURSIER;
     default:
       return null;
   }
 };
 
 /**
- * The caisse-specific fields, i.e. everything /confirm needs on top of the beneficiary block.
- * Known up front for allocataires, since the situation and the caisse are both answered in step 1.
- * Boursiers are the exception: which of the two shapes applies depends on hasMatricule, and that
- * only comes back with /search.
+ * Every field required on screen for this branch. Boursiers are the exception: an INE
+ * identifies the student outright, so it stands in for the pays et commune de naissance,
+ * and vice versa.
  */
-const getBranchFields = (
+const getRequiredFields = (
   situation: SituationType | null,
   caisse: CAISSE | null,
-  hasMatricule?: boolean,
+  formData: FormData,
 ): EligibilityFieldName[] => {
-  if (situation === 'boursier') {
-    return hasMatricule ? ['recipientIneNumber'] : ['recipientBirthCountry'];
+  const fields: EligibilityFieldName[] = [...BENEFICIARY_FIELDS, 'recipientGenre', 'email'];
+  const bornInFrance = (formData.get('recipientBirthCountry') ?? '').toString() === FRANCE_ISO_CODE;
+
+  if (situation === LCA_SITUATION.BOURSIER) {
+    const hasIne = !!(formData.get('recipientIneNumber') ?? '').toString().trim();
+
+    if (!hasIne) {
+      fields.push('recipientBirthCountry');
+      if (bornInFrance) fields.push('recipientBirthPlace');
+    }
+
+    return fields;
   }
 
-  if (situation === 'jeune') {
-    return caisse === CAISSE.CAF
-      ? ['recipientLastname', 'recipientFirstname', 'recipientCafNumber']
-      : ['recipientLastname', 'recipientFirstname', 'recipientBirthDate', 'recipientBirthCountry'];
-  }
+  fields.push(
+    'recipientLastname',
+    'recipientFirstname',
+    'recipientBirthDate',
+    'recipientBirthCountry',
+  );
 
-  if (situation === 'AAH') {
-    return caisse === CAISSE.CAF ? ['recipientCafNumber'] : ['recipientBirthCountry'];
-  }
+  // The birthplace is only asked for, and only accepted by the API, when the country is France
+  if (bornInFrance) fields.push('recipientBirthPlace');
+  if (caisse === CAISSE.CAF) fields.push('recipientCafNumber');
 
-  return [];
+  return fields;
 };
 
 const MergedEligibilityForm = () => {
-  const {
-    allowance,
-    caisse,
-    dob,
-    benefIsEligible,
-    eligibilityData,
-    setEligibilityData,
-    pspCodeData,
-    setPspCodeData,
-    portalNode,
-  } = useContext(EligibilityTestContext);
+  const { allowance, caisse, dob, portalNode } = useContext(EligibilityTestContext);
 
   const formRef = useRef<HTMLFormElement>(null);
+  const outcomeRef = useRef<HTMLDivElement>(null);
   const [inputStates, setInputStates] = useState<EligibilityFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>();
-  const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(false);
+  const [outcome, setOutcome] = useState<'queued' | 'already_queued' | null>(null);
+  // Masked address the previous request went to, when there was one.
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  // Unmasked, because it is the address this visitor just typed: naming it is what lets them
+  // catch their own typo before waiting on a link that will never arrive.
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const defaults = formDefaultsFor(allowance, caisse);
+  const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(
+    defaults?.recipientBirthCountry === FRANCE_ISO_CODE,
+  );
 
-  // Cached /search answer, keyed on the beneficiary values it was obtained with. Lets a boursier's
-  // second submit (after a missing INE or birthplace) go straight to /confirm.
-  const searchCache = useRef<{ key: string; item: SearchResponseBodyItem } | null>(null);
+  // Submitting unmounts the submit button, so focus would fall back to the document: move it
+  // onto the outcome instead, which also guarantees the message is read out.
+  useEffect(() => {
+    if (outcome) outcomeRef.current?.focus();
+  }, [outcome]);
 
   const situation = getExpectedSituation(allowance);
-  const isBoursier = situation === 'boursier';
+  const isBoursier = situation === LCA_SITUATION.BOURSIER;
   const isCaf = caisse === CAISSE.CAF;
-  const alwaysRequiredFields: EligibilityFieldName[] = [
-    ...BENEFICIARY_FIELDS,
-    ...getUnsentRequiredFields(situation, caisse),
-  ];
-
-  const getBeneficiaryKey = (formData: FormData) =>
-    BENEFICIARY_FIELDS.map((field) => (formData.get(field) ?? '').toString().trim()).join('|');
 
   const setFieldState = (field: EligibilityFieldName, hasValue: unknown) => {
     setInputStates((states) => ({
@@ -189,12 +179,12 @@ const MergedEligibilityForm = () => {
   };
 
   const isRequiredOnBlur = (field: EligibilityFieldName, formData: FormData): boolean => {
-    if (withBirthPlace(alwaysRequiredFields, formData).includes(field)) {
+    if (getRequiredFields(situation, caisse, formData).includes(field)) {
       return true;
     }
 
     if (!isBoursier) {
-      return withBirthPlace(getBranchFields(situation, caisse), formData).includes(field);
+      return false;
     }
 
     const hasIne = !!(formData.get('recipientIneNumber') ?? '').toString().trim();
@@ -249,13 +239,6 @@ const MergedEligibilityForm = () => {
       ?.focus();
   };
 
-  // The birthplace is only asked for, and only accepted by the API, when the country is France
-  const withBirthPlace = (fields: EligibilityFieldName[], formData: FormData) =>
-    fields.includes('recipientBirthCountry') &&
-    (formData.get('recipientBirthCountry') ?? '').toString() === 'FR'
-      ? [...fields, 'recipientBirthPlace' as EligibilityFieldName]
-      : fields;
-
   const validate = (
     formData: FormData,
     fields: EligibilityFieldName[],
@@ -279,192 +262,71 @@ const MergedEligibilityForm = () => {
     setError(message);
   };
 
-  const notifySearchError = (status: number, body: SearchResponseErrorBody) => {
-    if (
-      status === 400 &&
-      body.message ===
-        "Aucun exercice en cours, vous n'êtes pas autorisé à vous inscrire au pass Sport pour le moment."
-    ) {
-      notifyError('Le service est actuellement fermé');
-    } else {
-      notifyError('Une erreur est apparue. Merci de réessayer ultérieurement.');
-    }
-  };
-
-  const runSearch = async (formData: FormData): Promise<SearchResponseBodyItem | null> => {
-    const payload = new FormData();
-
-    BENEFICIARY_FIELDS.forEach((field) =>
-      payload.set(field, (formData.get(field) ?? '').toString().trim()),
-    );
-    payload.set('beneficiaryBirthDate', dob ?? '');
-
-    if (allowance) {
-      payload.set('allowanceName', allowance);
-    }
-
-    // Later used to know if we need to use a default address for people who don't have any address
-    if (isBoursier) {
-      payload.set('isFromCrous', 'true');
-    }
-
-    const { status, body } = await fetchEligible(payload);
-
-    if (status !== 200 || 'message' in body) {
-      notifySearchError(status, body as SearchResponseErrorBody);
-      return null;
-    }
-
-    setEligibilityData(body as SearchResponseBody);
-
-    if ((body as SearchResponseBody).length === 0) {
-      push([
-        'trackEvent',
-        'Eligibility Test',
-        'Eligibility test completed',
-        'Eligibility test unsuccessful - first step',
-      ]);
-      return null;
-    }
-
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Eligibility test step 1',
-      'Eligibility test step 1 successful',
-    ]);
-
-    return (body as SearchResponseBody)[0];
-  };
-
-  const runConfirm = async (
-    formData: FormData,
-    item: SearchResponseBodyItem,
-    branchFields: EligibilityFieldName[],
-  ) => {
-    const payload = new FormData();
-
-    payload.set('id', item.id.toString());
-    payload.set('situation', item.situation);
-    payload.set('organisme', item.organisme);
-
-    branchFields.forEach((field) => {
-      const value = (formData.get(field) ?? '').toString().trim();
-
-      if (field === 'recipientBirthDate') {
-        payload.set(field, convertDate(value) ?? '');
-        return;
-      }
-
-      // From France, only the birthplace is needed, the birth country no longer is
-      if (field === 'recipientBirthCountry' && value === 'FR') {
-        payload.set('recipientBirthPlace', (formData.get('recipientBirthPlace') ?? '').toString());
-        return;
-      }
-
-      payload.set(field, value);
-    });
-
-    if (allowance) {
-      payload.set('allowanceName', allowance);
-    }
-
-    const { status, body } = await fetchPspCode(payload);
-
-    if (status !== 200 || 'message' in body) {
-      notifyError();
-      return;
-    }
-
-    setPspCodeData(body as EnhancedConfirmResponseBody);
-
-    if ((body as EnhancedConfirmResponseBody).length > 0) {
-      setIsFormDisabled(true);
-      push([
-        'trackEvent',
-        'Eligibility Test',
-        'Eligibility test completed',
-        'Eligibility test successful',
-      ]);
-    } else {
-      push([
-        'trackEvent',
-        'Eligibility Test',
-        'Eligibility test completed',
-        'Eligibility test unsuccessful - final step',
-      ]);
-    }
-  };
-
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    // Drop the verdict of the previous attempt so a stale panel doesn't outlive this submit
-    setPspCodeData(null);
 
     const formData = new FormData(formRef.current!);
+    const required = getRequiredFields(situation, caisse, formData);
 
-    // Boursiers can't be fully validated yet: hasMatricule decides between INE and birthplace
-    const upfrontFields = isBoursier
-      ? alwaysRequiredFields
-      : withBirthPlace([...alwaysRequiredFields, ...getBranchFields(situation, caisse)], formData);
+    const check = validate(formData, required);
+    setInputStates(check.states);
 
-    const upfrontCheck = validate(formData, upfrontFields);
-    setInputStates(upfrontCheck.states);
-
-    if (!upfrontCheck.isValid) {
-      focusFirstError(upfrontCheck.states, upfrontFields);
+    if (!check.isValid) {
+      focusFirstError(check.states, required);
       return;
     }
 
-    const beneficiaryKey = getBeneficiaryKey(formData);
-    let item = searchCache.current?.key === beneficiaryKey ? searchCache.current.item : null;
-
-    if (!item) {
-      searchCache.current = null;
-      setEligibilityData(null);
-
-      item = await runSearch(formData);
-
-      if (!item) return;
-
-      searchCache.current = { key: beneficiaryKey, item };
+    // getRequiredFields drops the birth country as soon as an INE is present, so a boursier
+    // who answered neither passes the check above.
+    if (
+      isBoursier &&
+      !(formData.get('recipientIneNumber') ?? '').toString().trim() &&
+      !(formData.get('recipientBirthCountry') ?? '').toString().trim()
+    ) {
+      notifyError(BOURSIER_IDENTIFICATION_ERROR);
+      return;
     }
 
-    // /confirm keys off what /search answered, so a caisse or situation the user got wrong in
-    // step 1 means the fields on screen aren't the ones the API expects
-    const isDeclarationHonoured =
-      item.situation.toLowerCase() === situation?.toLowerCase() &&
-      (isBoursier || item.organisme === caisse);
+    // Answered in step 1, so they live in context rather than in an input.
+    formData.set('beneficiaryBirthDate', dob ?? '');
+    if (allowance) formData.set('allowanceName', allowance);
+    if (caisse) formData.set('caisse', caisse);
 
-    if (!isDeclarationHonoured) {
-      notifyError(MISMATCH_ERROR);
+    const { status, body } = await submitEligibilityRequest(formData);
+
+    if (status !== 202 && status !== 409) {
+      notifyError();
       push([
         'trackEvent',
         'Eligibility Test',
         'Eligibility test completed',
-        'Eligibility test unsuccessful - declaration mismatch',
+        'Eligibility test submission failed',
       ]);
       return;
     }
 
-    const branchFields = getBranchFields(situation, caisse, item.hasMatricule);
+    // 409 means this exact request is already in the queue. Nothing went wrong, but it is
+    // said out loud rather than dressed up as a fresh submission: someone who resubmits
+    // deserves to know their first attempt is still on its way.
+    const alreadyQueued = status === 409;
 
-    if (isBoursier) {
-      const branchCheck = validate(formData, withBirthPlace(branchFields, formData));
-      setInputStates(branchCheck.states);
-
-      if (!branchCheck.isValid) {
-        focusFirstError(branchCheck.states, withBirthPlace(branchFields, formData));
-        return;
-      }
-    }
-
-    await runConfirm(formData, item, branchFields);
+    setIsFormDisabled(true);
+    setSentTo(body.sentTo ?? null);
+    setVerificationEmail((formData.get('email') ?? '').toString().trim() || null);
+    setOutcome(alreadyQueued ? 'already_queued' : 'queued');
+    push([
+      'trackEvent',
+      'Eligibility Test',
+      'Eligibility test completed',
+      alreadyQueued
+        ? 'Eligibility test request already queued'
+        : 'Eligibility test verification email sent',
+    ]);
   };
 
   const onCountryChanged = (e: ChangeEvent<HTMLSelectElement>) => {
-    setIsBirthPlaceRequired(e.target.value.toUpperCase() === 'FR');
+    setIsBirthPlaceRequired(e.target.value.toUpperCase() === FRANCE_ISO_CODE);
     setFieldState('recipientBirthCountry', e.target.value);
     clearIneOrBirthCountryError('recipientBirthCountry', e.target.value);
   };
@@ -553,7 +415,7 @@ const MergedEligibilityForm = () => {
       disabled={isFormDisabled}
       nativeSelectProps={{
         name: 'recipientGenre',
-        defaultValue: '',
+        defaultValue: defaults?.recipientGenre ?? '',
         required: true,
         onBlur: onFieldBlur('recipientGenre'),
         onChange: (e: ChangeEvent<HTMLSelectElement>) =>
@@ -577,6 +439,7 @@ const MergedEligibilityForm = () => {
       disabled={isFormDisabled}
       nativeInputProps={{
         name: 'beneficiaryFirstname',
+        defaultValue: defaults?.beneficiaryFirstname,
         onBlur: onFieldBlur('beneficiaryFirstname'),
         onChange: (e: ChangeEvent<HTMLInputElement>) =>
           setFieldState('beneficiaryFirstname', e.target.value),
@@ -600,10 +463,6 @@ const MergedEligibilityForm = () => {
     />
   );
 
-  const isFailure =
-    (eligibilityData && eligibilityData.length === 0) || (pspCodeData && pspCodeData.length === 0);
-  const isSuccess = pspCodeData && pspCodeData.length > 0;
-
   return (
     <>
       <p className="fr-mb-2w fr-ml-n1w">
@@ -618,6 +477,7 @@ const MergedEligibilityForm = () => {
           disabled={isFormDisabled}
           nativeInputProps={{
             name: 'beneficiaryLastname',
+            defaultValue: defaults?.beneficiaryLastname,
             onBlur: onFieldBlur('beneficiaryLastname'),
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
               setFieldState('beneficiaryLastname', e.target.value),
@@ -641,12 +501,14 @@ const MergedEligibilityForm = () => {
           }
         />
 
-        {/* A boursier has no allocataire, so the genre sits beside their own prénom instead */}
+        {/* A boursier has no allocataire, so the genre describes them and is asked here rather
+            than in the allocataire block — stacked above the prénom, not beside it, so the
+            column order does not change what a screen reader announces between nom and prénom */}
         {isBoursier ? (
-          <div className="fr-grid-row fr-grid-row--gutters">
-            <div className="fr-col-12 fr-col-md-8">{firstnameField}</div>
-            <div className="fr-col-12 fr-col-md-4">{genreField}</div>
-          </div>
+          <>
+            {genreField}
+            {firstnameField}
+          </>
         ) : (
           firstnameField
         )}
@@ -655,6 +517,7 @@ const MergedEligibilityForm = () => {
           legend={getResidencePlaceLabel()}
           isDisabled={isFormDisabled}
           inputName="recipientResidencePlace"
+          defaultOption={defaults?.recipientResidencePlace}
           inputState={inputStates.recipientResidencePlace}
           onChanged={(text) => setFieldState('recipientResidencePlace', text)}
           onBlur={(text) => setFieldState('recipientResidencePlace', text)}
@@ -724,6 +587,7 @@ const MergedEligibilityForm = () => {
               disabled={isFormDisabled}
               nativeInputProps={{
                 name: 'recipientLastname',
+                defaultValue: defaults?.recipientLastname,
                 placeholder: 'ex: Dupont',
                 'aria-label': "Saisir le nom de l'allocataire",
                 required: true,
@@ -750,6 +614,7 @@ const MergedEligibilityForm = () => {
               disabled={isFormDisabled}
               nativeInputProps={{
                 name: 'recipientFirstname',
+                defaultValue: defaults?.recipientFirstname,
                 placeholder: 'ex: Marie',
                 'aria-label': "Saisir le prénom de l'allocataire",
                 required: true,
@@ -780,6 +645,7 @@ const MergedEligibilityForm = () => {
               hintText: 'Personne responsable du compte de l’allocation.',
               nativeInputProps: {
                 name: 'recipientCafNumber',
+                defaultValue: defaults?.recipientCafNumber,
                 placeholder: 'Exemple : 0123456',
                 type: 'text',
                 required: true,
@@ -802,7 +668,9 @@ const MergedEligibilityForm = () => {
           />
         )}
 
-        {situation === 'jeune' && !isCaf && (
+        {/* Asked for every caisse, not just the MSA: it is part of the identité pivot the
+            quotient familial and AAH endpoints are queried on. */}
+        {!isBoursier && (
           <Input
             label={
               <>
@@ -815,8 +683,9 @@ const MergedEligibilityForm = () => {
             disabled={isFormDisabled}
             nativeInputProps={{
               name: 'recipientBirthDate',
+              defaultValue: defaults?.recipientBirthDate,
               type: 'date',
-              min: '1950-01-01',
+              min: '1900-01-01',
               max: '2099-12-31',
               required: true,
               onBlur: onFieldBlur('recipientBirthDate'),
@@ -838,10 +707,35 @@ const MergedEligibilityForm = () => {
             onCountryBlur={onFieldBlur('recipientBirthCountry')}
             onBirthPlaceChanged={(text) => setFieldState('recipientBirthPlace', text)}
             shouldAutoFocus={false}
+            defaultBirthCountry={defaults?.recipientBirthCountry}
+            defaultBirthPlace={defaults?.recipientBirthPlace}
           />
         )}
 
-        <FormButton isDisabled={isFormDisabled} />
+        <Input
+          label={
+            <>
+              Adresse électronique <span className="text--required">*</span>
+            </>
+          }
+          className="fr-mt-2w"
+          hintText="C’est à cette adresse que votre code pass Sport sera envoyé. Exemple : nom@domaine.fr"
+          state={inputStates.email.state}
+          stateRelatedMessage={inputStates.email.errorMsg}
+          disabled={isFormDisabled}
+          nativeInputProps={{
+            name: 'email',
+            defaultValue: defaults?.email,
+            type: 'email',
+            required: true,
+            autoComplete: 'email',
+            onBlur: onFieldBlur('email'),
+            onChange: (e: ChangeEvent<HTMLInputElement>) => setFieldState('email', e.target.value),
+            'aria-label': 'Saisir votre adresse électronique',
+          }}
+        />
+
+        {!outcome && <FormButton isDisabled={isFormDisabled} />}
       </form>
 
       {error && (
@@ -850,20 +744,58 @@ const MergedEligibilityForm = () => {
         </div>
       )}
 
-      {isFailure &&
-        portalNode &&
+      {portalNode &&
         createPortal(
-          <div className="fr-mt-6w">
-            <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
-          </div>,
-          portalNode,
-        )}
-
-      {isSuccess &&
-        portalNode &&
-        createPortal(
-          <div className="fr-mt-6w">
-            <VerdictPanel isSuccess isEligible={benefIsEligible} />
+          <div className={styles.outcome}>
+            {outcome && (
+              <div className="fr-mt-6w" ref={outcomeRef} tabIndex={-1}>
+                <Alert
+                  role="status"
+                  severity={outcome === 'queued' ? 'success' : 'info'}
+                  title={
+                    outcome === 'queued' ? 'Confirmez votre adresse' : 'Demande déjà enregistrée'
+                  }
+                  description={
+                    <>
+                      <p className="fr-mb-1w">
+                        {outcome === 'queued' ? (
+                          <>
+                            Un courriel vient d’être envoyé
+                            {verificationEmail ? (
+                              <>
+                                {' '}
+                                à <strong>{verificationEmail}</strong>
+                              </>
+                            ) : null}
+                            . Ouvrez le lien qu’il contient pour lancer la vérification de vos
+                            droits&nbsp;: tant que ce lien n’est pas ouvert, votre demande n’est pas
+                            traitée.
+                          </>
+                        ) : sentTo ? (
+                          'Cette demande nous est déjà parvenue et a été traitée.'
+                        ) : (
+                          'Cette demande nous est déjà parvenue et son traitement est en cours.'
+                        )}
+                      </p>
+                      {outcome === 'queued' && (
+                        <p className="fr-mb-1w">Ce lien est valable 24&nbsp;heures.</p>
+                      )}
+                      {sentTo && (
+                        <p className="fr-mb-1w">
+                          Le résultat a été envoyé à <strong>{sentTo}</strong>. L’adresse est
+                          partiellement masquée&nbsp;; elle sert seulement à vous rappeler quelle
+                          boîte consulter.
+                        </p>
+                      )}
+                      <p className="fr-mb-0">
+                        Pensez à vérifier vos courriers indésirables si vous ne trouvez pas le
+                        courriel.
+                      </p>
+                    </>
+                  }
+                />
+              </div>
+            )}
           </div>,
           portalNode,
         )}

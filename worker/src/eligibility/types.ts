@@ -7,15 +7,26 @@ export const RESOURCE_ORDER: ResourceKey[] = ["qf", "aah", "cnous"];
 
 // QF is the "quotient familial < 700" route: it makes every child of the household
 // eligible on the household's QF alone, with no per-child call.
-export type Allowance = "AAH" | "CROUS" | "AEEH" | "QF";
+export const ALLOWANCE = {
+  AAH: "AAH",
+  CROUS: "CROUS",
+  AEEH: "AEEH",
+  QF: "QF",
+} as const;
+
+export type Allowance = (typeof ALLOWANCE)[keyof typeof ALLOWANCE];
+
+export const CAISSE = { CAF: "CAF", MSA: "MSA" } as const;
+
+export type Caisse = (typeof CAISSE)[keyof typeof CAISSE];
 
 // AEEH and QF both pull quotient_familial — AEEH for the family composition it needs
 // before calling per child, QF for the household's quotient value itself.
 export const ALLOWANCE_RESOURCES: Record<Allowance, ResourceKey[]> = {
-  AAH: ["aah"],
-  CROUS: ["cnous"],
-  AEEH: ["qf"],
-  QF: ["qf"],
+  [ALLOWANCE.AAH]: ["aah"],
+  [ALLOWANCE.CROUS]: ["cnous"],
+  [ALLOWANCE.AEEH]: ["qf"],
+  [ALLOWANCE.QF]: ["qf"],
 };
 
 // pass Sport 2026 campaign windows, as inclusive birthdate bounds. Derived from
@@ -46,7 +57,7 @@ export const householdQfCovers = (
   aides: Allowance[],
   qf: QuotientFamilialData | null | undefined,
 ): boolean => {
-  if (!aides.includes("QF")) return false;
+  if (!aides.includes(ALLOWANCE.QF)) return false;
   const valeur = qf?.quotient_familial?.valeur;
   return typeof valeur === "number" && valeur < QF_ELIGIBILITY_THRESHOLD;
 };
@@ -151,5 +162,47 @@ export type EligibilityJobPayload = {
 // What BullMQ actually stores: the payload plus the checkpoint the worker writes back
 // across retries.
 export type EligibilityJobData = EligibilityJobPayload & {
+  checkpoint?: EligibilityCheckpoint;
+};
+
+// 'FSS' (bourse régionale des formations sanitaires et sociales) is an LCA situation with
+// no API Particulier counterpart: the CNOUS bouquet only covers l'enseignement supérieur.
+export const SITUATION = { ...ALLOWANCE, FSS: "FSS" } as const;
+
+export type Situation = (typeof SITUATION)[keyof typeof SITUATION];
+
+// Routes where the pass Sport beneficiary is a child of the allocataire. On every other
+// route the allocataire IS the beneficiary, which decides who API Particulier is queried
+// about and whose identity the job is keyed on.
+const CHILD_AIDES: Situation[] = [SITUATION.QF, SITUATION.AEEH];
+
+export const isChildAide = (aide: Situation): boolean => CHILD_AIDES.includes(aide);
+
+// What the combined form (no FranceConnect) puts on the queue. Unlike the FranceConnect
+// payload this carries a DECLARED identity, not a verified one, and exactly one aide.
+export type ApiParticulierJobPayload = {
+  aide: Situation;
+  caisse: Caisse | null; // null for the boursier routes (organisme is always cnous)
+
+  // For QF/AEEH a child of the allocataire; for AAH and the boursier routes, the
+  // allocataire themselves.
+  beneficiary: { lastname: string; firstname: string; birthdate: string };
+
+  allocataire: PivotIdentity;
+
+  // LCA wants the pays de naissance as ISO 3166-1 alpha-2 while API Particulier wants the
+  // COG carried by allocataire.birthcountry. Only the site holds the conversion table.
+  birthCountryIso?: string;
+
+  cafNumber?: string;
+  ine?: string;
+
+  residenceInsee: string; // INSEE code of the commune de résidence (LCA search)
+  email: string;
+  clientIp?: string | null;
+  userAgent?: string | null;
+};
+
+export type ApiParticulierJobData = ApiParticulierJobPayload & {
   checkpoint?: EligibilityCheckpoint;
 };

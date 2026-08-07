@@ -1,28 +1,18 @@
-import {
-  ConfirmResponseErrorBody,
-  EnhancedConfirmResponseBody,
-  SearchResponseBody,
-  SearchResponseErrorBody,
-} from '@/types/EligibilityTest';
-
-export const fetchEligible = (
+export const submitEligibilityRequest = (
   formData: FormData,
-): Promise<{ status: number; body: SearchResponseBody | SearchResponseErrorBody }> => {
-  const url = `/v2/api/eligibility-test/search`;
-
-  return fetch(url, { method: 'POST', body: formData }).then(async (response) => ({
-    status: response.status,
-    body: (await response.json()) as SearchResponseBody | SearchResponseErrorBody,
-  }));
-};
-
-export const fetchPspCode = (
-  formData: FormData,
-): Promise<{ status: number; body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody }> => {
-  const url = `/v2/api/eligibility-test/confirm`;
-
-  return fetch(url, { method: 'POST', body: formData }).then(async (response) => ({
-    status: response.status,
-    body: (await response.json()) as EnhancedConfirmResponseBody | ConfirmResponseErrorBody,
-  }));
-};
+): Promise<{
+  status: number;
+  body: { queued?: boolean; alreadyQueued?: boolean; sentTo?: string; error?: string };
+}> =>
+  fetch('/v2/api/api-particulier/collect', { method: 'POST', body: formData }).then(
+    async (response) => ({
+      status: response.status,
+      body: (await response.json().catch(() => ({}))) as {
+        queued?: boolean;
+        alreadyQueued?: boolean;
+        // Masked by the database view, never assembled here.
+        sentTo?: string;
+        error?: string;
+      },
+    }),
+  );

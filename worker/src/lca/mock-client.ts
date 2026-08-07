@@ -26,18 +26,6 @@ export class MockLcaClient implements LcaClient {
   }
 
   async confirm(payload: ConfirmPayload): Promise<ConfirmItem[] | LcaError> {
-    return [
-      {
-        id: Number(payload.id) || 1,
-        id_psp: "MOCK-PSP-CODE",
-        nom: payload.recipientLastname ?? "N",
-        prenom: payload.recipientFirstname ?? "P",
-        date_naissance: payload.recipientBirthDate ?? "2004-05-15",
-        situation: payload.situation,
-        organisme: payload.organisme,
-        // matricule is stripped by process.ts sanitize before storage.
-        allocataire: { matricule: "MOCK-MATRICULE" },
-      },
-    ];
+    return [];
   }
 }

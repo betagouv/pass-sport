@@ -11,7 +11,16 @@ const templateIdFrom = (envVar: string): number | undefined => {
 
 async function deliver(
   recipient: string | undefined,
-  opts: { subject: string; name: string; alternativeText: string; html: string; templateEnv: string },
+  opts: {
+    subject: string;
+    name: string;
+    alternativeText: string;
+    html: string;
+    templateEnv: string;
+    // Merge fields for the Link Mobility template. Only meaningful in templateId mode —
+    // the inline HTML below already has the values interpolated.
+    variables?: Record<string, string | number>;
+  },
 ): Promise<SendEmailResult | null> {
   if (!recipient) return null;
   const templateId = templateIdFrom(opts.templateEnv);
@@ -20,6 +29,9 @@ async function deliver(
     recipients: [recipient],
     name: opts.name,
     alternativeText: opts.alternativeText,
+    ...(templateId !== undefined && opts.variables
+      ? { variables: { [recipient]: opts.variables } }
+      : {}),
     // Exactly one of templateId / html (the wrapper enforces this).
     ...(templateId !== undefined ? { templateId } : { html: opts.html }),
   });
@@ -137,6 +149,31 @@ export function sendBeneficiaryDigestEmail(
     alternativeText: `${salutation}\n${lines.join("\n")}`,
     templateEnv: "LINK_MOBILITY_TEMPLATE_DIGEST",
     html: [`<p>${greeting}</p>`, ...sections].join("\n").trim(),
+  });
+}
+
+// Gates the combined form: nothing is enqueued until this link is opened. It is not a login
+// and carries no verdict and no code — opening it only starts the processing whose result
+// goes back to this same address, so an intercepted link discloses nothing.
+export function sendVerificationEmail(
+  recipient: string | undefined,
+  link: string,
+): Promise<SendEmailResult | null> {
+  const href = escapeHtml(link);
+  return deliver(recipient, {
+    subject: "Confirmez votre adresse e-mail — pass Sport",
+    // Constant campaign name, like the digest: Link Mobility indexes it as searchable
+    // metadata, so it must never carry the token.
+    name: "pass-sport-verification-email",
+    alternativeText: `Bonjour,\nConfirmez votre adresse e-mail pour lancer le traitement de votre demande pass Sport :\n${link}\nCe lien est valable 24 heures.`,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_EMAIL_VERIFICATION",
+    variables: { lien: link },
+    html: `
+    <p>Bonjour,</p>
+    <p>Confirmez votre adresse e-mail pour lancer le traitement de votre demande pass Sport&nbsp;:</p>
+    <p><a href="${href}">Confirmer mon adresse e-mail</a></p>
+    <p>Ce lien est valable 24&nbsp;heures. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail&nbsp;: aucun traitement ne sera lancé.</p>
+  `.trim(),
   });
 }
 

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startStack, type Stack } from "./harness";
-import { CODES_JOB_NAME } from "../../src";
+import { FRANCE_CONNECT_JOB_NAME } from "../../src/queues";
 import type { Allowance } from "../../src/eligibility/types";
 
 // Design A: a FranceConnect user's job id IS their pairwise `sub`, so disconnecting
@@ -48,14 +48,14 @@ const settle = async (id: string) => {
 describe("job dedup by FranceConnect sub", () => {
   it("a second add under the same sub does not create a second job", async () => {
     const sub = "sub-dedup-1";
-    const first = await stack.queue.add(CODES_JOB_NAME, input(), {
+    const first = await stack.queue.add(FRANCE_CONNECT_JOB_NAME, input(), {
       jobId: sub,
     });
     expect(first.id).toBe(sub);
     await settle(sub);
 
     // Reconnect: same sub, a fresh signed payload. BullMQ must return the existing job.
-    const second = await stack.queue.add(CODES_JOB_NAME, input(), {
+    const second = await stack.queue.add(FRANCE_CONNECT_JOB_NAME, input(), {
       jobId: sub,
     });
     expect(second.id).toBe(sub);
@@ -67,7 +67,7 @@ describe("job dedup by FranceConnect sub", () => {
 
   it("the job is retrievable by sub after it completes", async () => {
     const sub = "sub-dedup-2";
-    await stack.queue.add(CODES_JOB_NAME, input(), { jobId: sub });
+    await stack.queue.add(FRANCE_CONNECT_JOB_NAME, input(), { jobId: sub });
     expect(await settle(sub)).toBe("completed");
 
     // This is what the site's findJobForSub does on reconnect.
@@ -77,7 +77,7 @@ describe("job dedup by FranceConnect sub", () => {
   });
 
   it("a different sub still gets its own job", async () => {
-    await stack.queue.add(CODES_JOB_NAME, input(), {
+    await stack.queue.add(FRANCE_CONNECT_JOB_NAME, input(), {
       jobId: "sub-other",
     });
     expect(await settle("sub-other")).toBe("completed");

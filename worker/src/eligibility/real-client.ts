@@ -8,8 +8,6 @@ import type { ApiParticulierClient } from "./client";
 import { CNOUS_IDENTITE_PATH, RESOURCE_META, toCnousParams, toDssParams } from "./client";
 import type { ApiParticulierData, PivotIdentity, ResourceResult } from "./types";
 
-// Real API Particulier SDK client. No client-side pre-throttle: throttles reactively
-// on 429 via queue.rateLimit.
 export class RealClient implements ApiParticulierClient {
   private client: Client;
 
@@ -95,6 +93,11 @@ export class RealClient implements ApiParticulierClient {
     return this.call(RESOURCE_META.cnous, () =>
       this.client.get(CNOUS_IDENTITE_PATH, { params: toCnousParams(identity) }),
     );
+  }
+
+  // SDK default v4: unlike the identite path there is no v5 for /ine, and v3 is deprecated.
+  cnousByIne(ine: string): Promise<ResourceResult> {
+    return this.call(RESOURCE_META.cnousIne, () => this.client.cnous.ine({ ine }));
   }
 
   aeeh(child: PivotIdentity, childIndex: number): Promise<ResourceResult> {

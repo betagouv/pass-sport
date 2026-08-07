@@ -6,8 +6,8 @@ export type FormStep = 'search' | 'confirm';
 
 /**
  * Every field the merged form can render, all scenarios confounded. Which ones are displayed
- * depends on the allowance, and which ones are required is only known once /search has answered
- * with the caisse.
+ * depends on the allowance; all of them travel in the job payload, whether or not LCA reads
+ * them, because API Particulier is queried on an identité pivot LCA never asked for.
  */
 export interface EligibilityFormInputsState {
   beneficiaryLastname: InputState;
@@ -21,6 +21,7 @@ export interface EligibilityFormInputsState {
   recipientBirthDate: InputState;
   recipientBirthCountry: InputState;
   recipientBirthPlace: InputState;
+  email: InputState;
 }
 
 export type EligibilityFieldName = keyof EligibilityFormInputsState;
@@ -30,8 +31,13 @@ export type BirthInputsState = Pick<
   'recipientBirthCountry' | 'recipientBirthPlace'
 >;
 
-export type SituationType = 'jeune' | 'AAH' | 'boursier';
-export type OrganismType = 'MSA' | 'CAF' | 'cnous';
+export const LCA_SITUATION = { JEUNE: 'jeune', AAH: 'AAH', BOURSIER: 'boursier' } as const;
+
+export type SituationType = (typeof LCA_SITUATION)[keyof typeof LCA_SITUATION];
+
+export const ORGANISME = { MSA: 'MSA', CAF: 'CAF', CNOUS: 'cnous' } as const;
+
+export type OrganismType = (typeof ORGANISME)[keyof typeof ORGANISME];
 
 export interface SearchResponseBodyItem {
   id: number;

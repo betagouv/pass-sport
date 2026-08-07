@@ -5,6 +5,10 @@
 // L'Insee donne le COG de la France (99100) aux territoires d'outre-mer ; on leur met
 // plutôt leur code département / collectivité (971-988). Les États disparus portent
 // leur COG historique.
+// The only country the birthplace question is asked for, and the only one LCA accepts a
+// commune de naissance with.
+export const FRANCE_ISO_CODE = 'FR';
+
 export const countries = [
   {
     isoCode: 'KH',

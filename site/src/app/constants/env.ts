@@ -5,3 +5,5 @@ export const CODES_OBTAINABLE_FOR_CROUS =
 export const IS_PRODUCTION_ENV = process.env.NEXT_PUBLIC_ENV === 'production';
 export const IS_LOCAL_ENV = process.env.NEXT_PUBLIC_ENV === 'local';
 export const CHATBOT_IS_ACTIVATED = process.env.NEXT_PUBLIC_CHATBOT_IS_ACTIVATED === 'yes';
+
+export const PREFILL_TEST_FORM = process.env.NEXT_PUBLIC_PREFILL_TEST_FORM === 'yes';

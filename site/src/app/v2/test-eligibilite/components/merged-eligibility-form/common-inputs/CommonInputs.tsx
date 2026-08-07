@@ -1,6 +1,6 @@
 import Select from '@codegouvfr/react-dsfr/Select';
 import { ChangeEvent, FocusEvent, ReactNode } from 'react';
-import { BirthInputsState } from 'types/EligibilityTest';
+import { BirthInputsState } from '@/types/EligibilityTest';
 import { countries } from '../../../helpers/countries';
 import CityFinder from '../../city-finder/CityFinder';
 
@@ -19,6 +19,8 @@ interface Props {
   isCountryRequired?: boolean;
   countryLabel?: ReactNode;
   birthPlaceLabel?: ReactNode;
+  defaultBirthCountry?: string;
+  defaultBirthPlace?: { value: string; label: string };
 }
 
 const CommonInputs = ({
@@ -35,6 +37,8 @@ const CommonInputs = ({
   isCountryRequired = true,
   countryLabel,
   birthPlaceLabel,
+  defaultBirthCountry,
+  defaultBirthPlace,
 }: Props) => {
   const getCountryOptions = () =>
     countries
@@ -73,7 +77,7 @@ const CommonInputs = ({
           name: birthCountryInputName,
           onChange: onCountryChanged,
           onBlur: onCountryBlur,
-          defaultValue: '',
+          defaultValue: defaultBirthCountry ?? '',
           required: isCountryRequired,
           'aria-label': isDirectBeneficiary
             ? `Saisir votre pays de naissance`
@@ -115,6 +119,7 @@ const CommonInputs = ({
             onChanged={onBirthPlaceChanged}
             required={isBirthInputRequired}
             shouldAutoFocus={shouldAutoFocus}
+            defaultOption={defaultBirthPlace}
           />
         )}
       </div>
