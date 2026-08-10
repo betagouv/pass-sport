@@ -21,8 +21,13 @@ const IDENTITY_COLUMNS = [
   "allocataire-code_pays_naissance",
 ] as const;
 
-const ADDED_COLUMNS = ["qf_value", "qf_eligible", "qf_error"] as const;
-const DEFAULT_QF_THRESHOLD = 700;
+// No eligibility verdict is computed here: the script only records the QF value the
+// API returned, and the threshold comparison is left to whoever consumes the output.
+// `qf_status` is what marks a row as settled, since an absent value is a legitimate
+// outcome for a 404.
+const ADDED_COLUMNS = ["qf_value", "qf_status", "qf_error"] as const;
+const STATUS_FOUND = "trouve";
+const STATUS_NOT_FOUND = "non_trouve";
 const MAX_ATTEMPTS = 3;
 
 // A rate-limit pause does not consume an attempt, so a permanently throttled token
@@ -138,7 +143,7 @@ async function readFirstLine(path: string): Promise<string> {
 // A row is settled once it carries a real verdict. Anything else — an API error, a
 // 404, an incomplete pivot, an interrupted write — is retried on the next run.
 const hasVerdict = (row: Record<string, string>): boolean =>
-  row.qf_eligible === "true" || row.qf_eligible === "false";
+  row.qf_status === STATUS_FOUND || row.qf_status === STATUS_NOT_FOUND;
 
 const readOutputRows = (path: string): AsyncIterable<Record<string, string>> =>
   createReadStream(path).pipe(
@@ -166,14 +171,14 @@ async function closeStream(
   });
 }
 
-const verdictColumns = (verdict: Verdict, threshold: number): Record<string, string> => {
-  // A QF value decides it; failing that, a 404 settles it as false; anything else is
-  // left blank and picked up again on the next run.
-  const isEligible =
-    verdict.value !== null ? verdict.value < threshold : verdict.notFound ? false : null;
+const verdictColumns = (verdict: Verdict): Record<string, string> => {
+  // A QF value settles the row; failing that, a 404 settles it as absent from the base;
+  // anything else leaves the status blank and is picked up again on the next run.
+  const status =
+    verdict.value !== null ? STATUS_FOUND : verdict.notFound ? STATUS_NOT_FOUND : "";
   return {
     qf_value: verdict.value === null ? "" : String(verdict.value),
-    qf_eligible: isEligible === null ? "" : String(isEligible),
+    qf_status: status,
     qf_error: verdict.error ?? "",
   };
 };
@@ -183,17 +188,13 @@ async function main(): Promise<void> {
   const positional = args.filter((arg) => !arg.startsWith("--"));
   const [inputPath, outputPath] = positional;
 
-  const thresholdIndex = args.indexOf("--threshold");
-  const threshold =
-    thresholdIndex === -1 ? DEFAULT_QF_THRESHOLD : Number(args[thresholdIndex + 1] ?? NaN);
-
   // A line per row is fine for a few hundred rows, but floods the log on a
   // multi-day, large-volume run — only print one line every N rows then.
   const logEveryIndex = args.indexOf("--log-every");
   const logEvery = logEveryIndex === -1 ? 1 : Number(args[logEveryIndex + 1] ?? NaN);
 
-  if (!inputPath || !outputPath || Number.isNaN(threshold) || Number.isNaN(logEvery) || logEvery < 1) {
-    console.error("usage: qf-batch <input.csv> <output.csv> [--threshold 700] [--log-every 1]");
+  if (!inputPath || !outputPath || Number.isNaN(logEvery) || logEvery < 1) {
+    console.error("usage: qf-batch <input.csv> <output.csv> [--log-every 1]");
     process.exitCode = 1;
     return;
   }
@@ -237,12 +238,12 @@ async function main(): Promise<void> {
           error: "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance)",
         };
 
-    const columns = verdictColumns(verdict, threshold);
+    const columns = verdictColumns(verdict);
     settled += 1;
     if (settled % logEvery === 0) {
       console.log(
         `${label}: ${verdict.value ?? "aucun verdict"}` +
-          (columns.qf_eligible === "" ? ` (${verdict.error})` : ` -> qf_eligible=${columns.qf_eligible}`),
+          (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`),
       );
     }
     if (INTER_ROW_DELAY_MS > 0) await sleep(INTER_ROW_DELAY_MS);
@@ -260,12 +261,12 @@ async function main(): Promise<void> {
 
   let done = 0;
   let called = 0;
-  let eligible = 0;
+  let withQf = 0;
   let noVerdict = 0;
 
   const record = async (row: Record<string, string>, columns: Record<string, string>) => {
-    if (columns.qf_eligible === "true") eligible += 1;
-    if (columns.qf_eligible === "") noVerdict += 1;
+    if (columns.qf_status === STATUS_FOUND) withQf += 1;
+    if (columns.qf_status === "") noVerdict += 1;
     await writeRow(stringifier, { ...row, ...columns });
   };
 
@@ -313,7 +314,7 @@ async function main(): Promise<void> {
 
   console.log(
     `\n${index} ligne(s) au total, ${called} appel(s) API ce run: ` +
-      `${eligible} éligible(s) (QF < ${threshold}), ` +
+      `${withQf} QF récupéré(s), ` +
       `${noVerdict} encore sans verdict -> ${outputPath}`,
   );
 }

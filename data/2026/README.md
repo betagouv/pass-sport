@@ -31,7 +31,7 @@ flowchart TB
     CNAF_RAW --> c1
     RGPD_LIST -.->|"exclusion"| c3
     c2b -->|"CSV"| QF_BATCH[("qf-batch.ts\ndetached process, up to a week")]:::rawFile
-    QF_BATCH -->|"CSV: qf_value/qf_eligible/qf_error"| c4b
+    QF_BATCH -->|"CSV: qf_value/qf_status/qf_error"| c4b
 
     c5 -->|"QF 6-17 + AAH 16-30 + AEEH 6-19"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
     c5 -->|"backup 6-13 y.o."| BACKUP_CNAF[("DB_BACKUP_CNAF\nCSV")]:::cleanedFile

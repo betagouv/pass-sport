@@ -30,7 +30,7 @@ pnpm db:migrate   # apply migrations
 
 ### QF batch (`qf:batch`)
 
-Reads a CSV of allocataires, calls the API Particulier `quotient_familial` resource for each row, and writes an output CSV enriched with `qf_value`, `qf_eligible` and `qf_error` columns. Runs are resumable: rows already settled (with a `qf_eligible` of `true`/`false`) in an existing output file are not re-queried.
+Reads a CSV of allocataires, calls the API Particulier `quotient_familial` resource for each row, and writes an output CSV enriched with `qf_value`, `qf_status` and `qf_error` columns. No eligibility verdict is computed: `qf_value` carries the QF returned by the API, and comparing it to a threshold is left to the consumer. Runs are resumable: rows already settled (with a `qf_status` of `trouve`/`non_trouve`) in an existing output file are not re-queried.
 
 The input CSV must contain at least the `allocataire-nom_naissance` and `allocataire-date_naissance` columns (see `IDENTITY_COLUMNS` in [src/scripts/qf-batch.ts](src/scripts/qf-batch.ts) for the full set of identity columns used to build the API request).
 
@@ -41,10 +41,9 @@ npm run qf:batch ./src/scripts/qf-batch-workdir/cnaf_2026_qf_batch_input.csv ./s
 Optional flags:
 
 ```bash
-npm run qf:batch <input.csv> <output.csv> --threshold 700 --log-every 50
+npm run qf:batch <input.csv> <output.csv> --log-every 50
 ```
 
-- `--threshold`: QF value below which a row is considered eligible (default `700`).
 - `--log-every`: log progress every N rows instead of every row (default `1`).
 
 ### DLQ (`dlq`)
