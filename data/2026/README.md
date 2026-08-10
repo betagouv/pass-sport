@@ -19,17 +19,21 @@ flowchart TB
 
     subgraph CNAF_NB["① clean_cnaf.ipynb"]
         c1["Load CSV · drop last row\nstrip whitespace\nextract postal + commune from ADRLIG5"]
-        c2["Map columns → PSP schema\norganisme='CAF'\nclassify jeune / AAH\nby DOB + name match"]
+        c2["Map columns → PSP schema · organisme='CAF'\nsituation = CNAF's own ORIGINESELECTION\n(AAH/ARS→jeune/AEEH), no more DOB+name guessing"]
+        c2b["Dedup ARS rows by allocataire (1 quotient_familial\ncall per household, not per child) → qf-batch input CSV"]
         c3["Remove rows missing nom/prenom/dob/genre\nRGPD email filter · age > 30 filter\nfix phone numbers · drop duplicates"]
         c4["Serialize allocataire + adresse_allocataire → JSON"]
-        c5{"Split\nby age"}
-        c1-->c2-->c3-->c4-->c5
+        c4b["Join qf-batch verdict back onto every child\nof its allocataire (by matricule + code_organisme)"]
+        c5{"Split\nby route"}
+        c1-->c2-->c2b-->c3-->c4-->c4b-->c5
     end
 
     CNAF_RAW --> c1
     RGPD_LIST -.->|"exclusion"| c3
+    c2b -->|"CSV"| QF_BATCH[("qf-batch.ts\ndetached process, up to a week")]:::rawFile
+    QF_BATCH -->|"CSV: qf_value/qf_eligible/qf_error"| c4b
 
-    c5 -->|"jeune 14-17 + AAH"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
+    c5 -->|"QF 6-17 + AAH 16-30 + AEEH 6-19"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
     c5 -->|"backup 6-13 y.o."| BACKUP_CNAF[("DB_BACKUP_CNAF\nCSV")]:::cleanedFile
 
     subgraph MSA_NB["② clean_msa.ipynb"]

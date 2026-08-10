@@ -7,15 +7,18 @@ import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
 import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
 
-const REQUIRED_COLUMNS = ["family_name", "birthdate"] as const;
+// Matches the 'allocataire-*' column convention already used across the data/
+// partner notebooks (CNAF/MSA/CNOUS), rather than the FranceConnect-flavored
+// vocabulary of PivotIdentity, so a notebook export needs no extra rename step.
+const REQUIRED_COLUMNS = ["allocataire-nom_naissance", "allocataire-date_naissance"] as const;
 const IDENTITY_COLUMNS = [
-  "family_name",
-  "preferred_username",
-  "given_name",
-  "birthdate",
-  "gender",
-  "birthplace",
-  "birthcountry",
+  "allocataire-nom_naissance",
+  "allocataire-nom_usage",
+  "allocataire-prenom",
+  "allocataire-date_naissance",
+  "allocataire-genre",
+  "allocataire-code_insee_naissance",
+  "allocataire-code_pays_naissance",
 ] as const;
 
 const ADDED_COLUMNS = ["qf_value", "qf_eligible", "qf_error"] as const;
@@ -31,19 +34,19 @@ const INTER_ROW_DELAY_MS = 100;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
-  const familyName = row.family_name?.trim();
-  const birthdate = row.birthdate?.trim();
+  const familyName = row["allocataire-nom_naissance"]?.trim();
+  const birthdate = row["allocataire-date_naissance"]?.trim();
   if (!familyName || !birthdate) return null;
 
-  const gender = row.gender?.trim().toLowerCase();
+  const gender = row["allocataire-genre"]?.trim().toLowerCase();
   return {
     family_name: familyName,
-    preferred_username: row.preferred_username?.trim() || undefined,
-    given_name: row.given_name?.trim() || undefined,
+    preferred_username: row["allocataire-nom_usage"]?.trim() || undefined,
+    given_name: row["allocataire-prenom"]?.trim() || undefined,
     birthdate,
     gender: gender === "male" || gender === "female" ? gender : undefined,
-    birthplace: row.birthplace?.trim() || undefined,
-    birthcountry: row.birthcountry?.trim() || undefined,
+    birthplace: row["allocataire-code_insee_naissance"]?.trim() || undefined,
+    birthcountry: row["allocataire-code_pays_naissance"]?.trim() || undefined,
   };
 };
 
@@ -184,8 +187,13 @@ async function main(): Promise<void> {
   const threshold =
     thresholdIndex === -1 ? DEFAULT_QF_THRESHOLD : Number(args[thresholdIndex + 1] ?? NaN);
 
-  if (!inputPath || !outputPath || Number.isNaN(threshold)) {
-    console.error("usage: qf-batch <input.csv> <output.csv> [--threshold 700]");
+  // A line per row is fine for a few hundred rows, but floods the log on a
+  // multi-day, large-volume run — only print one line every N rows then.
+  const logEveryIndex = args.indexOf("--log-every");
+  const logEvery = logEveryIndex === -1 ? 1 : Number(args[logEveryIndex + 1] ?? NaN);
+
+  if (!inputPath || !outputPath || Number.isNaN(threshold) || Number.isNaN(logEvery) || logEvery < 1) {
+    console.error("usage: qf-batch <input.csv> <output.csv> [--threshold 700] [--log-every 1]");
     process.exitCode = 1;
     return;
   }
@@ -217,18 +225,26 @@ async function main(): Promise<void> {
   const client = new RealClient();
   const outColumns = [...header, ...ADDED_COLUMNS];
 
+  let settled = 0;
+
   // Settles one row: no API call when the pivot is unusable, otherwise the QF chain.
   const settle = async (row: Record<string, string>, label: string) => {
     const identity = rowToIdentity(row);
     const verdict: Verdict = identity
       ? await screenRow(client, identity)
-      : { value: null, error: "identité pivot incomplète (family_name/birthdate)" };
+      : {
+          value: null,
+          error: "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance)",
+        };
 
     const columns = verdictColumns(verdict, threshold);
-    console.log(
-      `${label}: ${verdict.value ?? "aucun verdict"}` +
-        (columns.qf_eligible === "" ? ` (${verdict.error})` : ` -> qf_eligible=${columns.qf_eligible}`),
-    );
+    settled += 1;
+    if (settled % logEvery === 0) {
+      console.log(
+        `${label}: ${verdict.value ?? "aucun verdict"}` +
+          (columns.qf_eligible === "" ? ` (${verdict.error})` : ` -> qf_eligible=${columns.qf_eligible}`),
+      );
+    }
     if (INTER_ROW_DELAY_MS > 0) await sleep(INTER_ROW_DELAY_MS);
     return columns;
   };
