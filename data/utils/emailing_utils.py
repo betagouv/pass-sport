@@ -2,25 +2,30 @@ from typing import List
 
 import pandas as pd
 
+# relative: this package is reached both as `utils.*` (from data/) and as `data.utils.*`
+# (from the repo root), depending on the notebook
+from .data_utils import add_missing_leading_zero
+
 def clean_phone_number_in_place(df: pd.DataFrame, column_name="allocataire_telephone") -> None:
     """
     Adds a '0' prefix to phone numbers that:
     1.  Do not start with '0'.
     2.  Have a length of 9 characters.
+
+    Campaign flavour: missing numbers are emptied rather than kept null, since the
+    campaign CSV carries an empty cell. The prefixing rule itself lives in
+    data_utils.add_missing_leading_zero, shared with the partner cleaning notebooks.
     """
     require_columns([column_name], df)
 
     df[column_name] = df[column_name].fillna('')
-    mask_no_zero_phone_number = ~df[column_name].str.startswith('0')
-    mask_9_char_phone = df[column_name].str.len() == 9
-    final_mask = mask_no_zero_phone_number & mask_9_char_phone
+    cleaned = add_missing_leading_zero(df[column_name])
 
     print(
-        f"Number of beneficiaries with phone cleaned : {len(df[mask_no_zero_phone_number & mask_9_char_phone])}"
+        f"Number of beneficiaries with phone cleaned : {int((cleaned != df[column_name]).sum())}"
     )
 
-    # Add zero to theses matches
-    df.loc[final_mask, 'allocataire_telephone'] = '0' + df['allocataire_telephone']
+    df[column_name] = cleaned
 
 
 def internationalize_phone_number_in_place(df: pd.DataFrame) -> None:
