@@ -1,4 +1,5 @@
-"""Unit tests for clean_cnaf_lib, the logic extracted from clean_cnaf.ipynb.
+"""Unit tests for clean_cnaf_lib, the logic extracted from the two clean_cnaf notebooks
+(clean_cnaf_1_before_qf_batch.ipynb and clean_cnaf_2_after_qf_batch.ipynb).
 
 Run from data/: source .venv/bin/activate && pytest 2026/partners_data/test_clean_cnaf_lib.py
 """

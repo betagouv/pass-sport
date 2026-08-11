@@ -1,16 +1,17 @@
-"""DataFrame processing logic for clean_cnaf.ipynb.
+"""DataFrame processing logic for the clean_cnaf notebooks.
 
-Extracted out of the notebook so it can be unit tested (see test_clean_cnaf_lib.py).
-The notebook keeps the I/O - env vars, CSV reads/writes, printed stats - and calls
-these functions in the same order as before.
+Extracted out of the notebooks so it can be unit tested (see test_clean_cnaf_lib.py).
+They keep the I/O - env vars, CSV/parquet reads/writes, printed stats - and call these
+functions in the same order as before.
 
 Functions are pure: they take a DataFrame (plus explicit parameters) and return a new
 one, never mutating their input and never touching the filesystem or os.environ. The
 few steps that used to print a count return it instead, so the notebook can print it
 and a test can assert on it.
 
-Section order below follows the notebook's own cell order, split in two by the qf-batch
-checkpoint (qf-batch.ts runs out-of-band between phase 1 and phase 2).
+Section order below follows the notebooks' own cell order, split in two by the qf-batch
+checkpoint: phase 1 is clean_cnaf_1_before_qf_batch.ipynb, phase 2 is
+clean_cnaf_2_after_qf_batch.ipynb, and qf-batch.ts runs out-of-band between the two.
 """
 
 import json
