@@ -1,5 +1,8 @@
 # Data flow
 
+Notebook paths below are relative to [partners/](partners/), except ⑨ which is relative to
+this folder. Each partner owns a subfolder holding its notebooks, its extracted library, its
+tests and its data files.
 
 ```mermaid
 flowchart TB
@@ -17,7 +20,7 @@ flowchart TB
     CNOUS_RAWS[("CNOUS raw files\nCSV / UTF-8 / sep=,")]:::rawFile
     FSS_RAW[("FSS_PATHFILE_2026\nCSV / UTF-8 / sep=;")]:::rawFile
 
-    subgraph CNAF_NB1["①a clean_cnaf_1_before_qf_batch.ipynb"]
+    subgraph CNAF_NB1["①a cnaf/clean_cnaf_1_before_qf_batch.ipynb"]
         c1["Load CSV · drop last row\nstrip whitespace\nextract postal + commune from ADRLIG5"]
         c2["Map columns → PSP schema · organisme='CAF'\nsituation = CNAF's own ORIGINESELECTION\n(AAH/ARS→jeune/AEEH), no more DOB+name guessing"]
         c2b["Dedup ARS rows by allocataire (1 quotient_familial\ncall per household, not per child) → qf-batch input CSV"]
@@ -26,7 +29,7 @@ flowchart TB
         c1-->c2-->c2b-->c3-->c4
     end
 
-    subgraph CNAF_NB2["①b clean_cnaf_2_after_qf_batch.ipynb"]
+    subgraph CNAF_NB2["①b cnaf/clean_cnaf_2_after_qf_batch.ipynb"]
         c4b["Join qf-batch verdict back onto every child\nof its allocataire (by matricule + code_organisme)"]
         c5{"Split\nby route"}
         c4b-->c5
@@ -40,7 +43,7 @@ flowchart TB
 
     c5 -->|"QF 6-17 + AAH 16-30 + AEEH 6-19"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
 
-    subgraph MSA_NB["② clean_msa.ipynb"]
+    subgraph MSA_NB["② msa/clean_msa.ipynb"]
         m1["Load Excel · map 29 columns → PSP schema\norganisme='MSA'\nclassify ARS→jeune / AAH by DOB"]
         m2["Remove rows missing nom/prenom/dob/genre\nRGPD email filter · fix phone numbers\ndrop duplicates"]
         m3["Serialize allocataire + adresse_allocataire → JSON"]
@@ -54,7 +57,7 @@ flowchart TB
     m4 -->|"jeune 14-17 + AAH"| DB_MSA[("DB_MSA_EXPORT_2026\nCSV")]:::cleanedFile
     m4 -->|"backup 6-13 y.o."| BACKUP_MSA[("DB_BACKUP_MSA\nCSV")]:::cleanedFile
 
-    subgraph MERGE_NB["③ merge_cnaf_msa.ipynb  ·  run once per cleaned file"]
+    subgraph MERGE_NB["③ generate_new_codes.ipynb  ·  run once per cleaned file"]
         mg1["Load ONE cleaned file (SOURCE = CNAF | MSA | CNOUS)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
         mg2["Generate unique id_psp codes\nformat: YY-XXXX-XXXX\nseeded with the existing codes"]
         mg3["Write YYYY-MM-DD-source-with-codes.csv\nrewrite the existing codes file with the new ones"]
@@ -69,7 +72,7 @@ flowchart TB
     mg3 --> FINAL_DB[("one file per source\nCSV + id_psp")]:::finalFile
     mg3 -.->|"track used codes"| EXISTING_CODES
 
-    subgraph CNOUS_NB["④ clean_cnous.ipynb  ·  run once per wave"]
+    subgraph CNOUS_NB["④ cnous/clean_cnous.ipynb  ·  run once per wave"]
         cn1["Load CSV · dedup on allocataire-matricule (INE)\nclean + uppercase names\norganisme='cnous' · situation='boursier'"]
         cn2["Parse dates · filter DOB 1997-2026\nremove invalid rows · add 4h to birthdates\nserialize allocataire + adresse_allocataire → JSON\nadd default DB columns · dedup on email"]
         cn1-->cn2
@@ -78,7 +81,7 @@ flowchart TB
     CNOUS_RAWS --> cn1
     cn2 --> CNOUS_CLEANED[("CNOUS cleaned files\nCSV per wave  —  no id_psp")]:::cleanedFile
 
-    subgraph DEDUP_NB["⑤ deduplication_cnous.ipynb"]
+    subgraph DEDUP_NB["⑤ cnous/deduplication_cnous.ipynb"]
         dd1["Unwrap allocataire JSON\nexpose matricule / INE field"]
         dd2["Right join on allocataire-matricule\nkeep wave 2 rows NOT in wave 1"]
         dd3["Dedup on nom + prenom + date_naissance\nGenerate id_psp codes\nexcluding existing codes"]
@@ -90,7 +93,7 @@ flowchart TB
     EXISTING_CODES -.->|"seed"| dd3
     dd3 --> CNOUS_OUT[("CNOUS_2_OUTPUT\nCSV + id_psp")]:::finalFile
 
-    subgraph DEDUP_OCC_NB["⑥ deduplication_cnous_for_occitanie.ipynb"]
+    subgraph DEDUP_OCC_NB["⑥ cnous/deduplication_cnous_for_occitanie.ipynb"]
         do1["Unwrap allocataire JSON\nexpose matricule / INE field"]
         do2["Right join on allocataire-matricule\nkeep Occitanie rows NOT in wave 1"]
         do3["Dedup on nom + prenom + date_naissance\nGenerate id_psp codes\nexcluding existing codes"]
