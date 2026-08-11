@@ -7,3 +7,5 @@
 
 *.parquet
 *.txt
+
+.~lock.*
