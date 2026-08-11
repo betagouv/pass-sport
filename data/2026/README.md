@@ -50,19 +50,20 @@ flowchart TB
     m4 -->|"jeune 14-17 + AAH"| DB_MSA[("DB_MSA_EXPORT_2026\nCSV")]:::cleanedFile
     m4 -->|"backup 6-13 y.o."| BACKUP_MSA[("DB_BACKUP_MSA\nCSV")]:::cleanedFile
 
-    subgraph MERGE_NB["③ merge_cnaf_msa.ipynb"]
-        mg1["Concat CNAF + MSA (production)\nConcat CNAF + MSA (backup)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
-        mg2["Generate unique id_psp codes\nformat: YY-XXXX-XXXX\nassign to each row"]
-        mg1-->mg2
+    subgraph MERGE_NB["③ merge_cnaf_msa.ipynb  ·  run once per cleaned file"]
+        mg1["Load ONE cleaned file (SOURCE = CNAF | MSA | CNOUS)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
+        mg2["Generate unique id_psp codes\nformat: YY-XXXX-XXXX\nseeded with the existing codes"]
+        mg3["Write YYYY-MM-DD-source-with-codes.csv\nrewrite the existing codes file with the new ones"]
+        mg1-->mg2-->mg3
     end
 
     DB_CNAF --> mg1
     DB_MSA --> mg1
-    BACKUP_CNAF --> mg1
-    BACKUP_MSA --> mg1
+    CNOUS_CLEANED --> mg1
+    EXISTING_CODES -.->|"seed"| mg2
 
-    mg2 -->|"production"| FINAL_DB[("FINAL_DB_EXPORT_2026\nCSV + id_psp")]:::finalFile
-    mg2 -->|"backup"| FINAL_BACKUP[("FINAL_DB_BACKUP_EXPORT\nCSV")]:::cleanedFile
+    mg3 --> FINAL_DB[("one file per source\nCSV + id_psp")]:::finalFile
+    mg3 -.->|"track used codes"| EXISTING_CODES
 
     subgraph CNOUS_NB["④ clean_cnous.ipynb  ·  run once per wave"]
         cn1["Load CSV · dedup on allocataire-matricule (INE)\nclean + uppercase names\norganisme='cnous' · situation='boursier'"]
