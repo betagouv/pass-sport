@@ -4,10 +4,15 @@
 Everything the MSA shares with the CNAF is tested one folder up, in
 ../test_partners_lib.py.
 
-The fixtures reproduce rows observed in the MSA 2026 test file: a married allocataire
-whose destinataire name differs from her birth name, a file under legal guardianship
-(TUTELLE ORBISK / SERVICE MJPM, empty civility), a birth in Morocco, and the 4-digit INSEE
-codes of the Ariège whose leading zero the export drops.
+Every identity here is invented: names, communes and streets are built from made-up
+syllables so no fixture can collide with a real person or a real address, emails use
+example.org and phone numbers come from the 06 39 98 xx xx range ARCEP reserves for
+fiction. What the fixtures do reproduce is the *shape* of the rows the 2026 export
+delivers: a married allocataire whose destinataire name differs from her birth name, a
+file under legal guardianship (a guardian body as addressee, empty civility), a birth
+abroad, and the 4-digit INSEE codes of the départements 01-09 whose leading zero the
+export drops. INSEE and postal codes stay realistic - they are what the padding logic is
+tested against - so they do not correspond to the invented commune names next to them.
 
 Run from data/: source .venv/bin/activate && pytest 2026/partners/msa/test_clean_msa_lib.py
 """
@@ -109,7 +114,7 @@ def test_pad_birthplace_insee_restores_the_dropped_leading_zero():
 
 
 def test_pad_address_codes_restores_the_dropped_leading_zeros():
-    # Foix, in the Ariège: postal code 09000 and commune code 09122
+    # a commune of the Ariège: postal code 09000 and commune code 09122
     df = pd.DataFrame({
         'adresse_allocataire-code_postal': ['9000', '32260', ''],
         'adresse_allocataire-code_insee': ['9122', '32118', ''],
@@ -137,12 +142,12 @@ def test_build_allocataire_address_fields_joins_the_four_columns():
         'numero_voie_dest': ['2'],
         'complement_numero_voie_dest': ['B'],
         'type_voie_dest': ['RUE'],
-        'voie_dest': ['DU BOIS'],
+        'voie_dest': ['DES THALVES'],
     })
 
     result = lib.build_allocataire_address_fields(df)
 
-    assert result['adresse_allocataire-voie'].tolist() == ['2 B RUE DU BOIS']
+    assert result['adresse_allocataire-voie'].tolist() == ['2 B RUE DES THALVES']
 
 
 def test_build_allocataire_address_fields_skips_the_empty_parts():
@@ -156,7 +161,8 @@ def test_build_allocataire_address_fields_skips_the_empty_parts():
 
     result = lib.build_allocataire_address_fields(df)
 
-    assert result['adresse_allocataire-voie'].tolist() == ['890 CHE DE VORNAC', 'LD LES THALVES', '']
+    assert result['adresse_allocataire-voie'].tolist() == [
+        '890 CHE DE VORNAC', 'LD LES THALVES', '']
 
 
 def test_build_nom_adresse_postale():
@@ -181,7 +187,8 @@ def test_build_nom_adresse_postale_collapses_a_blank_civility():
 
     result = lib.build_nom_adresse_postale(df)
 
-    assert result['adresse_allocataire-nom_adresse_postale'].tolist() == ['TUTELLE ORBISK SERVICE MJPM']
+    assert result['adresse_allocataire-nom_adresse_postale'].tolist() == [
+        'TUTELLE ORBISK SERVICE MJPM']
 
 
 def test_build_allocataire_nom_usage_takes_the_married_name():
@@ -223,7 +230,7 @@ def test_set_organisme_and_situation_maps_the_msa_prestations():
 
 def test_drop_raw_msa_columns():
     df = pd.DataFrame({column: ['x'] for column in lib.MSA_RAW_COLUMNS_TO_DROP})
-    df['nom'] = ['DUPONT']
+    df['nom'] = ['QUIRBEL']
 
     result = lib.drop_raw_msa_columns(df)
 
@@ -270,14 +277,15 @@ def test_pad_birthplace_insee_leaves_a_missing_value_alone():
 
 # --- column-shape guard over the whole notebook sequence --------------------------
 
-# One row of the MSA 2026 test file, married allocataire born in France.
+# An invented row, padded to the fixed widths of the MSA export: a married allocataire
+# born in France, whose destinataire name differs from her birth name.
 MSA_2026_ROW = [
-    '32', '2020009900001', '320', 'MME ', 'VELTRANO', 'ASTRANE            ',
-    'VARNEUIL                   ', '32252', '                         ', '0', '19800312',
-    'a.zandric@example.org            ', '639980142', 'MME        ', 'ZANDRIC                  ',
-    'ASTRANE            ', '                         ', '    ', ' ', 'LD  ',
-    'LES THALVES                ', '32260', 'CLARENOIS                   ', '32118',
-    'ZANDRIC                  ', 'LUVIAN                ', '1', '20100407', 'ARS',
+    '32', '2020009900001', '320', 'MME ', 'VELTRANO', 'ASTRANE             ',
+    'VARNEUIL                 ', '32252', '                         ', '0', '19800312',
+    'a.zandric@example.org   ', '639980142', 'MME        ', 'ZANDRIC                  ',
+    'ASTRANE             ', '                         ', '    ', ' ', 'LD  ',
+    'LES THALVES              ', '32260', 'CLARENOIS                ', '32118',
+    'ZANDRIC                  ', 'LUVIAN              ', '1', '20100407', 'ARS',
 ]
 
 
