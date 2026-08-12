@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 import partners_lib as partners
-from utils.data_utils import format_insee_or_postal_code
+from utils.data_utils import pad_insee_or_postal_codes
 
 MSA_COLUMN_MAPPING = {
     # infos about allocataire
@@ -57,6 +57,10 @@ MSA_COLUMN_MAPPING = {
     'date_naissance_beneficiaire': 'date_naissance',
 }
 
+# The household address codes the MSA export strips the leading zero from, like the birth
+# commune one - see pad_address_codes.
+ADDRESS_CODE_COLUMNS = ['adresse_allocataire-code_postal', 'adresse_allocataire-code_insee']
+
 ORGANISME = 'MSA'
 
 # MSA spells the AEEH route "AEH"; the PSP situation is the same as CNAF's.
@@ -64,6 +68,9 @@ SITUATION_BY_ORIGIN = {'ARS': 'jeune', 'AAH': 'AAH', 'AEH': 'AEEH'}
 
 # MSA has no genre column for the allocataire, only a civility.
 QUALITE_TO_GENRE = {'MR': 'M', 'MME': 'F'}
+
+# Beneficiary genre as MSA codes it, where the PSP schema expects M/F.
+BENEFICIARY_GENRE_TO_PSP = {'1': 'M', '2': 'F'}
 
 # ISO codes standing for "born in France" in the MSA export: '0' is what it writes when
 # the birth country label is left empty, which is the case for every French birth.
@@ -129,7 +136,7 @@ def derive_allocataire_genre(df: pd.DataFrame) -> pd.DataFrame:
 def normalize_beneficiary_genre(df: pd.DataFrame) -> pd.DataFrame:
     """Beneficiary genre: MSA codes it 1/2 where the PSP schema expects M/F."""
     df = df.copy()
-    df['genre'] = df['genre'].replace({'1': 'M', '2': 'F'})
+    df['genre'] = df['genre'].replace(BENEFICIARY_GENRE_TO_PSP)
     return df
 
 
@@ -163,14 +170,28 @@ def fill_france_birth_country(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def pad_birthplace_insee(df: pd.DataFrame) -> pd.DataFrame:
-    """Restore the leading zero the MSA export drops from INSEE codes (9122 -> 09122).
+    """Restore the leading zero the MSA export drops from the birth commune INSEE code.
 
-    .apply() rather than a direct call: format_insee_or_postal_code works on one value,
-    and handed a Series it swallows the error and returns it unpadded.
+    Foix's 9122 comes back as 09122; a code already 5 characters wide, empty or null is
+    left exactly as it is.
     """
     df = df.copy()
-    df['allocataire-code_insee_naissance'] = df['allocataire-code_insee_naissance'].apply(
-        format_insee_or_postal_code)
+    df['allocataire-code_insee_naissance'] = pad_insee_or_postal_codes(
+        df['allocataire-code_insee_naissance'])
+    return df
+
+
+def pad_address_codes(df: pd.DataFrame) -> pd.DataFrame:
+    """Same missing leading zero, on the household's postal and INSEE commune codes.
+
+    The export drops it from every code of the départements 01-09: for Foix, postal code
+    9000 -> 09000 and commune code 9122 -> 09122. Applied on the frame rather than at JSON
+    serialization time, so the padded values are what the parquet handoff and the
+    adresse_allocataire JSON both carry.
+    """
+    df = df.copy()
+    for column in ADDRESS_CODE_COLUMNS:
+        df[column] = pad_insee_or_postal_codes(df[column])
     return df
 
 

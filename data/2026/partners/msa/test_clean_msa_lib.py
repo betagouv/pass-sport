@@ -108,6 +108,30 @@ def test_pad_birthplace_insee_restores_the_dropped_leading_zero():
     assert result['allocataire-code_insee_naissance'].tolist() == ['09122', '65440', '']
 
 
+def test_pad_address_codes_restores_the_dropped_leading_zeros():
+    # Foix, in the Ariège: postal code 09000 and commune code 09122
+    df = pd.DataFrame({
+        'adresse_allocataire-code_postal': ['9000', '32260', ''],
+        'adresse_allocataire-code_insee': ['9122', '32118', ''],
+    })
+
+    result = lib.pad_address_codes(df)
+
+    assert result['adresse_allocataire-code_postal'].tolist() == ['09000', '32260', '']
+    assert result['adresse_allocataire-code_insee'].tolist() == ['09122', '32118', '']
+
+
+def test_pad_address_codes_leaves_a_corsican_code_alone():
+    df = pd.DataFrame({
+        'adresse_allocataire-code_postal': ['20000'],
+        'adresse_allocataire-code_insee': ['2A004'],
+    })
+
+    result = lib.pad_address_codes(df)
+
+    assert result['adresse_allocataire-code_insee'].tolist() == ['2A004']
+
+
 def test_build_allocataire_address_fields_joins_the_four_columns():
     df = pd.DataFrame({
         'numero_voie_dest': ['2'],
@@ -276,6 +300,7 @@ def _run_notebook_column_sequence():
     df = lib.build_nom_adresse_postale(df)
     df = lib.set_organisme_and_situation(df)
     df = partners.parse_beneficiary_birthdate(df, '%Y%m%d')
+    df = lib.pad_address_codes(df)
     df = lib.drop_raw_msa_columns(df)
     df = partners.add_allocataire_json_column(df, lib.ALLOCATAIRE_JSON_EXTRA_FIELDS)
     df = partners.add_adresse_allocataire_json_column(df, lib.ADRESSE_JSON_EXTRA_FIELDS)

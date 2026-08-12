@@ -11,6 +11,7 @@ from utils.data_utils import (
     build_country_cog_lookup,
     drop_rows_missing_values,
     normalize_country_label,
+    pad_insee_or_postal_codes,
     shift_dates_by_hours,
 )
 
@@ -44,6 +45,51 @@ def test_add_missing_leading_zero_does_not_mutate_its_input():
     add_missing_leading_zero(phone)
 
     assert phone.iloc[0] == '612345678'
+
+
+def test_pad_insee_or_postal_codes_restores_the_dropped_leading_zero():
+    # Foix: postal code 09000, commune code 09122, both stripped by a numeric round trip
+    codes = pd.Series(['9000', '9122', '65440', '999'])
+
+    result = pad_insee_or_postal_codes(codes)
+
+    assert result.tolist() == ['09000', '09122', '65440', '00999']
+
+
+def test_pad_insee_or_postal_codes_leaves_the_non_numeric_codes_alone():
+    # Corsican and overseas codes carry a letter: an int cast would lose them
+    codes = pd.Series(['2A004', '2B033', '97A01', '', 'X'])
+
+    result = pad_insee_or_postal_codes(codes)
+
+    assert result.tolist() == ['2A004', '2B033', '97A01', '', 'X']
+
+
+def test_pad_insee_or_postal_codes_keeps_missing_codes_null():
+    codes = pd.Series(['9122', np.NaN, None])
+
+    result = pad_insee_or_postal_codes(codes)
+
+    assert result.iloc[0] == '09122'
+    assert pd.isna(result.iloc[1])
+    assert pd.isna(result.iloc[2])
+
+
+def test_pad_insee_or_postal_codes_accepts_an_all_null_column():
+    # such a column comes out of read_csv as float64, without a .str accessor
+    codes = pd.Series([np.NaN, np.NaN])
+
+    result = pad_insee_or_postal_codes(codes)
+
+    assert result.isna().all()
+
+
+def test_pad_insee_or_postal_codes_does_not_mutate_its_input():
+    codes = pd.Series(['9122'])
+
+    pad_insee_or_postal_codes(codes)
+
+    assert codes.iloc[0] == '9122'
 
 
 def test_shift_dates_by_hours():

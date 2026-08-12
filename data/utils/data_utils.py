@@ -25,6 +25,24 @@ def format_insee_or_postal_code(value: str):
         print(f"Casting to int impossible for value {value}, error {e}")
         return value
 
+# INSEE commune codes and French postal codes are both 5 characters wide.
+INSEE_OR_POSTAL_CODE_LENGTH = 5
+
+def pad_insee_or_postal_codes(codes: pd.Series) -> pd.Series:
+    """
+    Restores the leading zeros an export drops from INSEE / postal codes (9122 -> 09122).
+
+    Only values made exclusively of 1 to 4 digits are padded, which is exactly what a
+    numeric round trip through the partner's system loses: the codes of the départements
+    01 to 09 (Foix: postal 9000 -> 09000, commune 9122 -> 09122). Everything else is
+    returned untouched - a null stays null, an empty string stays empty, an already
+    5-digit code is left alone, and a Corsican or overseas code carrying a letter
+    (2A004, 2B033) is never fed through an int cast that would lose it.
+    """
+    text = codes.astype('string')
+    needs_padding = text.str.fullmatch(r'\d{1,4}').fillna(False)
+    return codes.mask(needs_padding, text.str.zfill(INSEE_OR_POSTAL_CODE_LENGTH))
+
 def require_columns(required_columns: List[str], df: pd.DataFrame) -> None:
     """
     Raises ValueError if any of the specified columns are missing in the DataFrame.

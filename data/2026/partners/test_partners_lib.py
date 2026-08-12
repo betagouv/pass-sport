@@ -315,6 +315,34 @@ def test_filter_within_eligibility_floor_includes_the_boundary():
     assert result['date_naissance'].tolist() == [pd.Timestamp('1996-01-01'), pd.Timestamp('2010-01-01')]
 
 
+def test_describe_rows_below_eligibility_floor_reports_age_birthdate_and_situation():
+    df = pd.DataFrame({
+        'date_naissance': pd.to_datetime(['1995-12-31', '1996-01-01', '1990-06-15']),
+        'situation': ['AAH', 'AAH', 'jeune'],
+    })
+
+    result = lib.describe_rows_below_eligibility_floor(df)
+
+    # only the two born before the floor, and the age is the one reached during the campaign
+    # year - the windows are whole years, not birthday-to-birthday
+    assert result.index.tolist() == [0, 2]
+    assert result['date_naissance'].tolist() == ['31/12/1995', '15/06/1990']
+    assert result['age_en_2026'].tolist() == [31, 36]
+    assert result['situation'].tolist() == ['AAH', 'jeune']
+
+
+def test_describe_rows_below_eligibility_floor_when_every_row_is_eligible():
+    df = pd.DataFrame({
+        'date_naissance': pd.to_datetime(['1996-01-01']),
+        'situation': ['AAH'],
+    })
+
+    result = lib.describe_rows_below_eligibility_floor(df)
+
+    assert result.empty
+    assert result.columns.tolist() == ['date_naissance', 'age_en_2026', 'situation']
+
+
 def test_fix_phone_number_formatting_adds_the_missing_leading_zero():
     df = pd.DataFrame({'allocataire-telephone': ['612345678', '0612345678', '61234567', np.NaN]})
 
