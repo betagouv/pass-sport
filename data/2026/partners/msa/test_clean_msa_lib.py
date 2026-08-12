@@ -4,15 +4,10 @@
 Everything the MSA shares with the CNAF is tested one folder up, in
 ../test_partners_lib.py.
 
-Every identity here is invented: names, communes and streets are built from made-up
-syllables so no fixture can collide with a real person or a real address, emails use
-example.org and phone numbers come from the 06 39 98 xx xx range ARCEP reserves for
-fiction. What the fixtures do reproduce is the *shape* of the rows the 2026 export
-delivers: a married allocataire whose destinataire name differs from her birth name, a
-file under legal guardianship (a guardian body as addressee, empty civility), a birth
-abroad, and the 4-digit INSEE codes of the départements 01-09 whose leading zero the
-export drops. INSEE and postal codes stay realistic - they are what the padding logic is
-tested against - so they do not correspond to the invented commune names next to them.
+The fixtures reproduce rows observed in the MSA 2026 test file: a married allocataire
+whose destinataire name differs from her birth name, a file under legal guardianship
+(TUTELLE ORBISK / SERVICE MJPM, empty civility), a birth in Morocco, and the 4-digit INSEE
+codes of the Ariège whose leading zero the export drops.
 
 Run from data/: source .venv/bin/activate && pytest 2026/partners/msa/test_clean_msa_lib.py
 """
@@ -21,19 +16,30 @@ import json
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import clean_msa_lib as lib
 
 
+def full_header_row(**values) -> pd.DataFrame:
+    """A one-row frame carrying all 29 delivered columns, blank but for the ones given.
+
+    map_msa_columns checks the header it is handed, so the fixtures it takes have to be
+    complete even when the assertion only looks at two columns.
+    """
+    row = {column: [''] for column in lib.MSA_2026_HEADER}
+    return pd.DataFrame({**row, **{column: [value] for column, value in values.items()}})
+
+
 def test_map_msa_columns_renames_to_psp_schema():
-    df = pd.DataFrame({
-        'numero_allocataire': ['2020009900001'],
-        'nom_naissance_allocataire': ['QUIRBEL'],
-        'prenom_usuel_allocataire': ['BALTHOR'],
-        'prestation': ['ARS'],
-        'nom_beneficiaire': ['QUIRBEL'],
-        'nom_destinataire': ['kept as is'],
-    })
+    df = full_header_row(
+        numero_allocataire='2020009900001',
+        nom_naissance_allocataire='QUIRBEL',
+        prenom_naissance_allocataire='BALTHOR',
+        prestation='ARS',
+        nom_beneficiaire='QUIRBEL',
+        nom_destinataire='kept as is',
+    )
 
     result = lib.map_msa_columns(df)
 
@@ -47,9 +53,18 @@ def test_map_msa_columns_renames_to_psp_schema():
     assert 'numero_allocataire' not in result.columns
 
 
+def test_map_msa_columns_names_the_missing_columns():
+    # the 2025 header, whose allocataire columns were named differently: says which columns
+    # are missing instead of failing much later on a bare KeyError
+    df = pd.DataFrame({'caisse': ['32'], 'nom_allocataire': ['QUIRBEL']})
+
+    with pytest.raises(ValueError, match='missing from the file'):
+        lib.map_msa_columns(df)
+
+
 def test_map_msa_columns_copies_the_birth_name_onto_the_pivot_column():
     # MSA has a single allocataire name column and it is the birth name
-    df = pd.DataFrame({'nom_naissance_allocataire': ['VELTRANO']})
+    df = full_header_row(nom_naissance_allocataire='VELTRANO')
 
     result = lib.map_msa_columns(df)
 
@@ -114,7 +129,7 @@ def test_pad_birthplace_insee_restores_the_dropped_leading_zero():
 
 
 def test_pad_address_codes_restores_the_dropped_leading_zeros():
-    # a commune of the Ariège: postal code 09000 and commune code 09122
+    # Foix, in the Ariège: postal code 09000 and commune code 09122
     df = pd.DataFrame({
         'adresse_allocataire-code_postal': ['9000', '32260', ''],
         'adresse_allocataire-code_insee': ['9122', '32118', ''],
@@ -237,18 +252,17 @@ def test_drop_raw_msa_columns():
     assert result.columns.tolist() == ['nom']
 
 
-# The 2026 header MSA delivers, in order - see en_tête_colonne_PassSport.csv.
-MSA_2026_HEADER = [
-    'caisse', 'numero_allocataire', 'organisme', 'qualite_allocataire',
-    'nom_naissance_allocataire', 'prenom_usuel_allocataire', 'commune_naissance_alloc',
-    'code_insee_commune_naiss_alloc', 'pays_naissance_alloc', 'code_iso_pays_naiss_alloc',
-    'date_naissance_alloc', 'adresse_de_messagerie', 'numero_tel_portable',
-    'qualite_destinataire', 'nom_destinataire', 'prenom_destinataire',
-    'complement_adresse_dest', 'numero_voie_dest', 'complement_numero_voie_dest',
-    'type_voie_dest', 'voie_dest', 'code_postal_dest', 'nom_commune_dest',
-    'code_insee_commune_dest', 'nom_beneficiaire', 'prenom_beneficiaire',
-    'genre_beneficiaire', 'date_naissance_beneficiaire', 'prestation',
-]
+# The 2026 header MSA delivers, in order - also written out in the "Input format" cell of
+# clean_msa_1_before_qf_batch.ipynb.
+MSA_2026_HEADER = lib.MSA_2026_HEADER
+
+
+def test_the_delivered_header_has_the_29_columns_msa_announced():
+    assert len(MSA_2026_HEADER) == 29
+    assert MSA_2026_HEADER[:6] == [
+        'caisse', 'numero_allocataire', 'organisme', 'qualite_allocataire',
+        'nom_naissance_allocataire', 'prenom_naissance_allocataire']
+    assert MSA_2026_HEADER[-1] == 'prestation'
 
 
 def test_the_column_mapping_covers_the_delivered_header():

@@ -7,7 +7,7 @@ here is what only the MSA file looks like - its 2026 column names, its %Y%m%d da
 export drops from INSEE codes.
 
 MSA started routing through qf-batch in 2026: its file now carries the allocataire pivot
-identity (nom de naissance, prénom usuel, date/commune/pays de naissance) that the
+identity (nom de naissance, prénom de naissance, date/commune/pays de naissance) that the
 quotient_familial call needs, which the 2025 format did not have.
 
 Extracted out of the notebooks so it can be unit tested (see test_clean_msa_lib.py).
@@ -24,13 +24,29 @@ import pandas as pd
 import partners_lib as partners
 from utils.data_utils import pad_insee_or_postal_codes
 
+# The 29 columns MSA delivers in 2026, in order. Kept here rather than in the notebook so
+# the mapping below, the separator detection and the tests all check against one list.
+MSA_2026_HEADER = [
+    'caisse', 'numero_allocataire', 'organisme', 'qualite_allocataire',
+    'nom_naissance_allocataire', 'prenom_naissance_allocataire', 'commune_naissance_alloc',
+    'code_insee_commune_naiss_alloc', 'pays_naissance_alloc', 'code_iso_pays_naiss_alloc',
+    'date_naissance_alloc', 'adresse_de_messagerie', 'numero_tel_portable',
+    'qualite_destinataire', 'nom_destinataire', 'prenom_destinataire',
+    'complement_adresse_dest', 'numero_voie_dest', 'complement_numero_voie_dest',
+    'type_voie_dest', 'voie_dest', 'code_postal_dest', 'nom_commune_dest',
+    'code_insee_commune_dest', 'nom_beneficiaire', 'prenom_beneficiaire',
+    'genre_beneficiaire', 'date_naissance_beneficiaire', 'prestation',
+]
+
 MSA_COLUMN_MAPPING = {
     # infos about allocataire
     'numero_allocataire': 'allocataire-matricule',
     'organisme': 'allocataire-code_organisme',
     'qualite_allocataire': 'allocataire-qualite',
+    # both names MSA delivers are birth names, which is exactly what the qf-batch pivot
+    # wants - the usage name is only in the destinataire block, see build_allocataire_nom_usage
     'nom_naissance_allocataire': 'allocataire-nom',
-    'prenom_usuel_allocataire': 'allocataire-prenom',
+    'prenom_naissance_allocataire': 'allocataire-prenom',
     'adresse_de_messagerie': 'allocataire-courriel',
     'numero_tel_portable': 'allocataire-telephone',
 
@@ -116,7 +132,16 @@ def map_msa_columns(df: pd.DataFrame) -> pd.DataFrame:
     'allocataire-nom_naissance' (the qf-batch pivot): unlike the CNAF, MSA has a single
     allocataire name column and it *is* the birth name. The usage name lives in the
     destinataire columns - see build_allocataire_nom_usage.
+
+    Raises with the list of missing columns rather than letting the first step that needs
+    one fail on a bare KeyError, which says nothing about what the file actually held.
     """
+    missing = [column for column in MSA_COLUMN_MAPPING if column not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{len(missing)} expected MSA column(s) missing from the file: {missing}. "
+            f"Got: {list(df.columns)}")
+
     df = df.rename(columns=MSA_COLUMN_MAPPING)
     df['allocataire-nom_naissance'] = df['allocataire-nom']
     return df
