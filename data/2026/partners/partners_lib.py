@@ -59,6 +59,11 @@ AAH_DOB_MAX = datetime(2010, 12, 31)
 AEEH_DOB_MIN = datetime(2007, 1, 1)
 AEEH_DOB_MAX = datetime(2020, 12, 31)
 
+# The windows above are all expressed as "N ans révolus" over the campaign year, whole
+# years: a beneficiary born in 1996 is the 30 ans of the AAH route, whatever their
+# birthday. Used to report an age alongside a birthdate.
+CAMPAIGN_YEAR = 2026
+
 # INSEE COG code for France, in the v_pays_territoire reference file.
 FRANCE_COG = '99100'
 
@@ -294,6 +299,27 @@ def filter_within_eligibility_floor(df: pd.DataFrame, floor_date: datetime = AAH
     """
     mask_after_floor = pd.to_datetime(df['date_naissance']) >= floor_date
     return df[mask_after_floor]
+
+
+def describe_rows_below_eligibility_floor(
+    df: pd.DataFrame, floor_date: datetime = AAH_DOB_MIN, campaign_year: int = CAMPAIGN_YEAR
+) -> pd.DataFrame:
+    """The rows filter_within_eligibility_floor drops, for logging them one by one.
+
+    Kept next to the filter and taking the same floor_date, so the notebook can print why
+    each beneficiary was rejected - their birthdate, the age it makes them reach during the
+    campaign year, and the route (situation) they came in on.
+
+    Returns an empty frame with those columns when nothing is out of the windows.
+    """
+    birthdates = pd.to_datetime(df['date_naissance'])
+    mask_below_floor = birthdates < floor_date
+
+    return pd.DataFrame({
+        'date_naissance': birthdates[mask_below_floor].dt.strftime('%d/%m/%Y'),
+        f'age_en_{campaign_year}': campaign_year - birthdates[mask_below_floor].dt.year,
+        'situation': df.loc[mask_below_floor, 'situation'],
+    })
 
 
 def fix_phone_number_formatting(df: pd.DataFrame) -> pd.DataFrame:
