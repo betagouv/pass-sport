@@ -50,17 +50,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    develop:
-      watch:
-        - action: sync
-          path: ./site
-          target: /site
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./site/package.json
-        - action: rebuild
-          path: ./site/src
+    # No `develop.watch` here on purpose: reload comes from the ./site bind mount above,
+    # which Next's own watcher picks up (inotify crosses a Linux bind mount fine). Compose
+    # ignores any watch rule whose path is already bind-mounted ("this path won't be
+    # monitored"), so a watch block can only hurt — and the previous one did: `action:
+    # rebuild` on a service running a stock `image:` with no build context makes
+    # `docker compose watch` abort the service outright ("can't watch service app with
+    # action rebuild without a build context"), leaving no dev server to reload anything.
+    # Run this stack with `docker compose up`, not `docker compose watch`.
   worker:
     build:
       context: ./worker
