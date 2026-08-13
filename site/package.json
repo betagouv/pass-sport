@@ -10,6 +10,7 @@
     "prebuild": "react-dsfr update-icons",
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "scalingo-cleanup": "bash ./scripts/scalingo-cleanup.sh",
     "start": "next start",
     "lint": "eslint --ignore-pattern=scripts/**/*",
     "format:check": "prettier --check --ignore-path .gitignore \"**/*.+(ts|tsx|json|mjs|scss)\"",
