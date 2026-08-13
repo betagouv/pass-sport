@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { randomUUID } from 'crypto';
 import * as Sentry from '@sentry/nextjs';
 import { buildAuthorizeUrl, getFranceConnectConfig } from '@/app/services/france-connect';
 import {
   FC_INTERNAL_PAGE_PATH,
   FC_NONCE_COOKIE,
   FC_STATE_COOKIE,
+  generateOidcSecret,
   getRedirectUri,
   transientCookieOptions,
 } from '@/app/v2/api/poc-fc-api-particulier/shared';
@@ -14,8 +14,8 @@ import {
 export async function GET(request: Request): Promise<Response> {
   try {
     const config = getFranceConnectConfig();
-    const state = randomUUID();
-    const nonce = randomUUID();
+    const state = generateOidcSecret();
+    const nonce = generateOidcSecret();
 
     const authorizeUrl = buildAuthorizeUrl({
       config,
@@ -24,7 +24,6 @@ export async function GET(request: Request): Promise<Response> {
       nonce,
     });
 
-    console.log({ config, authorizeUrl });
     const cookieStore = await cookies();
     cookieStore.set(FC_STATE_COOKIE, state, transientCookieOptions());
     cookieStore.set(FC_NONCE_COOKIE, nonce, transientCookieOptions());

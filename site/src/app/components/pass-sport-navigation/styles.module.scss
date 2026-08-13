@@ -25,6 +25,24 @@
   }
 }
 
+// FranceConnect session status in the header tools. Sits in the same fr-btns-group as
+// "Se déconnecter", so it borrows the quick-access type scale without looking clickable.
+.poc-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: var(--text-mention-grey);
+
+  strong {
+    color: var(--text-title-blue-france);
+    font-weight: 700;
+  }
+}
+
 // For printing, the text is overlapping the logo, it needs a margin to fix that
 .service {
   @media print {
