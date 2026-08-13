@@ -350,7 +350,7 @@ export default function SimplifiedEligibilityTest({
           {displayObtainCodeButton && (
             <p className="fr-mb-0 fr-mt-3w text-align--center">
               <Link
-                href="/v2/test-eligibilite"
+                href="/v2/poc-fc-api-particulier"
                 className="fr-btn fr-btn--secondary"
                 onClick={onCodeObtentionLinkClick}
               >
