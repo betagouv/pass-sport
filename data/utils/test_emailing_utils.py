@@ -25,7 +25,7 @@ def test_clean_phone_number_in_place_prefixes_nine_digit_numbers():
 
 def test_clean_phone_number_in_place_empties_missing_numbers():
     # campaign flavour: the CSV carries an empty cell, not a null
-    df = pd.DataFrame({'allocataire_telephone': ['612345678', np.NaN]})
+    df = pd.DataFrame({'allocataire_telephone': ['612345678', np.nan]})
 
     clean_phone_number_in_place(df)
 
@@ -33,7 +33,7 @@ def test_clean_phone_number_in_place_empties_missing_numbers():
 
 
 def test_clean_phone_number_in_place_reports_how_many_were_cleaned(capsys):
-    df = pd.DataFrame({'allocataire_telephone': ['612345678', '712345678', '0612345678', np.NaN]})
+    df = pd.DataFrame({'allocataire_telephone': ['612345678', '712345678', '0612345678', np.nan]})
 
     clean_phone_number_in_place(df)
 

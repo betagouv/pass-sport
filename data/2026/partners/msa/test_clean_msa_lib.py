@@ -282,7 +282,7 @@ def test_the_json_extra_fields_point_at_existing_pipeline_columns():
 
 
 def test_pad_birthplace_insee_leaves_a_missing_value_alone():
-    df = pd.DataFrame({'allocataire-code_insee_naissance': [np.NaN]})
+    df = pd.DataFrame({'allocataire-code_insee_naissance': [np.nan]})
 
     result = lib.pad_birthplace_insee(df)
 

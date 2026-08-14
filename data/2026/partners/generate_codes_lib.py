@@ -71,7 +71,7 @@ def add_production_default_columns(df: pd.DataFrame, exercice_id: int = EXERCICE
     timestamp = now if now is not None else pd.Timestamp.now(tz=CAMPAIGN_TIMEZONE)
 
     df['exercice_id'] = exercice_id
-    df['uuid_doc'] = np.NaN
+    df['uuid_doc'] = np.nan
     df[['zrr', 'qpv', 'a_valider', 'refuser']] = False
     df[['created_at', 'updated_at']] = timestamp
 

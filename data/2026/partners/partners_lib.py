@@ -71,13 +71,13 @@ FRANCE_COG = '99100'
 # --- Phase 1: pre-checkpoint ------------------------------------------------------
 
 PHONE_PLACEHOLDER_REPLACEMENTS = {
-    '0000000000': np.NaN,
-    '0600000000': np.NaN,
-    '0700000001': np.NaN,
-    '0100000000': np.NaN,
-    '0400000000': np.NaN,
-    '0600000001': np.NaN,
-    '0700000000': np.NaN,
+    '0000000000': np.nan,
+    '0600000000': np.nan,
+    '0700000001': np.nan,
+    '0100000000': np.nan,
+    '0400000000': np.nan,
+    '0600000001': np.nan,
+    '0700000000': np.nan,
 }
 
 QUALITE_NORMALIZATION = {'MME': 'Mme', 'MR': 'M'}
@@ -257,7 +257,7 @@ def clear_foreign_birthplace_insee(df: pd.DataFrame, france_cog: str = FRANCE_CO
     """
     df = df.copy()
     mask_born_abroad = df['allocataire-code_pays_naissance'] != france_cog
-    df.loc[mask_born_abroad, 'allocataire-code_insee_naissance'] = np.NaN
+    df.loc[mask_born_abroad, 'allocataire-code_insee_naissance'] = np.nan
     return df, int(mask_born_abroad.sum())
 
 
@@ -333,7 +333,7 @@ def fix_phone_number_formatting(df: pd.DataFrame) -> pd.DataFrame:
     df['allocataire-telephone'] = add_missing_leading_zero(df['allocataire-telephone'])
 
     mask_tel_eq_zero = df['allocataire-telephone'] == '0'
-    df.loc[mask_tel_eq_zero, 'allocataire-telephone'] = np.NaN
+    df.loc[mask_tel_eq_zero, 'allocataire-telephone'] = np.nan
 
     return df
 
@@ -342,7 +342,7 @@ def clear_blank_email(df: pd.DataFrame) -> pd.DataFrame:
     """Set NaN values for not existing courriel."""
     df = df.copy()
     mask_email_not_existing = df['allocataire-courriel'] == ''
-    df.loc[mask_email_not_existing, 'allocataire-courriel'] = np.NaN
+    df.loc[mask_email_not_existing, 'allocataire-courriel'] = np.nan
     return df
 
 

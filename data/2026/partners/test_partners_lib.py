@@ -235,7 +235,7 @@ def test_map_birth_country_to_cog_reports_unmapped_labels():
 
 def test_clear_foreign_birthplace_insee():
     df = pd.DataFrame({
-        'allocataire-code_pays_naissance': ['99100', '99350', np.NaN],
+        'allocataire-code_pays_naissance': ['99100', '99350', np.nan],
         'allocataire-code_insee_naissance': ['75056', 'CASABLANCA', 'SOMEWHERE'],
     })
 
@@ -264,7 +264,7 @@ def test_filter_rows_missing_required_fields_drops_incomplete_rows():
         'nom': ['DUPONT', 'MARTIN', 'DURAND'],
         'prenom': ['Jean', 'Marie', 'Paul'],
         'date_naissance': [pd.Timestamp('2010-01-01'), pd.Timestamp('2011-01-01'), pd.NaT],
-        'genre': ['M', np.NaN, 'M'],
+        'genre': ['M', np.nan, 'M'],
     })
 
     result = lib.filter_rows_missing_required_fields(df)
@@ -277,7 +277,7 @@ def test_filter_rows_missing_required_fields_handles_an_empty_result():
         'nom': ['DUPONT'],
         'prenom': ['Jean'],
         'date_naissance': [pd.Timestamp('2010-01-01')],
-        'genre': [np.NaN],
+        'genre': [np.nan],
     })
 
     result = lib.filter_rows_missing_required_fields(df)
@@ -344,7 +344,7 @@ def test_describe_rows_below_eligibility_floor_when_every_row_is_eligible():
 
 
 def test_fix_phone_number_formatting_adds_the_missing_leading_zero():
-    df = pd.DataFrame({'allocataire-telephone': ['612345678', '0612345678', '61234567', np.NaN]})
+    df = pd.DataFrame({'allocataire-telephone': ['612345678', '0612345678', '61234567', np.nan]})
 
     result = lib.fix_phone_number_formatting(df)
 
@@ -420,7 +420,7 @@ def test_drop_duplicate_beneficiaries_keeps_rows_differing_on_any_key_column():
 
 
 def test_add_allocataire_json_column_omits_null_fields():
-    df = pd.DataFrame([_beneficiary_row(**{'allocataire-telephone': np.NaN, 'allocataire-courriel': np.NaN})])
+    df = pd.DataFrame([_beneficiary_row(**{'allocataire-telephone': np.nan, 'allocataire-courriel': np.nan})])
 
     result = lib.add_allocataire_json_column(df)
 
@@ -454,7 +454,7 @@ def test_add_allocataire_json_column_without_extra_fields_carries_only_the_share
 
 def test_add_allocataire_json_column_carries_the_partner_extra_fields():
     df = pd.DataFrame([_beneficiary_row(**{'allocataire-date_naissance': '30/04/1985',
-                                           'allocataire-pays_naissance': np.NaN})])
+                                           'allocataire-pays_naissance': np.nan})])
 
     result = lib.add_allocataire_json_column(df, {
         'date_naissance': 'allocataire-date_naissance',
@@ -491,8 +491,8 @@ def test_add_adresse_allocataire_json_column_pads_codes_to_five_digits():
 
 
 def test_add_adresse_allocataire_json_column_omits_null_fields():
-    df = pd.DataFrame([_address_row(**{'adresse_allocataire-cplt_adresse': np.NaN,
-                                       'adresse_allocataire-code_insee': np.NaN})])
+    df = pd.DataFrame([_address_row(**{'adresse_allocataire-cplt_adresse': np.nan,
+                                       'adresse_allocataire-code_insee': np.nan})])
 
     result = lib.add_adresse_allocataire_json_column(df)
 
@@ -614,7 +614,7 @@ def test_qf_eligible_index_applies_the_threshold_strictly():
 
 def test_qf_eligible_index_excludes_rows_without_a_verdict():
     df = _route_frame([
-        {'date_naissance': '2010-06-01', 'qf_value': np.NaN},
+        {'date_naissance': '2010-06-01', 'qf_value': np.nan},
         {'date_naissance': '2010-06-01', 'qf_value': 650.0},
     ])
 

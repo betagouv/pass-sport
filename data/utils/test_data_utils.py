@@ -30,7 +30,7 @@ def test_add_missing_leading_zero():
 
 def test_add_missing_leading_zero_keeps_missing_numbers_null():
     # the partner notebooks rely on this: a null phone must not become '' or '0...'
-    phone = pd.Series(['612345678', np.NaN, None])
+    phone = pd.Series(['612345678', np.nan, None])
 
     result = add_missing_leading_zero(phone)
 
@@ -66,7 +66,7 @@ def test_pad_insee_or_postal_codes_leaves_the_non_numeric_codes_alone():
 
 
 def test_pad_insee_or_postal_codes_keeps_missing_codes_null():
-    codes = pd.Series(['9122', np.NaN, None])
+    codes = pd.Series(['9122', np.nan, None])
 
     result = pad_insee_or_postal_codes(codes)
 
@@ -77,7 +77,7 @@ def test_pad_insee_or_postal_codes_keeps_missing_codes_null():
 
 def test_pad_insee_or_postal_codes_accepts_an_all_null_column():
     # such a column comes out of read_csv as float64, without a .str accessor
-    codes = pd.Series([np.NaN, np.NaN])
+    codes = pd.Series([np.nan, np.nan])
 
     result = pad_insee_or_postal_codes(codes)
 
@@ -104,7 +104,7 @@ def test_drop_rows_missing_values_drops_incomplete_rows():
     df = pd.DataFrame({
         'nom': ['DUPONT', 'MARTIN', 'DURAND'],
         'prenom': ['Jean', 'Marie', 'Paul'],
-        'genre': ['M', np.NaN, 'M'],
+        'genre': ['M', np.nan, 'M'],
         'date_naissance': [pd.Timestamp('2010-01-01'), pd.Timestamp('2011-01-01'), pd.NaT],
     })
 
@@ -116,8 +116,8 @@ def test_drop_rows_missing_values_drops_incomplete_rows():
 def test_drop_rows_missing_values_drops_columns_left_entirely_null():
     df = pd.DataFrame({
         'nom': ['DUPONT', 'MARTIN'],
-        'always_empty': [np.NaN, np.NaN],
-        'sometimes_empty': ['value', np.NaN],
+        'always_empty': [np.nan, np.nan],
+        'sometimes_empty': ['value', np.nan],
     })
 
     result = drop_rows_missing_values(df, ['nom'])

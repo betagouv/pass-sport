@@ -13,7 +13,7 @@ def unaccent_and_upper(text: str) -> str:
 
 def format_insee_or_postal_code(value: str):
     try:
-        if value == '' or value is None or value is np.NaN:
+        if value == '' or value is None or value is np.nan:
             return value
 
         if isinstance(value, str) and re.search(r'\d[A-Z]\d{3}', value):
