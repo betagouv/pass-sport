@@ -18,9 +18,20 @@ qf-batch.ts runs out-of-band between the two. Every phase 2 step is shared, so t
 module only covers phase 1.
 """
 
+import csv
+
 import pandas as pd
 
 import partners_lib as partners
+
+# Positional column order of the raw CNAF export. Used to read the file ourselves rather
+# than trust its own header row - see read_raw_cnaf_csv below for why.
+CNAF_RAW_COLUMNS = [
+    'CODORG', 'MATRICULE', 'QUALDOS', 'RESPDOS', 'NOMNAIDOS', 'PRENOMDOS', 'DTNAIDOS',
+    'SEXDOS', 'COMMUNENAIDOS', 'PAYSNAIDOS', 'NOMCOMPLET', 'ADRLIG1DESTDOS', 'ADRLIG2DESTDOS',
+    'ADRLIG3DESTDOS', 'ADRLIG4DESTDOS', 'ADRLIG5DESTDOS', 'ADRLIG6DESTDOS', 'NUMINSEE',
+    'ADRMAIL', 'NUMTEL', 'NOMENF', 'PRENOMENF', 'DTNAIENF', 'SEXENF', 'ORIGINESELECTION',
+]
 
 CNAF_COLUMN_MAPPING = {
     # infos about allocataire
@@ -68,6 +79,27 @@ RAW_ADDRESS_COLUMNS_TO_DROP = [
     'ADRLIG5DESTDOS',
     'ADRLIG6DESTDOS',
 ]
+
+
+def read_raw_cnaf_csv(filepath: str) -> pd.DataFrame:
+    """Read the raw CNAF export, ascii-encoded and semicolon-separated.
+
+    Column names are supplied positionally (`names=CNAF_RAW_COLUMNS`, `header=None`) instead
+    of being read from the file's own header row, because that header row is unreliable:
+    CNAF's concatenation step has been known to truncate it to 200 of its 268 characters,
+    silently dropping NUMINSEE onward. pandas doesn't raise on that - with fewer header
+    names than data columns it folds the extra leading data columns into a MultiIndex, and
+    every column after that point ends up holding the wrong values. Reading positionally
+    sidesteps the header row's content entirely, so it is correct whether the row is 200,
+    268, or any other number of characters.
+
+    skiprows=2 drops the PASSPORT metadata row and the header row itself (never parsed).
+    """
+    return pd.read_csv(
+        filepath, encoding='ascii', on_bad_lines='skip', sep=';', quoting=csv.QUOTE_NONE,
+        dtype={column: 'str' for column in CNAF_RAW_COLUMNS}, engine='c',
+        keep_default_na=False, names=CNAF_RAW_COLUMNS, header=None, skiprows=2,
+    )
 
 
 def clean_raw_cnaf(df: pd.DataFrame) -> pd.DataFrame:

@@ -12,6 +12,51 @@ import pandas as pd
 import clean_cnaf_lib as lib
 
 
+def _cnaf_csv_row(**overrides):
+    values = {column: '' for column in lib.CNAF_RAW_COLUMNS}
+    values.update(overrides)
+    return ';'.join(values[column] for column in lib.CNAF_RAW_COLUMNS)
+
+
+def _write_cnaf_csv(path, header, row):
+    path.write_text(
+        "PASSPORT;143;20260906;160036;;;;;;;;;;;;;;;;;;;;;\r\n"
+        f"{header}\r\n"
+        f"{row}\r\n",
+        newline='',
+    )
+
+
+def test_read_raw_cnaf_csv_reads_columns_positionally(tmp_path):
+    csv_file = tmp_path / "cnaf.csv"
+    header = ';'.join(lib.CNAF_RAW_COLUMNS)
+    row = _cnaf_csv_row(NUMINSEE='14047', ORIGINESELECTION='ARS')
+    _write_cnaf_csv(csv_file, header, row)
+
+    result = lib.read_raw_cnaf_csv(str(csv_file))
+
+    assert list(result.columns) == lib.CNAF_RAW_COLUMNS
+    assert result['NUMINSEE'].tolist() == ['14047']
+    assert result['ORIGINESELECTION'].tolist() == ['ARS']
+
+
+def test_read_raw_cnaf_csv_ignores_a_truncated_header_row(tmp_path):
+    # CNAF's concatenation step has shipped this header line truncated to 200 of its 268
+    # characters, dropping NUMINSEE onward. Columns must still land correctly since they
+    # are read positionally rather than parsed from this row.
+    csv_file = tmp_path / "cnaf_truncated_header.csv"
+    header = ';'.join(lib.CNAF_RAW_COLUMNS)
+    truncated_header = header[:200]
+    row = _cnaf_csv_row(NUMINSEE='14047', ORIGINESELECTION='ARS')
+    _write_cnaf_csv(csv_file, truncated_header, row)
+
+    result = lib.read_raw_cnaf_csv(str(csv_file))
+
+    assert list(result.columns) == lib.CNAF_RAW_COLUMNS
+    assert result['NUMINSEE'].tolist() == ['14047']
+    assert result['ORIGINESELECTION'].tolist() == ['ARS']
+
+
 def test_clean_raw_cnaf_drops_last_row_and_strips_every_column():
     df = pd.DataFrame({
         'NOMENF': ['  DUPONT  ', ' MARTIN', 'trailing garbage'],
