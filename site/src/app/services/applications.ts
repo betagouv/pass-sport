@@ -100,6 +100,61 @@ export const findApplicationForSub = async (sub: string): Promise<ExistingApplic
   }
 };
 
+export const findApplicationForJobId = async (
+  jobId: string,
+): Promise<ExistingApplication | null> => {
+  try {
+    const { rows } = await getPool().query<{ first_application: Date; last_application: Date }>(
+      'SELECT first_application, last_application FROM applications_by_job_id WHERE job_id = $1 AND last_application >= $2',
+      [jobId, campaignStart()],
+    );
+    if (rows.length === 0) {
+      return null;
+    }
+    return {
+      firstApplication: rows[0].first_application,
+      lastApplication: rows[0].last_application,
+    };
+  } catch (e) {
+    console.error(`[pass-sport] applications lookup failed: ${(e as Error).message}`);
+
+    Sentry.withScope((scope) => {
+      scope.setLevel('error');
+      scope.setTag('lookup', 'applications_by_job_id');
+      scope.captureMessage('Applications lookup failed — a resubmission will re-run the chain');
+      scope.captureException(e);
+    });
+
+    return null;
+  }
+};
+
+export type ProcessedRequest = { emailMask: string | null; emailSent: boolean };
+
+export const findResultForJobId = async (jobId: string): Promise<ProcessedRequest | null> => {
+  try {
+    const { rows } = await getPool().query<{ email_mask: string | null; email_sent: boolean }>(
+      'SELECT email_mask, email_sent FROM application_results_by_job_id WHERE job_id = $1',
+      [jobId],
+    );
+    if (rows.length === 0) {
+      return null;
+    }
+    return { emailMask: rows[0].email_mask, emailSent: rows[0].email_sent };
+  } catch (e) {
+    console.error(`[pass-sport] results lookup failed: ${(e as Error).message}`);
+
+    Sentry.withScope((scope) => {
+      scope.setLevel('error');
+      scope.setTag('lookup', 'application_results_by_job_id');
+      scope.captureMessage('Results lookup failed — the recap will not name the mailbox');
+      scope.captureException(e);
+    });
+
+    return null;
+  }
+};
+
 export const findResultsForSub = async (sub: string): Promise<BeneficiaryResult[]> => {
   try {
     const { rows } = await getPool().query<{

@@ -1,12 +1,9 @@
-// Bridge between the pivot identity + API Particulier results and the LCA payloads.
-// The LCA base is authoritative; the eligibility rules here only feed the no-match
-// fallback verdict.
-
 import {
   AEEH_BIRTHDATE_MAX,
   AEEH_BIRTHDATE_MIN,
   QF_BIRTHDATE_MAX,
   QF_BIRTHDATE_MIN,
+  ALLOWANCE,
   QF_ELIGIBILITY_THRESHOLD,
   householdQfCovers,
   isWithinBirthdateWindow,
@@ -18,26 +15,37 @@ import {
   type ResourceResult,
   type StatutBeneficiaireData,
 } from "../eligibility/types";
-import type { BeneficiaryCandidate, ConfirmPayload, SearchItem, SearchPayload } from "./types";
-
-// Reference date for all age computations of the 2026 campaign.
+import {
+  LCA_SITUATION,
+  ORGANISME,
+  type BeneficiaryCandidate,
+  type ConfirmPayload,
+  type SearchItem,
+  type SearchPayload,
+} from "./types";
 const AGE_REFERENCE_DATE = "2026-12-31";
 
 // Completed years ("ans révolus") at the reference date.
 export const ageAtReferenceDate = (birthdate: string): number => {
   const [ry, rm, rd] = AGE_REFERENCE_DATE.split("-").map(Number);
   const [by, bm, bd] = birthdate.split("-").map(Number);
+
   let age = ry - by;
+
   if (rm < bm || (rm === bm && rd < bd)) age -= 1;
+
   return age;
 };
 
 // Normalizes API Particulier dates ("DD/MM/YYYY" or ISO) to YYYY-MM-DD.
-const toIsoDate = (date?: string): string | null => {
+export const toIsoDate = (date?: string): string | null => {
   if (!date) return null;
+
   const fr = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
   if (fr) return `${fr[3]}-${fr[2]}-${fr[1]}`;
   if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
+
   return null;
 };
 
@@ -55,7 +63,7 @@ const findChildResource = (
 
 // Verdict from a per-child AEEH row: true/false when the API answered, null when
 // there is no usable row.
-const childStatusVerdict = (row: ResourceResult | undefined): boolean | null => {
+export const childStatusVerdict = (row: ResourceResult | undefined): boolean | null => {
   if (!row) return null;
   if (row.success && row.data) {
     const { status } = row.data as AllocationEnfantHandicapeData;
@@ -87,12 +95,12 @@ export const listBeneficiaryCandidates = (
     const reasons: string[] = [];
 
     if (getAah(results)?.est_beneficiaire && age >= 16 && age <= 30) {
-      eligibilities.push("AAH");
+      eligibilities.push(ALLOWANCE.AAH);
       reasons.push(`AAH: bénéficiaire, ${age} ans (16-30)`);
     }
 
     if (getBoursier(results)?.statut_boursier?.est_boursier && age < 28) {
-      eligibilities.push("CROUS");
+      eligibilities.push(ALLOWANCE.CROUS);
       reasons.push(`CROUS: boursier, ${age} ans (<28)`);
     }
 
@@ -131,7 +139,7 @@ export const listBeneficiaryCandidates = (
     );
 
     if (qfCovers && isWithinBirthdateWindow(birthdate, QF_BIRTHDATE_MIN, QF_BIRTHDATE_MAX)) {
-      eligibilities.push("QF");
+      eligibilities.push(ALLOWANCE.QF);
       reasons.push(
         `QF: quotient ${qfData?.quotient_familial?.valeur} < ${QF_ELIGIBILITY_THRESHOLD}, ${age} ans (6-17)`,
       );
@@ -139,7 +147,7 @@ export const listBeneficiaryCandidates = (
       aeehVerdict &&
       isWithinBirthdateWindow(birthdate, AEEH_BIRTHDATE_MIN, AEEH_BIRTHDATE_MAX)
     ) {
-      eligibilities.push("AEEH");
+      eligibilities.push(ALLOWANCE.AEEH);
       reasons.push(`AEEH: bénéficiaire, ${age} ans (17-19)`);
     }
 
@@ -158,7 +166,7 @@ export const buildSearchPayload = (
   beneficiaryBirthDate: candidate.birthdate,
   recipientResidencePlace: residenceInsee,
   allowanceName: candidate.eligibilities[0],
-  isFromCrous: candidate.eligibilities.includes("CROUS"),
+  isFromCrous: candidate.eligibilities.includes(ALLOWANCE.CROUS),
 });
 
 // FranceConnect birthcountry is a COG INSEE code; LCA expects ISO 3166-1 alpha-2.
@@ -173,7 +181,7 @@ export const buildConfirmPayload = (
   results: ResourceResult[],
 ): ConfirmPayload => {
   const allocataire = getQf(results)?.allocataires?.[0];
-  const isCrous = searchItem.situation === "boursier" && searchItem.organisme === "cnous";
+  const isCrous = searchItem.situation === LCA_SITUATION.BOURSIER && searchItem.organisme === ORGANISME.CNOUS;
   const matricule = searchItem.matricule || undefined;
 
   return {

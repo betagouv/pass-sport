@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import type { PivotIdentity } from '@/app/services/queue';
 
 export const BASE_DOMAIN = process.env.BASE_DOMAIN;
@@ -5,8 +6,20 @@ export const FC_INTERNAL_PAGE_PATH = '/v2/poc-fc-api-particulier';
 
 export const FC_STATE_COOKIE = 'fc_poc_state';
 export const FC_NONCE_COOKIE = 'fc_poc_nonce';
-export const FC_ID_TOKEN_COOKIE = 'fc_poc_id_token';
 export const FC_LOGOUT_STATE_COOKIE = 'fc_poc_logout_state';
+
+// FranceConnect FS qualification, criterion 12: `state` and `nonce` must be at least
+// 22 characters made only of digits and upper/lowercase letters. base64url also emits
+// '-' and '_', so drop them and draw again until the target length is covered.
+export const generateOidcSecret = (length = 32): string => {
+  let secret = '';
+
+  while (secret.length < length) {
+    secret += randomBytes(32).toString('base64url').replace(/[-_]/g, '');
+  }
+
+  return secret.slice(0, length);
+};
 
 const CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/callback';
 const LOGOUT_CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/logout/callback';
@@ -17,6 +30,10 @@ export interface PocResult {
   // across sessions — it becomes the BullMQ job id, so a reconnecting user cannot
   // enqueue a second job.
   sub: string;
+  // Kept alongside the identity rather than in its own cookie: qualification criterion
+  // 14 requires `id_token_hint` on session/end, so the token must stay available for
+  // exactly as long as the session that offers "Se déconnecter".
+  idToken: string;
 }
 
 const isProd = process.env.NODE_ENV === 'production';

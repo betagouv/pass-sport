@@ -3,6 +3,14 @@ import { createRemoteJWKSet, jwtVerify, type JWTPayload, type JWTVerifyGetKey } 
 // FranceConnect v2 signs id_token / userinfo with ES256 (ECDSA P-256 + SHA-256).
 const FC_SIGNING_ALG = 'ES256';
 
+// eIDAS assurance levels, weakest first. Qualification criterion 10: the level carried
+// by the id_token `acr` claim must be at least the one asked for in `acr_values`.
+const EIDAS_LEVELS = ['eidas1', 'eidas2', 'eidas3'] as const;
+
+export type EidasLevel = (typeof EIDAS_LEVELS)[number];
+
+export const REQUESTED_EIDAS_LEVEL: EidasLevel = 'eidas1';
+
 export interface FranceConnectConfig {
   clientId: string;
   clientSecret: string;
@@ -86,7 +94,7 @@ export const buildAuthorizeUrl = (params: {
   url.searchParams.set('scope', config.scopes);
   url.searchParams.set('state', state);
   url.searchParams.set('nonce', nonce);
-  url.searchParams.set('acr_values', 'eidas1');
+  url.searchParams.set('acr_values', REQUESTED_EIDAS_LEVEL);
 
   return url;
 };
@@ -140,6 +148,14 @@ export const verifyIdToken = async (params: {
 
   if (payload.nonce !== nonce) {
     throw new Error('FranceConnect id_token nonce mismatch');
+  }
+
+  const acrIndex = EIDAS_LEVELS.indexOf(payload.acr as EidasLevel);
+
+  if (acrIndex < EIDAS_LEVELS.indexOf(REQUESTED_EIDAS_LEVEL)) {
+    throw new Error(
+      `FranceConnect id_token acr is below the requested eIDAS level (got "${payload.acr}", expected at least "${REQUESTED_EIDAS_LEVEL}")`,
+    );
   }
 
   return payload;

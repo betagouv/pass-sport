@@ -39,7 +39,7 @@ export class RealLcaClient implements LcaClient {
 
     const res = await fetch(url, { headers: this.headers() });
 
-    if (!res.ok) throw new Error(`LCA /search failed: ${res.status}`);
+    if (!res.ok) return { message: `LCA /search failed: ${res.status}`, httpStatus: res.status };
 
     const body = (await res.json()) as SearchItem[] | LcaError;
 
@@ -55,7 +55,7 @@ export class RealLcaClient implements LcaClient {
 
     const res = await fetch(url, { headers: this.headers() });
 
-    if (!res.ok) throw new Error(`LCA /confirm failed: ${res.status}`);
+    if (!res.ok) return { message: `LCA /confirm failed: ${res.status}`, httpStatus: res.status };
 
     return (await res.json()) as ConfirmItem[] | LcaError;
   }

@@ -12,16 +12,31 @@ import { IS_LOCAL_ENV } from '@/app/constants/env';
 import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
-  title: 'POC FranceConnect + API Particulier - pass Sport',
+  title: 'Récupération du code | pass Sport',
   description: 'Démonstrateur : connexion FranceConnect puis appel API Particulier côté serveur.',
 };
 
+// Internal error keys, then the OpenID Connect errors FranceConnect can hand back on
+// the redirect_uri (qualification criterion 24) — every one of them needs a sentence
+// the user can act on rather than the raw code.
 const ERROR_MESSAGES: Record<string, string> = {
   login: 'Impossible de démarrer la connexion FranceConnect.',
   state: 'Échec de la vérification de sécurité (state). Veuillez réessayer.',
   callback: "Erreur lors de l'échange avec FranceConnect ou API Particulier.",
-  access_denied: 'Vous avez refusé la connexion FranceConnect.',
+  identity: "FranceConnect n'a pas transmis les informations d'identité attendues.",
   logout_state: 'Vous avez été déconnecté (vérification de sécurité incomplète).',
+  access_denied: 'Vous avez refusé la connexion FranceConnect.',
+  invalid_request: 'La demande de connexion était incomplète. Veuillez réessayer.',
+  invalid_scope: 'La demande de connexion portait sur des données non autorisées.',
+  invalid_client: "Le service n'est pas correctement déclaré auprès de FranceConnect.",
+  unauthorized_client: "Le service n'est pas autorisé à utiliser cette connexion.",
+  unsupported_response_type: 'Ce type de connexion FranceConnect n’est pas pris en charge.',
+  server_error: 'FranceConnect a rencontré une erreur. Veuillez réessayer dans un instant.',
+  temporarily_unavailable:
+    'FranceConnect est momentanément indisponible. Veuillez réessayer plus tard.',
+  login_required: 'Votre connexion FranceConnect a expiré. Veuillez vous reconnecter.',
+  consent_required: 'Vous devez accepter le partage de vos données pour continuer.',
+  interaction_required: 'FranceConnect a besoin d’une action de votre part pour continuer.',
 };
 
 // Rendered on the server, where the container clock is UTC — so pin the timezone
@@ -73,12 +88,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
       id={SKIP_LINKS_ID.mainContent}
       role="main"
     >
-      <h1>POC FranceConnect + API Particulier</h1>
-      <p className="fr-text--lead">
-        Démonstrateur : authentification via FranceConnect, puis saisie des aides et de la commune ;
-        l&apos;appel à API Particulier n&apos;est réalisé côté serveur qu&apos;une fois ces
-        informations confirmées.
-      </p>
+      <h1>Récupération du code pass Sport</h1>
 
       {error && (
         <div className="fr-alert fr-alert--error fr-my-3w">
@@ -99,12 +109,32 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             description="Nous vous demanderons ensuite vos aides et votre commune, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
           />
 
-          <p className="fr-mb-2w">
-            Connectez-vous avec FranceConnect pour récupérer les codes pass Sport.
-          </p>
-          <FranceConnectSection />
+          <div className={styles.choiceGrid}>
+            <div className={styles.choice}>
+              <h2 className="fr-h4">S'authentifier avec FranceConnect</h2>
+              <p>
+                Nous vérifions vos droits directement auprès des administrations : aucun
+                justificatif à fournir.
+              </p>
+              {/* Wording imposed by the FranceConnect FS qualification (criterion 1):
+                  it must appear verbatim, directly above the button. */}
+              <p className={styles.franceConnectIntro}>
+                FranceConnect est la solution proposée par l’État pour sécuriser et simplifier la
+                connexion à vos services en ligne.
+              </p>
+              <FranceConnectSection />
+            </div>
 
-          <NoFranceConnectSection />
+            <div className={styles.choiceSeparator} role="presentation">
+              <span>Ou</span>
+            </div>
+
+            <div className={styles.choice}>
+              <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
+              <p>Renseignez vous-même vos informations pour vérifier votre éligibilité.</p>
+              <NoFranceConnectSection />
+            </div>
+          </div>
         </section>
       ) : (
         <section className={styles.section}>

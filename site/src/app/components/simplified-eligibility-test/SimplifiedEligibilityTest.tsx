@@ -4,13 +4,8 @@ import styles from './styles.module.scss';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import Button, { ButtonProps } from '@codegouvfr/react-dsfr/Button';
-import {
-  AEEH_CODE_OBTENTION_TYPE,
-  ALLOCATION,
-  getAeehCodeObtentionType,
-  isEligible,
-} from '@/utils/eligibility-test';
-import { useCallback, useState } from 'react';
+import { ALLOCATION, isEligible } from '@/utils/eligibility-test';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
@@ -19,6 +14,7 @@ import Link from 'next/link';
 import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { InputState } from '@/types/form';
+import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -51,12 +47,12 @@ const defaultOptions = [
     label: 'Aucune',
   },
   {
-    value: ALLOCATION.AEEH,
-    label: `Allocation d'éducation de l'enfant handicapé (AEEH)`,
+    value: ALLOCATION.QF,
+    label: 'Quotient familial inférieur à 700',
   },
   {
-    value: ALLOCATION.ARS,
-    label: 'Allocation de rentrée scolaire (ARS)',
+    value: ALLOCATION.AEEH,
+    label: `Allocation d'éducation de l'enfant handicapé (AEEH)`,
   },
   {
     value: ALLOCATION.AAH,
@@ -106,6 +102,19 @@ export default function SimplifiedEligibilityTest({
   const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
   const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
+  const { save } = useEligibilityTestStorage();
+
+  useEffect(() => {
+    // Skip the mount pass, otherwise a previously stored entry gets wiped before any user input
+    if (targetDate === null && allocationName === null) {
+      return;
+    }
+
+    save({
+      dob: targetDate,
+      situation: allocationName,
+    });
+  }, [targetDate, allocationName, save]);
 
   function resetStates() {
     setDisplayEligibilityConditions(false);
@@ -126,7 +135,7 @@ export default function SimplifiedEligibilityTest({
         })}
       >
         <p className="fr-h5 fr-mb-0">
-          <>Testez votre éligibilité en 1 min</>
+          <>Vérifier votre éligibilité ou celle de l&apos;un de vos enfants</>
         </p>
 
         <form
@@ -153,26 +162,13 @@ export default function SimplifiedEligibilityTest({
                 if (CODES_OBTAINABLE && isBenefEligible && targetDate) {
                   switch (allocationName) {
                     case ALLOCATION.AAH:
-                    case ALLOCATION.ARS:
+                    case ALLOCATION.AEEH:
+                    case ALLOCATION.QF:
                       setAlertMeta({
                         title: successInitialMeta.title,
                         description: successInitialMeta.description,
                       });
                       setDisplayObtainCodeButton(true);
-                      break;
-                    case ALLOCATION.AEEH:
-                      const { displayType } = getAeehCodeObtentionType(targetDate);
-
-                      setAlertMeta({
-                        title: successInitialMeta.title,
-                        description: successInitialMeta.description,
-                      });
-
-                      if (displayType === AEEH_CODE_OBTENTION_TYPE.LINK) {
-                        setDisplayAeehLink(true);
-                      } else if (displayType === AEEH_CODE_OBTENTION_TYPE.FORM) {
-                        setDisplayObtainCodeButton(true);
-                      }
                       break;
                     case ALLOCATION.CROUS:
                     case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
@@ -194,9 +190,9 @@ export default function SimplifiedEligibilityTest({
 
                 if (!CODES_OBTAINABLE && isBenefEligible) {
                   switch (allocationName) {
+                    case ALLOCATION.QF:
                     case ALLOCATION.AAH:
                     case ALLOCATION.AEEH:
-                    case ALLOCATION.ARS:
                       setAlertMeta({
                         title: successInitialMeta.title,
                         description: successInitialMeta.description,
@@ -210,11 +206,11 @@ export default function SimplifiedEligibilityTest({
                     case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
                       setAlertMeta({
                         title: successInitialMeta.title,
-                        description: `En tant qu'étudiant boursier, vous recevrez votre code progressivement à partir du 1er novembre au lieu du 1er septembre. Nous nous excusons pour la gêne occasionnée.`,
+                        description: `En tant qu'étudiant boursier, vous recevrez votre code progressivement à partir de fin août.`,
                       });
                       setKnowMoreMeta({
                         title: 'A savoir',
-                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir du 1er novembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
+                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir de fin août. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
                       });
                       break;
                   }
@@ -243,7 +239,7 @@ export default function SimplifiedEligibilityTest({
             }
           }}
         >
-          <div className="fr-fieldset" aria-describedby="eligibility-notification-message">
+          <div className="fr-fieldset fr-m-0" aria-describedby="eligibility-notification-message">
             <div
               className={cn(
                 styles['eligibility-test__fields'],
@@ -254,10 +250,10 @@ export default function SimplifiedEligibilityTest({
             >
               <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
                 <Input
-                  label="Date de naissance"
+                  label="Date de naissance de la personne éligible"
                   state={inputStates.dob?.state}
                   stateRelatedMessage={inputStates.dob?.errorMsg}
-                  hintText="Exemple : 31/12/2026."
+                  hintText="Exemple : 31/12/2015."
                   nativeInputProps={{
                     required: true,
                     type: 'date',
@@ -285,8 +281,7 @@ export default function SimplifiedEligibilityTest({
 
               <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
                 <Select
-                  label="Êtes-vous bénéficiaire d'une aide ?"
-                  hint="Sélectionner l'aide dont vous bénéficiez."
+                  label="Dans quelle situation êtes vous ?"
                   state={inputStates.allowance.state}
                   stateRelatedMessage={inputStates.allowance?.errorMsg}
                   nativeSelectProps={{
@@ -302,7 +297,7 @@ export default function SimplifiedEligibilityTest({
                         ...inputStates,
                         allowance: {
                           state: inputIsValid ? 'default' : 'error',
-                          errorMsg: !inputIsValid ? `Le choix de l'aide est requise` : '',
+                          errorMsg: !inputIsValid ? `Le choix de la situation est requise` : '',
                         },
                       });
 
@@ -323,6 +318,7 @@ export default function SimplifiedEligibilityTest({
                   })}
                 </Select>
               </div>
+
               <div
                 className={cn('fr-fieldset__element', styles['eligibility-test__confirm-button'])}
               >
@@ -354,7 +350,7 @@ export default function SimplifiedEligibilityTest({
           {displayObtainCodeButton && (
             <p className="fr-mb-0 fr-mt-3w text-align--center">
               <Link
-                href="/v2/test-eligibilite"
+                href="/v2/poc-fc-api-particulier"
                 className="fr-btn fr-btn--secondary"
                 onClick={onCodeObtentionLinkClick}
               >
@@ -405,8 +401,8 @@ export default function SimplifiedEligibilityTest({
               <p>Le dispositif est ouvert :</p>
               <ul className="fr-ml-2w">
                 <li>
-                  Aux jeunes de 14 à 17 ans bénéficiaires de l&apos;ARS (Allocation de Rentrée
-                  Scolaire) ;
+                  Aux jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
+                  familial est inférieur ou égal à 699 ;
                 </li>
                 <li>
                   Aux jeunes en situation de handicap :

@@ -59,6 +59,29 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(r[0].verdict).toBe("eligible_confirmed");
   });
 
+  // A confirm answering [] means LCA knows the person but has no code for them yet. That
+  // is a verdict, not an incident: failing the job would retry four times over an answer
+  // that will not change, then give up, and the usager would never hear back.
+  it("empty confirm -> not_found, the job completes and still writes a verdict", async () => {
+    stack.setLcaConfirmEmpty(true);
+
+    try {
+      await stack.enqueueAndWait(selfCrous());
+      const r = await rows();
+
+      expect(r).toHaveLength(1);
+      expect(r[0].lca_status).toBe("not_found");
+      // CROUS was claimed and the fake API Particulier says boursier, so our own route
+      // still carries them.
+      expect(r[0].is_eligible).toBe(true);
+      expect(r[0].verdict).toBe("eligible_pending");
+      expect(r[0].email_kind).toBe("eligible_soon");
+      expect(r[0].pass_sport_code).toBeNull();
+    } finally {
+      stack.setLcaConfirmEmpty(false);
+    }
+  });
+
   it("QF children chain -> enfant rows confirmed with code email", async () => {
     // AEEH pulls QF, whose deterministic children are all sent to LCA.
     await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
@@ -110,7 +133,7 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   // 1000, i.e. above the 700 threshold.
   //
   // The tests below are about OUR routes, so they take LCA out of the picture: a
-  // confirmed LCA match sets is_eligible true on its own (index.ts — the base is
+  // confirmed LCA match sets is_eligible true on its own (jobs/france-connect.ts — the base is
   // authoritative), which would make every child look eligible whatever the rule says.
   // A "Nomatch" last name is the harness convention for "LCA finds nobody".
   const routeOnly = () => stack.setChildrenLastname("NomatchEnfant");

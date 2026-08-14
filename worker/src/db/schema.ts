@@ -10,7 +10,18 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { PivotIdentity } from "../eligibility/types";
+import type { ApiParticulierJobPayload, PivotIdentity } from "../eligibility/types";
+
+// The verdict as the USAGER should read it. The verdict column below is where each
+// value is documented. 'eligible_pending_lca' is never produced by the worker — the code
+// generation under data/ writes it — but it is declared so the type stays the exact set
+// of values the column can hold.
+export type Verdict =
+  | "eligible_confirmed"
+  | "eligible_pending"
+  | "eligible_pending_lca"
+  | "not_eligible"
+  | "not_assessed";
 
 export const eligibilityResults = pgTable(
   "eligibility_results",
@@ -41,7 +52,7 @@ export const eligibilityResults = pgTable(
     // The verdict as the USAGER should read it, and the only column the site is granted.
     // Deliberately not email_kind: that one describes what was SENT, is null in three
     // unrelated situations, and gets flipped by the email_sent UPDATE. Written once here
-    // so the site never has to re-derive the rule that lives in index.ts.
+    // so the site never has to re-derive the rule that lives in jobs/shared.ts.
     //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email
     //   'eligible_pending'     — éligible chez nous, pas encore dans la base LCA
     //   'eligible_pending_lca' — un code a été fabriqué pour cette personne et part vers
@@ -53,10 +64,19 @@ export const eligibilityResults = pgTable(
     //                            passage refabriquerait un code aux mêmes personnes.
     //   'not_eligible'         — aucune route ouverte et aucun match LCA
     //   'not_assessed'         — personne non évaluée (rien de demandé pour elle)
-    verdict: text("verdict").notNull(),
+    // The only column the site is granted. Deliberately not email_kind: that one describes
+    // what was SENT, is null in three unrelated situations, and gets flipped by the
+    // email_sent UPDATE. Written once by the job so the site never has to re-derive it.
+    // See the Verdict type above for the values.
+    verdict: text("verdict").$type<Verdict>().notNull(),
 
     emailKind: text("email_kind"),
     emailSent: boolean("email_sent").notNull().default(false),
+
+    // Where the recapitulative email went. Kept so a usager coming back can be told which
+    // mailbox to look in — never handed out whole: the site only ever reads the masked
+    // projection in application_results_by_job_id.
+    email: text("email"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -107,6 +127,111 @@ export const applicationResultsBySub = pgView("application_results_by_sub").as((
         )`,
     ),
 );
+
+// The no-FranceConnect counterpart of applications_by_sub. That one keys on the pairwise
+// pseudonym, which is null on this path; here the key is job_id, the identity hash the
+// site derives before enqueuing (site/src/app/services/eligibility-job.ts).
+//
+// It exists so a completed job can still be recognised once BullMQ has dropped it: without
+// it, resubmitting the same request re-runs the whole chain and re-burns API Particulier
+// quota. Narrow on purpose — a hash and two timestamps, no identity, no code — which is
+// what makes it grantable to site_readonly.
+export const applicationsByJobId = pgView("applications_by_job_id").as((qb) =>
+  qb
+    .select({
+      jobId: sql<string>`${eligibilityResults.jobId}`.as("job_id"),
+      firstApplication: sql<Date>`min(${eligibilityResults.createdAt})`.as("first_application"),
+      lastApplication: sql<Date>`max(${eligibilityResults.createdAt})`.as("last_application"),
+    })
+    .from(eligibilityResults)
+    .where(
+      sql`${eligibilityResults.allocataireFcSub} is null and ${eligibilityResults.jobId} is not null`,
+    )
+    .groupBy(eligibilityResults.jobId),
+);
+
+// Masked in SQL rather than on the site: site_readonly must never receive the address at
+// all, so no bug downstream can leak it. Fixed-width stars, so the length of the local part
+// is not leaked either. "patrick.nguyen@beta.gouv.fr" -> "p***n@beta.gouv.fr".
+const maskedEmail = sql<string | null>`
+  case
+    when ${eligibilityResults.email} is null then null
+    else left(split_part(${eligibilityResults.email}, '@', 1), 1)
+      || '***'
+      || case
+           when length(split_part(${eligibilityResults.email}, '@', 1)) > 1
+           then right(split_part(${eligibilityResults.email}, '@', 1), 1)
+           else ''
+         end
+      || '@'
+      || split_part(${eligibilityResults.email}, '@', 2)
+  end`;
+
+// What the combined form shows a usager coming back with a request already processed:
+// which mailbox to look in, and nothing else.
+//
+// Deliberately NOT the shape of application_results_by_sub. That view is keyed on the
+// FranceConnect `sub`, which nobody can produce without authenticating; this one is keyed on
+// job_id, an identity hash ANY visitor can recompute by typing someone's name, birthdate and
+// commune de naissance into the form. Exposing verdict or pass_sport_code here would turn
+// the form into a lookup oracle for other people's codes.
+export const applicationResultsByJobId = pgView("application_results_by_job_id").as((qb) =>
+  qb
+    .select({
+      jobId: sql<string>`${eligibilityResults.jobId}`.as("job_id"),
+      emailMask: maskedEmail.as("email_mask"),
+      emailSent: eligibilityResults.emailSent,
+      createdAt: eligibilityResults.createdAt,
+    })
+    .from(eligibilityResults)
+    .where(
+      sql`${eligibilityResults.allocataireFcSub} is null
+        and ${eligibilityResults.jobId} is not null
+        and ${eligibilityResults.createdAt} = (
+          select max(latest.created_at)
+          from eligibility_results latest
+          where latest.job_id = ${eligibilityResults.jobId}
+        )`,
+    ),
+);
+
+// The combined form asks for an address and takes a DECLARED identity — so anyone can type
+// a third party's état civil, put their own address on it, and burn API Particulier quota.
+// This table is what stands between the submission and the job: nothing is enqueued until
+// the link mailed to that address is clicked.
+//
+// It is the one table the site writes to (a column-level UPDATE on consumed_at), because
+// the click has to be consumed synchronously to render its own outcome.
+export const emailVerifications = pgTable(
+  "email_verifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    // sha256 hex of the token. The token itself is only ever in the email — a read of this
+    // table yields no working link.
+    tokenHash: text("token_hash").notNull().unique(),
+
+    // The api-particulier-job payload, held verbatim until the click replays it. Carries the
+    // declared identité pivot, the n° CAF or INE and the address, which is what makes the
+    // sweep below a retention boundary and not housekeeping.
+    payload: jsonb("payload").$type<ApiParticulierJobPayload>().notNull(),
+
+    // The identity hash the site derives before enqueuing (apiParticulierJobId). Same value
+    // the eventual job is keyed on, so the cooldown and the trace line up with it.
+    jobId: text("job_id").notNull(),
+
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+
+    // Set by the atomic UPDATE that consumes the token — the single-use guarantee is the
+    // `where consumed_at is null` of that statement, not an application-side check.
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("email_verifications_job_id_idx").on(t.jobId)],
+);
+
+export type EmailVerificationRow = typeof emailVerifications.$inferInsert;
 
 export const audit = pgTable("audit", {
   id: uuid("id").defaultRandom().primaryKey(),

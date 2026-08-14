@@ -70,7 +70,7 @@ export function proxy(request: NextRequest) {
   const disabledRoutes = [
     '/v2/budget',
     '/v2/test-eligibilite-base',
-    '/v2/test-eligibilite',
+    // '/v2/test-eligibilite',
     '/v2/test-ou-code',
     '/v2/partenaires',
   ];

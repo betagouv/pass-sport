@@ -2,6 +2,13 @@
   color: var(--text-mention-grey);
 }
 
+/* react-select is not a .fr-input, so DSFR's .fr-input-group--disabled rules never reach it.
+   Mirror them by hand, or the field stays black-on-white beside a form full of greyed ones. */
+.label--disabled,
+.label--disabled .hint {
+  color: var(--text-disabled-grey);
+}
+
 .city-finder {
   &__container {
     flex-direction: column;

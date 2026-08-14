@@ -9,12 +9,10 @@ import {
 } from '@/app/services/france-connect';
 import {
   BASE_DOMAIN,
-  FC_ID_TOKEN_COOKIE,
   FC_INTERNAL_PAGE_PATH,
   FC_NONCE_COOKIE,
   FC_STATE_COOKIE,
   getRedirectUri,
-  transientCookieOptions,
 } from '@/app/v2/api/poc-fc-api-particulier/shared';
 import { storePocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
 import { toPivotIdentity } from '@/app/v2/api/poc-fc-api-particulier/pivot';
@@ -32,6 +30,7 @@ export async function GET(request: Request): Promise<Response> {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const fcError = url.searchParams.get('error');
+  const fcErrorDescription = url.searchParams.get('error_description');
 
   const cookieStore = await cookies();
   const expectedState = cookieStore.get(FC_STATE_COOKIE)?.value;
@@ -41,11 +40,26 @@ export async function GET(request: Request): Promise<Response> {
   cookieStore.delete(FC_STATE_COOKIE);
   cookieStore.delete(FC_NONCE_COOKIE);
 
+  // Criterion 12: the state is echoed on the error return too, so check it before
+  // trusting anything else on the query string — including the error itself.
+  if (!state || !expectedState || state !== expectedState) {
+    return redirectToPage({ error: 'state' });
+  }
+
+  // Criterion 24: FranceConnect returns `error` and `error_description`. The
+  // description is operator-facing detail, so it goes to Sentry rather than the page.
   if (fcError) {
+    Sentry.withScope((scope) => {
+      scope.setLevel(fcError === 'access_denied' ? 'info' : 'warning');
+      scope.setTag('fc_error', fcError);
+      scope.setExtra('error_description', fcErrorDescription);
+      scope.captureMessage(`FranceConnect returned an error: ${fcError}`);
+    });
+
     return redirectToPage({ error: fcError });
   }
 
-  if (!code || !state || !expectedState || state !== expectedState || !expectedNonce) {
+  if (!code || !expectedNonce) {
     return redirectToPage({ error: 'state' });
   }
 
@@ -71,17 +85,13 @@ export async function GET(request: Request): Promise<Response> {
       return redirectToPage({ error: 'identity' });
     }
 
-    await storePocResult({ identity: pivot, sub: identity.sub });
+    await storePocResult({ identity: pivot, sub: identity.sub, idToken: tokens.idToken });
 
-    const response = redirectToPage({ status: 'ok' });
-
-    response.cookies.set(FC_ID_TOKEN_COOKIE, tokens.idToken, transientCookieOptions());
-
-    return response;
+    return redirectToPage({ status: 'ok' });
   } catch (e) {
     Sentry.withScope((scope) => {
       scope.setLevel('error');
-      scope.captureMessage('FranceConnect POC callback failed');
+      scope.captureMessage('FranceConnect callback failed');
       scope.captureException(e);
     });
 

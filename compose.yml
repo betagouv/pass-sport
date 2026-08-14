@@ -19,7 +19,10 @@ services:
       app:
         condition: service_started
   app:
-    image: node:25-alpine
+    # Debian rather than alpine: musl gives worker threads a 128 KB stack where glibc gives
+    # 8 MB, and Next's CSS pipeline overflows it parsing dsfr.min.css — 737 KB on a single
+    # line — as an intermittent "Maximum call stack size exceeded".
+    image: node:25
     working_dir: /site
     ports:
       - '3001:3000'
@@ -33,38 +36,47 @@ services:
     command: >
       sh -c "
         npm install -g pnpm@11.4.0 &&
-        CI=true pnpm install --frozen-lockfile --ignore-scripts &&
+        CI=true pnpm install --frozen-lockfile --ignore-scripts --store-dir /pnpm-store &&
         npm run dev
       "
     volumes:
       - ./site:/site
+      # Keeps pnpm's hard-link farm off the macOS bind mount, which loses entries under it
+      # often enough to fail a module read mid-build. Same treatment as the worker.
+      - site-node-modules:/site/node_modules
+      - site-pnpm-store:/pnpm-store
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    develop:
-      watch:
-        - action: sync
-          path: ./site
-          target: /site
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./site/package.json
-        - action: rebuild
-          path: ./site/src
+    # No `develop.watch` here on purpose: reload comes from the ./site bind mount above,
+    # which Next's own watcher picks up (inotify crosses a Linux bind mount fine). Compose
+    # ignores any watch rule whose path is already bind-mounted ("this path won't be
+    # monitored"), so a watch block can only hurt — and the previous one did: `action:
+    # rebuild` on a service running a stock `image:` with no build context makes
+    # `docker compose watch` abort the service outright ("can't watch service app with
+    # action rebuild without a build context"), leaving no dev server to reload anything.
+    # Run this stack with `docker compose up`, not `docker compose watch`.
   worker:
     build:
       context: ./worker
       target: dev
     working_dir: /app
+    ports:
+      # Node inspector, for an IDE debugger to attach. Bound to 127.0.0.1: an open
+      # inspector is arbitrary code execution on this container.
+      - '127.0.0.1:9229:9229'
     env_file:
       - ./worker/.env.local
     environment:
       - SCALINGO_REDIS_URL=redis://passsport:passsport@redis:6379
       - SCALINGO_POSTGRESQL_URL=postgres://passsport:passsport@db:5432/passsport
       - PGSSL_DISABLE=true
+      # Base of the email-verification link. Points at the WAF, the port a browser on the
+      # host actually reaches — not the `app` service name, which only resolves inside the
+      # compose network.
+      - PUBLIC_SITE_URL=http://localhost:3000
     volumes:
       - ./worker:/app
       - worker-node-modules:/app/node_modules
@@ -140,3 +152,5 @@ volumes:
   pgdata:
   worker-node-modules:
   worker-pnpm-store:
+  site-node-modules:
+  site-pnpm-store:

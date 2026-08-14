@@ -13,9 +13,11 @@ import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remo
 import Notice from '@codegouvfr/react-dsfr/Notice';
 
 interface Props {
-  // POC FranceConnect + API Particulier: a live session (httpOnly cookie, read
-  // server-side in the root layout) surfaces a "Se déconnecter" quick-access item.
-  showPocLogout?: boolean;
+  // POC FranceConnect + API Particulier: while a session is live (read server-side in
+  // the root layout), the header shows the user's civil name — qualification criterion
+  // 18 asks that a connected user can tell at a glance who they are connected as — plus
+  // a "Se déconnecter" quick-access item. Undefined means no session.
+  pocUserName?: string;
 }
 
 // Route that destroys the POC session then server-redirects to the FranceConnect
@@ -24,7 +26,7 @@ interface Props {
 // RSC fetch cannot follow the external FranceConnect redirect.
 const POC_LOGOUT_URL = '/v2/api/poc-fc-api-particulier/logout';
 
-export default function PassSportNavigation({ showPocLogout = false }: Props) {
+export default function PassSportNavigation({ pocUserName }: Props) {
   const paths: string | null = usePathname();
 
   const isActive = (path: string) => {
@@ -73,8 +75,16 @@ export default function PassSportNavigation({ showPocLogout = false }: Props) {
           'aria-label': `Retourner sur la page d'accueil du pass Sport`,
         }}
         quickAccessItems={
-          showPocLogout
+          pocUserName
             ? [
+                // Plain node rather than a quick-access link: there is no account space
+                // to navigate to, so the identity must read as a status, not a control.
+                <p key="poc-identity" className={styles['poc-identity']}>
+                  <span className="fr-icon-account-line" aria-hidden="true" />
+                  <span>
+                    Connecté avec FranceConnect en tant que <strong>{pocUserName}</strong>
+                  </span>
+                </p>,
                 {
                   iconId: 'fr-icon-logout-box-r-line',
                   text: 'Se déconnecter',

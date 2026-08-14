@@ -2,8 +2,13 @@
 
 import type { Allowance } from "../eligibility/types";
 
-export type SituationType = "jeune" | "AAH" | "boursier";
-export type OrganismType = "MSA" | "CAF" | "cnous";
+export const LCA_SITUATION = { JEUNE: "jeune", AAH: "AAH", BOURSIER: "boursier" } as const;
+
+export type SituationType = (typeof LCA_SITUATION)[keyof typeof LCA_SITUATION];
+
+export const ORGANISME = { MSA: "MSA", CAF: "CAF", CNOUS: "cnous" } as const;
+
+export type OrganismType = (typeof ORGANISME)[keyof typeof ORGANISME];
 
 export type SearchPayload = {
   beneficiaryLastname: string;
@@ -54,7 +59,9 @@ export type ConfirmItem = {
   [key: string]: unknown;
 };
 
-export type LcaError = { message: string };
+// httpStatus is absent when LCA answers 200 with a business message, and set when the
+// gateway answers non-2xx.
+export type LcaError = { message: string; httpStatus?: number };
 
 // A person the LCA search can target (self or a QF child).
 export type BeneficiaryCandidate = {
@@ -66,9 +73,13 @@ export type BeneficiaryCandidate = {
   reasons: string[];
 };
 
-export type CandidateResult = {
-  candidate: BeneficiaryCandidate;
-  status: "confirmed" | "not_found" | "error";
-  passSportCode?: string;
-  confirm?: ConfirmItem; // sanitized (matricule stripped)
-};
+// 'confirmed' carries a code by construction: LCA answering an item without an id_psp is
+// the same answer as answering nothing, and is reported as 'not_found'.
+export type CandidateResult =
+  | {
+      candidate: BeneficiaryCandidate;
+      status: "confirmed";
+      passSportCode: string;
+      confirm: ConfirmItem; // sanitized (matricule stripped)
+    }
+  | { candidate: BeneficiaryCandidate; status: "not_found" | "error" };
