@@ -46,6 +46,26 @@ npm run qf:batch <input.csv> <output.csv> --log-every 50
 
 - `--log-every`: log progress every N rows instead of every row (default `1`).
 
+#### On the processing machine
+
+A run can take up to a week, so on the processing machine it goes through
+[src/scripts/run-qf-batch.sh](src/scripts/run-qf-batch.sh) instead of a raw `npm run`: it
+takes the partner name alone, derives both paths from the shared
+`data/2026/partners/qf-batch-workdir` convention, and sources nvm itself (systemd reads no
+shell profile). It is the single entry point, by hand or under systemd — the two must never
+diverge:
+
+```bash
+./src/scripts/run-qf-batch.sh msa
+# or, supervised (survives an SSH disconnect, restarts on failure, caps retries):
+systemctl start pass-sport-qf-batch@msa
+journalctl -fu pass-sport-qf-batch@msa
+```
+
+The `pass-sport-qf-batch@` systemd unit is deployed by [deploy/ansible/](../deploy/ansible/)
+but never enabled or auto-started — each partner's run is started by hand. See
+[deploy/ansible/README.md](../deploy/ansible/README.md) for provisioning the machine.
+
 ### DLQ (`dlq`)
 
 ```bash

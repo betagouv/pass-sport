@@ -42,10 +42,17 @@ export const eligibilityResults = pgTable(
     // Deliberately not email_kind: that one describes what was SENT, is null in three
     // unrelated situations, and gets flipped by the email_sent UPDATE. Written once here
     // so the site never has to re-derive the rule that lives in index.ts.
-    //   'eligible_confirmed' — LCA a le bénéficiaire, un code part par email
-    //   'eligible_pending'   — éligible chez nous, pas encore dans la base LCA
-    //   'not_eligible'       — aucune route ouverte et aucun match LCA
-    //   'not_assessed'       — personne non évaluée (rien de demandé pour elle)
+    //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email
+    //   'eligible_pending'     — éligible chez nous, pas encore dans la base LCA
+    //   'eligible_pending_lca' — un code a été fabriqué pour cette personne et part vers
+    //                            LCA, qui ne le sert pas encore. JAMAIS écrit par le worker:
+    //                            il est posé par la génération de codes côté data/, qui
+    //                            ramasse les 'eligible_pending' et les marque une fois le
+    //                            CSV produit (data/2026/partners/franceconnect/). C'est ce
+    //                            qui rend ce ramassage rejouable — sans lui, un second
+    //                            passage refabriquerait un code aux mêmes personnes.
+    //   'not_eligible'         — aucune route ouverte et aucun match LCA
+    //   'not_assessed'         — personne non évaluée (rien de demandé pour elle)
     verdict: text("verdict").notNull(),
 
     emailKind: text("email_kind"),

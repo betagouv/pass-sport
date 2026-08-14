@@ -60,7 +60,15 @@ export type WorkerDeps = {
   queue: Queue<EligibilityJobData>;
 };
 
-export type Verdict = "eligible_confirmed" | "eligible_pending" | "not_eligible" | "not_assessed";
+// Mirror of the verdict column (db/schema.ts), which is where each value is documented.
+// 'eligible_pending_lca' is never produced here — the code generation under data/ writes it
+// — but it is declared so the type stays the exact set of values the column can hold.
+export type Verdict =
+  | "eligible_confirmed"
+  | "eligible_pending"
+  | "eligible_pending_lca"
+  | "not_eligible"
+  | "not_assessed";
 export type BeneficiaryOutcome = {
   source: string;
   isEligible: boolean;

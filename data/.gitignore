@@ -7,7 +7,17 @@
 *.zip
 *.sql
 
+# Ces trois-là sont du code, pas des données : ce sont les requêtes d'extraction, de
+# write-back et de contrôle de la source franceconnect. Le *.sql ci-dessus vise les dumps de
+# base.
+!2026/partners/franceconnect/export_eligible_pending.sql
+!2026/partners/franceconnect/writeback_verdict.sql
+!2026/partners/franceconnect/check_writeback.sql
+
 ignored/
 backup/
 statiscs/*.pdf
 __pycache__
+
+*.log
+logs/

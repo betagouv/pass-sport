@@ -61,6 +61,7 @@ export class RealClient implements ApiParticulierClient {
           retryAfter,
           rateLimitRemaining: 0,
           rateLimitResetMs: (retryAfter ?? 1) * 1000,
+          requestUrl: e.url,
           childIndex,
         };
       }
@@ -71,6 +72,7 @@ export class RealClient implements ApiParticulierClient {
           success: false,
           data: null,
           error: e.firstErrorDetail ?? e.firstErrorTitle ?? e.message,
+          requestUrl: e.url,
           childIndex,
         };
       }

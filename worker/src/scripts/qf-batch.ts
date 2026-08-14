@@ -25,7 +25,10 @@ const IDENTITY_COLUMNS = [
 // API returned, and the threshold comparison is left to whoever consumes the output.
 // `qf_status` is what marks a row as settled, since an absent value is a legitimate
 // outcome for a 404.
-const ADDED_COLUMNS = ["qf_value", "qf_status", "qf_error"] as const;
+// `qf_request_url` est une colonne de debug : elle rejoue l'appel tel qu'il est parti
+// (URL + query params). Le SDK ne l'expose que sur ses erreurs, donc elle reste vide
+// sur les lignes trouvées. Elle contient l'identité pivot en clair — à ne pas diffuser.
+const ADDED_COLUMNS = ["qf_value", "qf_status", "qf_error", "qf_request_url"] as const;
 const STATUS_FOUND = "trouve";
 const STATUS_NOT_FOUND = "non_trouve";
 const MAX_ATTEMPTS = 3;
@@ -62,12 +65,22 @@ const waitMsFor = (result: ResourceResult): number =>
 
 // `notFound` is a real, permanent answer (absent from the CAF/MSA base), not a missing
 // one: it settles the row as ineligible so resume never re-calls the API for it.
-type Verdict = { value: number | null; error: string | null; notFound?: boolean };
+type Verdict = {
+  value: number | null;
+  error: string | null;
+  notFound?: boolean;
+  requestUrl?: string | null;
+};
 
 // One row through quotient_familial, pausing (without consuming an attempt) whenever
 // the window is exhausted. Returns the QF value, or the reason there is none.
 async function screenRow(client: RealClient, identity: PivotIdentity): Promise<Verdict> {
   let rateLimitPauses = 0;
+
+  // Dernière URL remontée par le SDK, quel que soit l'essai — lue au moment du return,
+  // donc toujours celle de la tentative qui a produit le verdict.
+  let requestUrl: string | null = null;
+  const verdict = (v: Omit<Verdict, "requestUrl">): Verdict => ({ ...v, requestUrl });
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let result: ResourceResult;
@@ -76,16 +89,18 @@ async function screenRow(client: RealClient, identity: PivotIdentity): Promise<V
       result = await client.quotientFamilial(identity);
     } catch (error) {
       // RealClient.call rethrows anything that is not an ApiGouvError/RateLimitError.
-      if (attempt === MAX_ATTEMPTS) return { value: null, error: (error as Error).message };
+      if (attempt === MAX_ATTEMPTS) return verdict({ value: null, error: (error as Error).message });
       continue;
     }
+
+    requestUrl = result.requestUrl ?? requestUrl;
 
     // 429: pause for the whole window and try this row again. Not an attempt — a
     // throttled call did no work, so counting it would drop rows for being unlucky.
     if (result.rateLimited) {
       rateLimitPauses += 1;
       if (rateLimitPauses > MAX_RATE_LIMIT_PAUSES) {
-        return { value: null, error: `throttlé ${rateLimitPauses} fois d'affilée, abandon` };
+        return verdict({ value: null, error: `throttlé ${rateLimitPauses} fois d'affilée, abandon` });
       }
       const waitMs = waitMsFor(result);
       console.log(`  rate limited, pausing ${Math.round(waitMs / 1000)}s`);
@@ -97,7 +112,7 @@ async function screenRow(client: RealClient, identity: PivotIdentity): Promise<V
     if (result.success && result.data) {
       const value = (result.data as QuotientFamilialData).quotient_familial?.valeur;
       if (typeof value !== "number") {
-        return { value: null, error: "réponse sans quotient_familial.valeur" };
+        return verdict({ value: null, error: "réponse sans quotient_familial.valeur" });
       }
 
       // Proactive: the window is spent, so pause before the next row rather than
@@ -106,24 +121,24 @@ async function screenRow(client: RealClient, identity: PivotIdentity): Promise<V
         console.log(`  window exhausted, pausing ${Math.round(result.rateLimitResetMs / 1000)}s`);
         await sleep(result.rateLimitResetMs);
       }
-      return { value, error: null };
+      return verdict({ value, error: null });
     }
 
     // 404 is a real answer — this person is not in the CAF/MSA base. Settled as
     // ineligible, so it is neither retried in-run nor re-called on the next run.
     if (result.httpStatus === 404) {
-      return { value: null, error: "non trouvé (404)", notFound: true };
+      return verdict({ value: null, error: "non trouvé (404)", notFound: true });
     }
 
     if (attempt === MAX_ATTEMPTS) {
-      return {
+      return verdict({
         value: null,
         error: result.error ?? `httpStatus=${result.httpStatus ?? "none"}`,
-      };
+      });
     }
   }
 
-  return { value: null, error: "épuisé" };
+  return verdict({ value: null, error: "épuisé" });
 }
 
 async function readFirstLine(path: string): Promise<string> {
@@ -180,6 +195,7 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
     qf_value: verdict.value === null ? "" : String(verdict.value),
     qf_status: status,
     qf_error: verdict.error ?? "",
+    qf_request_url: verdict.requestUrl ?? "",
   };
 };
 

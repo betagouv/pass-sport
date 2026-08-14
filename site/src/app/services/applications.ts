@@ -9,16 +9,25 @@ export type ExistingApplication = {
 };
 
 // Mirror of the worker's Verdict (worker/src/index.ts). 'not_assessed' means the person
-// was never asked about, and is filtered out before display.
-export type Verdict = 'eligible_confirmed' | 'eligible_pending' | 'not_eligible' | 'not_assessed';
+// was never asked about, and is filtered out before display. 'eligible_pending_lca' is the
+// same news for the usager as 'eligible_pending' — a code exists but LCA does not serve it
+// yet — so BeneficiaryRecap groups the two.
+export type Verdict =
+  | 'eligible_confirmed'
+  | 'eligible_pending'
+  | 'eligible_pending_lca'
+  | 'not_eligible'
+  | 'not_assessed';
 
 export type BeneficiaryResult = {
   source: 'self' | 'enfant';
   // Null on 'self' rows: the allocataire is named by the session, not by the view.
   givenName: string | null;
   verdict: Verdict;
-  // Null outside 'eligible_confirmed', and on rows written before the code was stored at
-  // all — those users only ever got it by email.
+  // Set on 'eligible_confirmed' and on 'eligible_pending_lca' (a minted code LCA does not
+  // serve yet — not shown, the recap only reads codes out of the confirmed bucket). Null
+  // elsewhere, and on rows written before the code was stored at all — those users only
+  // ever got it by email.
   code: string | null;
 };
 

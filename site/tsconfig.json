@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -20,11 +24,21 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/images/*": ["public/images/*"],
-      "@/components/*": ["components/*"],
-      "@/utils/*": ["./utils/*"],
-      "@/*": ["./src/*"],
-      "@/types/*": ["./types/*"]
+      "@/images/*": [
+        "public/images/*"
+      ],
+      "@/components/*": [
+        "components/*"
+      ],
+      "@/utils/*": [
+        "./utils/*"
+      ],
+      "@/*": [
+        "./src/*"
+      ],
+      "@/types/*": [
+        "./types/*"
+      ]
     }
   },
   "include": [
@@ -34,7 +48,10 @@
     ".next/types/**/*.ts",
     "global.d.ts",
     "fonts.d.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next/dev/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

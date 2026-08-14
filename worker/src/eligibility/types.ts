@@ -124,6 +124,10 @@ export type ResourceResult = {
   childIndex?: number; // index into QuotientFamilialData.enfants
   rateLimited?: boolean;
   retryAfter?: number | null;
+  // URL effectivement appelée, query params compris — pour debug uniquement. Le SDK ne
+  // la remonte que sur ses erreurs (ApiGouvError.url), pas sur une réponse 2xx. Contient
+  // l'identité pivot en clair : ne pas logguer ni persister hors contexte de debug.
+  requestUrl?: string | null;
   // Rate-limit state surfaced on EVERY call (success and 429). Enables proactive pausing.
   rateLimitRemaining?: number | null;
   rateLimitResetMs?: number | null;
