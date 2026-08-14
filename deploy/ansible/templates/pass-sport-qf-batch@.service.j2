@@ -1,0 +1,26 @@
+[Unit]
+Description=pass Sport — qf-batch pour %i (quotient familial, API Particulier)
+Documentation=file://{{ pass_sport_repo }}/worker/README.md
+After=network-online.target
+Wants=network-online.target
+# 5 échecs en une heure et l'unité renonce : un jeton révoqué ou une entrée illisible ne doit
+# pas boucler pendant une semaine en ayant l'air occupé.
+StartLimitIntervalSec=1h
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User={{ pass_sport_user }}
+WorkingDirectory={{ pass_sport_repo }}/worker
+ExecStart={{ pass_sport_repo }}/worker/src/scripts/run-qf-batch.sh %i
+# Reprise automatique : le script repart des lignes non réglées. 5 min d'attente pour qu'une
+# panne passagère d'API ne se transforme pas en martèlement.
+Restart=on-failure
+RestartSec=5min
+# SIGTERM propre : la ligne en cours finit son écriture, le CSV reste un préfixe valide.
+KillSignal=SIGTERM
+TimeoutStopSec=60
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
