@@ -6,6 +6,7 @@ import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
 import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
+import { RatePacer } from "./rate-pacer";
 
 // Matches the 'allocataire-*' column convention already used across the data/
 // partner notebooks (CNAF/MSA/CNOUS), rather than the FranceConnect-flavored
@@ -37,7 +38,11 @@ const MAX_ATTEMPTS = 3;
 // would otherwise spin here forever. Bounded so a multi-day run fails loudly on a
 // revoked/exhausted quota instead of looking busy.
 const MAX_RATE_LIMIT_PAUSES = 20;
-const INTER_ROW_DELAY_MS = 100;
+
+// Self-imposed ceiling, kept below the API's own: the 429 path stays the backstop if it
+// turns out to be set too high.
+const DEFAULT_RATE_PER_MINUTE = 200;
+const DEFAULT_NIGHT_RATE_PER_MINUTE = 500;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -74,7 +79,11 @@ type Verdict = {
 
 // One row through quotient_familial, pausing (without consuming an attempt) whenever
 // the window is exhausted. Returns the QF value, or the reason there is none.
-async function screenRow(client: RealClient, identity: PivotIdentity): Promise<Verdict> {
+async function screenRow(
+  client: RealClient,
+  identity: PivotIdentity,
+  pacer: RatePacer,
+): Promise<Verdict> {
   let rateLimitPauses = 0;
 
   // Dernière URL remontée par le SDK, quel que soit l'essai — lue au moment du return,
@@ -84,6 +93,10 @@ async function screenRow(client: RealClient, identity: PivotIdentity): Promise<V
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let result: ResourceResult;
+
+    // Per attempt, not per row: a row can burn up to MAX_ATTEMPTS calls plus every retry
+    // after a 429, and pacing per row would quietly overshoot the quota.
+    await pacer.acquire();
 
     try {
       result = await client.quotientFamilial(identity);
@@ -199,18 +212,46 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
   };
 };
 
+const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate"];
+
+const numberOption = (args: string[], name: string, fallback: number): number => {
+  const index = args.indexOf(name);
+  return index === -1 ? fallback : Number(args[index + 1] ?? NaN);
+};
+
+// Skips the value that follows a valued option, otherwise `--rate 200` before the paths
+// would make "200" the input file.
+const positionalArgs = (args: string[]): string[] => {
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    if (VALUED_OPTIONS.includes(args[index])) {
+      index += 1;
+      continue;
+    }
+    if (!args[index].startsWith("--")) positional.push(args[index]);
+  }
+  return positional;
+};
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const positional = args.filter((arg) => !arg.startsWith("--"));
-  const [inputPath, outputPath] = positional;
+  const [inputPath, outputPath] = positionalArgs(args);
 
   // A line per row is fine for a few hundred rows, but floods the log on a
   // multi-day, large-volume run — only print one line every N rows then.
-  const logEveryIndex = args.indexOf("--log-every");
-  const logEvery = logEveryIndex === -1 ? 1 : Number(args[logEveryIndex + 1] ?? NaN);
+  const logEvery = numberOption(args, "--log-every", 1);
+  const ratePerMinute = numberOption(args, "--rate", DEFAULT_RATE_PER_MINUTE);
+  const nightRatePerMinute = numberOption(args, "--night-rate", DEFAULT_NIGHT_RATE_PER_MINUTE);
 
-  if (!inputPath || !outputPath || Number.isNaN(logEvery) || logEvery < 1) {
-    console.error("usage: qf-batch <input.csv> <output.csv> [--log-every 1]");
+  const invalidOption = [logEvery, ratePerMinute, nightRatePerMinute].some(
+    (value) => Number.isNaN(value) || value < 1,
+  );
+
+  if (!inputPath || !outputPath || invalidOption) {
+    console.error(
+      "usage: qf-batch <input.csv> <output.csv> [--log-every 1] " +
+        `[--rate ${DEFAULT_RATE_PER_MINUTE}] [--night-rate ${DEFAULT_NIGHT_RATE_PER_MINUTE}]`,
+    );
     process.exitCode = 1;
     return;
   }
@@ -240,6 +281,12 @@ async function main(): Promise<void> {
   }
 
   const client = new RealClient();
+  const pacer = new RatePacer({
+    dayRatePerMinute: ratePerMinute,
+    nightRatePerMinute: nightRatePerMinute,
+    onRateChange: (rate, isNight) =>
+      console.log(`  cadence ${rate}/min (${isNight ? "nuit" : "jour"}, Europe/Paris)`),
+  });
   const outColumns = [...header, ...ADDED_COLUMNS];
 
   let settled = 0;
@@ -248,7 +295,7 @@ async function main(): Promise<void> {
   const settle = async (row: Record<string, string>, label: string) => {
     const identity = rowToIdentity(row);
     const verdict: Verdict = identity
-      ? await screenRow(client, identity)
+      ? await screenRow(client, identity, pacer)
       : {
           value: null,
           error: "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance)",
@@ -262,7 +309,6 @@ async function main(): Promise<void> {
           (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`),
       );
     }
-    if (INTER_ROW_DELAY_MS > 0) await sleep(INTER_ROW_DELAY_MS);
     return columns;
   };
 

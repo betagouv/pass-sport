@@ -37,4 +37,9 @@ export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 cd "$REPO_DIR" && nvm use >/dev/null
 
 cd "$WORKER_DIR"     # load-env.ts cherche .env.local dans le cwd (jeton API Particulier)
-exec pnpm qf:batch "$INPUT" "$OUTPUT" --log-every "${QF_LOG_EVERY:-50}"
+# Cadencement auto-imposé, sous le quota de l'API Particulier. Monter d'un palier = relancer
+# avec un QF_RATE plus haut (200, puis 250, puis 300…) ; la reprise fait le reste.
+exec pnpm qf:batch "$INPUT" "$OUTPUT" \
+  --log-every "${QF_LOG_EVERY:-50}" \
+  --rate "${QF_RATE:-200}" \
+  --night-rate "${QF_NIGHT_RATE:-500}"

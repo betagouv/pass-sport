@@ -13,6 +13,9 @@ Type=simple
 User={{ pass_sport_user }}
 WorkingDirectory={{ pass_sport_repo }}/worker
 ExecStart={{ pass_sport_repo }}/worker/src/scripts/run-qf-batch.sh %i
+# Cadencement auto-imposé. Monter d'un palier = changer la variable puis `systemctl restart`.
+Environment=QF_RATE={{ pass_sport_qf_rate | default(200) }}
+Environment=QF_NIGHT_RATE={{ pass_sport_qf_night_rate | default(500) }}
 # Reprise automatique : le script repart des lignes non réglées. 5 min d'attente pour qu'une
 # panne passagère d'API ne se transforme pas en martèlement.
 Restart=on-failure
