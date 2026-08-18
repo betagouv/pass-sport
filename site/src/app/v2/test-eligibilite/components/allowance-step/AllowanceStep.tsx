@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import MergedEligibilityForm from '../merged-eligibility-form/MergedEligibilityForm';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
-import CustomRadioButtons from '@/app/v2/test-eligibilite-base/components/customRadioButtons/CustomRadioButtons';
+import CustomRadioButtons from '@/app/v2/test-eligibilite/components/custom-radio-buttons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
 import cn from 'classnames';

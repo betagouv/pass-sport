@@ -24,7 +24,7 @@ interface Props {
 // session/end endpoint (mode 2). Uses a Button quick-access item + a full-page
 // navigation on purpose: the registered DSFR Link is next/link, whose client-side
 // RSC fetch cannot follow the external FranceConnect redirect.
-const POC_LOGOUT_URL = '/v2/api/poc-fc-api-particulier/logout';
+const POC_LOGOUT_URL = '/v2/api/france-connect/logout';
 
 export default function PassSportNavigation({ pocUserName }: Props) {
   const paths: string | null = usePathname();

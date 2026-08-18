@@ -26,7 +26,9 @@ export const EMAIL_VERIFICATION_JOB_NAME = 'email-verification-job';
 
 const JOB_OPTS = {
   attempts: 4,
-  backoff: { type: 'linear' as const, delay: 60_000 },
+  // Not a BullMQ builtin, which is what routes it to the worker's `retryBackoff` strategy.
+  // The delays live there; nothing on this side would be read.
+  backoff: { type: 'escalating' as const },
   removeOnComplete: true,
   removeOnFail: { age: 86_400 },
 };

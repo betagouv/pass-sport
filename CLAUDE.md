@@ -1,5 +1,9 @@
 # Project instructions
 
+## General guidelines
+- Comments should always be in english
+- Code should be self explanatory, make the variable names meaningful, avoid the comments as much as possible (it is a code smell)
+
 ## Node version
 
 Before running **any** `node`, `npm`, `npx`, `yarn` or `pnpm` command, switch to the

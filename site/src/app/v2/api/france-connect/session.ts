@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import * as Sentry from '@sentry/nextjs';
 import { getRedis } from '@/app/services/redis';
-import { PocResult, sessionCookieOptions } from '@/app/v2/api/poc-fc-api-particulier/shared';
+import { PocResult, sessionCookieOptions } from '@/app/v2/api/france-connect/shared';
 
 export const POC_SESSION_COOKIE = 'fc_poc_session';
 
@@ -68,7 +68,7 @@ export const deletePocResult = async (): Promise<void> => {
   } catch (e) {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
-      scope.setTag('session', 'poc-fc-api-particulier');
+      scope.setTag('session', 'france-connect');
       scope.captureMessage('POC session delete failed (Redis unavailable)');
       scope.captureException(e);
     });

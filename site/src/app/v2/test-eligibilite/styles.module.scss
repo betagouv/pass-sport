@@ -1,85 +1,79 @@
 @use '../../variables';
 
-.main {
-  background-color: white;
-
-  form {
-    width: 100%;
-  }
-
-  //fieldset {
-  //  padding: 16px;
-  //  margin-bottom: 0;
-  //}
+.section {
+  margin-top: 2rem;
 }
 
-.title {
-  text-align: center;
-}
+.choiceGrid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.5rem;
+  margin: 2rem 0;
 
-.background {
-  background-color: var(--pink-tuile-950-100);
-  border-radius: 8px;
-  margin: 48px auto;
-  padding: 40px;
-  max-width: 792px;
-}
-
-.wrapper {
-  background-color: white;
-  padding: 40px;
-  margin: 0 auto;
-  border-radius: 8px;
-}
-
-.paragraph {
-  color: var(--border-plain-grey);
-  font-style: italic;
-}
-
-.top-section-tile {
-  display: flex;
-  flex-direction: row;
-  background-color: white;
-  position: relative;
-  top: -100px;
-  margin-bottom: -80px;
-  align-items: center;
-
-  &__image {
-    max-width: 384px;
-    align-self: baseline;
-  }
-
-  &__description {
-    padding: 24px;
-  }
-
-  &__description p {
-    line-height: 38px;
-    margin-bottom: 0;
-    white-space: break-spaces;
-  }
-
-  @media screen and (max-width: variables.$lg) {
-    flex-direction: column;
-    top: -60px;
-
-    &__image {
-      max-width: 100%;
-    }
-
-    &__description p,
-    &__description ul {
-      margin: 0;
-    }
+  @media screen and (max-width: variables.$md) {
+    grid-template-columns: 1fr;
   }
 }
 
-.top-section-content {
+.choice {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  max-width: 792px;
-  margin: 24px auto 0 auto;
+  padding: 1.5rem;
+  border: 1px solid var(--border-default-grey);
+  background-color: var(--background-alt-grey);
+
+  // Bottom-align the CTAs so both cards read as one row despite unequal copy length.
+  > :last-child {
+    margin-top: 1rem;
+  }
+}
+
+// Mandatory FranceConnect wording: it sits right above the button and must not read as
+// an aside, so keep it in body colour rather than the muted mention grey.
+.franceConnectIntro {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+}
+
+.choiceSeparator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    width: 1px;
+    background-color: var(--border-default-grey);
+  }
+
+  span {
+    color: var(--text-mention-grey);
+    text-transform: uppercase;
+    font-size: 0.875rem;
+  }
+
+  @media screen and (max-width: variables.$md) {
+    flex-direction: row;
+    gap: 1rem;
+
+    &::before,
+    &::after {
+      width: auto;
+      height: 1px;
+    }
+  }
+}
+
+.payload {
+  background-color: var(--background-alt-grey);
+  padding: 1rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
 }

@@ -19,7 +19,7 @@ import {
   EMAIL_VERIFICATION_QUEUE_NAME,
   FRANCE_CONNECT_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
-  linearBackoff,
+  retryBackoff,
 } from "../../src/queues";
 import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
 import {
@@ -351,9 +351,9 @@ export async function startStack(
   const worker = new Worker<EligibilityJobData>(
     FRANCE_CONNECT_QUEUE_NAME,
     async (job) => processEligibilityJob(job, job.data, deps),
-    // Same settings as production, so the producer's "linear" backoff resolves here
+    // Same settings as production, so the producer's "escalating" backoff resolves here
     // too if a test ever enqueues with attempts > 1.
-    { connection: conn(), settings: { backoffStrategy: linearBackoff } },
+    { connection: conn(), settings: { backoffStrategy: retryBackoff } },
   );
   await worker.waitUntilReady();
 
@@ -392,7 +392,7 @@ export async function startStack(
   const apWorker = new Worker<ApiParticulierJobData>(
     API_PARTICULIER_QUEUE_NAME,
     async (job) => processApiParticulierJob(job, job.data, apDeps),
-    { connection: conn(), settings: { backoffStrategy: linearBackoff } },
+    { connection: conn(), settings: { backoffStrategy: retryBackoff } },
   );
   await apWorker.waitUntilReady();
 
@@ -437,7 +437,7 @@ export async function startStack(
   const verificationWorker = new Worker<EmailVerificationJobData>(
     EMAIL_VERIFICATION_QUEUE_NAME,
     async (job) => processEmailVerificationJob(job, job.data, { db }),
-    { connection: conn(), settings: { backoffStrategy: linearBackoff } },
+    { connection: conn(), settings: { backoffStrategy: retryBackoff } },
   );
   await verificationWorker.waitUntilReady();
 

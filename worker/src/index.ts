@@ -22,7 +22,7 @@ import {
   API_PARTICULIER_QUEUE_NAME,
   EMAIL_VERIFICATION_QUEUE_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
-  linearBackoff,
+  retryBackoff,
 } from "./queues";
 
 // Scalingo injects SCALINGO_REDIS_URL for the Redis addon.
@@ -45,7 +45,7 @@ async function startFlow<TData extends object>(opts: {
 
   const worker = new Worker<TData>(opts.queueName, async (job) => opts.process(job, queue), {
     connection: createRedisConnection(),
-    settings: { backoffStrategy: linearBackoff },
+    settings: { backoffStrategy: retryBackoff },
   });
 
   worker.on("error", (err) => {

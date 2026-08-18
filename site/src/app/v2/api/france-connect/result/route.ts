@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { findResultsForSub } from '@/app/services/applications';
-import { loadPocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
+import { loadPocResult } from '@/app/v2/api/france-connect/session';
 
 export async function GET(): Promise<Response> {
   try {

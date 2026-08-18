@@ -13,9 +13,9 @@ import {
   FC_NONCE_COOKIE,
   FC_STATE_COOKIE,
   getRedirectUri,
-} from '@/app/v2/api/poc-fc-api-particulier/shared';
-import { storePocResult } from '@/app/v2/api/poc-fc-api-particulier/session';
-import { toPivotIdentity } from '@/app/v2/api/poc-fc-api-particulier/pivot';
+} from '@/app/v2/api/france-connect/shared';
+import { storePocResult } from '@/app/v2/api/france-connect/session';
+import { toPivotIdentity } from '@/app/v2/api/france-connect/pivot';
 
 const redirectToPage = (params: Record<string, string> = {}): NextResponse => {
   const url = new URL(FC_INTERNAL_PAGE_PATH, BASE_DOMAIN);

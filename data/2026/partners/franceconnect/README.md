@@ -230,7 +230,7 @@ aucune migration. Elle est en revanche déclarée partout où l'ensemble des ver
   référence des quatre autres valeurs ;
 - [worker/src/index.ts](../../../../worker/src/index.ts) — le worker ne l'écrit jamais ;
 - [site/src/app/services/applications.ts](../../../../site/src/app/services/applications.ts) ;
-- [site/.../BeneficiaryRecap.tsx](../../../../site/src/app/v2/poc-fc-api-particulier/components/BeneficiaryRecap.tsx)
+- [site/.../BeneficiaryRecap.tsx](../../../../site/src/app/v2/test-eligibilite/components/BeneficiaryRecap.tsx)
   — le composant range les bénéficiaires en trois blocs, et une valeur qu'il ne connaît pas
   disparaîtrait de la page. `eligible_pending_lca` rejoint le bloc « éligibilité confirmée,
   code à venir », qui reste vrai tant que LCA ne sert pas le code.

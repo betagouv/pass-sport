@@ -78,7 +78,7 @@ export default function PostLoginInfoForm({
 
     setIsLoading(true);
     try {
-      const res = await fetch('/v2/api/poc-fc-api-particulier/collect', {
+      const res = await fetch('/v2/api/france-connect/collect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aides, residenceInsee }),

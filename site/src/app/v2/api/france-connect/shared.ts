@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import type { PivotIdentity } from '@/app/services/queue';
 
 export const BASE_DOMAIN = process.env.BASE_DOMAIN;
-export const FC_INTERNAL_PAGE_PATH = '/v2/poc-fc-api-particulier';
+export const FC_INTERNAL_PAGE_PATH = '/v2/test-eligibilite';
 
 export const FC_STATE_COOKIE = 'fc_poc_state';
 export const FC_NONCE_COOKIE = 'fc_poc_nonce';
@@ -21,8 +21,8 @@ export const generateOidcSecret = (length = 32): string => {
   return secret.slice(0, length);
 };
 
-const CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/callback';
-const LOGOUT_CALLBACK_PATH = '/v2/api/poc-fc-api-particulier/logout/callback';
+const CALLBACK_PATH = '/v2/api/france-connect/callback';
+const LOGOUT_CALLBACK_PATH = '/v2/api/france-connect/logout/callback';
 
 export interface PocResult {
   identity: PivotIdentity;

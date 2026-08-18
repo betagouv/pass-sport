@@ -29,7 +29,7 @@ export default function ResultPanel() {
       }
 
       try {
-        const res = await fetch('/v2/api/poc-fc-api-particulier/result');
+        const res = await fetch('/v2/api/france-connect/result');
         if (cancelled) return;
 
         // 401 = the session died before the worker finished. Nothing to retry.

@@ -9,7 +9,7 @@ import {
   generateOidcSecret,
   getRedirectUri,
   transientCookieOptions,
-} from '@/app/v2/api/poc-fc-api-particulier/shared';
+} from '@/app/v2/api/france-connect/shared';
 
 export async function GET(request: Request): Promise<Response> {
   try {
