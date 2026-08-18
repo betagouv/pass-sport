@@ -29,6 +29,10 @@
 #   l'empreinte SSH Scalingo a été amorcée à la main (voir deploy/ansible/README.md) et qu'un
 #   essai à blanc (FC_PROD_DROP_DIR détourné) a été validé.
 #
+# Cette entrée crontab peut elle-même être sautée en entier (pas seulement posée désactivée)
+# avec `--skip-tags fc-cron` — pour rejouer le reste du provisioning, CLI Scalingo comprise,
+# avant que le volet FC (jeton, empreinte SSH) soit prêt.
+#
 # Les tâches sont réparties dans tasks/ (un fichier par section, importé ci-dessous dans
 # l'ordre de jeu) : ce fichier ne sert que de sommaire et de définition des variables. Chaque
 # fichier de tasks/ porte les commentaires détaillés de ses propres tâches.

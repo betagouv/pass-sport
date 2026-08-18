@@ -119,6 +119,26 @@ C'est une garantie du playbook, pas un oubli à corriger :
   d'avoir vérifié tout le reste n'a pas d'utilité et un vrai coût si quelque chose est mal
   configuré.
 
+### Reporter tout le volet FC (crontab Scalingo/tunnel)
+
+`pass_sport_fc_cron_enabled` (ci-dessus) pose l'entrée crontab désactivée : la tâche tourne,
+seul son état change. Si le volet FC n'est pas encore prêt (jeton Scalingo, empreinte SSH),
+`--skip-tags fc-cron` saute les deux tâches qui en dépendent — rien n'est posé :
+
+```bash
+ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
+  --extra-vars @~/pass-sport-secrets.yml \
+  --skip-tags fc-cron
+```
+
+Deux tâches portent ce tag : la crontab `pass-sport-fc` et `/etc/default/pass-sport-fc`
+(`SCALINGO_APP`/`SCALINGO_API_TOKEN` n'ont souvent pas de sens tant que la cron elle-même est
+reportée). Le reste du provisioning tourne normalement, CLI Scalingo comprise — y compris la
+vérification que `fc_prod_drop_dir` (`/nfs/postgresql`) est inscriptible, qui n'est **pas**
+taguée : si ce montage n'existe pas encore non plus, le playbook échouera quand même sur cette
+tâche-là. Un passage ultérieur sans `--skip-tags fc-cron` pose les deux fichiers, crontab
+désactivée par défaut comme toujours.
+
 ## Premier déploiement — le clone
 
 Le playbook vit dans le dépôt qu'il provisionne : le clone initial est donc un amorçage
