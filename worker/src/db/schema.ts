@@ -79,6 +79,8 @@ export const eligibilityResults = pgTable(
     email: text("email"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("eligibility_results_allocataire_fc_sub_idx").on(t.allocataireFcSub)],
 );

@@ -10,12 +10,11 @@ interface Props {
 export default function BeneficiaryRecap({ beneficiaries }: Props) {
   const assessed = beneficiaries.filter((b) => b.verdict !== 'not_assessed');
   const confirmed = assessed.filter((b) => b.verdict === 'eligible_confirmed');
-  // Both pending verdicts land here: 'eligible_pending_lca' means a code has been minted for
-  // this person but LCA does not serve it yet, which reads the same way to the usager. A
-  // verdict falling through all three buckets would vanish from the page entirely.
+  const codeAwaitingLca = assessed.filter((b) => b.verdict === 'eligible_pending_lca' && b.code);
   const soon = assessed.filter(
-    (b) => b.verdict === 'eligible_pending' || b.verdict === 'eligible_pending_lca',
+    (b) => b.verdict === 'eligible_pending' || (b.verdict === 'eligible_pending_lca' && !b.code),
   );
+
   const notEligible = assessed.filter((b) => b.verdict === 'not_eligible');
 
   if (assessed.length === 0) {
@@ -62,6 +61,27 @@ export default function BeneficiaryRecap({ beneficiaries }: Props) {
         </div>
       )}
 
+      {codeAwaitingLca.length > 0 && (
+        <div className="fr-alert fr-alert--success fr-mb-2w">
+          <h3 className="fr-alert__title">
+            {codeAwaitingLca.length > 1
+              ? 'Les codes pass Sport suivants vous sont attribués'
+              : 'Le code pass Sport suivant vous est attribué'}
+          </h3>
+          <ul className="fr-ml-2w">
+            {codeAwaitingLca.map((b, i) => (
+              <li key={`codeAwaitingLca-${i}`}>
+                {who(b)}&nbsp;: <strong>{b.code}</strong>
+              </li>
+            ))}
+          </ul>
+          <p>
+            Un court délai peut être nécessaire avant qu’une structure sportive partenaire puisse{' '}
+            {codeAwaitingLca.length > 1 ? 'les' : 'le'} valider.
+          </p>
+        </div>
+      )}
+
       {soon.length > 0 && (
         <div className="fr-alert fr-alert--info fr-mb-2w">
           <h3 className="fr-alert__title">Éligibilité confirmée, code à venir</h3>
@@ -70,7 +90,10 @@ export default function BeneficiaryRecap({ beneficiaries }: Props) {
               <li key={`soon-${i}`}>{who(b)}</li>
             ))}
           </ul>
-          <p>Le code sera envoyé prochainement par email.</p>
+          <p>
+            Le code sera envoyé prochainement par email ou affiché ici lors de votre prochaine
+            visite.
+          </p>
         </div>
       )}
 

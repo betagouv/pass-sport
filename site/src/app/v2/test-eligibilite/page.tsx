@@ -111,7 +111,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
 
           <div className={styles.choiceGrid}>
             <div className={styles.choice}>
-              <h2 className="fr-h4">S'authentifier avec FranceConnect</h2>
+              <h2 className="fr-h4">S&apos;authentifier avec FranceConnect</h2>
               <p>
                 Nous vérifions vos droits directement auprès des administrations : aucun
                 justificatif à fournir.
