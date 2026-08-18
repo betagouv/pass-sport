@@ -19,22 +19,15 @@ set -euo pipefail
 
 PARTNER="${1:?usage: run-qf-batch.sh <cnaf|msa>}"
 WORKER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-REPO_DIR="$(cd "$WORKER_DIR/.." && pwd)"
 WORKDIR="$(cd "$WORKER_DIR/../data/2026/partners/qf-batch-workdir" && pwd)"
 
 INPUT="$WORKDIR/${PARTNER}_2026_qf_batch_input.csv"
 OUTPUT="$WORKDIR/${PARTNER}_2026_qf_batch_output.csv"
 [[ -f "$INPUT" ]] || { echo "entrée introuvable : $INPUT" >&2; exit 1; }
 
-# nvm n'existe pas pour systemd, qui ne lit aucun profil : le sourcer ici est ce qui rend le
-# script indépendant de la version de node installée au niveau du système.
-export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-# shellcheck source=/dev/null
-[[ -s "$NVM_DIR/nvm.sh" ]] && . "$NVM_DIR/nvm.sh"
-# Le seul .nvmrc du dépôt est à la racine (voir CLAUDE.md) : nvm doit y être invoqué depuis
-# là, pas depuis worker/ qui n'a pas le sien — mais `nvm use` modifie le PATH du shell
-# courant, donc pas de sous-shell ici, sous peine de perdre le changement à la ligne suivante.
-cd "$REPO_DIR" && nvm use >/dev/null
+# Node vient d'un paquet apt/NodeSource (voir deploy/ansible/lamp-setup.yml), pas de nvm : il
+# est déjà sur /usr/bin, sur le PATH par défaut de systemd comme des sessions interactives —
+# plus besoin de sourcer quoi que ce soit ici avant d'appeler pnpm.
 
 cd "$WORKER_DIR"     # load-env.ts cherche .env.local dans le cwd (jeton API Particulier)
 # Cadencement auto-imposé, sous le quota de l'API Particulier. Monter d'un palier = relancer

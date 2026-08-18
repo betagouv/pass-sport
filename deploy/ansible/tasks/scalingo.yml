@@ -1,0 +1,23 @@
+---
+# CLI Scalingo, toujours la dernière version.
+#
+# Pas de version épinglée et pas de `creates:` : le playbook est joué environ une fois
+# par campagne, une version figée serait donc périmée à son prochain passage, et un
+# changement côté Scalingo se découvrirait en pleine cron FC plutôt qu'à l'installation.
+# Le verdict `changed` est rendu par la comparaison de versions, pour qu'un rejeu sans
+# nouvelle publication reste `ok`.
+- name: Version actuelle de la CLI Scalingo
+  ansible.builtin.command: scalingo --version
+  register: scalingo_avant
+  failed_when: false
+  changed_when: false
+
+- name: CLI Scalingo (dernière version publiée)
+  become: true
+  ansible.builtin.shell: curl -fsSL https://cli-dl.scalingo.com/install | bash
+  changed_when: false        # le vrai verdict est rendu ci-dessous
+
+- name: Version après installation
+  ansible.builtin.command: scalingo --version
+  register: scalingo_apres
+  changed_when: scalingo_apres.stdout != scalingo_avant.stdout

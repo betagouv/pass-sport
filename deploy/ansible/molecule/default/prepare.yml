@@ -1,0 +1,65 @@
+---
+# Prépare le conteneur pour ressembler à une machine de traitement neuve, juste avant le
+# premier passage du playbook : ce que l'infra fournirait déjà en vrai (systemd démarré, un
+# montage de dépôt de production, un Ansible installé une première fois).
+- name: Prepare
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    # systemd met un instant à atteindre un état stable après le démarrage du conteneur ;
+    # "running" ou "degraded" sont tous deux des fins de boot normales — "degraded" signale
+    # juste qu'une unité sans rapport a échoué (fréquent dans un conteneur minimal), pas que
+    # systemd lui-même ne soit pas prêt.
+    - name: systemd est démarré
+      ansible.builtin.command: systemctl is-system-running --wait
+      register: systemd_state
+      changed_when: false
+      failed_when: systemd_state.stdout not in ['running', 'degraded']
+
+    # git et ansible sur la machine : le tout premier geste manuel documenté par
+    # deploy/ansible/README.md est `sudo git clone .../pass-sport /srv/pass-sport`, donc git
+    # doit déjà être là (une image Ubuntu de base l'a normalement, mais le Dockerfile de ce
+    # scénario est volontairement nu) ; ansible est la toute première étape jouable soi-même
+    # une fois le dépôt cloné. On reproduit les deux ici à l'identique.
+    - name: apt install git + ansible (bootstrap, comme documenté pour la vraie machine)
+      ansible.builtin.apt:
+        name: [git, ansible]
+        state: present
+        update_cache: true
+
+    # Copie plutôt qu'un bind mount rw (voir molecule.yml) : lamp-setup.yml fait des
+    # chown/chmod récursifs, qui ne doivent JAMAIS toucher les fichiers réels du poste de dev.
+    # Exclusions volontaires : .git (les ~467 Mo d'historique du poste de dev — inutiles ici,
+    # voir la tâche `git init` ci-dessous pour ce qu'il faut à la place),
+    # node_modules/.venv/.venv-molecule (artefacts déjà installés sur le poste de dev — les
+    # garder masquerait si le playbook sait vraiment les reconstruire tout seul sur une
+    # machine neuve, qui est tout l'intérêt de ce test).
+    # Même chemin que la vraie machine (/srv/pass-sport, le défaut de pass_sport_repo dans
+    # lamp-setup.yml) : c'est ce qui rend ce test fidèle au `sudo git clone .../pass-sport
+    # /srv/pass-sport` documenté comme amorçage manuel dans deploy/ansible/README.md, sans
+    # avoir à passer --extra-vars pass_sport_repo=... pour compenser un chemin de test à part.
+    - name: Copie du dépôt (hors artefacts déjà installés sur le poste de dev)
+      ansible.builtin.command: >
+        rsync -a --delete
+        --exclude=.git --exclude=node_modules --exclude=__pycache__
+        --exclude=data/.venv --exclude=deploy/ansible/.venv-molecule
+        /host-pass-sport/ /srv/pass-sport/
+      changed_when: true
+
+    # lamp-setup.yml (tasks/depot.yml) fait tourner `git config core.sharedRepository` sur
+    # pass_sport_repo : ça suppose un vrai dépôt git, pas seulement des fichiers. Un `git init`
+    # vide suffit à ce que la tâche teste (il ne lit ni ne vérifie d'historique) sans avoir à
+    # rsyncer les ~467 Mo de `.git` du poste de dev à chaque passage.
+    - name: .git minimal (tient lieu du vrai clone, sans son historique)
+      ansible.builtin.command: git init /srv/pass-sport
+      changed_when: true
+
+    # Tient lieu du montage NFS réel : lamp-setup.yml ne fait que vérifier que
+    # fc_prod_drop_dir est inscriptible (le montage lui-même appartient à l'infra), donc ce
+    # test le fournit comme le ferait l'infra en vrai — voir --extra-vars dans converge.yml.
+    - name: Dossier de dépôt de test (tient lieu de /nfs/postgresql)
+      ansible.builtin.file:
+        path: /tmp/fc-drop
+        state: directory
+        mode: '0755'

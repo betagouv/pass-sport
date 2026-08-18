@@ -11,6 +11,11 @@ StartLimitBurst=5
 [Service]
 Type=simple
 User={{ pass_sport_user }}
+Group={{ pass_sport_group }}
+# Les CSV de sortie portent des identités pivot : jamais lisibles par tout le monde. 0007
+# donne rw-rw---- — le groupe écrit, donc l'autre opérateur peut reprendre le passage, et les
+# autres comptes de la machine n'ont rien. Le défaut (0022) les créait en rw-r--r--.
+UMask=0007
 WorkingDirectory={{ pass_sport_repo }}/worker
 ExecStart={{ pass_sport_repo }}/worker/src/scripts/run-qf-batch.sh %i
 # Cadencement auto-imposé. Monter d'un palier = changer la variable puis `systemctl restart`.

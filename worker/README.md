@@ -51,9 +51,10 @@ npm run qf:batch <input.csv> <output.csv> --log-every 50
 A run can take up to a week, so on the processing machine it goes through
 [src/scripts/run-qf-batch.sh](src/scripts/run-qf-batch.sh) instead of a raw `npm run`: it
 takes the partner name alone, derives both paths from the shared
-`data/2026/partners/qf-batch-workdir` convention, and sources nvm itself (systemd reads no
-shell profile). It is the single entry point, by hand or under systemd — the two must never
-diverge:
+`data/2026/partners/qf-batch-workdir` convention, and relies on Node being an apt/NodeSource
+package (see [deploy/ansible/lamp-setup.yml](../deploy/ansible/lamp-setup.yml)), already on the
+default PATH systemd and interactive shells both use — no per-run sourcing needed. It is the
+single entry point, by hand or under systemd — the two must never diverge:
 
 ```bash
 ./src/scripts/run-qf-batch.sh msa

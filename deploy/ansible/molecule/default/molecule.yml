@@ -1,0 +1,40 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  # `image:` n'est qu'un nom de tag local ici (pre_build_image: false construit depuis notre
+  # Dockerfile, il n'est jamais tiré d'un registre). `command:` explicite et non le CMD de
+  # l'image : molecule remplace sinon la commande par une boucle `sleep` par défaut
+  # (override_command vaut true par défaut), ce qui empêcherait systemd de démarrer.
+  - name: pass-sport-test
+    image: pass-sport-ubuntu2604-systemd
+    dockerfile: Dockerfile
+    pre_build_image: false
+    command: /sbin/init
+    privileged: true
+    cgroupns_mode: host
+    tmpfs:
+      - /run
+      - /run/lock
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # Lecture seule, jamais rw : lamp-setup.yml fait des chown/chmod récursifs sur le
+      # dépôt. En rw ces changements s'appliqueraient aux fichiers RÉELS du poste de dev via
+      # le bind mount. prepare.yml en fait une copie interne au conteneur (/pass-sport),
+      # c'est sur CETTE copie que joue le playbook — jamais sur /host-pass-sport.
+      - "${MOLECULE_SCENARIO_DIRECTORY}/../../../..:/host-pass-sport:ro"
+
+provisioner:
+  name: ansible
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+
+verifier:
+  name: ansible

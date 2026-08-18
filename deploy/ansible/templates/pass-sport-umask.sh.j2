@@ -1,0 +1,14 @@
+# Posé par deploy/ansible/lamp-setup.yml — ne pas éditer à la main.
+#
+# Les fichiers de campagne portent des identités pivot et des courriels : rien de ce que crée
+# un membre du groupe d'exploitation ne doit naître lisible par tout le monde.
+#
+# C'est le pendant, côté humain, du `UMask=0007` de l'unité pass-sport-qf-batch@ : sans lui un
+# notebook lancé par un opérateur écrirait ses CSV en rw-r--r--, rouvrant le trou que l'unité
+# vient de fermer. 007 donne rw-rw---- — le groupe écrit, les autres n'ont rien.
+#
+# Ne s'applique qu'aux shells de connexion, ce qui couvre le cas réel : une session SSH d'où
+# partent nbconvert et systemctl.
+if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx '{{ pass_sport_group }}'; then
+    umask 007
+fi
