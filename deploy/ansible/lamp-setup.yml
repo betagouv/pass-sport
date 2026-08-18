@@ -1,0 +1,165 @@
+---
+# Provisioning de la machine de traitement pass Sport : qf-batch (worker/) et le passage
+# FranceConnect (data/2026/partners/franceconnect/).
+#
+# Joué SUR la machine elle-même, jamais depuis un nœud de contrôle distant : l'accès passe
+# par un bastion à session interactive (RemoteCommand + auth par mot de passe), qu'OpenSSH
+# refuse pour le transport SSH d'Ansible ("Cannot execute command-line and remote command").
+# Se connecter comme d'habitude, puis :
+#
+#   cd /chemin/du/depot && git pull
+#   ansible-playbook -i localhost, -c local deploy/ansible/traitement.yml \
+#     --extra-vars @~/pass-sport-secrets.yml
+#
+# Secrets (SCALINGO_APP, SCALINGO_API_TOKEN) : jamais dans ce dépôt, public. Ils arrivent par
+# --extra-vars, depuis un fichier gardé hors dépôt en mode 600 — voir deploy/ansible/README.md.
+#
+# Ni qf-batch ni la cron FranceConnect ne démarrent tout seuls à l'issue de ce playbook :
+# - l'unité systemd qf-batch@ est déposée mais jamais activée (`systemctl enable`) ni
+#   démarrée — chaque passage se déclenche à la main, `systemctl start qf-batch@<partenaire>` ;
+# - l'entrée crontab de FranceConnect est posée DÉSACTIVÉE (commentée) par défaut : le
+#   premier passage automatique n'a lieu qu'après l'avoir explicitement activée, une fois que
+#   l'empreinte SSH Scalingo a été amorcée à la main (voir deploy/ansible/README.md) et qu'un
+#   essai à blanc (FC_PROD_DROP_DIR détourné) a été validé.
+
+- name: Machine de traitement pass Sport
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  vars:
+    pass_sport_repo: /srv/pass-sport
+    pass_sport_user: passsport
+    fc_prod_drop_dir: /nfs/postgresql
+    # Interrupteur de sécurité : par défaut la cron FC est posée mais désactivée. Activer
+    # avec `--extra-vars pass_sport_fc_cron_enabled=true` une fois les prérequis validés
+    # (empreinte SSH amorcée, essai à blanc réussi).
+    pass_sport_fc_cron_enabled: false
+
+  tasks:
+    # --- Paquets système -------------------------------------------------------
+    # psql pour les 3 .sql de franceconnect, util-linux pour le flock du script,
+    # openssh-client parce que scalingo db-tunnel monte une connexion SSH.
+    # `acl` n'est pas décoratif : sans lui, toute tâche en become_user vers un compte non
+    # privilégié échoue sur « Failed to set permissions on the temporary files ». Il est
+    # installé ici, donc avant la première de ces tâches.
+    - name: Paquets
+      become: true
+      ansible.builtin.apt:
+        name: [postgresql-client, util-linux, openssh-client, curl, git, python3-venv, acl]
+        state: present
+        update_cache: true
+
+    # --- CLI Scalingo, toujours la dernière version -----------------------------
+    # Pas de version épinglée et pas de `creates:` : le playbook est joué environ une fois
+    # par campagne, une version figée serait donc périmée à son prochain passage, et un
+    # changement côté Scalingo se découvrirait en pleine cron FC plutôt qu'à l'installation.
+    # Le verdict `changed` est rendu par la comparaison de versions, pour qu'un rejeu sans
+    # nouvelle publication reste `ok`.
+    - name: Version actuelle de la CLI Scalingo
+      ansible.builtin.command: scalingo --version
+      register: scalingo_avant
+      failed_when: false
+      changed_when: false
+
+    - name: CLI Scalingo (dernière version publiée)
+      become: true
+      ansible.builtin.shell: curl -fsSL https://cli-dl.scalingo.com/install | bash
+      changed_when: false        # le vrai verdict est rendu ci-dessous
+
+    - name: Version après installation
+      ansible.builtin.command: scalingo --version
+      register: scalingo_apres
+      changed_when: scalingo_apres.stdout != scalingo_avant.stdout
+
+    # --- Node par nvm, version du .nvmrc de la racine --------------------------
+    # nvm et pas un paquet système : c'est ce que CLAUDE.md impose, et ce que
+    # run-qf-batch.sh source. `creates` porte l'idempotence, nvm n'étant pas déclaratif.
+    - name: nvm
+      ansible.builtin.shell: >
+        curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+      args:
+        creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+      become_user: "{{ pass_sport_user }}"
+
+    - name: Node du .nvmrc + pnpm
+      ansible.builtin.shell: |
+        . ~/.nvm/nvm.sh
+        cd {{ pass_sport_repo }} && nvm install && nvm use
+        corepack enable pnpm
+      args: { executable: /bin/bash }
+      become_user: "{{ pass_sport_user }}"
+      changed_when: true
+
+    - name: Dépendances du worker
+      ansible.builtin.shell: |
+        . ~/.nvm/nvm.sh && cd {{ pass_sport_repo }} && nvm use
+        pnpm install --frozen-lockfile
+      args: { chdir: "{{ pass_sport_repo }}/worker", executable: /bin/bash }
+      become_user: "{{ pass_sport_user }}"
+      changed_when: true
+
+    # --- Virtualenv data/ ------------------------------------------------------
+    - name: Virtualenv data/.venv
+      ansible.builtin.pip:
+        requirements: "{{ pass_sport_repo }}/data/requirements.txt"
+        virtualenv: "{{ pass_sport_repo }}/data/.venv"
+        virtualenv_command: python3.12 -m venv
+      become_user: "{{ pass_sport_user }}"
+
+    # Sans ce kernelspec, `nbconvert --execute` échoue sur « No such kernel named python3 » :
+    # les 13 notebooks déclarent ce nom, et pip seul n'enregistre rien.
+    - name: Kernel Jupyter du virtualenv
+      ansible.builtin.command:
+        cmd: >
+          {{ pass_sport_repo }}/data/.venv/bin/python -m ipykernel install --user
+          --name python3 --display-name '.venv (3.12)'
+        creates: "{{ ansible_env.HOME }}/.local/share/jupyter/kernels/python3/kernel.json"
+      become_user: "{{ pass_sport_user }}"
+
+    # --- Configuration ---------------------------------------------------------
+    # Ce que la machine seule connaît, et qui n'a rien à faire dans data/.env : le script le
+    # source lui-même (run_fc_pipeline.sh). scalingo_app / scalingo_api_token viennent des
+    # --extra-vars, jamais de ce dépôt.
+    - name: /etc/default/pass-sport-fc
+      become: true
+      ansible.builtin.template:
+        src: pass-sport-fc.env.j2
+        dest: /etc/default/pass-sport-fc
+        owner: "{{ pass_sport_user }}"
+        mode: '0600'      # il porte SCALINGO_API_TOKEN
+
+    - name: Dossier de dépôt inscriptible
+      ansible.builtin.command: "test -w {{ fc_prod_drop_dir }}"
+      changed_when: false
+      # Le montage NFS n'est pas géré ici : il appartient à l'infra, on vérifie seulement que
+      # le passage FC ne mourra pas au dernier moment, après avoir marqué la base.
+
+    # --- Ordonnancement --------------------------------------------------------
+    # `name` porte l'idempotence : rejouer ne duplique pas la ligne, contrairement à un
+    # crontab édité à la main. Posée DÉSACTIVÉE tant que pass_sport_fc_cron_enabled n'est
+    # pas passé à true : voir l'en-tête de ce fichier.
+    - name: Passage FranceConnect toutes les 6 heures
+      ansible.builtin.cron:
+        name: pass-sport-fc
+        user: "{{ pass_sport_user }}"
+        minute: '30'
+        hour: '0,6,12,18'
+        job: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run_fc_pipeline.sh"
+        disabled: "{{ not pass_sport_fc_cron_enabled }}"
+
+    - name: Unité systemd qf-batch (templatée par partenaire)
+      become: true
+      ansible.builtin.template:
+        src: 'pass-sport-qf-batch@.service.j2'
+        dest: '/etc/systemd/system/pass-sport-qf-batch@.service'
+        mode: '0644'
+      notify: daemon-reload
+      # Volontairement pas de `systemctl enable`/`state: started` ici : qf-batch se déclenche
+      # à la main, un partenaire à la fois (`systemctl start pass-sport-qf-batch@msa`),
+      # jamais tout seul à l'installation ni au démarrage de la machine.
+
+  handlers:
+    - name: daemon-reload
+      become: true
+      ansible.builtin.systemd_service: { daemon_reload: true }

@@ -12,12 +12,16 @@ import {
 } from "drizzle-orm/pg-core";
 import type { ApiParticulierJobPayload, PivotIdentity } from "../eligibility/types";
 
-// The verdict as the USAGER should read it.
-//   'eligible_confirmed' — LCA a le bénéficiaire, un code part par email
-//   'eligible_pending'   — éligible chez nous, pas encore dans la base LCA
-//   'not_eligible'       — aucune route ouverte et aucun match LCA
-//   'not_assessed'       — personne non évaluée (rien de demandé pour elle)
-export type Verdict = "eligible_confirmed" | "eligible_pending" | "not_eligible" | "not_assessed";
+// The verdict as the USAGER should read it. The verdict column below is where each
+// value is documented. 'eligible_pending_lca' is never produced by the worker — the code
+// generation under data/ writes it — but it is declared so the type stays the exact set
+// of values the column can hold.
+export type Verdict =
+  | "eligible_confirmed"
+  | "eligible_pending"
+  | "eligible_pending_lca"
+  | "not_eligible"
+  | "not_assessed";
 
 export const eligibilityResults = pgTable(
   "eligibility_results",
@@ -45,6 +49,21 @@ export const eligibilityResults = pgTable(
     // a job that had no beneficiary to send to LCA at all.
     lcaStatus: text("lca_status").notNull(),
 
+    // The verdict as the USAGER should read it, and the only column the site is granted.
+    // Deliberately not email_kind: that one describes what was SENT, is null in three
+    // unrelated situations, and gets flipped by the email_sent UPDATE. Written once here
+    // so the site never has to re-derive the rule that lives in jobs/shared.ts.
+    //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email
+    //   'eligible_pending'     — éligible chez nous, pas encore dans la base LCA
+    //   'eligible_pending_lca' — un code a été fabriqué pour cette personne et part vers
+    //                            LCA, qui ne le sert pas encore. JAMAIS écrit par le worker:
+    //                            il est posé par la génération de codes côté data/, qui
+    //                            ramasse les 'eligible_pending' et les marque une fois le
+    //                            CSV produit (data/2026/partners/franceconnect/). C'est ce
+    //                            qui rend ce ramassage rejouable — sans lui, un second
+    //                            passage refabriquerait un code aux mêmes personnes.
+    //   'not_eligible'         — aucune route ouverte et aucun match LCA
+    //   'not_assessed'         — personne non évaluée (rien de demandé pour elle)
     // The only column the site is granted. Deliberately not email_kind: that one describes
     // what was SENT, is null in three unrelated situations, and gets flipped by the
     // email_sent UPDATE. Written once by the job so the site never has to re-derive it.

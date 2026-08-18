@@ -10,7 +10,12 @@ interface Props {
 export default function BeneficiaryRecap({ beneficiaries }: Props) {
   const assessed = beneficiaries.filter((b) => b.verdict !== 'not_assessed');
   const confirmed = assessed.filter((b) => b.verdict === 'eligible_confirmed');
-  const soon = assessed.filter((b) => b.verdict === 'eligible_pending');
+  // Both pending verdicts land here: 'eligible_pending_lca' means a code has been minted for
+  // this person but LCA does not serve it yet, which reads the same way to the usager. A
+  // verdict falling through all three buckets would vanish from the page entirely.
+  const soon = assessed.filter(
+    (b) => b.verdict === 'eligible_pending' || b.verdict === 'eligible_pending_lca',
+  );
   const notEligible = assessed.filter((b) => b.verdict === 'not_eligible');
 
   if (assessed.length === 0) {

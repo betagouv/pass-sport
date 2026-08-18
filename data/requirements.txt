@@ -1,9 +1,16 @@
-pandas==2.2.1
+# pandas/pyarrow/matplotlib/playwright bumped from their previous pins for Python 3.14 (see
+# CLAUDE.md): the processing machine's OS, Ubuntu 26.04, only ships python3.14, and the older
+# pins have no cp314 wheel (would fall back to a from-source build, needing a C/C++ compiler
+# that the machine doesn't carry). Each was bumped to the EARLIEST release with a cp314 wheel,
+# not to latest, to keep the jump as small as possible.
+pandas==2.3.3
 python-dotenv==1.2.2
 pre-commit==3.7.0
 ipykernel==6.22.0
 pycryptodome==3.20.0
-playwright==1.45.0
-matplotlib==3.9.2
+playwright==1.52.0
+matplotlib==3.10.6
 matplotlib-inline==0.1.6
-pyarrow==19.0.1
+pyarrow==22.0.0
+nbconvert==7.17.1
+pytest==8.3.4

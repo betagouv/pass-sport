@@ -6,44 +6,60 @@ import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
 import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
+import { RatePacer } from "./rate-pacer";
 
-const REQUIRED_COLUMNS = ["family_name", "birthdate"] as const;
+// Matches the 'allocataire-*' column convention already used across the data/
+// partner notebooks (CNAF/MSA/CNOUS), rather than the FranceConnect-flavored
+// vocabulary of PivotIdentity, so a notebook export needs no extra rename step.
+const REQUIRED_COLUMNS = ["allocataire-nom_naissance", "allocataire-date_naissance"] as const;
 const IDENTITY_COLUMNS = [
-  "family_name",
-  "preferred_username",
-  "given_name",
-  "birthdate",
-  "gender",
-  "birthplace",
-  "birthcountry",
+  "allocataire-nom_naissance",
+  "allocataire-nom_usage",
+  "allocataire-prenom",
+  "allocataire-date_naissance",
+  "allocataire-genre",
+  "allocataire-code_insee_naissance",
+  "allocataire-code_pays_naissance",
 ] as const;
 
-const ADDED_COLUMNS = ["qf_value", "qf_eligible", "qf_error"] as const;
-const DEFAULT_QF_THRESHOLD = 700;
+// No eligibility verdict is computed here: the script only records the QF value the
+// API returned, and the threshold comparison is left to whoever consumes the output.
+// `qf_status` is what marks a row as settled, since an absent value is a legitimate
+// outcome for a 404.
+// `qf_request_url` est une colonne de debug : elle rejoue l'appel tel qu'il est parti
+// (URL + query params). Le SDK ne l'expose que sur ses erreurs, donc elle reste vide
+// sur les lignes trouvées. Elle contient l'identité pivot en clair — à ne pas diffuser.
+const ADDED_COLUMNS = ["qf_value", "qf_status", "qf_error", "qf_request_url"] as const;
+const STATUS_FOUND = "trouve";
+const STATUS_NOT_FOUND = "non_trouve";
 const MAX_ATTEMPTS = 3;
 
 // A rate-limit pause does not consume an attempt, so a permanently throttled token
 // would otherwise spin here forever. Bounded so a multi-day run fails loudly on a
 // revoked/exhausted quota instead of looking busy.
 const MAX_RATE_LIMIT_PAUSES = 20;
-const INTER_ROW_DELAY_MS = 100;
+
+// Self-imposed ceiling, kept below the API's own: the 429 path stays the backstop if it
+// turns out to be set too high.
+const DEFAULT_RATE_PER_MINUTE = 200;
+const DEFAULT_NIGHT_RATE_PER_MINUTE = 500;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
-  const familyName = row.family_name?.trim();
-  const birthdate = row.birthdate?.trim();
+  const familyName = row["allocataire-nom_naissance"]?.trim();
+  const birthdate = row["allocataire-date_naissance"]?.trim();
   if (!familyName || !birthdate) return null;
 
-  const gender = row.gender?.trim().toLowerCase();
+  const gender = row["allocataire-genre"]?.trim().toLowerCase();
   return {
     family_name: familyName,
-    preferred_username: row.preferred_username?.trim() || undefined,
-    given_name: row.given_name?.trim() || undefined,
+    preferred_username: row["allocataire-nom_usage"]?.trim() || undefined,
+    given_name: row["allocataire-prenom"]?.trim() || undefined,
     birthdate,
     gender: gender === "male" || gender === "female" ? gender : undefined,
-    birthplace: row.birthplace?.trim() || undefined,
-    birthcountry: row.birthcountry?.trim() || undefined,
+    birthplace: row["allocataire-code_insee_naissance"]?.trim() || undefined,
+    birthcountry: row["allocataire-code_pays_naissance"]?.trim() || undefined,
   };
 };
 
@@ -54,30 +70,50 @@ const waitMsFor = (result: ResourceResult): number =>
 
 // `notFound` is a real, permanent answer (absent from the CAF/MSA base), not a missing
 // one: it settles the row as ineligible so resume never re-calls the API for it.
-type Verdict = { value: number | null; error: string | null; notFound?: boolean };
+type Verdict = {
+  value: number | null;
+  error: string | null;
+  notFound?: boolean;
+  requestUrl?: string | null;
+};
 
 // One row through quotient_familial, pausing (without consuming an attempt) whenever
 // the window is exhausted. Returns the QF value, or the reason there is none.
-async function screenRow(client: RealClient, identity: PivotIdentity): Promise<Verdict> {
+async function screenRow(
+  client: RealClient,
+  identity: PivotIdentity,
+  pacer: RatePacer,
+): Promise<Verdict> {
   let rateLimitPauses = 0;
+
+  // Dernière URL remontée par le SDK, quel que soit l'essai — lue au moment du return,
+  // donc toujours celle de la tentative qui a produit le verdict.
+  let requestUrl: string | null = null;
+  const verdict = (v: Omit<Verdict, "requestUrl">): Verdict => ({ ...v, requestUrl });
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let result: ResourceResult;
+
+    // Per attempt, not per row: a row can burn up to MAX_ATTEMPTS calls plus every retry
+    // after a 429, and pacing per row would quietly overshoot the quota.
+    await pacer.acquire();
 
     try {
       result = await client.quotientFamilial(identity);
     } catch (error) {
       // RealClient.call rethrows anything that is not an ApiGouvError/RateLimitError.
-      if (attempt === MAX_ATTEMPTS) return { value: null, error: (error as Error).message };
+      if (attempt === MAX_ATTEMPTS) return verdict({ value: null, error: (error as Error).message });
       continue;
     }
+
+    requestUrl = result.requestUrl ?? requestUrl;
 
     // 429: pause for the whole window and try this row again. Not an attempt — a
     // throttled call did no work, so counting it would drop rows for being unlucky.
     if (result.rateLimited) {
       rateLimitPauses += 1;
       if (rateLimitPauses > MAX_RATE_LIMIT_PAUSES) {
-        return { value: null, error: `throttlé ${rateLimitPauses} fois d'affilée, abandon` };
+        return verdict({ value: null, error: `throttlé ${rateLimitPauses} fois d'affilée, abandon` });
       }
       const waitMs = waitMsFor(result);
       console.log(`  rate limited, pausing ${Math.round(waitMs / 1000)}s`);
@@ -89,7 +125,7 @@ async function screenRow(client: RealClient, identity: PivotIdentity): Promise<V
     if (result.success && result.data) {
       const value = (result.data as QuotientFamilialData).quotient_familial?.valeur;
       if (typeof value !== "number") {
-        return { value: null, error: "réponse sans quotient_familial.valeur" };
+        return verdict({ value: null, error: "réponse sans quotient_familial.valeur" });
       }
 
       // Proactive: the window is spent, so pause before the next row rather than
@@ -98,24 +134,24 @@ async function screenRow(client: RealClient, identity: PivotIdentity): Promise<V
         console.log(`  window exhausted, pausing ${Math.round(result.rateLimitResetMs / 1000)}s`);
         await sleep(result.rateLimitResetMs);
       }
-      return { value, error: null };
+      return verdict({ value, error: null });
     }
 
     // 404 is a real answer — this person is not in the CAF/MSA base. Settled as
     // ineligible, so it is neither retried in-run nor re-called on the next run.
     if (result.httpStatus === 404) {
-      return { value: null, error: "non trouvé (404)", notFound: true };
+      return verdict({ value: null, error: "non trouvé (404)", notFound: true });
     }
 
     if (attempt === MAX_ATTEMPTS) {
-      return {
+      return verdict({
         value: null,
         error: result.error ?? `httpStatus=${result.httpStatus ?? "none"}`,
-      };
+      });
     }
   }
 
-  return { value: null, error: "épuisé" };
+  return verdict({ value: null, error: "épuisé" });
 }
 
 async function readFirstLine(path: string): Promise<string> {
@@ -135,7 +171,7 @@ async function readFirstLine(path: string): Promise<string> {
 // A row is settled once it carries a real verdict. Anything else — an API error, a
 // 404, an incomplete pivot, an interrupted write — is retried on the next run.
 const hasVerdict = (row: Record<string, string>): boolean =>
-  row.qf_eligible === "true" || row.qf_eligible === "false";
+  row.qf_status === STATUS_FOUND || row.qf_status === STATUS_NOT_FOUND;
 
 const readOutputRows = (path: string): AsyncIterable<Record<string, string>> =>
   createReadStream(path).pipe(
@@ -163,29 +199,59 @@ async function closeStream(
   });
 }
 
-const verdictColumns = (verdict: Verdict, threshold: number): Record<string, string> => {
-  // A QF value decides it; failing that, a 404 settles it as false; anything else is
-  // left blank and picked up again on the next run.
-  const isEligible =
-    verdict.value !== null ? verdict.value < threshold : verdict.notFound ? false : null;
+const verdictColumns = (verdict: Verdict): Record<string, string> => {
+  // A QF value settles the row; failing that, a 404 settles it as absent from the base;
+  // anything else leaves the status blank and is picked up again on the next run.
+  const status =
+    verdict.value !== null ? STATUS_FOUND : verdict.notFound ? STATUS_NOT_FOUND : "";
   return {
     qf_value: verdict.value === null ? "" : String(verdict.value),
-    qf_eligible: isEligible === null ? "" : String(isEligible),
+    qf_status: status,
     qf_error: verdict.error ?? "",
+    qf_request_url: verdict.requestUrl ?? "",
   };
+};
+
+const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate"];
+
+const numberOption = (args: string[], name: string, fallback: number): number => {
+  const index = args.indexOf(name);
+  return index === -1 ? fallback : Number(args[index + 1] ?? NaN);
+};
+
+// Skips the value that follows a valued option, otherwise `--rate 200` before the paths
+// would make "200" the input file.
+const positionalArgs = (args: string[]): string[] => {
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    if (VALUED_OPTIONS.includes(args[index])) {
+      index += 1;
+      continue;
+    }
+    if (!args[index].startsWith("--")) positional.push(args[index]);
+  }
+  return positional;
 };
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const positional = args.filter((arg) => !arg.startsWith("--"));
-  const [inputPath, outputPath] = positional;
+  const [inputPath, outputPath] = positionalArgs(args);
 
-  const thresholdIndex = args.indexOf("--threshold");
-  const threshold =
-    thresholdIndex === -1 ? DEFAULT_QF_THRESHOLD : Number(args[thresholdIndex + 1] ?? NaN);
+  // A line per row is fine for a few hundred rows, but floods the log on a
+  // multi-day, large-volume run — only print one line every N rows then.
+  const logEvery = numberOption(args, "--log-every", 1);
+  const ratePerMinute = numberOption(args, "--rate", DEFAULT_RATE_PER_MINUTE);
+  const nightRatePerMinute = numberOption(args, "--night-rate", DEFAULT_NIGHT_RATE_PER_MINUTE);
 
-  if (!inputPath || !outputPath || Number.isNaN(threshold)) {
-    console.error("usage: qf-batch <input.csv> <output.csv> [--threshold 700]");
+  const invalidOption = [logEvery, ratePerMinute, nightRatePerMinute].some(
+    (value) => Number.isNaN(value) || value < 1,
+  );
+
+  if (!inputPath || !outputPath || invalidOption) {
+    console.error(
+      "usage: qf-batch <input.csv> <output.csv> [--log-every 1] " +
+        `[--rate ${DEFAULT_RATE_PER_MINUTE}] [--night-rate ${DEFAULT_NIGHT_RATE_PER_MINUTE}]`,
+    );
     process.exitCode = 1;
     return;
   }
@@ -215,21 +281,34 @@ async function main(): Promise<void> {
   }
 
   const client = new RealClient();
+  const pacer = new RatePacer({
+    dayRatePerMinute: ratePerMinute,
+    nightRatePerMinute: nightRatePerMinute,
+    onRateChange: (rate, isNight) =>
+      console.log(`  cadence ${rate}/min (${isNight ? "nuit" : "jour"}, Europe/Paris)`),
+  });
   const outColumns = [...header, ...ADDED_COLUMNS];
+
+  let settled = 0;
 
   // Settles one row: no API call when the pivot is unusable, otherwise the QF chain.
   const settle = async (row: Record<string, string>, label: string) => {
     const identity = rowToIdentity(row);
     const verdict: Verdict = identity
-      ? await screenRow(client, identity)
-      : { value: null, error: "identité pivot incomplète (family_name/birthdate)" };
+      ? await screenRow(client, identity, pacer)
+      : {
+          value: null,
+          error: "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance)",
+        };
 
-    const columns = verdictColumns(verdict, threshold);
-    console.log(
-      `${label}: ${verdict.value ?? "aucun verdict"}` +
-        (columns.qf_eligible === "" ? ` (${verdict.error})` : ` -> qf_eligible=${columns.qf_eligible}`),
-    );
-    if (INTER_ROW_DELAY_MS > 0) await sleep(INTER_ROW_DELAY_MS);
+    const columns = verdictColumns(verdict);
+    settled += 1;
+    if (settled % logEvery === 0) {
+      console.log(
+        `${label}: ${verdict.value ?? "aucun verdict"}` +
+          (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`),
+      );
+    }
     return columns;
   };
 
@@ -244,12 +323,12 @@ async function main(): Promise<void> {
 
   let done = 0;
   let called = 0;
-  let eligible = 0;
+  let withQf = 0;
   let noVerdict = 0;
 
   const record = async (row: Record<string, string>, columns: Record<string, string>) => {
-    if (columns.qf_eligible === "true") eligible += 1;
-    if (columns.qf_eligible === "") noVerdict += 1;
+    if (columns.qf_status === STATUS_FOUND) withQf += 1;
+    if (columns.qf_status === "") noVerdict += 1;
     await writeRow(stringifier, { ...row, ...columns });
   };
 
@@ -297,7 +376,7 @@ async function main(): Promise<void> {
 
   console.log(
     `\n${index} ligne(s) au total, ${called} appel(s) API ce run: ` +
-      `${eligible} éligible(s) (QF < ${threshold}), ` +
+      `${withQf} QF récupéré(s), ` +
       `${noVerdict} encore sans verdict -> ${outputPath}`,
   );
 }
