@@ -1,0 +1,55 @@
+---
+# Node par apt/NodeSource, version majeure du .nvmrc de la racine.
+#
+# Un paquet système et pas nvm : Ubuntu ne fournit pas Node 25 dans ses dépôts par défaut,
+# d'où le dépôt NodeSource, mais une fois posé Node est sur /usr/bin — déjà sur le PATH par
+# défaut de systemd ET de cron (voir tasks/ordonnancement.yml), sans qu'un script ait à
+# sourcer quoi que ce soit. C'est ce qui a changé par rapport à nvm : run-qf-batch.sh n'a
+# plus besoin de son propre sourcing (systemd ne lit aucun profil), et cette installation
+# n'a plus besoin d'être répétée par compte — un seul Node global sert au compte de service
+# et aux deux opérateurs.
+#
+# La version majeure est lue dans .nvmrc, pas codée en dur : un futur bump de .nvmrc se
+# propage donc tout seul au prochain passage du playbook, sans toucher à ce fichier. Le
+# dépôt NodeSource est rejoué à chaque passage (comme la CLI Scalingo, voir scalingo.yml)
+# pour capter un tel bump ; à l'intérieur d'un même majeur, dev (nvm, patch du jour de
+# l'install) et prod (apt, dernier patch NodeSource du jour du playbook) peuvent différer
+# en mineur/patch — assumé, même logique que « CLI Scalingo, toujours la dernière version ».
+- name: Version majeure de Node (.nvmrc)
+  become: true
+  ansible.builtin.slurp:
+    src: "{{ pass_sport_repo }}/.nvmrc"
+  register: nvmrc_content
+
+- name: Version majeure de Node (.nvmrc), extraite
+  ansible.builtin.set_fact:
+    node_major: "{{ (nvmrc_content.content | b64decode).strip() }}"
+
+- name: Dépôt NodeSource pour Node {{ node_major }}
+  become: true
+  ansible.builtin.shell: curl -fsSL https://deb.nodesource.com/setup_{{ node_major }}.x | bash -
+  changed_when: false        # le vrai verdict est rendu par l'installation du paquet
+
+# corepack n'est plus fourni par le binaire node depuis les versions récentes de Node.js
+# (constaté sur la v25 du .nvmrc de la racine : bin/ ne contient que node/npm/npx) — il
+# faut l'installer soi-même via npm, ce qu'un `corepack enable` nu supposait à tort.
+- name: Node (apt, dernière version publiée pour ce majeur)
+  become: true
+  ansible.builtin.apt:
+    name: nodejs
+    state: latest
+    update_cache: true
+
+- name: corepack + pnpm (global, sert aux 3 comptes)
+  become: true
+  ansible.builtin.shell: npm install --global corepack && corepack enable pnpm
+  changed_when: true
+
+- name: Dépendances du worker
+  ansible.builtin.shell: |
+    set -euo pipefail
+    pnpm install --frozen-lockfile
+  args: { chdir: "{{ pass_sport_repo }}/worker", executable: /bin/bash }
+  become: true
+  become_user: "{{ pass_sport_user }}"
+  changed_when: true

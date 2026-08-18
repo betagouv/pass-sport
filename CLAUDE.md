@@ -16,8 +16,10 @@ package directory if it has its own).
 ## Python / `data/` folder
 
 Everything under [data/](data/) — scripts, Jupyter notebooks, `pip install`, linters —
-runs inside the virtualenv at `data/.venv` (Python 3.12). Never use the system
-`python`/`pip`. In a non-interactive shell, activate it in the same command:
+runs inside the virtualenv at `data/.venv` (Python 3.14 — bumped from 3.12 because the
+processing machine's OS, Ubuntu 26.04, does not ship 3.12 at all; see
+[data/requirements.txt](data/requirements.txt) for the pins validated against 3.14). Never use
+the system `python`/`pip`. In a non-interactive shell, activate it in the same command:
 
 ```bash
 source data/.venv/bin/activate && <your python command>
