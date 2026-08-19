@@ -8,6 +8,7 @@
 # échouerait selon la version du paquet installée — silencieusement, jusqu'au premier
 # passage de cron. `job:` porte la VALEUR quand `env: true`, ce n'est pas une commande.
 - name: PATH de la crontab (scalingo vit dans /usr/local/bin)
+  become: true
   ansible.builtin.cron:
     name: PATH
     env: true
@@ -21,6 +22,7 @@
 # (rien posé, rien à retirer), là où pass_sport_fc_cron_enabled ne fait que commenter une
 # entrée déjà posée. Sert à reporter tout le volet FC — le reste du provisioning tourne.
 - name: Passage FranceConnect toutes les 6 heures
+  become: true
   ansible.builtin.cron:
     name: pass-sport-fc
     user: "{{ pass_sport_user }}"
