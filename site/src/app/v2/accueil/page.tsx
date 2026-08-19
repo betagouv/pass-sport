@@ -156,7 +156,7 @@ export default async function Accueil() {
             <ul>
               <li>
                 Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
-                familial est inférieur ou égal à 699 ;
+                familial est inférieur ou égal à 699€ ;
               </li>
               <li>
                 Jeunes en situation de handicap :
@@ -187,24 +187,49 @@ export default async function Accueil() {
               d&apos;accéder durablement à une activité physique encadrée, au sein d&apos;un
               environnement structurant, éducatif et sécurisé.
             </p>
-            <h2 className="fr-h1 fr-mb-2w">Où utiliser le pass Sport ?</h2>
+            <h2 className="fr-h1 fr-mb-2w">Quand vais-je recevoir mon pass Sport ?</h2>
             <p className="fr-mb-2w">
-              Le pass Sport peut être utilisé dans plus de 85 000 clubs et salles de sport partout
-              en France. Vous pouvez{' '}
+              Les bénéficiaires recevront leur code pass Sport directement par e-mail entre le XX et
+              le XX septembre 2026, à l’adresse transmise par les organismes partenaires. À partir
+              du 4 septembre, les personnes qui n’auront pas reçu leur code pourront le récupérer
+              directement sur le site{' '}
+              <Link href="https://pass.sports.gouv.fr" target="_blank">
+                https://pass.sports.gouv.fr
+              </Link>
+              , sous réserve de remplir les conditions d’éligibilité au dispositif.
+            </p>
+            <h2 className="fr-h1 fr-mb-2w">Où et comment utiliser le pass Sport ?</h2>
+            <p className="fr-mb-2w">
+              Pour l&apos;utiliser, il suffira de présenter votre code à votre club ou salle de
+              sport au moment de l&apos;inscription. S’il l’accepte, celui-ci déduira
+              automatiquement 50 € de la licence ou de l&apos;abonnement au moment de
+              l&apos;inscription.
+            </p>
+
+            <p className="fr-mb-2w">
+              Il peut être utilisé dans plus de 85 000 clubs et salles de sport partout en France.
+              Vous pouvez{' '}
               <Link
                 href="/v2/trouver-un-club"
                 target="_blank"
-                title="consulter une liste indicative des établissements - nouvelle fenêtre"
+                title="consulter une liste indicative des établissements cartographie - nouvelle fenêtre"
               >
-                consulter une liste indicative des établissements.
+                consulter une liste indicative des établissements cartographie
               </Link>
+              .
             </p>
+
             <p className="fr-mb-2w">
               Si le club qui vous intéresse ne figure pas sur la liste, il est possible qu&apos;il
               soit partenaire mais non référencé. N&apos;hésitez pas à vérifier directement auprès
-              du club.
+              du club ou de la salle de sport.
             </p>
-            <h2 className="fr-my-5w fr-h1">Une question ?</h2>
+
+            <p className="fr-mb-2w">
+              Le pass Sport est valable du 1er septembre au 31 décembre 2026.
+            </p>
+
+            <h2 className="fr-mb-2w fr-h1 fr-mt-0">Une question ?</h2>
             <p className="fr-mb-2w">
               Vous avez consulté les différentes pages sans trouver l&apos;information que vous
               cherchiez ? Vous vous posez des questions sur le pass Sport ?
