@@ -40,10 +40,27 @@
     state: latest
     update_cache: true
 
+
+# `umask 022` explicite le shim posé par cette tâche
+# (become: true → root) n'était traversable/exécutable que par root — `command -v pnpm`
+# échouait pour passsport (become_user de la tâche suivante) alors que le fichier existait
+# bel et bien. Le umask ambiant de la session root d'Ansible sur cet hôte est donc plus
+# restrictif que le 022 habituel ; on ne le déduit pas, on l'impose pour cette installation
+# globale qui doit rester lisible/exécutable par les 3 comptes, comme /usr/bin/node et
+# /usr/bin/npm (posés par apt, eux, en 755/644) le sont déjà.
 - name: corepack + pnpm (global, sert aux 3 comptes)
   become: true
-  ansible.builtin.shell: npm install --global corepack && corepack enable pnpm
+  ansible.builtin.shell: >-
+    umask 022 &&
+    npm install --global corepack &&
+    corepack enable pnpm
   changed_when: true
+  environment:
+    # Sans ça, le premier `pnpm ...` de CHAQUE compte (le téléchargement corepack est mis
+    # en cache par utilisateur, sous $HOME/.cache/node/corepack) déclenche un prompt
+    # interactif « Do you want to continue? [Y/n] » — constaté en lançant `pnpm -v` à la
+    # main sur la machine. Sous Ansible, sans TTY, ça bloque ou échoue selon le module.
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
 
 - name: Dépendances du worker
   ansible.builtin.shell: |
@@ -53,3 +70,5 @@
   become: true
   become_user: "{{ pass_sport_user }}"
   changed_when: true
+  environment:
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"  # même risque de prompt, cette fois pour passsport
