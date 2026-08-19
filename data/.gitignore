@@ -13,6 +13,7 @@
 !2026/partners/franceconnect/export_eligible_pending.sql
 !2026/partners/franceconnect/writeback_verdict.sql
 !2026/partners/franceconnect/check_writeback.sql
+!2026/partners/v_pays_territoire_2026.csv
 
 ignored/
 backup/
