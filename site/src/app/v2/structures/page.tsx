@@ -62,9 +62,9 @@ export default function Page() {
               // },
             ]}
             knowMore={{
-              title: 'A savoir',
+              title: 'À savoir',
               description:
-                'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution. Nous vous remercions pour votre mobilisation.',
+                'Si des bénéficiaires n’ont pas encore reçu leur code pass Sport, vous pouvez leur proposer de déposer un chèque de caution en attendant sa réception. Merci pour votre mobilisation.',
             }}
           />
         </section>
@@ -135,43 +135,44 @@ export default function Page() {
               attestation d&apos;affiliation (une attestation par fédération affiliée) ;
             </li>
             <li>
-              Associations agréées Jeunesse Education Populaire (JEP) ou Sport : agrément JEP ou
+              Associations agréées Jeunesse Éducation Populaire (JEP) ou Sport : agrément JEP ou
               Sport valide ;
             </li>
             <li>Structures des loisirs sportifs marchands : charte d&apos;engagement 2026.</li>
           </ul>
 
-          <section>
-            <p className="fr-mt-2w">
-              <Link
-                href="https://view.genially.com/68ca5c87e161eb800feb72cf/guide-clubs-affiliees-a-une-fede-agreee-ministere-charge-des-sports"
-                target="_blank"
-                className="fr-link"
-              >
-                Consulter le tutoriel pour les structures affiliées
-              </Link>
-            </p>
+          {/* todo: enable later when we have up to date versions of the tutorials */}
+          {/*<section>*/}
+          {/*  <p className="fr-mt-2w">*/}
+          {/*    <Link*/}
+          {/*      href="https://view.genially.com/68ca5c87e161eb800feb72cf/guide-clubs-affiliees-a-une-fede-agreee-ministere-charge-des-sports"*/}
+          {/*      target="_blank"*/}
+          {/*      className="fr-link"*/}
+          {/*    >*/}
+          {/*      Consulter le tutoriel pour les structures affiliées*/}
+          {/*    </Link>*/}
+          {/*  </p>*/}
 
-            <p className="fr-mt-2w">
-              <Link
-                href="https://view.genially.com/68c96700f88999c4be85cef4/guide-assos-avec-un-agrement-jep-ou-sport"
-                target="_blank"
-                className="fr-link"
-              >
-                Consulter le tutoriel pour les structures agréées Sport ou JEP
-              </Link>
-            </p>
+          {/*  <p className="fr-mt-2w">*/}
+          {/*    <Link*/}
+          {/*      href="https://view.genially.com/68c96700f88999c4be85cef4/guide-assos-avec-un-agrement-jep-ou-sport"*/}
+          {/*      target="_blank"*/}
+          {/*      className="fr-link"*/}
+          {/*    >*/}
+          {/*      Consulter le tutoriel pour les structures agréées Sport ou JEP*/}
+          {/*    </Link>*/}
+          {/*  </p>*/}
 
-            <p className="fr-mt-2w">
-              <Link
-                href="https://view.genially.com/68a832edc26eae6fb0633be1/guide-loisirs-sportifs-marchands-lsm"
-                target="_blank"
-                className="fr-link"
-              >
-                Consulter le tutoriel pour les structures Loisirs Sportifs Marchands
-              </Link>
-            </p>
-          </section>
+          {/*  <p className="fr-mt-2w">*/}
+          {/*    <Link*/}
+          {/*      href="https://view.genially.com/68a832edc26eae6fb0633be1/guide-loisirs-sportifs-marchands-lsm"*/}
+          {/*      target="_blank"*/}
+          {/*      className="fr-link"*/}
+          {/*    >*/}
+          {/*      Consulter le tutoriel pour les structures Loisirs Sportifs Marchands*/}
+          {/*    </Link>*/}
+          {/*  </p>*/}
+          {/*</section>*/}
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.INPUT_CODES} className={styles['input-codes-section']}>
@@ -267,18 +268,18 @@ export default function Page() {
             </Link>
           </p>
         </section>
-
-        <section className={styles['decret-section']}>
-          <h2 className="fr-h4">Texte de référence</h2>
-          <Link
-            href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
-            target="_blank"
-            className="align-self--baseline fr-link"
-            aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"
-          >
-            Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025
-          </Link>
-        </section>
+        {/* todo: enable later when we will have the signed decret */}
+        {/*<section className={styles['decret-section']}>*/}
+        {/*  <h2 className="fr-h4">Texte de référence</h2>*/}
+        {/*  <Link*/}
+        {/*    href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"*/}
+        {/*    target="_blank"*/}
+        {/*    className="align-self--baseline fr-link"*/}
+        {/*    aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"*/}
+        {/*  >*/}
+        {/*    Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025*/}
+        {/*  </Link>*/}
+        {/*</section>*/}
       </div>
     </main>
   );

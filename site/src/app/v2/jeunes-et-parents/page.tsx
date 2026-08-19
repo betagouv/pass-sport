@@ -131,8 +131,8 @@ export default function Page() {
             </p>
 
             <p>
-              Rapprochez-vous de votre club avec votre pass Sport ou consultez la liste des
-              structures sportives partenaires disponibles ci-dessous.
+              Rapprochez-vous de votre club ou salle de sport avec votre pass Sport ou consultez la
+              liste des structures sportives partenaires disponibles ci-dessous.
             </p>
 
             <ul className="list-style-type--none fr-pl-0">
@@ -172,9 +172,20 @@ export default function Page() {
             variant="purple"
             titleAs="h3"
             knowMore={{
-              title: 'A savoir',
-              description:
-                "La campagne pass Sport 2026 n'a pas encore démarré. Les bénéficiaires du pass Sport pourront l'utiliser du 1er septembre au 31 décembre 2026.",
+              title: 'À savoir',
+              description: (
+                <>
+                  Les bénéficiaires recevront leur code pass Sport directement par e-mail entre le
+                  XX et le XX septembre 2026, à l’adresse transmise par les organismes partenaires.{' '}
+                  <br />
+                  <br />À partir du 4 septembre 2026, les personnes qui n’auront pas reçu leur code
+                  pourront le récupérer directement sur le site{' '}
+                  <Link href="https://pass.sports.gouv.fr" target="_blank">
+                    https://pass.sports.gouv.fr
+                  </Link>{' '}
+                  , sous réserve de remplir les conditions d’éligibilité au dispositif.
+                </>
+              ),
             }}
           />
           <div>

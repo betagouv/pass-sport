@@ -11,10 +11,10 @@ import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import Link from 'next/link';
-import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { InputState } from '@/types/form';
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -48,7 +48,7 @@ const defaultOptions = [
   },
   {
     value: ALLOCATION.QF,
-    label: 'Quotient familial inférieur à 700',
+    label: 'Quotient familial du foyer allocataire inférieur ou égal à 699 €',
   },
   {
     value: ALLOCATION.AEEH,
@@ -61,7 +61,7 @@ const defaultOptions = [
 
   {
     value: ALLOCATION.CROUS,
-    label: 'Bourse ou aide annuelle CROUS',
+    label: 'Bourse ou aide annuelle du CROUS',
   },
   {
     value: ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX,
@@ -84,23 +84,19 @@ export default function SimplifiedEligibilityTest({
   const [knowMoreMeta, setKnowMoreMeta] = useState<{ title: string; description: string } | null>(
     null,
   );
-  const [alertMeta, setAlertMeta] = useState<{ title: string; description: string } | null>(null);
+  const [alertMeta, setAlertMeta] = useState<{
+    title: string;
+    description: string | React.ReactNode;
+  } | null>(null);
 
   const eligibilityTestOnClick = useCallback(() => {
     push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked', 'Submission button']);
-  }, []);
-
-  const onAeehLinkClick = useCallback(() => {
-    push(['trackEvent', 'Simplified Eligibility Test', 'Clicked', 'Button to open AEEH form']);
   }, []);
 
   const onCodeObtentionLinkClick = useCallback(() => {
     push(['trackEvent', 'Simplified Eligibility Test', 'Button clicked', 'Code obtention link']);
   }, []);
 
-  const [displayEligibilityConditions, setDisplayEligibilityConditions] = useState<boolean>(false);
-  const [displayAeehLink, setDisplayAeehLink] = useState<boolean>(false);
-  const [displayObtainCodeButton, setDisplayObtainCodeButton] = useState<boolean>(false);
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
   const { save } = useEligibilityTestStorage();
 
@@ -117,9 +113,6 @@ export default function SimplifiedEligibilityTest({
   }, [targetDate, allocationName, save]);
 
   function resetStates() {
-    setDisplayEligibilityConditions(false);
-    setDisplayAeehLink(false);
-    setDisplayObtainCodeButton(false);
     setSuccess(null);
     setAlertMeta(null);
     setKnowMoreMeta(null);
@@ -151,7 +144,17 @@ export default function SimplifiedEligibilityTest({
                 const isBenefEligible = isEligible({ targetDate, allocationName });
                 const successInitialMeta = {
                   title: `Bonne nouvelle, vous êtes éligible au pass Sport.`,
-                  description: '',
+                  description: (
+                    <>
+                      Les codes pass Sport seront envoyés aux bénéficiaires entre le XX et le XX
+                      septembre 2026. À partir du 4 septembre, si vous n’avez pas reçu votre code
+                      pass Sport, vous pourrez le récupérer directement sur{' '}
+                      <Link href="https://pass.sports.gouv.fr" target="_blank">
+                        https://pass.sports.gouv.fr
+                      </Link>
+                      , sous réserve de remplir les conditions d’éligibilité.
+                    </>
+                  ),
                 };
 
                 const errorInitialMeta = {
@@ -159,7 +162,7 @@ export default function SimplifiedEligibilityTest({
                   description: '',
                 };
 
-                if (CODES_OBTAINABLE && isBenefEligible && targetDate) {
+                if (isBenefEligible && targetDate) {
                   switch (allocationName) {
                     case ALLOCATION.AAH:
                     case ALLOCATION.AEEH:
@@ -168,62 +171,29 @@ export default function SimplifiedEligibilityTest({
                         title: successInitialMeta.title,
                         description: successInitialMeta.description,
                       });
-                      setDisplayObtainCodeButton(true);
-                      break;
-                    case ALLOCATION.CROUS:
-                    case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
-                      if (!CODES_OBTAINABLE_FOR_CROUS) {
-                        setAlertMeta({
-                          title: successInitialMeta.title,
-                          description: `En tant qu'étudiant boursier, vous recevrez un code par mail entre mi-octobre et fin novembre.`,
-                        });
-                      } else {
-                        setAlertMeta({
-                          title: successInitialMeta.title,
-                          description: successInitialMeta.description,
-                        });
-                        setDisplayObtainCodeButton(true);
-                      }
-                      break;
-                  }
-                }
-
-                if (!CODES_OBTAINABLE && isBenefEligible) {
-                  switch (allocationName) {
-                    case ALLOCATION.QF:
-                    case ALLOCATION.AAH:
-                    case ALLOCATION.AEEH:
-                      setAlertMeta({
-                        title: successInitialMeta.title,
-                        description: successInitialMeta.description,
-                      });
-                      setKnowMoreMeta({
-                        title: 'A savoir',
-                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir du 1er septembre. Si vous n'avez rien reçu, revenez sur le site à partir du 1er septembre pour en bénéficier.`,
-                      });
                       break;
                     case ALLOCATION.CROUS:
                     case ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX:
                       setAlertMeta({
                         title: successInitialMeta.title,
-                        description: `En tant qu'étudiant boursier, vous recevrez votre code progressivement à partir de fin août.`,
+                        description: (
+                          <>
+                            Les codes pass Sport seront envoyés aux bénéficiaires entre le XX et le
+                            XX septembre 2026. À partir du 4 septembre, si vous n&apos;avez pas reçu
+                            votre code pass Sport, vous pourrez le récupérer directement sur{' '}
+                            <Link href="https://pass.sports.gouv.fr" target="_blank">
+                              https://pass.sports.gouv.fr
+                            </Link>
+                            , sous réserve de remplir les conditions d&apos;éligibilité.
+                          </>
+                        ),
                       });
-                      setKnowMoreMeta({
-                        title: 'A savoir',
-                        description: `Le pass Sport 2026 sera progressivement disponible par mail à partir de fin août. Si vous n'avez rien reçu, revenez sur le site à partir du 1er novembre pour en bénéficier.`,
-                      });
+
                       break;
                   }
                 }
 
-                if (CODES_OBTAINABLE && !isBenefEligible) {
-                  setAlertMeta({
-                    title: errorInitialMeta.title,
-                    description: errorInitialMeta.description,
-                  });
-
-                  setDisplayEligibilityConditions(true);
-                } else if (!CODES_OBTAINABLE && !isBenefEligible) {
+                if (!isBenefEligible) {
                   setAlertMeta({
                     title: errorInitialMeta.title,
                     description: errorInitialMeta.description,
@@ -323,14 +293,14 @@ export default function SimplifiedEligibilityTest({
                 className={cn('fr-fieldset__element', styles['eligibility-test__confirm-button'])}
               >
                 <Button type="submit" priority={buttonVariant}>
-                  Vérifier
+                  Je vérifie
                 </Button>
               </div>
             </div>
           </div>
 
           <div aria-live="polite" aria-atomic="true" id="eligibility-notification-message">
-            {success !== null && alertMeta !== null && (
+            {success !== null && alertMeta !== null && alertMeta.description !== null && (
               <Alert
                 severity={success ? 'success' : 'info'}
                 className="fr-mt-2w"
@@ -347,7 +317,7 @@ export default function SimplifiedEligibilityTest({
             </section>
           )}
 
-          {displayObtainCodeButton && (
+          {CODES_OBTAINABLE && alertMeta !== null && success && (
             <p className="fr-mb-0 fr-mt-3w text-align--center">
               <Link
                 href="/v2/test-eligibilite"
@@ -359,50 +329,13 @@ export default function SimplifiedEligibilityTest({
             </p>
           )}
 
-          {displayAeehLink && (
-            <>
-              <p className="fr-my-3w text-align--center">
-                <Link
-                  className="fr-btn fr-btn--secondary"
-                  href="https://www.demarches-simplifiees.fr/commencer/code-pass-sport-aeeh"
-                  target="_blank"
-                  title="Récupérer le pass Sport sur démarches-simplifiées - Nouvelle fenêtre"
-                  onClick={() => {
-                    onAeehLinkClick();
-                  }}
-                >
-                  Récupérer mon pass Sport
-                </Link>
-              </p>
-
-              <p className="text-align--center fr-mb-2w fr-text--sm">
-                La demande est à effectuer sur démarches-simplifiées.
-              </p>
-
-              <p>Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club :</p>
-
-              <ul className="fr-ml-2w">
-                <li>Régler l&apos;inscription avec la déduction immédiate de 50 € ;</li>
-                <li>
-                  Fournir un chèque de 50 € (non encaissé), restitué dès réception du code pass
-                  Sport.
-                </li>
-              </ul>
-
-              <p>
-                Si vous n&apos;êtes finalement pas éligible, le club pourra encaisser le chèque.
-                Chaque club reste libre d&apos;accepter ou non cette solution.
-              </p>
-            </>
-          )}
-
-          {displayEligibilityConditions && (
+          {!success && CODES_OBTAINABLE && alertMeta !== null && (
             <section className="fr-mt-3w">
               <p>Le dispositif est ouvert :</p>
               <ul className="fr-ml-2w">
                 <li>
                   Aux jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
-                  familial est inférieur ou égal à 699 ;
+                  familial est inférieur ou égal à 699 € ;
                 </li>
                 <li>
                   Aux jeunes en situation de handicap :

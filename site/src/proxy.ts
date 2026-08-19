@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { isPasSportClosed } from '@/utils/date';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 const ELIGIBILITY_PATH = '/v2/api/eligibility-test/';
 
@@ -67,7 +68,13 @@ export function proxy(request: NextRequest) {
 
   response.headers.set('Content-Security-Policy', contentSecurityPolicyHeaderValue);
 
-  const disabledRoutes = ['/v2/budget', '/v2/partenaires'];
+  const disabledRoutes = [
+    '/v2/budget',
+    '/v2/partenaires',
+    ...(CODES_OBTAINABLE
+      ? []
+      : ['/v2/test-eligibilite', '/v2/test-eligibilite/hors-france-connect']),
+  ];
 
   if (disabledRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
     return NextResponse.rewrite(new URL('/v2/not-found', request.url), { status: 404 });
@@ -76,7 +83,14 @@ export function proxy(request: NextRequest) {
   // When pass sport is closed, we want to redirect from certain pages to the homepage
   const pagesToRedirectFrom = [
     ...(isPasSportClosed()
-      ? ['/v2/jeunes-et-parents', '/v2/structures', '/v2/partenaires', '/v2/trouver-un-club']
+      ? [
+          '/v2/jeunes-et-parents',
+          '/v2/structures',
+          '/v2/partenaires',
+          '/v2/trouver-un-club',
+          '/v2/test-eligibilite',
+          '/v2/test-eligibilite/hors-france-connect',
+        ]
       : []),
   ];
 

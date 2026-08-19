@@ -336,7 +336,7 @@ export function AccordionsFaq() {
           <ul className="fr-pl-0">
             <li>
               Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient familial
-              est inférieur ou égal à 699 ;
+              est inférieur ou égal à 699 € ;
             </li>
             <li>
               Jeunes en situation de handicap :
