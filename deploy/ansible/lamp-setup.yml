@@ -50,6 +50,16 @@
     pass_sport_repo: /srv/pass-sport
     pass_sport_group: passsport
     pass_sport_user: passsport          # compte de service : exécute l'unité et la cron
+    # Partenaires branchés sur qf-batch (ressource "qf" de l'API Particulier) — pas cnous, qui
+    # passe par une autre ressource (voir worker/src/eligibility/types.ts). Source de vérité :
+    # le message d'usage de worker/src/scripts/run-qf-batch.sh. Sert à énumérer explicitement
+    # les instances pass-sport-qf-batch@<partenaire> autorisées en sudo
+    # (templates/pass-sport-sudoers.j2) — le sudoers de la machine de traitement refuse le
+    # wildcard `pass-sport-qf-batch@*` qu'on utilisait avant pour les viser toutes d'un coup.
+    # Ajouter un partenaire ici puis redéployer à chaque onboarding qf-batch.
+    pass_sport_qf_partners:
+      - cnaf
+      - msa
     # Les deux comptes humains. Vides par défaut : les noms d'opérateurs viennent du fichier
     # hors dépôt (~/pass-sport-secrets.yml), comme les secrets — ce dépôt est public.
     pass_sport_operators: []
