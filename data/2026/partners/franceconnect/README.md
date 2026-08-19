@@ -175,14 +175,19 @@ Le nom `fc_2026_writeback.csv` est figé et le `cd` obligatoire : `\copy` est la
 psql qui n'interpole aucune variable dans ses arguments, le chemin ne peut donc pas lui être
 passé, et comme elle s'exécute côté client il est relatif au dossier d'où psql est lancé.
 
-`writeback_verdict.sql` affiche trois comptes : `lignes_csv` et `lignes_marquees` doivent être
-égaux, et `ids_introuvables` valoir 0. Il est idempotent — rejoué, il affiche `UPDATE 0`, le
-filtre `verdict = 'eligible_pending'` empêchant de re-marquer une ligne ou d'écraser un code
+`writeback_verdict.sql` écrit deux tables dans la même transaction : le verdict et le code dans
+`eligibility_results`, et une ligne `actor = 'cron'`, `action = 'psp.code_writeback'` dans
+`eligibility_history` — la fabrication d'un code est la seule action du parcours qui ne passe
+pas par le worker, et n'aurait sinon aucune trace.
+
+Il affiche quatre comptes : `lignes_csv`, `lignes_marquees` et `lignes_historisees` doivent
+être égaux, et `ids_introuvables` valoir 0. Il est idempotent — rejoué, il affiche `UPDATE 0`,
+le filtre `verdict = 'eligible_pending'` empêchant de re-marquer une ligne ou d'écraser un code
 venu de LCA.
 
-`check_writeback.sql` rend une seule valeur, celle sur laquelle la cron s'arrête : combien
-des bénéficiaires de ce passage sont **encore** en `eligible_pending`. Ce doit être 0. Le CSV
-de production ne part en injection qu'une fois ce contrôle passé.
+`check_writeback.sql` rend une seule valeur, celle sur laquelle la cron s'arrête : combien des
+bénéficiaires de ce passage sont **encore** en `eligible_pending` ou sans ligne d'historique.
+Ce doit être 0. Le CSV de production ne part en injection qu'une fois ce contrôle passé.
 
 **Contrôle final** : relancer `export_eligible_pending.sql`. Le CSV doit être vide, en-tête
 seul — à ceci près que le site continue de tourner, et qu'une resoumission survenue

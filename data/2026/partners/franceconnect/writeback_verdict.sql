@@ -35,28 +35,60 @@ create temp table fc_codes (
 -- quel code est parti chez qui, et ce que le site affichera une fois LCA en mesure de servir
 -- le code. Le couple « verdict 'eligible_pending_lca' + code présent » dit exactement l'état
 -- réel : code fabriqué, pas encore servi par LCA.
-update eligibility_results r
-   set pass_sport_code = c.id_psp,
-       verdict = 'eligible_pending_lca'
-  from fc_codes c
- where r.id = c.eligibility_result_id
-   -- Ce qui rend le script idempotent : rejoué sur le même fichier il met 0 ligne à jour.
-   -- Protège aussi d'un écrasement d'un code venu de LCA ('eligible_confirmed').
-   and r.verdict = 'eligible_pending';
+--
+-- Marquage et trace dans un seul statement : l'historique hérite ainsi de l'idempotence de
+-- l'UPDATE — rejoué, celui-ci ne retourne rien et l'INSERT en insère 0.
+with marked as (
+  update eligibility_results r
+     set pass_sport_code = c.id_psp,
+         verdict = 'eligible_pending_lca'
+    from fc_codes c
+   where r.id = c.eligibility_result_id
+     -- Ce qui rend le script idempotent : rejoué sur le même fichier il met 0 ligne à jour.
+     -- Protège aussi d'un écrasement d'un code venu de LCA ('eligible_confirmed').
+     and r.verdict = 'eligible_pending'
+  returning r.id, r.job_id, r.allocataire_fc_sub, r.source, r.residence_insee, r.pass_sport_code
+)
+insert into eligibility_history
+  (allocataire_fc_sub, job_id, attempt, actor, action, status, subject, payload)
+select
+  m.allocataire_fc_sub,
+  m.job_id,
+  0,
+  -- run_fc_pipeline.sh est une cron ; valeur déjà dans HistoryActor (worker/src/db/history.ts).
+  'cron',
+  'psp.code_writeback',
+  'success',
+  -- source et subject ont le même domaine 'self' | 'enfant'.
+  m.source,
+  -- http_status, duration_ms et error restent NULL : aucun appel externe ici, une valeur
+  -- synthétique se lirait comme un vrai appel.
+  jsonb_build_object(
+    'eligibility_result_id', m.id,
+    'pass_sport_code',       m.pass_sport_code,
+    'verdict_before',        'eligible_pending',
+    'verdict_after',         'eligible_pending_lca',
+    'residence_insee',       m.residence_insee,
+    'csv',                   'fc_2026_writeback.csv'
+  )
+from marked m;
 
 -- Contrôle : ce que le CSV demandait, ce qui a réellement bougé, et ce qui a été ignoré.
 -- Un écart non nul signale des lignes déjà marquées (rejeu) ou passées entre-temps à
 -- 'eligible_confirmed' par le worker — les deux sont sans danger, mais doivent se voir.
 select
-  (select count(*) from fc_codes)                                          as lignes_csv,
+  (select count(*) from fc_codes) as lignes_csv,
   (select count(*)
      from eligibility_results r
      join fc_codes c on c.eligibility_result_id = r.id
     where r.verdict = 'eligible_pending_lca'
-      and r.pass_sport_code = c.id_psp)                                    as lignes_marquees,
+      and r.pass_sport_code = c.id_psp) as lignes_marquees,
   (select count(*)
      from fc_codes c
-    where not exists (select 1 from eligibility_results r where r.id = c.eligibility_result_id))
-                                                                           as ids_introuvables;
+    where not exists (select 1 from eligibility_results r where r.id = c.eligibility_result_id)) as ids_introuvables,
+  (select count(*)
+     from eligibility_history h
+     join fc_codes c on c.eligibility_result_id = (h.payload ->> 'eligibility_result_id')::uuid
+    where h.action = 'psp.code_writeback') as lignes_historisees;
 
 commit;

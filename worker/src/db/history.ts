@@ -2,8 +2,8 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 import { eligibilityHistory } from "./schema";
 
-// Who performed the action. 'cron' is unused today — the future relance/expiration job
-// builds a recorder with a null jobId and emits under it, no schema change needed.
+// Who performed the action. 'cron' is emitted from raw SQL by the code write-back under
+// data/2026/partners/franceconnect, never through this recorder.
 export type HistoryActor = "api_particulier" | "lca" | "worker" | "cron";
 
 export type HistoryStatus = "success" | "not_found" | "error" | "rate_limited" | "skipped";

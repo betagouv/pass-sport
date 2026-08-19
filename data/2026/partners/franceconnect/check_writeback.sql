@@ -1,5 +1,6 @@
 -- Contrôle d'après write-back : combien des bénéficiaires de ce passage sont ENCORE en
--- verdict 'eligible_pending' ? La réponse doit être 0.
+-- verdict 'eligible_pending', ou sans ligne d'historique 'psp.code_writeback' ? La réponse
+-- doit être 0.
 --
 -- writeback_verdict.sql affiche trois comptes qu'un humain lit ; la cron, elle, a besoin
 -- d'une seule valeur sur laquelle s'arrêter. C'est ce que fait ce script : une valeur non
@@ -34,7 +35,25 @@ create temp table fc_codes_check (
 
 \copy fc_codes_check from 'fc_2026_writeback.csv' with (format csv, header, delimiter ';')
 
-select count(*)
-  from eligibility_results r
-  join fc_codes_check c on c.eligibility_result_id = r.id
- where r.verdict = 'eligible_pending';
+with historised as (
+  -- Un seul parcours, puis anti-jointure : une corrélation par ligne du CSV rescannerait une
+  -- table qui ne fait que grossir. Pas de fenêtre temporelle, sinon un rejeu à plus d'un jour
+  -- ne verrait plus la trace posée par le passage d'origine.
+  select (payload ->> 'eligibility_result_id')::uuid as eligibility_result_id
+  from eligibility_history
+  where action = 'psp.code_writeback'
+)
+select
+  (select count(*)
+     from eligibility_results r
+     join fc_codes_check c on c.eligibility_result_id = r.id
+    where r.verdict = 'eligible_pending')
++ (select count(*)
+     from eligibility_results r
+     join fc_codes_check c on c.eligibility_result_id = r.id
+    -- Seules les lignes que CE CSV a effectivement marquées doivent avoir une trace : une ligne
+    -- passée entre-temps à 'eligible_confirmed' par le worker n'a jamais été marquée ici.
+    where r.verdict = 'eligible_pending_lca'
+      and r.pass_sport_code = c.id_psp
+      and not exists (
+        select 1 from historised h where h.eligibility_result_id = r.id));

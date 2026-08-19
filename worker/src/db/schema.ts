@@ -280,6 +280,7 @@ export const eligibilityHistory = pgTable(
     // 'dss.quotient_familial' | 'dss.aah' | 'cnous.etudiant_boursier' | 'dss.aeeh'
     // | 'lca.search' | 'lca.search.crous_retry' | 'lca.confirm'
     // | 'email.digest' | 'results.persisted'
+    // | 'psp.code_writeback' — written by data/, like the 'eligible_pending_lca' verdict
     action: text("action").notNull(),
 
     // 'success' | 'not_found' | 'error' | 'rate_limited' | 'skipped'
