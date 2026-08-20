@@ -1,0 +1,25 @@
+# Posé par deploy/ansible/lamp-setup.yml — ne pas éditer à la main.
+#
+# `nb <notebook.ipynb>` exécute un notebook sans interface graphique, via nbconvert plutôt
+# qu'un `jupyter` interactif (la machine est headless — voir data/2026/README.md, section
+# "Running a notebook without a graphical interface").
+#
+# Chemin de nbconvert en dur ({{ pass_sport_repo }}), plutôt que relatif au dossier courant :
+# la fonction reste utilisable même si l'opérateur n'est pas exactement dans
+# data/2026/partners. Le chemin du NOTEBOOK passé en argument, lui, reste relatif au dossier
+# courant — se placer dans data/2026/partners avant `nb cnaf/clean_cnaf_1_before_qf_batch.ipynb`.
+#
+# --inplace : le notebook exécuté devient le rapport du passage (lignes rejetées, codes INSEE
+# paddés...), lisible avec `git diff`. --ExecutePreprocessor.timeout=-1 : lève le timeout de
+# 30 s/cellule, sans quoi la lecture d'un export de plusieurs centaines de milliers de lignes
+# est tuée en cours de route.
+#
+# Réservée au groupe d'exploitation, comme l'umask 007 voisin (pass-sport-umask.sh) : ce sont
+# ses membres qui possèdent les fichiers de campagne que ces notebooks lisent et écrivent.
+# Ne s'applique qu'aux shells de connexion, ce qui couvre le cas réel : une session SSH.
+if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx '{{ pass_sport_group }}'; then
+    nb() {
+        "{{ pass_sport_repo }}/data/.venv/bin/jupyter" nbconvert --to notebook --execute \
+            --inplace --ExecutePreprocessor.timeout=-1 "$1"
+    }
+fi

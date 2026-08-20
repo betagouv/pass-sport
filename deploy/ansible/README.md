@@ -51,7 +51,7 @@ de qui a fait quoi.
 | L'arrêter, le relancer | `sudo systemctl stop\|restart pass-sport-qf-batch@msa` | oui |
 | Voir son état | `systemctl status pass-sport-qf-batch@msa` | non |
 | Suivre ses journaux | `journalctl -fu pass-sport-qf-batch@msa` | non |
-| Écrire les fichiers de campagne | notebooks, CSV, `git pull` | non |
+| Écrire les fichiers de campagne | `nb <notebook.ipynb>`, CSV, `git pull` | non |
 | Jouer un passage FC à la main | `./run_fc_pipeline.sh` | non |
 
 `status` et `journalctl` se passent de `sudo` : le premier est lisible sans privilège, le
@@ -86,6 +86,11 @@ humain exécute le notebook phase 2 qui la relit. Le playbook rend cela transpar
 - `chmod -R g+rwX,o-rwx` — le groupe lit et écrit, **les autres comptes n'ont rien** ;
 - `UMask=0007` sur l'unité et `umask 007` sur les sessions humaines
   (`/etc/profile.d/pass-sport-umask.sh`) : les fichiers naissent en `rw-rw----`.
+
+Un script `/etc/profile.d` voisin, `pass-sport-nb.sh`, prédéfinit la fonction shell `nb` pour
+le même groupe : elle exécute un notebook via `nbconvert` avec le chemin d'interpréteur du
+virtualenv en dur, pour que l'opérateur n'ait plus à la redéfinir de session en session (voir
+[data/2026/README.md](../../data/2026/README.md)).
 
 Ce dernier point n'est pas cosmétique : ces CSV portent des identités pivot et des courriels.
 Un fichier en `rw-r--r--` dans l'arbre signale que l'umask n'a pas été appliqué — typiquement
@@ -239,7 +244,9 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
 8. Sous `<compte1>` : `systemctl status pass-sport-qf-batch@msa` et
    `journalctl -u pass-sport-qf-batch@msa -n 20` doivent rendre le journal, **sans** `sudo` et
    sans « No journal files were found ».
-9. **Le va-et-vient de fichiers, le vrai test** : sous `<compte1>`, écrire un fichier d'essai
+9. Toujours sous `<compte1>`, en shell de connexion : `type nb` doit rendre une fonction shell
+   (pas « not found »). Sous un compte hors du groupe `passsport`, elle doit être absente.
+10. **Le va-et-vient de fichiers, le vrai test** : sous `<compte1>`, écrire un fichier d'essai
    dans `data/2026/partners/qf-batch-workdir/`, puis vérifier sous `<compte2>` qu'il est
    modifiable (`test -w`) et que son mode est `rw-rw----` avec le groupe `passsport`. Un
    `rw-r--r--` signale que `/etc/profile.d/pass-sport-umask.sh` n'a pas été appliqué — shell

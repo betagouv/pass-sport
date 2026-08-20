@@ -28,11 +28,11 @@ tested `*_lib.py` modules, and what remains in the `.ipynb` is the run-by-run re
 rejected rows, padded INSEE codes, birth-country labels without a COG match — which
 `nbconvert` preserves and a conversion would discard.
 
+`nb <notebook.ipynb>` is a shell function predefined for every operator session (see below) —
+there is nothing to source or redefine, it is already there on login:
+
 ```bash
 cd data/2026/partners
-nb() { ../../.venv/bin/jupyter nbconvert --to notebook --execute --inplace \
-         --ExecutePreprocessor.timeout=-1 "$1"; }
-
 nb msa/clean_msa_1_before_qf_batch.ipynb   # ②a writes the qf-batch input + the parquet
 systemctl start pass-sport-qf-batch@msa    #    the API batch, detached (up to a week)
 nb msa/clean_msa_2_after_qf_batch.ipynb    # ②b joins the verdict, writes DB_MSA_EXPORT_2026
@@ -45,9 +45,12 @@ on screen: `data/.gitignore` does not cover `.ipynb`, so `git diff` shows the co
 the read of a several-hundred-thousand-row export. For a report to `scp` back, `--to html` on
 the already-executed notebook (so without `--execute`).
 
-Two prerequisites, both handled by [deploy/ansible/](../../deploy/ansible/): the `data/.venv`
-virtualenv, and its Jupyter kernel registered under the name `python3` — the name all 13
-notebooks declare, without which `nbconvert` fails on `No such kernel named python3`.
+Three prerequisites, all handled by [deploy/ansible/](../../deploy/ansible/): the `data/.venv`
+virtualenv, its Jupyter kernel registered under the name `python3` — the name all 13 notebooks
+declare, without which `nbconvert` fails on `No such kernel named python3` — and the `nb`
+function itself, dropped at `/etc/profile.d/pass-sport-nb.sh` and scoped to the operator group
+(see [deploy/ansible/README.md](../../deploy/ansible/README.md)). Being a `/etc/profile.d`
+script, it only loads in a *login* shell — same caveat as the sibling `umask 007`.
 
 ```mermaid
 flowchart TB

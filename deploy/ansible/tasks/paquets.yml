@@ -23,6 +23,7 @@
         python3-venv,
         acl,
         libatomic1,
+        visidata,
         cron,
       ]
     state: present
