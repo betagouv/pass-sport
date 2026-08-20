@@ -11,7 +11,7 @@ export const isLcaError = (outcome: unknown): outcome is LcaError =>
 // The only field dropped from the history payload. Not privacy — volume: the attestation
 // runs to hundreds of kilobytes per confirm, rows are never purged, and nothing reads it
 // back. Everything else (id_psp, matricule, courriel) is kept on purpose.
-const withoutPdf = (item: ConfirmItem): Omit<ConfirmItem, "pdf_base_64"> => {
+export const withoutPdf = (item: ConfirmItem): Omit<ConfirmItem, "pdf_base_64"> => {
   const { pdf_base_64: _pdf, ...rest } = item;
   return rest;
 };
@@ -32,6 +32,7 @@ type LcaEvent = {
   action: string;
   subject: "self" | "enfant";
   durationMs: number;
+  httpStatus: number;
   extra?: Record<string, unknown>;
 };
 
@@ -49,11 +50,11 @@ export const recordLcaSearch = async (
     status: failed ? "error" : outcome.length === 0 ? "not_found" : "success",
     subject: event.subject,
     durationMs: event.durationMs,
+    httpStatus: event.httpStatus,
     error: failed ? outcome.message : undefined,
     payload: {
       results: failed ? null : outcome,
       result_count: failed ? null : outcome.length,
-      http_status: failed ? (outcome.httpStatus ?? null) : null,
       ...event.extra,
     },
   });
@@ -73,13 +74,13 @@ export const recordLcaConfirm = async (
     status: failed ? "error" : outcome.length === 0 ? "not_found" : "success",
     subject: event.subject,
     durationMs: event.durationMs,
+    httpStatus: event.httpStatus,
     error: failed ? outcome.message : undefined,
     payload: {
       // A confirm answers about exactly one beneficiary, so the item is stored as an
       // object rather than an array — `payload->'item'->>'id_psp'` stays queryable.
       item: failed || outcome.length === 0 ? null : withoutPdf(outcome[0]),
       item_count: failed ? null : outcome.length,
-      http_status: failed ? (outcome.httpStatus ?? null) : null,
       ...event.extra,
     },
   });

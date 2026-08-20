@@ -111,9 +111,14 @@ describe("lca job", () => {
       jobId,
     );
 
-    const [row] = await resultsFor(jobId);
-    expect(row.verdict).toBe("not_assessed");
-    expect(row.is_eligible).toBe(false);
+    // No verdict was reached, so no row: applications_by_job_id stays empty too and the
+    // usager can come back once the gateway is up.
+    expect(await resultsFor(jobId)).toHaveLength(0);
+
+    // The trace still lands — the LCA calls the site made, then the explicit skip.
+    const actions = (await historyFor(jobId)).map((e) => [e.action, e.status]);
+    expect(actions).toContainEqual(["results.skipped", "skipped"]);
+    expect(actions).toContainEqual(["lca.search", "success"]);
   });
 
   it("does not write a second row nor a second email when the usager resubmits", async () => {

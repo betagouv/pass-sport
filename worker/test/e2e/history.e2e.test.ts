@@ -78,6 +78,10 @@ describe("eligibility_history", () => {
         .filter((r) => r.actor !== "worker")
         .every((r) => typeof r.duration_ms === "number" && r.duration_ms >= 0),
     ).toBe(true);
+
+    // Same rule for the status: every call that reached an answer records the one it got,
+    // successes included. It stayed null on the LCA rows until the client carried it out.
+    expect(lca.map((r) => r.http_status)).toEqual([200, 200]);
   });
 
   it("keeps the raw payload, pass Sport code and matricule included", async () => {

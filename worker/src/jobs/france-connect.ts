@@ -102,9 +102,9 @@ export async function processEligibilityJob(
       lcaClient,
       candidate,
       identity,
-      results,
       residenceInsee,
       history,
+      job.id,
     );
 
     console.log(
@@ -153,15 +153,16 @@ export async function processEligibilityJob(
     });
   }
 
-  const askedAboutSelf = data.aides.includes(ALLOWANCE.AAH) || data.aides.includes(ALLOWANCE.CROUS);
-
+  // Only ever the connected user: an enfant always passes worthAnLcaCall, and a self
+  // candidate only exists when AAH or CROUS was claimed. So this is a real refusal on an
+  // aide the usager did ask about, never an unexamined case.
   for (const candidate of skipped) {
     pending.push({
       candidate,
       // No LCA call was made for this person, so neither 'not_found' nor 'error' is true.
       status: "not_applicable",
       isEligible: false,
-      verdict: askedAboutSelf ? "not_eligible" : "not_assessed",
+      verdict: "not_eligible",
       passSportCode: null,
       // Left out of the digest on purpose: we do not email someone a refusal for an aide
       // they never claimed, and emailKind drives both the digest and the email_sent UPDATE.
@@ -184,34 +185,20 @@ export async function processEligibilityJob(
   const { sub: _sub, ...allocataireIdentite } = identity;
 
   if (pending.length === 0) {
-    // No candidate at all — the identité pivot was missing a given_name or a birthdate,
-    // so listBeneficiaryCandidates could not even build a 'self'. Still record the
-    // application: applications_by_sub is the site's dedup source, and without a row this
-    // person could resubmit on every visit and re-burn the API Particulier quota.
-    console.log(`[pass-sport-worker] job ${job.id}: no beneficiary, recording the application`);
-    await database.insert(eligibilityResults).values({
-      jobId: job.id ?? null,
-      source: "self",
-      allocataireIdentite,
-      allocataireFcSub: identity.sub ?? null,
-      enfantIdentite: null,
-      isEligible: false,
-      isFranceConnected,
-      residenceInsee,
-      // No LCA call was made for this job, so neither 'not_found' nor 'error' is true.
-      lcaStatus: "not_applicable",
-      verdict: "not_assessed",
-      passSportCode: null,
-      emailKind: null,
-      emailSent: false,
-    });
-
-    // After the write, so the event doubles as proof it landed.
+    // No candidate at all — a QF/AEEH demande whose QF answer carried no exploitable
+    // enfant, or an identité pivot missing a given_name or a birthdate. An
+    // eligibility_results row is a verdict about a beneficiary, and there is neither, so
+    // nothing is written. eligibility_history keeps the trace of the run.
+    //
+    // The cost is deliberate: applications_by_sub is derived from this table, so this
+    // usager is not recognised as having applied and a resubmission re-runs the whole
+    // API Particulier chain.
+    console.log(`[pass-sport-worker] job ${job.id}: no beneficiary, nothing to record`);
     await history.record({
       actor: "worker",
-      action: "results.persisted",
-      status: "success",
-      payload: { rows: 1, reason: "no_beneficiary" },
+      action: "results.skipped",
+      status: "skipped",
+      payload: { rows: 0, reason: "no_beneficiary" },
     });
   } else {
     console.log(

@@ -22,7 +22,7 @@ import {
 import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
-import type { LcaClient } from "../../src/lca/client";
+import type { LcaClient, LcaResponse } from "../../src/lca/client";
 import { runMigrations } from "../../src/db/migrate";
 import type {
   EligibilityJobData,
@@ -34,7 +34,6 @@ import type {
 import type {
   ConfirmItem,
   ConfirmPayload,
-  LcaError,
   OrganismType,
   SearchItem,
   SearchPayload,
@@ -78,6 +77,10 @@ class FakeApiClient implements ApiParticulierClient {
   // the routes concluded (jobs/france-connect.ts), which would otherwise mask the rule under test.
   childrenLastname = "Enfant";
 
+  // QF answers with no enfant at all: a demande for a child aide that leaves no
+  // beneficiary to search, only the demande itself to record.
+  qfChildless = false;
+
   constructor(private readonly first429RetryAfter?: number) {}
 
   private take429(meta: { resource: string; label: string }): ResourceResult | null {
@@ -107,7 +110,7 @@ class FakeApiClient implements ApiParticulierClient {
         //   Aine   born 2008 -> 18 ans: AEEH window only
         //   Milieu born 2009 -> 17 ans: BOTH windows (QF has priority)
         //   Cadet  born 2012 -> 14 ans: QF window only
-        enfants: [
+        enfants: this.qfChildless ? [] : [
           {
             nom_naissance: this.childrenLastname,
             prenoms: "Aine",
@@ -180,7 +183,7 @@ class FakeLcaClient implements LcaClient {
 
   constructor(private readonly failOnSearchCall?: number) {}
 
-  async search(payload: SearchPayload): Promise<SearchItem[] | LcaError> {
+  async search(payload: SearchPayload): Promise<LcaResponse<SearchItem[]>> {
     this.searchCalls += 1;
 
     if (this.failOnSearchCall && this.searchCalls === this.failOnSearchCall) {
@@ -189,55 +192,66 @@ class FakeLcaClient implements LcaClient {
 
     if (this.searchHttpStatus) {
       return {
-        message: `LCA /search failed: ${this.searchHttpStatus}`,
         httpStatus: this.searchHttpStatus,
+        body: {
+          message: `LCA /search failed: ${this.searchHttpStatus}`,
+          httpStatus: this.searchHttpStatus,
+        },
       };
     }
 
-    if (payload.beneficiaryLastname.toLowerCase().startsWith("nomatch")) return [];
+    if (payload.beneficiaryLastname.toLowerCase().startsWith("nomatch")) {
+      return { httpStatus: 200, body: [] };
+    }
     const isCrous = !!payload.isFromCrous;
     const answer = this.answerAs ?? {
       situation: (isCrous ? "boursier" : "jeune") as SituationType,
       organisme: (isCrous ? "cnous" : "CAF") as OrganismType,
     };
-    return [
-      {
-        id: 1,
-        nom: payload.beneficiaryLastname,
-        prenom: payload.beneficiaryFirstname,
-        date_naissance: payload.beneficiaryBirthDate,
-        situation: answer.situation,
-        organisme: answer.organisme,
-        matricule: "SECRET-MATRICULE",
-        hasMatricule: true,
-      },
-    ];
+    return {
+      httpStatus: 200,
+      body: [
+        {
+          id: 1,
+          nom: payload.beneficiaryLastname,
+          prenom: payload.beneficiaryFirstname,
+          date_naissance: payload.beneficiaryBirthDate,
+          situation: answer.situation,
+          organisme: answer.organisme,
+          matricule: "SECRET-MATRICULE",
+          hasMatricule: true,
+        },
+      ],
+    };
   }
 
   // Make /confirm answer with an empty array: LCA matched the person on /search but has
   // no code for them.
   confirmEmpty = false;
 
-  async confirm(payload: ConfirmPayload): Promise<ConfirmItem[] | LcaError> {
+  async confirm(payload: ConfirmPayload): Promise<LcaResponse<ConfirmItem[]>> {
     this.confirmPayloads.push(payload);
 
-    if (this.confirmEmpty) return [];
+    if (this.confirmEmpty) return { httpStatus: 200, body: [] };
 
-    return [
-      {
-        id: 1,
-        id_psp: "PSP-CODE-123",
-        nom: "N",
-        prenom: "P",
-        date_naissance: "2004-05-15",
-        situation: "boursier",
-        organisme: "cnous",
-        // matricule is stripped by process.ts sanitize before storage.
-        allocataire: { matricule: "SECRET-MATRICULE" },
-        // Present so the history test can prove it is dropped rather than pass vacuously.
-        pdf_base_64: "JVBERi0xLjQK-FAKE-ATTESTATION",
-      },
-    ];
+    return {
+      httpStatus: 200,
+      body: [
+        {
+          id: 1,
+          id_psp: "PSP-CODE-123",
+          nom: "N",
+          prenom: "P",
+          date_naissance: "2004-05-15",
+          situation: "boursier",
+          organisme: "cnous",
+          // matricule is stripped by process.ts sanitize before storage.
+          allocataire: { matricule: "SECRET-MATRICULE" },
+          // Present so the history test can prove it is dropped rather than pass vacuously.
+          pdf_base_64: "JVBERi0xLjQK-FAKE-ATTESTATION",
+        },
+      ],
+    };
   }
 }
 
@@ -271,6 +285,9 @@ export type Stack = {
   // is what a test asserting on OUR eligibility routes needs — an LCA confirm sets
   // is_eligible true on its own and would hide the rule under test.
   setChildrenLastname: (lastname: string) => void;
+  // Strips the fake children from the QF answer, leaving a child-aide demande with no
+  // beneficiary at all.
+  setQfChildless: (childless: boolean) => void;
   close: () => Promise<void>;
 };
 
@@ -449,6 +466,9 @@ export async function startStack(
     },
     setChildrenLastname: (lastname: string) => {
       apiClient.childrenLastname = lastname;
+    },
+    setQfChildless: (childless: boolean) => {
+      apiClient.qfChildless = childless;
     },
     close,
   };

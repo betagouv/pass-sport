@@ -93,20 +93,32 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(enfants.every((x) => x.verdict === "eligible_confirmed")).toBe(true);
   });
 
-  // Nothing was claimed for the adult (AEEH is about the children), so no LCA call is
-  // made for them — but the row is still written, marked as not evaluated. The site
-  // filters 'not_assessed' out of the recap rather than telling them "pas éligible" to
-  // a question they never asked.
-  it("aide enfants seule: l'adulte a une ligne 'not_assessed', sans appel LCA", async () => {
+  // Nothing was claimed for the adult (AEEH is about the children), so they are not a
+  // beneficiary candidate at all: no LCA call, and no row either. The row used to be
+  // written as 'not_assessed' and filtered back out by the site — the allocataire simply
+  // is not a beneficiary on a child route.
+  it("aide enfants seule: l'adulte n'a aucune ligne", async () => {
     await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
-    const self = (await rows()).filter((x) => x.source === "self");
+    const all = await rows();
 
-    expect(self).toHaveLength(1);
-    expect(self[0].verdict).toBe("not_assessed");
-    expect(self[0].lca_status).toBe("not_applicable");
-    expect(self[0].is_eligible).toBe(false);
-    // No email either: we do not write to someone about an aide they never claimed.
-    expect(self[0].email_kind).toBeNull();
+    expect(all.filter((x) => x.source === "self")).toHaveLength(0);
+    // Not vacuous: the children of that same job did land.
+    expect(all.filter((x) => x.source === "enfant").length).toBeGreaterThanOrEqual(1);
+  });
+
+  // No enfant came back, so the job has no beneficiary at all and eligibility_results stays
+  // empty — a row here would be a verdict about nobody. The known cost: applications_by_sub
+  // is derived from this table, so this usager is not recognised as having applied and a
+  // resubmission re-runs the whole API Particulier chain.
+  it("aide enfants sans enfant exploitable: aucune ligne", async () => {
+    stack.setQfChildless(true);
+    try {
+      await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
+
+      expect(await rows()).toHaveLength(0);
+    } finally {
+      stack.setQfChildless(false);
+    }
   });
 
   // Regression: this row used to not exist at all. The toProcess filter dropped a self

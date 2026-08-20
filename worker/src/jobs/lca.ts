@@ -47,6 +47,21 @@ export async function processLcaJob(
   const verdict = VERDICT_BY_STATUS[data.lcaStatus];
   const emailKind: EmailKind | null = data.lcaStatus === "confirmed" ? "code" : null;
 
+  // LCA never answered, so nothing was concluded about this person. A row here would be a
+  // verdict claiming otherwise; the LCA events replayed above are the whole trace. Leaving
+  // the table empty also leaves applications_by_job_id empty, so the usager can come back
+  // once the gateway is up instead of being told they already applied.
+  if (verdict === "not_assessed") {
+    console.log(`[pass-sport-worker] job ${job.id}: LCA unreachable, nothing to record`);
+    await history.record({
+      actor: "worker",
+      action: "results.skipped",
+      status: "skipped",
+      payload: { rows: 0, reason: "lca_unreachable" },
+    });
+    return { verdict, emailed: false, skipped: true, processedAt: new Date().toISOString() };
+  }
+
   // BullMQ drops a job once it completes, so a usager who submits the same request twice
   // gets a second one through. The row already written is what recognises it.
   if (job.id) {

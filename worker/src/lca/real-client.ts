@@ -1,4 +1,4 @@
-import type { LcaClient } from "./client";
+import type { LcaClient, LcaResponse } from "./client";
 import { buildConfirmQuery, buildSearchQuery } from "./client";
 import type {
   ConfirmItem,
@@ -33,30 +33,36 @@ export class RealLcaClient implements LcaClient {
     return { "X-Gravitee-Api-Key": this.apiKey };
   }
 
-  async search(payload: SearchPayload): Promise<SearchItem[] | LcaError> {
+  async search(payload: SearchPayload): Promise<LcaResponse<SearchItem[]>> {
     const url = new URL(`${this.base}${SEARCH_PATH}`);
     url.search = buildSearchQuery(payload).toString();
 
     const res = await fetch(url, { headers: this.headers() });
+    const httpStatus = res.status;
 
-    if (!res.ok) return { message: `LCA /search failed: ${res.status}`, httpStatus: res.status };
+    if (!res.ok) {
+      return { httpStatus, body: { message: `LCA /search failed: ${httpStatus}`, httpStatus } };
+    }
 
     const body = (await res.json()) as SearchItem[] | LcaError;
 
-    if ("message" in body) return body;
+    if ("message" in body) return { httpStatus, body };
 
     // keepMatricule server-side (never leaves the worker).
-    return body.map((item) => ({ ...item, hasMatricule: !!item.matricule }));
+    return { httpStatus, body: body.map((item) => ({ ...item, hasMatricule: !!item.matricule })) };
   }
 
-  async confirm(payload: ConfirmPayload): Promise<ConfirmItem[] | LcaError> {
+  async confirm(payload: ConfirmPayload): Promise<LcaResponse<ConfirmItem[]>> {
     const url = new URL(`${this.base}${CONFIRM_PATH}`);
     url.search = buildConfirmQuery(payload).toString();
 
     const res = await fetch(url, { headers: this.headers() });
+    const httpStatus = res.status;
 
-    if (!res.ok) return { message: `LCA /confirm failed: ${res.status}`, httpStatus: res.status };
+    if (!res.ok) {
+      return { httpStatus, body: { message: `LCA /confirm failed: ${httpStatus}`, httpStatus } };
+    }
 
-    return (await res.json()) as ConfirmItem[] | LcaError;
+    return { httpStatus, body: (await res.json()) as ConfirmItem[] | LcaError };
   }
 }

@@ -6,9 +6,14 @@ import type {
   SearchPayload,
 } from "./types";
 
+// The status travels beside the body rather than inside it: a success answers with a bare
+// array, which has nowhere to carry it, and eligibility_history.http_status has to hold the
+// status of every call and not only of the failures.
+export type LcaResponse<T> = { httpStatus: number; body: T | LcaError };
+
 export interface LcaClient {
-  search(payload: SearchPayload): Promise<SearchItem[] | LcaError>;
-  confirm(payload: ConfirmPayload, item: SearchItem): Promise<ConfirmItem[] | LcaError>;
+  search(payload: SearchPayload): Promise<LcaResponse<SearchItem[]>>;
+  confirm(payload: ConfirmPayload, item: SearchItem): Promise<LcaResponse<ConfirmItem[]>>;
 }
 
 export const buildSearchQuery = (p: SearchPayload): URLSearchParams => {

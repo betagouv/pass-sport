@@ -1,14 +1,17 @@
 import * as Sentry from "@sentry/node";
-import type { PivotIdentity, ResourceResult } from "../eligibility/types";
+import type { PivotIdentity } from "../eligibility/types";
 import { startTimer, type HistoryRecorder } from "../db/history";
 import type { LcaClient } from "./client";
+import { buildConfirmQuery } from "./client";
 import { buildConfirmPayload, buildSearchPayload } from "./candidates";
 import {
   DEFAULT_INSEE_CODE,
   isLcaError,
   recordLcaConfirm,
   recordLcaSearch,
+  withoutPdf,
 } from "./history";
+import { logPii } from "../log";
 import type { BeneficiaryCandidate, CandidateResult, ConfirmItem } from "./types";
 
 // Strip the matricule (server-side secret) from a confirm item before storage.
@@ -24,26 +27,29 @@ export async function processCandidateThroughLca(
   lca: LcaClient,
   candidate: BeneficiaryCandidate,
   identity: PivotIdentity,
-  results: ResourceResult[],
   residenceInsee: string,
   history: HistoryRecorder,
+  jobId?: string,
 ): Promise<CandidateResult> {
   const subject = candidate.source;
 
   try {
     const payload = buildSearchPayload(candidate, residenceInsee);
     const searchTimer = startTimer();
-    let search = await lca.search(payload);
+    let { body: search, httpStatus: searchStatus } = await lca.search(payload);
     await recordLcaSearch(
-      { history, action: "lca.search", subject, durationMs: searchTimer(), extra: { is_from_crous: !!payload.isFromCrous } },
+      { history, action: "lca.search", subject, durationMs: searchTimer(), httpStatus: searchStatus, extra: { is_from_crous: !!payload.isFromCrous } },
       search,
     );
 
     if (!isLcaError(search) && search.length === 0 && payload.isFromCrous) {
       const retryTimer = startTimer();
-      search = await lca.search({ ...payload, recipientResidencePlace: DEFAULT_INSEE_CODE });
+      ({ body: search, httpStatus: searchStatus } = await lca.search({
+        ...payload,
+        recipientResidencePlace: DEFAULT_INSEE_CODE,
+      }));
       await recordLcaSearch(
-        { history, action: "lca.search.crous_retry", subject, durationMs: retryTimer(), extra: { insee_fallback: DEFAULT_INSEE_CODE } },
+        { history, action: "lca.search.crous_retry", subject, durationMs: retryTimer(), httpStatus: searchStatus, extra: { insee_fallback: DEFAULT_INSEE_CODE } },
         search,
       );
     }
@@ -51,10 +57,29 @@ export async function processCandidateThroughLca(
     if (isLcaError(search)) return { candidate, status: "error" };
     if (search.length === 0) return { candidate, status: "not_found" };
 
-    const confirmTimer = startTimer();
-    const confirm = await lca.confirm(buildConfirmPayload(search[0], identity, results), search[0]);
+    const confirmPayload = buildConfirmPayload(search[0], identity);
 
-    await recordLcaConfirm({ history, action: "lca.confirm", subject, durationMs: confirmTimer() }, confirm);
+    // Query as it goes on the wire, matricule included — behind LOG_PII, like the
+    // API Particulier params in eligibility/calls.ts.
+    logPii(
+      `job ${jobId}: → LCA confirm ${subject} params=${buildConfirmQuery(confirmPayload).toString()}`,
+    );
+
+    const confirmTimer = startTimer();
+    const { body: confirm, httpStatus: confirmStatus } = await lca.confirm(confirmPayload, search[0]);
+
+    logPii(
+      `job ${jobId}: ← LCA confirm ${subject} ${
+        isLcaError(confirm)
+          ? `error=${confirm.message}`
+          : JSON.stringify(confirm.map(withoutPdf))
+      }`,
+    );
+
+    await recordLcaConfirm(
+      { history, action: "lca.confirm", subject, durationMs: confirmTimer(), httpStatus: confirmStatus },
+      confirm,
+    );
 
     if (isLcaError(confirm)) return { candidate, status: "error" };
     if (confirm.length === 0) return { candidate, status: "not_found" };

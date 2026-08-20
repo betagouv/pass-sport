@@ -79,8 +79,10 @@ const getAah = (r: ResourceResult[]): StatutBeneficiaireData | null =>
 const getBoursier = (r: ResourceResult[]): EtudiantBoursierData | null =>
   (findResource(r, "cnous.etudiant_boursier")?.data as EtudiantBoursierData) ?? null;
 
-// Every person the LCA search can target: connected user + each QF child. Nobody is
-// filtered here (the LCA base decides); eligibilities feed the fallback.
+// Every person the LCA search can target: each QF child, plus the connected user when
+// they claimed an aide for themselves. QF and AEEH are aides for a child, so on those
+// routes the allocataire is never a beneficiary and has no business being searched.
+// Children are not filtered — the LCA base decides; eligibilities feed the fallback.
 export const listBeneficiaryCandidates = (
   identity: PivotIdentity,
   results: ResourceResult[],
@@ -88,8 +90,10 @@ export const listBeneficiaryCandidates = (
 ): BeneficiaryCandidate[] => {
   const candidates: BeneficiaryCandidate[] = [];
 
+  const askedAboutSelf = aides.includes(ALLOWANCE.AAH) || aides.includes(ALLOWANCE.CROUS);
+
   // Connected user: AAH (16-30) and étudiant boursier (< 28).
-  if (identity.family_name && identity.given_name && identity.birthdate) {
+  if (askedAboutSelf && identity.family_name && identity.given_name && identity.birthdate) {
     const age = ageAtReferenceDate(identity.birthdate);
     const eligibilities: Allowance[] = [];
     const reasons: string[] = [];
@@ -173,14 +177,14 @@ export const buildSearchPayload = (
 // Only France mapped; foreign countries omitted (field is optional).
 const cogCountryToIso = (cog?: string): string | undefined => (cog === "99100" ? "FR" : undefined);
 
-// Builds the LCA confirm payload for a search result. Allocataire = connected user;
-// matricule (server-side only) routes to INE for CROUS, else CAF/MSA number.
+// Builds the LCA confirm payload for a search result. Allocataire = the connected user,
+// always from the identité pivot rather than the QF allocataires[0], which is not
+// guaranteed to be them. Matricule (server-side only) routes to INE for CROUS, else
+// CAF/MSA number.
 export const buildConfirmPayload = (
   searchItem: SearchItem,
   identity: PivotIdentity,
-  results: ResourceResult[],
 ): ConfirmPayload => {
-  const allocataire = getQf(results)?.allocataires?.[0];
   const isCrous = searchItem.situation === LCA_SITUATION.BOURSIER && searchItem.organisme === ORGANISME.CNOUS;
   const matricule = searchItem.matricule || undefined;
 
@@ -188,8 +192,8 @@ export const buildConfirmPayload = (
     id: String(searchItem.id),
     situation: searchItem.situation,
     organisme: searchItem.organisme,
-    recipientLastname: allocataire?.nom_usage || allocataire?.nom_naissance || identity.family_name,
-    recipientFirstname: allocataire?.prenoms || identity.given_name || "",
+    recipientLastname: identity.family_name,
+    recipientFirstname: identity.given_name || "",
     recipientIneNumber: isCrous ? matricule : undefined,
     recipientCafNumber: isCrous ? undefined : matricule,
     recipientBirthDate: identity.birthdate,
