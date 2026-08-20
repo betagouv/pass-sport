@@ -10,7 +10,7 @@ interface Props {
   onBirthPlaceChanged: (text: string | null) => void;
   birthCountryInputName: string;
   birthPlaceInputName: string;
-  inputStates: BirthInputsState;
+  inputStates: Partial<BirthInputsState>;
   areInputsDisabled: boolean;
   isBirthInputRequired: boolean;
   isDirectBeneficiary?: boolean;

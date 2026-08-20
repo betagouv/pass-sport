@@ -1,11 +1,8 @@
 export const FRANCE_CONNECT_QUEUE_NAME = "codes-queue-france-connect";
 export const FRANCE_CONNECT_JOB_NAME = "france-connect-job";
 
-export const API_PARTICULIER_QUEUE_NAME = "codes-queue-api-particulier";
-export const API_PARTICULIER_JOB_NAME = "api-particulier-job";
-
-export const EMAIL_VERIFICATION_QUEUE_NAME = "codes-queue-email-verification";
-export const EMAIL_VERIFICATION_JOB_NAME = "email-verification-job";
+export const LCA_QUEUE_NAME = "codes-queue-lca";
+export const LCA_JOB_NAME = "lca-job";
 
 // 2h, then 4h, then 18h: the three retries of a 4-attempt job span a full day, so an LCA or
 // API Particulier outage lasting a working day is ridden out without the usager resubmitting.

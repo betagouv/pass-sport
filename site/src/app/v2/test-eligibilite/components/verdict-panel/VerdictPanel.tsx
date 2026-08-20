@@ -22,13 +22,14 @@ interface Props {
 const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
   const successRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
-  const { eligibilityData, pspCodeData, allowance } = useContext(EligibilityTestContext);
+  const { verdict, allowance } = useContext(EligibilityTestContext);
   const linkToFaq =
     allowance !== ALLOWANCE.AEEH
       ? `/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`
       : `/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1&${CONTACT_PAGE_QUERYPARAMS.segment}=aeeh-eligible`;
-  const linkSource = pspCodeData?.[0]?.pdf_base_64
-    ? `data:application/pdf;base64,${pspCodeData?.[0]?.pdf_base_64}`
+  const passSport = verdict?.outcome === 'code' ? verdict : null;
+  const linkSource = passSport?.pdfBase64
+    ? `data:application/pdf;base64,${passSport.pdfBase64}`
     : null;
 
   const onDownloadLinkClicked = useCallback(() => {
@@ -63,9 +64,7 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
               <Badge severity="success">mon pass sport</Badge>
 
               <p className="fr-my-3w">Votre code pass Sport est le :</p>
-              <p className="fr-text--xl fr-text--bold fr-mb-0">
-                {eligibilityData?.[0] && pspCodeData?.[0] && pspCodeData[0].id_psp}
-              </p>
+              <p className="fr-text--xl fr-text--bold fr-mb-0">{passSport?.code}</p>
               <p className="fr-text--lg fr-mt-3w">
                 <span className="fr-text--bold">
                   Notez ce numéro ou téléchargez votre pass Sport
@@ -73,18 +72,16 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                 pour le présenter à votre club.
               </p>
 
-              {eligibilityData?.[0] && pspCodeData?.[0] && (
+              {passSport && (
                 <div className={styles['download-section']}>
                   {linkSource ? (
-                    <>
-                      <DownloadLink
-                        details="PDF ~100 KB"
-                        label="Télécharger mon pass Sport"
-                        href={linkSource}
-                        filename={`code-pass-sport-${eligibilityData[0].nom}-${eligibilityData[0].prenom}.pdf`}
-                        onClick={onDownloadLinkClicked}
-                      />
-                    </>
+                    <DownloadLink
+                      details="PDF ~100 KB"
+                      label="Télécharger mon pass Sport"
+                      href={linkSource}
+                      filename={`code-pass-sport-${passSport.beneficiaryLastname}-${passSport.beneficiaryFirstname}.pdf`}
+                      onClick={onDownloadLinkClicked}
+                    />
                   ) : (
                     <Alert
                       severity="error"

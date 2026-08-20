@@ -2,7 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
-import MergedEligibilityForm from '../merged-eligibility-form/MergedEligibilityForm';
+import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
+import CrousEligibilityTestForms from '../crous-eligibility-test-forms/CrousEligibilityTestForms';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import CustomRadioButtons from '@/app/v2/test-eligibilite/components/custom-radio-buttons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
@@ -10,7 +11,7 @@ import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/S
 import cn from 'classnames';
 import styles from './styles.module.scss';
 import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
-import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
+import { StepOneFields, VerdictResponseBody } from '@/types/EligibilityTest';
 import Input from '@codegouvfr/react-dsfr/Input';
 import {
   ALLOCATION_MAPPING_TO_ALLOWANCE,
@@ -48,8 +49,8 @@ const initialInputsState: AllowanceFormInputsState = {
 
 const AllowanceStep = () => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-  const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
-  const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
+  const [stepOneFields, setStepOneFields] = useState<StepOneFields | null>(null);
+  const [verdict, setVerdict] = useState<VerdictResponseBody | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
   const [caisse, setCaisse] = useState<CAISSE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -112,8 +113,8 @@ const AllowanceStep = () => {
     setAllowance(null);
     setCaisse(null);
     setIsValidated(null);
-    setEligibilityData(null);
-    setPspCodeData(null);
+    setStepOneFields(null);
+    setVerdict(null);
     setDob('');
     clear();
   };
@@ -130,8 +131,8 @@ const AllowanceStep = () => {
   // "Modifier": reopen the form on the answers already given instead of starting over
   const editTest = () => {
     setIsValidated(null);
-    setEligibilityData(null);
-    setPspCodeData(null);
+    setStepOneFields(null);
+    setVerdict(null);
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -202,15 +203,15 @@ const AllowanceStep = () => {
         caisse,
         benefIsEligible,
         dob,
-        eligibilityData,
-        pspCodeData,
+        stepOneFields,
+        verdict,
         performNewTest: restartTest,
         portalNode,
         setPortalNode,
         setAllowance,
         setBenefIsEligible,
-        setEligibilityData,
-        setPspCodeData,
+        setStepOneFields,
+        setVerdict,
       }}
     >
       <div className={cn(styles.background)}>
@@ -449,7 +450,8 @@ const AllowanceStep = () => {
             benefIsEligible &&
             allowance !== null &&
             allowance !== ALLOWANCE.NONE &&
-            (isBoursier ? CODES_OBTAINABLE_FOR_CROUS : true) && <MergedEligibilityForm />}
+            (isBoursier ? CODES_OBTAINABLE_FOR_CROUS : true) &&
+            (isBoursier ? <CrousEligibilityTestForms /> : <EligibilityTestForms />)}
         </div>
       </div>
 

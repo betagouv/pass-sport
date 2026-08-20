@@ -1,28 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
 import { isPasSportClosed } from '@/utils/date';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 
-const ELIGIBILITY_PATH = '/v2/api/eligibility-test/';
-
-function isAllowedOrigin(request: NextRequest): boolean {
-  const expected = process.env.ORIGIN_SHARED_SECRET;
-  if (!expected) {
-    return false;
-  }
-
-  const got = request.headers.get('x-origin-secret') ?? '';
-  const a = Buffer.from(got);
-  const b = Buffer.from(expected);
-
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
+// /v2/api/eligibility-test/ used to sit behind a shared secret. It bought nothing: the form
+// is a public page, so whatever calls that route on its behalf is reachable by anyone too —
+// the secret only moved which URL an abuser aims at. What the route is actually exposed to,
+// a bruteforce of the n° d'allocataire, is answered by the rate limit at the infrastructure
+// layer; and chaining /search into /confirm already closed the enumeration oracle.
 export function proxy(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith(ELIGIBILITY_PATH) && !isAllowedOrigin(request)) {
-    return new NextResponse('Forbidden', { status: 403 });
-  }
-
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   const scriptSrc =

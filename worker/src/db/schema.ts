@@ -10,7 +10,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { ApiParticulierJobPayload, PivotIdentity } from "../eligibility/types";
+import type { PivotIdentity } from "../eligibility/types";
 
 // The verdict as the USAGER should read it. The verdict column below is where each
 // value is documented. 'eligible_pending_lca' is never produced by the worker — the code
@@ -32,8 +32,9 @@ export const eligibilityResults = pgTable(
     // 'self' | 'enfant'. self rows leave enfant_* NULL.
     source: text("source").notNull(),
 
-    // Identité pivot only — `sub` is excluded, it lives in allocataire_fc_sub below.
-    allocataireIdentite: jsonb("allocataire_identite").$type<Omit<PivotIdentity, "sub">>(),
+    // Identité pivot only — `sub` is excluded, it lives in allocataire_fc_sub below. Partial:
+    // the two-step form knows an allocataire by name alone, and boursiers have none at all.
+    allocataireIdentite: jsonb("allocataire_identite").$type<Partial<Omit<PivotIdentity, "sub">>>(),
     enfantIdentite: jsonb("enfant_identite").$type<Partial<PivotIdentity>>(),
 
     // FranceConnect pairwise pseudonym for the allocataire. Opaque and NOT derived from
@@ -197,13 +198,10 @@ export const applicationResultsByJobId = pgView("application_results_by_job_id")
     ),
 );
 
-// The combined form asks for an address and takes a DECLARED identity — so anyone can type
-// a third party's état civil, put their own address on it, and burn API Particulier quota.
-// This table is what stands between the submission and the job: nothing is enqueued until
-// the link mailed to that address is clicked.
-//
-// It is the one table the site writes to (a column-level UPDATE on consumed_at), because
-// the click has to be consumed synchronously to render its own outcome.
+// Retired. It used to gate the asynchronous no-FranceConnect path: nothing was enqueued until
+// the link mailed to the declared address was clicked. That path now answers inside the
+// request and queries LCA only, so no row is ever written here again — the table is kept for
+// the ones minted before the switch, which sweepEmailVerifications drains.
 export const emailVerifications = pgTable(
   "email_verifications",
   {
@@ -213,13 +211,12 @@ export const emailVerifications = pgTable(
     // table yields no working link.
     tokenHash: text("token_hash").notNull().unique(),
 
-    // The api-particulier-job payload, held verbatim until the click replays it. Carries the
-    // declared identité pivot, the n° CAF or INE and the address, which is what makes the
-    // sweep below a retention boundary and not housekeeping.
-    payload: jsonb("payload").$type<ApiParticulierJobPayload>().notNull(),
+    // The job payload the click replayed. Carries a declared identité pivot, the n° CAF or
+    // INE and the address, which is what makes the sweep a retention boundary and not
+    // housekeeping.
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
 
-    // The identity hash the site derives before enqueuing (apiParticulierJobId). Same value
-    // the eventual job is keyed on, so the cooldown and the trace line up with it.
+    // The identity hash the site derived before enqueuing, which the job was keyed on.
     jobId: text("job_id").notNull(),
 
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

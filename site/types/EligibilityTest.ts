@@ -1,13 +1,13 @@
 import { InputState } from './form';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { CAISSE } from '@/utils/eligibility-test';
 
 // Form step, search being the first step & confirm being the final step
 export type FormStep = 'search' | 'confirm';
 
 /**
- * Every field the merged form can render, all scenarios confounded. Which ones are displayed
- * depends on the allowance; all of them travel in the job payload, whether or not LCA reads
- * them, because API Particulier is queried on an identité pivot LCA never asked for.
+ * Every field the two-step form can render, all branches confounded. Each step-two form
+ * picks the subset LCA reads for its situation + organisme.
  */
 export interface EligibilityFormInputsState {
   beneficiaryLastname: InputState;
@@ -15,13 +15,11 @@ export interface EligibilityFormInputsState {
   recipientResidencePlace: InputState;
   recipientLastname: InputState;
   recipientFirstname: InputState;
-  recipientGenre: InputState;
   recipientCafNumber: InputState;
   recipientIneNumber: InputState;
   recipientBirthDate: InputState;
   recipientBirthCountry: InputState;
   recipientBirthPlace: InputState;
-  email: InputState;
 }
 
 export type EligibilityFieldName = keyof EligibilityFormInputsState;
@@ -29,6 +27,37 @@ export type EligibilityFieldName = keyof EligibilityFormInputsState;
 export type BirthInputsState = Pick<
   EligibilityFormInputsState,
   'recipientBirthCountry' | 'recipientBirthPlace'
+>;
+
+export type StepOneFormInputsState = Pick<
+  EligibilityFormInputsState,
+  'beneficiaryLastname' | 'beneficiaryFirstname' | 'recipientResidencePlace'
+>;
+
+export type StepOneFields = Record<keyof StepOneFormInputsState, string>;
+
+export type YoungCafInputsState = Pick<
+  EligibilityFormInputsState,
+  'recipientCafNumber' | 'recipientLastname' | 'recipientFirstname'
+>;
+
+export type YoungMsaInputsState = Pick<
+  EligibilityFormInputsState,
+  'recipientLastname' | 'recipientFirstname' | 'recipientBirthDate' | 'recipientBirthCountry'
+> &
+  Partial<Pick<EligibilityFormInputsState, 'recipientBirthPlace'>>;
+
+export type AahCafInputsState = Pick<EligibilityFormInputsState, 'recipientCafNumber'>;
+
+export type AahMsaInputsState = Pick<EligibilityFormInputsState, 'recipientBirthCountry'> &
+  Partial<Pick<EligibilityFormInputsState, 'recipientBirthPlace'>>;
+
+/* A boursier gives an INE, or the pays et commune de naissance that stand in for it */
+export type CrousInputsState = Partial<
+  Pick<
+    EligibilityFormInputsState,
+    'recipientIneNumber' | 'recipientBirthCountry' | 'recipientBirthPlace'
+  >
 >;
 
 export const LCA_SITUATION = { JEUNE: 'jeune', AAH: 'AAH', BOURSIER: 'boursier' } as const;
@@ -130,3 +159,36 @@ export interface SearchPayload {
   allowanceName?: ALLOWANCE;
   isFromCrous?: boolean;
 }
+
+/** Everything the two steps collected, sent in one go once step 2 is filled in. */
+export interface EligibilityTestRequest {
+  allowanceName: ALLOWANCE;
+  caisse: CAISSE | null;
+  beneficiaryLastname: string;
+  beneficiaryFirstname: string;
+  beneficiaryBirthDate: string;
+  recipientResidencePlace: string;
+  recipientLastname?: string;
+  recipientFirstname?: string;
+  recipientCafNumber?: string;
+  recipientIneNumber?: string;
+  recipientBirthDate?: string;
+  recipientBirthCountry?: string;
+  recipientBirthPlace?: string;
+}
+
+/**
+ * What the browser gets back from the single round-trip. LCA answers /confirm with the
+ * allocataire's courriel, matricule and postal address; none of it crosses back — the only
+ * consumer is the worker, which is handed the code and the address out of band.
+ */
+export type VerdictResponseBody =
+  | {
+      outcome: 'code';
+      code: string;
+      beneficiaryLastname: string;
+      beneficiaryFirstname: string;
+      pdfBase64: string | null;
+    }
+  | { outcome: 'not_found' }
+  | { outcome: 'error'; message: string };

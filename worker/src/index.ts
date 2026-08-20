@@ -9,21 +9,11 @@ import { db, pool } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { getClient } from "./eligibility/client";
 import { getLcaClient } from "./lca/client";
-import type { ApiParticulierJobData, EligibilityJobData } from "./eligibility/types";
+import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
-import { processApiParticulierJob, type ApiParticulierDeps } from "./jobs/api-particulier";
-import {
-  processEmailVerificationJob,
-  sweepEmailVerifications,
-  type EmailVerificationDeps,
-  type EmailVerificationJobData,
-} from "./jobs/email-verification";
-import {
-  API_PARTICULIER_QUEUE_NAME,
-  EMAIL_VERIFICATION_QUEUE_NAME,
-  FRANCE_CONNECT_QUEUE_NAME,
-  retryBackoff,
-} from "./queues";
+import { processLcaJob, type LcaDeps } from "./jobs/lca";
+import { sweepEmailVerifications } from "./db/email-verifications";
+import { FRANCE_CONNECT_QUEUE_NAME, LCA_QUEUE_NAME, retryBackoff } from "./queues";
 
 // Scalingo injects SCALINGO_REDIS_URL for the Redis addon.
 const SCALINGO_REDIS_URL = process.env.SCALINGO_REDIS_URL ?? "redis://localhost:6379";
@@ -108,25 +98,17 @@ async function main(): Promise<void> {
     },
   });
 
-  const apiParticulier = await startFlow<ApiParticulierJobData>({
-    queueName: API_PARTICULIER_QUEUE_NAME,
-    process: (job, queue) => {
-      const deps: ApiParticulierDeps = { apiClient, lcaClient, db, queue };
-      return processApiParticulierJob(job, job.data, deps);
-    },
-  });
-
-  // Gates the API Particulier flow: it mails the confirmation link, and only a click on that
-  // link creates the api-particulier-job above.
-  const emailVerification = await startFlow<EmailVerificationJobData>({
-    queueName: EMAIL_VERIFICATION_QUEUE_NAME,
+  // The no-FranceConnect path answers in the request itself; this only journals the LCA
+  // calls the site made, persists the verdict and mails the code.
+  const lca = await startFlow<LcaJobData>({
+    queueName: LCA_QUEUE_NAME,
     process: (job) => {
-      const deps: EmailVerificationDeps = { db };
-      return processEmailVerificationJob(job, job.data, deps);
+      const deps: LcaDeps = { db };
+      return processLcaJob(job, job.data, deps);
     },
   });
 
-  const flows = [franceConnect, apiParticulier, emailVerification];
+  const flows = [franceConnect, lca];
 
   const sweepAll = async (): Promise<void> => {
     try {
@@ -142,7 +124,8 @@ async function main(): Promise<void> {
   await sweepAll();
 
   // Hourly. email_verifications is the only swept table: its payload holds a declared identité
-  // pivot. eligibility_history is NOT swept — it is kept indefinitely.
+  // pivot left over from the retired verification flow. eligibility_history is NOT swept — it
+  // is kept indefinitely.
   const sweepTimer = setInterval(sweepAll, 3600_000);
 
   sweepTimer.unref();

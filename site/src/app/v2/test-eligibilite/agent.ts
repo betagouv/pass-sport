@@ -1,18 +1,19 @@
-export const submitEligibilityRequest = (
-  formData: FormData,
-): Promise<{
-  status: number;
-  body: { queued?: boolean; alreadyQueued?: boolean; sentTo?: string; error?: string };
-}> =>
-  fetch('/v2/api/api-particulier/collect', { method: 'POST', body: formData }).then(
-    async (response) => ({
-      status: response.status,
-      body: (await response.json().catch(() => ({}))) as {
-        queued?: boolean;
-        alreadyQueued?: boolean;
-        // Masked by the database view, never assembled here.
-        sentTo?: string;
-        error?: string;
-      },
-    }),
-  );
+import type { EligibilityTestRequest, VerdictResponseBody } from '@/types/EligibilityTest';
+
+const VERDICT_PATH = '/v2/api/eligibility-test/verdict';
+
+// The form's only call. Both LCA steps happen behind it, so nothing here ever sees a
+// "this person exists" answer on its own.
+export const requestPassSportCode = async (
+  request: EligibilityTestRequest,
+): Promise<VerdictResponseBody> => {
+  const response = await fetch(VERDICT_PATH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  const body = (await response.json().catch(() => null)) as VerdictResponseBody | null;
+
+  return body ?? { outcome: 'error', message: 'Internal error' };
+};

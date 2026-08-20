@@ -13,12 +13,10 @@ export type FormDefaults = {
   recipientResidencePlace: CityDefault;
   recipientLastname: string;
   recipientFirstname: string;
-  recipientGenre: 'F' | 'M';
   recipientCafNumber: string;
   recipientBirthDate: string;
   recipientBirthCountry: string;
   recipientBirthPlace: CityDefault;
-  email: string;
 };
 
 const PARIS_2E: CityDefault = { value: '75102', label: 'Paris 2e Arrondissement (75)' };
@@ -30,12 +28,10 @@ const QF_CAF_DEFAULTS: FormDefaults = {
   recipientResidencePlace: PARIS_2E,
   recipientLastname: 'MERCIER',
   recipientFirstname: 'PIERRE',
-  recipientGenre: 'M',
   recipientCafNumber: '0123456',
   recipientBirthDate: '1969-03-17',
   recipientBirthCountry: FRANCE_ISO_CODE,
   recipientBirthPlace: GONESSE,
-  email: 'patrick.nguyen.ext@beta.gouv.fr',
 };
 
 // Only the QF/CAF branch has a known-good case; every other branch is filled by hand.

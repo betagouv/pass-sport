@@ -13,31 +13,21 @@ import {
 // Worker code under test — imported from src (extensionless; Vitest/Vite resolve
 // the .ts sources directly, matching the tsconfig "bundler" moduleResolution).
 import {
-  API_PARTICULIER_JOB_NAME,
-  API_PARTICULIER_QUEUE_NAME,
-  EMAIL_VERIFICATION_JOB_NAME,
-  EMAIL_VERIFICATION_QUEUE_NAME,
   FRANCE_CONNECT_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
+  LCA_JOB_NAME,
+  LCA_QUEUE_NAME,
   retryBackoff,
 } from "../../src/queues";
 import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
-import {
-  processApiParticulierJob,
-  type ApiParticulierDeps,
-} from "../../src/jobs/api-particulier";
-import {
-  processEmailVerificationJob,
-  type EmailVerificationJobData,
-} from "../../src/jobs/email-verification";
+import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
 import type { LcaClient } from "../../src/lca/client";
 import { runMigrations } from "../../src/db/migrate";
 import type {
-  ApiParticulierJobData,
-  ApiParticulierJobPayload,
   EligibilityJobData,
   EligibilityJobPayload,
+  LcaJobData,
   PivotIdentity,
   ResourceResult,
 } from "../../src/eligibility/types";
@@ -260,17 +250,12 @@ export type Stack = {
   // Enqueue a payload and wait for the worker to reject it. Returns the failure reason.
   enqueueAndWaitFailure: (data: EligibilityJobPayload) => Promise<string>;
 
-  // The combined-form flow, on its own queue and worker exactly as in production.
-  apQueue: Queue<ApiParticulierJobData>;
-  enqueueApAndWait: (data: ApiParticulierJobPayload, jobId?: string) => Promise<unknown>;
-  enqueueApAndWaitFailure: (data: ApiParticulierJobPayload) => Promise<string>;
+  // The two-step form flow, on its own queue and worker exactly as in production. The LCA
+  // calls happen on the site, so what lands here is already an outcome.
+  lcaQueue: Queue<LcaJobData>;
+  enqueueLcaAndWait: (data: LcaJobData, jobId?: string) => Promise<unknown>;
+  enqueueLcaAndWaitFailure: (data: LcaJobData) => Promise<string>;
 
-  // The email-verification gate that now precedes the combined-form flow.
-  verificationQueue: Queue<EmailVerificationJobData>;
-  enqueueVerificationAndWait: (
-    data: EmailVerificationJobData,
-    jobId?: string,
-  ) => Promise<unknown>;
   // Raw form bodies received by the fake Link Mobility server, newest last.
   sentEmails: () => string[];
 
@@ -382,22 +367,20 @@ export async function startStack(
     throw new Error(`job ${job.id} did not finish in time`);
   };
 
-  const apQueue = new Queue<ApiParticulierJobData>(API_PARTICULIER_QUEUE_NAME, {
-    connection: conn(),
-  });
-  await apQueue.setGlobalConcurrency(1);
+  const lcaQueue = new Queue<LcaJobData>(LCA_QUEUE_NAME, { connection: conn() });
+  await lcaQueue.setGlobalConcurrency(1);
 
-  const apDeps: ApiParticulierDeps = { apiClient, lcaClient, db, queue: apQueue };
+  const lcaDeps: LcaDeps = { db };
 
-  const apWorker = new Worker<ApiParticulierJobData>(
-    API_PARTICULIER_QUEUE_NAME,
-    async (job) => processApiParticulierJob(job, job.data, apDeps),
+  const lcaWorker = new Worker<LcaJobData>(
+    LCA_QUEUE_NAME,
+    async (job) => processLcaJob(job, job.data, lcaDeps),
     { connection: conn(), settings: { backoffStrategy: retryBackoff } },
   );
-  await apWorker.waitUntilReady();
+  await lcaWorker.waitUntilReady();
 
   const waitFor = async (
-    q: Queue<ApiParticulierJobData>,
+    q: Queue<LcaJobData>,
     jobId: string,
     want: "completed" | "failed",
   ): Promise<unknown> => {
@@ -413,53 +396,14 @@ export async function startStack(
     throw new Error(`job ${jobId} did not finish in time`);
   };
 
-  const enqueueApAndWait = async (
-    data: ApiParticulierJobPayload,
-    jobId?: string,
-  ): Promise<unknown> => {
-    const job = await apQueue.add(API_PARTICULIER_JOB_NAME, data, jobId ? { jobId } : undefined);
-    return waitFor(apQueue, job.id!, "completed");
+  const enqueueLcaAndWait = async (data: LcaJobData, jobId?: string): Promise<unknown> => {
+    const job = await lcaQueue.add(LCA_JOB_NAME, data, jobId ? { jobId } : undefined);
+    return waitFor(lcaQueue, job.id!, "completed");
   };
 
-  const enqueueApAndWaitFailure = async (data: ApiParticulierJobPayload): Promise<string> => {
-    const job = await apQueue.add(API_PARTICULIER_JOB_NAME, data);
-    return (await waitFor(apQueue, job.id!, "failed")) as string;
-  };
-
-  // Base of the link the verification job builds; the job refuses to run without it.
-  process.env.PUBLIC_SITE_URL = "https://pass-sport.test";
-
-  const verificationQueue = new Queue<EmailVerificationJobData>(EMAIL_VERIFICATION_QUEUE_NAME, {
-    connection: conn(),
-  });
-  await verificationQueue.setGlobalConcurrency(1);
-
-  const verificationWorker = new Worker<EmailVerificationJobData>(
-    EMAIL_VERIFICATION_QUEUE_NAME,
-    async (job) => processEmailVerificationJob(job, job.data, { db }),
-    { connection: conn(), settings: { backoffStrategy: retryBackoff } },
-  );
-  await verificationWorker.waitUntilReady();
-
-  const enqueueVerificationAndWait = async (
-    data: EmailVerificationJobData,
-    jobId?: string,
-  ): Promise<unknown> => {
-    const job = await verificationQueue.add(
-      EMAIL_VERIFICATION_JOB_NAME,
-      data,
-      jobId ? { jobId } : undefined,
-    );
-    for (let i = 0; i < 100; i++) {
-      const fresh = await verificationQueue.getJob(job.id!);
-      const state = await fresh?.getState();
-      if (state === "completed") return fresh?.returnvalue;
-      if (state === "failed") {
-        throw new Error(`job ${job.id} failed: ${fresh?.failedReason ?? "<no reason>"}`);
-      }
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    throw new Error(`job ${job.id} did not finish in time`);
+  const enqueueLcaAndWaitFailure = async (data: LcaJobData): Promise<string> => {
+    const job = await lcaQueue.add(LCA_JOB_NAME, data);
+    return (await waitFor(lcaQueue, job.id!, "failed")) as string;
   };
 
   const close = async (): Promise<void> => {
@@ -467,10 +411,8 @@ export async function startStack(
     // connections, THEN stop the containers — so nothing reconnects to a dead port.
     await worker.close();
     await queue.close();
-    await apWorker.close();
-    await apQueue.close();
-    await verificationWorker.close();
-    await verificationQueue.close();
+    await lcaWorker.close();
+    await lcaQueue.close();
     await Promise.all(connections.map((c) => c.quit().catch(() => {})));
     await pool.end();
     await new Promise<void>((resolve) => emailServer.close(() => resolve()));
@@ -485,11 +427,9 @@ export async function startStack(
     redis: guardConn,
     enqueueAndWait,
     enqueueAndWaitFailure,
-    apQueue,
-    enqueueApAndWait,
-    enqueueApAndWaitFailure,
-    verificationQueue,
-    enqueueVerificationAndWait,
+    lcaQueue,
+    enqueueLcaAndWait,
+    enqueueLcaAndWaitFailure,
     sentEmails: () => sentEmails,
     setLcaAnswer: (answer) => {
       lcaClient.answerAs = answer;

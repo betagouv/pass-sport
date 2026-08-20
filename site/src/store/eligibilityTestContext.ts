@@ -1,5 +1,5 @@
 import React, { Dispatch, SetStateAction } from 'react';
-import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
+import { StepOneFields, VerdictResponseBody } from '@/types/EligibilityTest';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { CAISSE } from '@/utils/eligibility-test';
 
@@ -7,10 +7,11 @@ type EligibilityTestContextProps = {
   performNewTest: VoidFunction;
   portalNode: HTMLElement | null;
   setPortalNode: (node: HTMLElement | null) => void;
-  eligibilityData: SearchResponseBody | null;
-  pspCodeData: ConfirmResponseBody | null;
-  setEligibilityData: Dispatch<SetStateAction<SearchResponseBody | null>>;
-  setPspCodeData: Dispatch<SetStateAction<ConfirmResponseBody | null>>;
+  // Answered in step 1 and held here until step 2 submits: the two are sent to LCA together.
+  stepOneFields: StepOneFields | null;
+  setStepOneFields: Dispatch<SetStateAction<StepOneFields | null>>;
+  verdict: VerdictResponseBody | null;
+  setVerdict: Dispatch<SetStateAction<VerdictResponseBody | null>>;
   dob?: string;
   benefIsEligible: boolean;
   setBenefIsEligible: Dispatch<SetStateAction<boolean>>;
@@ -23,10 +24,10 @@ const EligibilityTestContext = React.createContext<EligibilityTestContextProps>(
   performNewTest: () => {},
   portalNode: null,
   setPortalNode: () => {},
-  eligibilityData: null,
-  pspCodeData: null,
-  setEligibilityData: () => {},
-  setPspCodeData: () => {},
+  stepOneFields: null,
+  setStepOneFields: () => {},
+  verdict: null,
+  setVerdict: () => {},
   dob: undefined,
   benefIsEligible: false,
   setBenefIsEligible: () => {},

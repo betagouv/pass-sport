@@ -182,9 +182,21 @@ const CHILD_AIDES: Situation[] = [SITUATION.QF, SITUATION.AEEH];
 
 export const isChildAide = (aide: Situation): boolean => CHILD_AIDES.includes(aide);
 
-// What the combined form (no FranceConnect) puts on the queue. Unlike the FranceConnect
-// payload this carries a DECLARED identity, not a verified one, and exactly one aide.
-export type ApiParticulierJobPayload = {
+// One LCA call as the site observed it, replayed verbatim into eligibility_history. The site
+// performs /search and /confirm itself now, so it is the only place that sees the raw
+// answers; the worker just writes them down.
+export type LcaHistoryEvent = {
+  action: string;
+  status: "success" | "not_found" | "error";
+  durationMs: number;
+  error?: string;
+  payload: Record<string, unknown>;
+};
+
+// What the two-step form (no FranceConnect) puts on the queue, once the usager already has
+// their answer on screen. It carries the OUTCOME, not the inputs: nothing here is re-queried,
+// and no API Particulier call happens on this path at all.
+export type LcaJobData = {
   aide: Situation;
   caisse: Caisse | null; // null for the boursier routes (organisme is always cnous)
 
@@ -192,21 +204,18 @@ export type ApiParticulierJobPayload = {
   // allocataire themselves.
   beneficiary: { lastname: string; firstname: string; birthdate: string };
 
-  allocataire: PivotIdentity;
-
-  // LCA wants the pays de naissance as ISO 3166-1 alpha-2 while API Particulier wants the
-  // COG carried by allocataire.birthcountry. Only the site holds the conversion table.
-  birthCountryIso?: string;
-
-  cafNumber?: string;
-  ine?: string;
+  allocataire: { family_name?: string; given_name?: string };
 
   residenceInsee: string; // INSEE code of the commune de résidence (LCA search)
-  email: string;
+
+  lcaStatus: "confirmed" | "not_found" | "error";
+  passSportCode: string | null;
+
+  // Read off the LCA /confirm answer (allocataire.courriel), so it only ever exists when a
+  // code was found. Null otherwise, and then nobody is mailed.
+  email: string | null;
+
+  history: LcaHistoryEvent[];
   clientIp?: string | null;
   userAgent?: string | null;
-};
-
-export type ApiParticulierJobData = ApiParticulierJobPayload & {
-  checkpoint?: EligibilityCheckpoint;
 };

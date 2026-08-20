@@ -2,21 +2,17 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { RedisContainer, type StartedRedisContainer } from "@testcontainers/redis";
-import {
-  API_PARTICULIER_QUEUE_NAME,
-  EMAIL_VERIFICATION_QUEUE_NAME,
-  FRANCE_CONNECT_QUEUE_NAME,
-} from "../../src/queues";
+import { FRANCE_CONNECT_QUEUE_NAME, LCA_QUEUE_NAME } from "../../src/queues";
 
 // Pins the BullMQ semantics every producer depends on now that there are no dead-letter
 // queues: a job that exhausted its attempts stays in `failed` on its own queue for
 // removeOnFail (24h) and keeps holding its id — and add() for an existing id is a silent
 // no-op that DISCARDS the new payload.
 //
-// With no DLQ, resubmitting is the ONLY way back. All three queues are keyed on a stable id
-// (the FranceConnect `sub`, or the identity hash), so without the producer clearing that
-// corpse first (site/src/app/services/queue.ts) every resubmission inside the 24h window
-// would be swallowed and the usager left with nothing.
+// With no DLQ, resubmitting is the ONLY way back. Both queues are keyed on a stable id (the
+// FranceConnect `sub`, or the beneficiary identity hash), so without the producer clearing
+// that corpse first (site/src/app/services/queue.ts) every resubmission inside the 24h window
+// would be swallowed — losing the trace and the email even though the usager saw their code.
 
 let container: StartedRedisContainer;
 const connections: Redis[] = [];
@@ -71,8 +67,7 @@ const exhaustAttempts = async (queueName: string, jobId: string): Promise<Queue>
 
 describe.each([
   { name: "france-connect", queueName: FRANCE_CONNECT_QUEUE_NAME, jobId: "fc-sub-abc" },
-  { name: "api-particulier", queueName: API_PARTICULIER_QUEUE_NAME, jobId: "ap-hash" },
-  { name: "email-verification", queueName: EMAIL_VERIFICATION_QUEUE_NAME, jobId: "ev-hash" },
+  { name: "lca", queueName: LCA_QUEUE_NAME, jobId: "lca-hash" },
 ])("$name", ({ queueName, jobId }) => {
   it("lets the usager resubmit after the job died", async () => {
     const queue = await exhaustAttempts(queueName, jobId);

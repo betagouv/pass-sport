@@ -73,10 +73,6 @@ services:
       - SCALINGO_REDIS_URL=redis://passsport:passsport@redis:6379
       - SCALINGO_POSTGRESQL_URL=postgres://passsport:passsport@db:5432/passsport
       - PGSSL_DISABLE=true
-      # Base of the email-verification link. Points at the WAF, the port a browser on the
-      # host actually reaches — not the `app` service name, which only resolves inside the
-      # compose network.
-      - PUBLIC_SITE_URL=http://localhost:3000
     volumes:
       - ./worker:/app
       - worker-node-modules:/app/node_modules
