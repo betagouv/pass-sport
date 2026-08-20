@@ -4,7 +4,7 @@ import {
   BASE_DOMAIN,
   FC_INTERNAL_PAGE_PATH,
   FC_LOGOUT_STATE_COOKIE,
-} from '@/app/v2/api/france-connect/shared';
+} from '@/app/api/france-connect/shared';
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import * as Sentry from '@sentry/nextjs';
 import { getRedis } from '@/app/services/redis';
-import { PocResult, sessionCookieOptions } from '@/app/v2/api/france-connect/shared';
+import { PocResult, sessionCookieOptions } from '@/app/api/france-connect/shared';
 
 export const POC_SESSION_COOKIE = 'fc_poc_session';
 

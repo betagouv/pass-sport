@@ -11,8 +11,8 @@ import {
   generateOidcSecret,
   getPostLogoutRedirectUri,
   transientCookieOptions,
-} from '@/app/v2/api/france-connect/shared';
-import { deletePocResult, loadPocResult } from '@/app/v2/api/france-connect/session';
+} from '@/app/api/france-connect/shared';
+import { deletePocResult, loadPocResult } from '@/app/api/france-connect/session';
 
 export async function GET(): Promise<Response> {
   // Read the id_token before dropping the session: criterion 14 needs it as

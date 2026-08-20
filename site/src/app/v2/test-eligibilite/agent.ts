@@ -1,6 +1,6 @@
 import type { EligibilityTestRequest, VerdictResponseBody } from '@/types/EligibilityTest';
 
-const VERDICT_PATH = '/v2/api/eligibility-test/verdict';
+const VERDICT_PATH = '/api/eligibility-test/verdict';
 
 // The form's only call. Both LCA steps happen behind it, so nothing here ever sees a
 // "this person exists" answer on its own.

@@ -21,8 +21,8 @@ export const generateOidcSecret = (length = 32): string => {
   return secret.slice(0, length);
 };
 
-const CALLBACK_PATH = '/v2/api/france-connect/callback';
-const LOGOUT_CALLBACK_PATH = '/v2/api/france-connect/logout/callback';
+const CALLBACK_PATH = '/api/france-connect/callback';
+const LOGOUT_CALLBACK_PATH = '/api/france-connect/logout/callback';
 
 export interface PocResult {
   identity: PivotIdentity;

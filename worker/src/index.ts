@@ -1,5 +1,3 @@
-// Must be first: loads .env.local (local dev) before any module reads process.env,
-// then initializes Sentry before any other module loads.
 import "./load-env";
 import "./instrument";
 import { type Job, Queue, Worker } from "bullmq";
@@ -12,7 +10,6 @@ import { getLcaClient } from "./lca/client";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
-import { sweepEmailVerifications } from "./db/email-verifications";
 import { FRANCE_CONNECT_QUEUE_NAME, LCA_QUEUE_NAME, retryBackoff } from "./queues";
 
 // Scalingo injects SCALINGO_REDIS_URL for the Redis addon.
@@ -109,26 +106,6 @@ async function main(): Promise<void> {
   });
 
   const flows = [franceConnect, lca];
-
-  const sweepAll = async (): Promise<void> => {
-    try {
-      const swept = await sweepEmailVerifications(db);
-      if (swept > 0) {
-        console.log(`[pass-sport-worker] email_verifications: swept ${swept} rows past retention`);
-      }
-    } catch (e) {
-      console.warn(`[pass-sport-worker] email_verifications sweep failed: ${(e as Error).message}`);
-    }
-  };
-
-  await sweepAll();
-
-  // Hourly. email_verifications is the only swept table: its payload holds a declared identité
-  // pivot left over from the retired verification flow. eligibility_history is NOT swept — it
-  // is kept indefinitely.
-  const sweepTimer = setInterval(sweepAll, 3600_000);
-
-  sweepTimer.unref();
 
   console.log("[pass-sport-worker] standalone worker started");
 

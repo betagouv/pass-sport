@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import type { BeneficiaryResult } from '@/app/services/applications';
 import BeneficiaryRecap from './BeneficiaryRecap';
 
-const POLL_INTERVAL_MS = 2_000;
-const MAX_POLLS = 60;
+const POLL_INTERVAL_MS = 20_000;
+const MAX_POLLS = 9;
 
 type State =
   | { kind: 'polling' }
@@ -18,26 +18,33 @@ export default function ResultPanel() {
   useEffect(() => {
     let polls = 0;
     let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
 
-    const timer = setInterval(async () => {
+    const stop = (next: State) => {
+      clearInterval(timer);
+      if (!cancelled) setState(next);
+    };
+
+    const poll = async () => {
       polls += 1;
 
       if (polls > MAX_POLLS) {
-        clearInterval(timer);
-        if (!cancelled) setState({ kind: 'gave_up' });
+        stop({ kind: 'gave_up' });
         return;
       }
 
       try {
-        const res = await fetch('/v2/api/france-connect/result');
+        const res = await fetch('/api/france-connect/result');
         if (cancelled) return;
 
         // 401 = the session died before the worker finished. Nothing to retry.
-        if (!res.ok) {
-          clearInterval(timer);
-          setState({ kind: 'gave_up' });
+        if (res.status === 401) {
+          stop({ kind: 'gave_up' });
           return;
         }
+
+        // Anything else — a 429 from the rate limiter, a 5xx blip — is transient.
+        if (!res.ok) return;
 
         const body = (await res.json()) as
           | { status: 'pending' }
@@ -46,13 +53,17 @@ export default function ResultPanel() {
         if (cancelled) return;
 
         if (body.status === 'done') {
-          clearInterval(timer);
-          setState({ kind: 'done', beneficiaries: body.beneficiaries });
+          stop({ kind: 'done', beneficiaries: body.beneficiaries });
         }
       } catch {
         // A transient network blip should not end the poll — the next tick retries.
       }
-    }, POLL_INTERVAL_MS);
+    };
+
+    // The worker usually answers within seconds; waiting a whole interval before the
+    // first check would sit on a spinner long after the result is ready.
+    void poll();
+    timer = setInterval(poll, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;

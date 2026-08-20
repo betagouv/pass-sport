@@ -90,9 +90,19 @@ server {
     limit_req zone=next_v2_nav_req_limit burst=30 nodelay;
   }
 
-  location /api {
+  location = /api/france-connect/result {
     proxy_pass http://app_backend;
-    limit_req zone=api_req_limit burst=4;
+    limit_req zone=api_poll_limit burst=10 nodelay;
+  }
+
+  location = /api/eligibility-test/verdict {
+    proxy_pass http://app_backend;
+    limit_req zone=eligibility_req_limit burst=5 nodelay;
+  }
+
+  location /api/ {
+    proxy_pass http://app_backend;
+    limit_req zone=api_req_limit burst=10 nodelay;
   }
 
   location /_next {
@@ -117,6 +127,12 @@ server {
 
 }
 
-limit_req_zone $binary_remote_addr zone=api_req_limit:100m rate=20r/m;
-limit_req_zone $binary_remote_addr zone=eligibility_req_limit:100m rate=20r/m;
+# # 503 is indistinguishable from a real outage, both for the browser and for monitoring.
+limit_req_status    429;
+# limit_req_log_level error;
+
+# 10m holds ~160k client states at 64 bytes each, well beyond this traffic.
+limit_req_zone $binary_remote_addr zone=api_poll_limit:10m         rate=20r/m;
+limit_req_zone $binary_remote_addr zone=api_req_limit:10m          rate=20r/m;
+limit_req_zone $binary_remote_addr zone=eligibility_req_limit:10m  rate=20r/m;
 limit_req_zone $binary_remote_addr zone=next_v2_nav_req_limit:100m rate=300r/m;

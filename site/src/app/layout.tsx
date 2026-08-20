@@ -2,7 +2,7 @@ import './globals.scss';
 import SkipLinksWrapper from '@/app/components/skip-links-wrapper/SkipLinksWrapper';
 import { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { loadPocResult } from '@/app/v2/api/france-connect/session';
+import { loadPocResult } from '@/app/api/france-connect/session';
 import React from 'react';
 import Matomo from './Matomo';
 import PassSportFooter from './components/pass-sport-footer/PassSportFooter';

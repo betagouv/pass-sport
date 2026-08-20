@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import z, { ZodError } from 'zod';
 import { Allowance, enqueueCodesJob } from '@/app/services/queue';
-import { loadPocResult } from '@/app/v2/api/france-connect/session';
+import { loadPocResult } from '@/app/api/france-connect/session';
 import { getClientIp } from '@/utils/client-ip';
 
 const schema = z.object({

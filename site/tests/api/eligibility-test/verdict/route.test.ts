@@ -4,8 +4,8 @@
 
 import { fetchCode, fetchEligible } from '@/app/services/eligibility-test';
 import { enqueueLcaJob } from '@/app/services/queue';
-import { POST } from '@/app/v2/api/eligibility-test/verdict/route';
-import { generatePdfBuffer } from '@/app/v2/api/eligibility-test/verdict/generate-pdf-buffer';
+import { POST } from '@/app/api/eligibility-test/verdict/route';
+import { generatePdfBuffer } from '@/app/api/eligibility-test/verdict/generate-pdf-buffer';
 import {
   buildConfirmResponseBody,
   buildSearchResponseBody,
@@ -25,7 +25,7 @@ jest.mock('../../../../utils/cookie', () => ({
   handleSupportCookie: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../../../src/app/v2/api/eligibility-test/verdict/generate-pdf-buffer', () => ({
+jest.mock('../../../../src/app/api/eligibility-test/verdict/generate-pdf-buffer', () => ({
   generatePdfBuffer: jest.fn(),
 }));
 
@@ -36,7 +36,7 @@ const mockedGeneratePdf = generatePdfBuffer as jest.Mock;
 
 const post = (body: Record<string, unknown>) =>
   POST(
-    new Request('http://localhost/v2/api/eligibility-test/verdict', {
+    new Request('http://localhost/api/eligibility-test/verdict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -59,7 +59,7 @@ beforeEach(() => {
   mockedGeneratePdf.mockResolvedValue(Buffer.from('pdf'));
 });
 
-describe('POST /v2/api/eligibility-test/verdict', () => {
+describe('POST /api/eligibility-test/verdict', () => {
   it('returns 400 when a beneficiary field is missing', async () => {
     const { beneficiaryLastname: _omitted, ...incomplete } = YOUNG_MSA_REQUEST;
 

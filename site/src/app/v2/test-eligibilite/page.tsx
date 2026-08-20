@@ -5,7 +5,7 @@ import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
 import PostLoginFlow from './components/PostLoginFlow';
 import BeneficiaryRecap from './components/BeneficiaryRecap';
-import { loadPocResult } from '@/app/v2/api/france-connect/session';
+import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
 import { IS_LOCAL_ENV } from '@/app/constants/env';

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isPasSportClosed } from '@/utils/date';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 
-// /v2/api/eligibility-test/ used to sit behind a shared secret. It bought nothing: the form
+// /api/eligibility-test/ used to sit behind a shared secret. It bought nothing: the form
 // is a public page, so whatever calls that route on its behalf is reachable by anyone too —
 // the secret only moved which URL an abuser aims at. What the route is actually exposed to,
 // a bruteforce of the n° d'allocataire, is answered by the rate limit at the infrastructure
