@@ -131,8 +131,17 @@ server {
 limit_req_status    429;
 # limit_req_log_level error;
 
+# Trusted upstream ranges exempted from rate limiting: an empty $limit_req_key makes
+# nginx skip limiting entirely for the matching request (documented limit_req_zone behavior).
+geo $limit_req_key {
+  default              $binary_remote_addr;
+  185.24.186.224/28    "";
+  82.210.16.160/28     "";
+  145.242.17.29/32     "";
+}
+
 # 10m holds ~160k client states at 64 bytes each, well beyond this traffic.
-limit_req_zone $binary_remote_addr zone=api_poll_limit:10m         rate=20r/m;
-limit_req_zone $binary_remote_addr zone=api_req_limit:10m          rate=20r/m;
-limit_req_zone $binary_remote_addr zone=eligibility_req_limit:10m  rate=20r/m;
-limit_req_zone $binary_remote_addr zone=next_v2_nav_req_limit:100m rate=300r/m;
+limit_req_zone $limit_req_key zone=api_poll_limit:10m         rate=20r/m;
+limit_req_zone $limit_req_key zone=api_req_limit:10m          rate=20r/m;
+limit_req_zone $limit_req_key zone=eligibility_req_limit:10m  rate=20r/m;
+limit_req_zone $limit_req_key zone=next_v2_nav_req_limit:100m rate=300r/m;
