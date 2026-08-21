@@ -43,6 +43,12 @@ export const toDssParams = (identity: PivotIdentity) => ({
   code_cog_insee_pays_naissance: identity.birthcountry || undefined,
 });
 
+// AAH is queried on the état civil alone — nom_usage narrows the match and costs answers.
+export const toAahParams = (identity: PivotIdentity) => {
+  const { nom_usage, ...params } = toDssParams(identity);
+  return params;
+};
+
 // CNOUS v5 is not in the SDK (caps at v4) — generic client.get() with camelCase
 // keys (no snake_case mapping). v5 adds the INE to the response (EtudiantBoursierData.ine).
 export const CNOUS_IDENTITE_PATH = "/v5/cnous/etudiant_boursier/identite";
