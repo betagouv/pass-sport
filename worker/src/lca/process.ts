@@ -38,18 +38,16 @@ export async function processCandidateThroughLca(
     const searchTimer = startTimer();
     let { body: search, httpStatus: searchStatus } = await lca.search(payload);
     await recordLcaSearch(
-      { history, action: "lca.search", subject, durationMs: searchTimer(), httpStatus: searchStatus, extra: { is_from_crous: !!payload.isFromCrous } },
+      { history, action: "lca.search", subject, durationMs: searchTimer(), httpStatus: searchStatus, bodyPayload: payload, extra: { is_from_crous: !!payload.isFromCrous } },
       search,
     );
 
     if (!isLcaError(search) && search.length === 0 && payload.isFromCrous) {
+      const retryPayload = { ...payload, recipientResidencePlace: DEFAULT_INSEE_CODE };
       const retryTimer = startTimer();
-      ({ body: search, httpStatus: searchStatus } = await lca.search({
-        ...payload,
-        recipientResidencePlace: DEFAULT_INSEE_CODE,
-      }));
+      ({ body: search, httpStatus: searchStatus } = await lca.search(retryPayload));
       await recordLcaSearch(
-        { history, action: "lca.search.crous_retry", subject, durationMs: retryTimer(), httpStatus: searchStatus, extra: { insee_fallback: DEFAULT_INSEE_CODE } },
+        { history, action: "lca.search.crous_retry", subject, durationMs: retryTimer(), httpStatus: searchStatus, bodyPayload: retryPayload, extra: { insee_fallback: DEFAULT_INSEE_CODE } },
         search,
       );
     }
@@ -77,7 +75,7 @@ export async function processCandidateThroughLca(
     );
 
     await recordLcaConfirm(
-      { history, action: "lca.confirm", subject, durationMs: confirmTimer(), httpStatus: confirmStatus },
+      { history, action: "lca.confirm", subject, durationMs: confirmTimer(), httpStatus: confirmStatus, bodyPayload: confirmPayload },
       confirm,
     );
 

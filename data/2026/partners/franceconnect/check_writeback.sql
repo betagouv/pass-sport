@@ -39,7 +39,7 @@ with historised as (
   -- Un seul parcours, puis anti-jointure : une corrélation par ligne du CSV rescannerait une
   -- table qui ne fait que grossir. Pas de fenêtre temporelle, sinon un rejeu à plus d'un jour
   -- ne verrait plus la trace posée par le passage d'origine.
-  select (payload ->> 'eligibility_result_id')::uuid as eligibility_result_id
+  select (response_payload ->> 'eligibility_result_id')::uuid as eligibility_result_id
   from eligibility_history
   where action = 'psp.code_writeback'
 )

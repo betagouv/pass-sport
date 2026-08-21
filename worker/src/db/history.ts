@@ -16,9 +16,11 @@ export type HistoryEvent = {
   httpStatus?: number | null;
   durationMs?: number;
   error?: string;
+  // The params/body the endpoint was called with, as sent.
+  bodyPayload?: Record<string, unknown> | null;
   // Always an object, never a bare array: call sites wrap collections so the column
-  // keeps a queryable shape (`payload->'results'` rather than `payload->0`).
-  payload?: Record<string, unknown> | null;
+  // keeps a queryable shape (`response_payload->'results'` rather than `response_payload->0`).
+  responsePayload?: Record<string, unknown> | null;
 };
 
 export type HistoryContext = {
@@ -43,7 +45,9 @@ const maxPayloadBytes = (): number => {
   return Number.isFinite(raw) && raw > 0 ? raw : 0;
 };
 
-function preparePayload(payload: HistoryEvent["payload"]): Record<string, unknown> | null {
+function preparePayload(
+  payload: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null {
   if (payload == null || !payloadsEnabled()) return null;
 
   const cap = maxPayloadBytes();
@@ -81,7 +85,8 @@ export function createHistoryRecorder(
           httpStatus: event.httpStatus ?? null,
           durationMs: event.durationMs ?? null,
           error: event.error ?? null,
-          payload: preparePayload(event.payload),
+          bodyPayload: preparePayload(event.bodyPayload),
+          responsePayload: preparePayload(event.responsePayload),
         });
       } catch (e) {
         // An observation table that breaks the pipeline it observes is worse than none.

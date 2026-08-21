@@ -31,23 +31,16 @@ const splitBirthdate = (birthdate?: string) => {
 const splitPrenoms = (givenName?: string): string[] | undefined =>
   givenName ? givenName.split(" ").filter(Boolean) : undefined;
 
-// DSS "_identite" params (AAH, AEEH, QF): snake_case (SDK maps to camelCase).
+// DSS "_identite" params (QF, AAH, AEEH): snake_case (SDK maps to camelCase). Queried on the
+// état civil alone — nom_usage narrows the match and costs answers.
 export const toDssParams = (identity: PivotIdentity) => ({
   nom_naissance: identity.family_name,
-  // nom_usage: identity.preferred_username || undefined,
-  nom_usage: 'DUBOIS',
   prenoms: splitPrenoms(identity.given_name),
   ...splitBirthdate(identity.birthdate),
   sexe_etat_civil: mapGender(identity.gender),
   code_cog_insee_commune_naissance: identity.birthplace || undefined,
   code_cog_insee_pays_naissance: identity.birthcountry || undefined,
 });
-
-// AAH is queried on the état civil alone — nom_usage narrows the match and costs answers.
-export const toAahParams = (identity: PivotIdentity) => {
-  const { nom_usage, ...params } = toDssParams(identity);
-  return params;
-};
 
 // CNOUS v5 is not in the SDK (caps at v4) — generic client.get() with camelCase
 // keys (no snake_case mapping). v5 adds the INE to the response (EtudiantBoursierData.ine).

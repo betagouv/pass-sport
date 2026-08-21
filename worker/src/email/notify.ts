@@ -152,6 +152,56 @@ export function sendBeneficiaryDigestEmail(
   });
 }
 
+// The two outcomes of the no-FranceConnect form. Unlike the FranceConnect digest, this path
+// knows exactly one beneficiary and exactly one recipient — the address the usager typed at
+// step two — so it gets its own pair of templates rather than a bucketed recap.
+//
+// The code only ever appears in the success mail, which is sent only when the typed address
+// is the one LCA already holds for the allocataire.
+export function sendLcaOutcomeEmail(
+  recipient: string | undefined,
+  params: {
+    outcome: "success" | "failure";
+    beneficiary: { firstname: string; lastname: string };
+    code?: string;
+  },
+): Promise<SendEmailResult | null> {
+  const { outcome, beneficiary, code } = params;
+  const prenom = beneficiary.firstname;
+  const nom = beneficiary.lastname;
+  const who = fullName(prenom, nom);
+
+  if (outcome === "success") {
+    return deliver(recipient, {
+      subject: "Votre code pass Sport",
+      // Constant campaign name: Link Mobility indexes it as searchable metadata on their
+      // side, so it must never carry the code.
+      name: "pass-sport-lca-succes",
+      alternativeText: `Bonjour,\n${who} : code pass Sport ${code ?? ""}`,
+      templateEnv: "LINK_MOBILITY_TEMPLATE_LCA_SUCCESS",
+      variables: { code: code ?? "", prenom, nom },
+      html: `
+    <p>Bonjour,</p>
+    <p>Le code pass Sport de ${escapeHtml(who)} est&nbsp;: <strong style="font-size:18px">${escapeHtml(code ?? "")}</strong></p>
+    <p>Présentez ce code à une structure sportive partenaire pour bénéficier de l'aide.</p>
+  `.trim(),
+    });
+  }
+
+  return deliver(recipient, {
+    subject: "Votre demande pass Sport",
+    name: "pass-sport-lca-echec",
+    alternativeText: `Bonjour,\nAucun droit n'a pu être confirmé pour ${who}.`,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_LCA_FAILURE",
+    variables: { prenom, nom },
+    html: `
+    <p>Bonjour,</p>
+    <p>D'après les informations disponibles, aucun droit n'a pu être confirmé pour ${escapeHtml(who)}.</p>
+    <p>Si vous pensez qu'il s'agit d'une erreur, rapprochez-vous d'une structure partenaire.</p>
+  `.trim(),
+  });
+}
+
 // Gates the combined form: nothing is enqueued until this link is opened. It is not a login
 // and carries no verdict and no code — opening it only starts the processing whose result
 // goes back to this same address, so an intercepted link discloses nothing.

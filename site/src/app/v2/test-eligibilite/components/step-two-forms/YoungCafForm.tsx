@@ -9,6 +9,8 @@ import { CAF } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { formDefaultsFor } from '../../helpers/test-defaults';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
+import { useRecipientEmail } from '../../hooks/use-recipient-email';
+import RecipientEmailInput from './common-inputs/RecipientEmailInput';
 
 const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -27,6 +29,7 @@ const YoungCafForm = () => {
   const { allowance, caisse } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
   const { isFormDisabled, error, submit } = useStepTwoSubmit();
+  const email = useRecipientEmail();
   const defaults = formDefaultsFor(allowance, caisse);
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungCafInputsState } => {
@@ -58,10 +61,11 @@ const YoungCafForm = () => {
 
     const formData = new FormData(formRef.current!);
     const { isValid, states } = isFormValid(formData);
+    const recipientEmail = email.validate(formData);
 
     setInputStates(states);
 
-    if (!isValid) {
+    if (!isValid || !recipientEmail) {
       return;
     }
 
@@ -69,6 +73,7 @@ const YoungCafForm = () => {
       recipientCafNumber: formData.get('recipientCafNumber')!.toString().trim(),
       recipientLastname: formData.get('recipientLastname')!.toString().trim(),
       recipientFirstname: formData.get('recipientFirstname')!.toString().trim(),
+      recipientEmail,
     });
   };
 
@@ -164,6 +169,13 @@ const YoungCafForm = () => {
               de la <CAF />.
             </>
           }
+        />
+
+        <RecipientEmailInput
+          inputState={email.inputState}
+          isDisabled={isFormDisabled}
+          onChange={email.onChange}
+          onBlur={email.onBlur}
         />
 
         <FormButton isDisabled={isFormDisabled} />

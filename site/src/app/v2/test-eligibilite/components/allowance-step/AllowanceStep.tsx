@@ -10,8 +10,8 @@ import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
 import cn from 'classnames';
 import styles from './styles.module.scss';
-import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
-import { StepOneFields, VerdictResponseBody } from '@/types/EligibilityTest';
+import NotEligiblePanel from '@/app/v2/test-eligibilite/components/not-eligible-panel/NotEligiblePanel';
+import { StepOneFields } from '@/types/EligibilityTest';
 import Input from '@codegouvfr/react-dsfr/Input';
 import {
   ALLOCATION_MAPPING_TO_ALLOWANCE,
@@ -50,7 +50,7 @@ const initialInputsState: AllowanceFormInputsState = {
 const AllowanceStep = () => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [stepOneFields, setStepOneFields] = useState<StepOneFields | null>(null);
-  const [verdict, setVerdict] = useState<VerdictResponseBody | null>(null);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
   const [caisse, setCaisse] = useState<CAISSE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -114,7 +114,7 @@ const AllowanceStep = () => {
     setCaisse(null);
     setIsValidated(null);
     setStepOneFields(null);
-    setVerdict(null);
+    setSubmittedEmail(null);
     setDob('');
     clear();
   };
@@ -132,7 +132,7 @@ const AllowanceStep = () => {
   const editTest = () => {
     setIsValidated(null);
     setStepOneFields(null);
-    setVerdict(null);
+    setSubmittedEmail(null);
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -201,17 +201,15 @@ const AllowanceStep = () => {
       value={{
         allowance,
         caisse,
-        benefIsEligible,
         dob,
         stepOneFields,
-        verdict,
+        submittedEmail,
         performNewTest: restartTest,
         portalNode,
         setPortalNode,
         setAllowance,
-        setBenefIsEligible,
         setStepOneFields,
-        setVerdict,
+        setSubmittedEmail,
       }}
     >
       <div className={cn(styles.background)}>
@@ -493,9 +491,7 @@ const AllowanceStep = () => {
             </div>
           )}
 
-        {isValidated && allowance && dob && !benefIsEligible && (
-          <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
-        )}
+        {isValidated && allowance && dob && !benefIsEligible && <NotEligiblePanel />}
       </div>
     </EligibilityTestContext.Provider>
   );

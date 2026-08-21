@@ -50,7 +50,8 @@ export type LcaHistoryEvent = {
   status: 'success' | 'not_found' | 'error';
   durationMs: number;
   error?: string;
-  payload: Record<string, unknown>;
+  bodyPayload?: Record<string, unknown>;
+  responsePayload: Record<string, unknown>;
 };
 
 /**
@@ -65,8 +66,11 @@ export type LcaJobData = {
   residenceInsee: string;
   lcaStatus: 'confirmed' | 'not_found' | 'error';
   passSportCode: string | null;
-  // Read off the LCA /confirm answer (allocataire.courriel). Null when LCA held none, which
-  // is the one case where nobody can be told anything.
+  // Typed by the usager at the end of step two, and the only address the outcome is ever
+  // mailed to. Always present.
+  contactEmail: string;
+  // Read off the LCA /confirm answer (allocataire.courriel). Never written to; it is compared
+  // against contactEmail to decide whether the code may be mailed. Null when LCA held none.
   email: string | null;
   history: LcaHistoryEvent[];
   clientIp?: string | null;
@@ -80,10 +84,18 @@ const BENEFICIARY_HASH_FIELDS = ['lastname', 'firstname', 'birthdate'] as const;
 // and not reversible into a name and a birthdate, since it ends up as a Redis key. The aide
 // is part of it so someone refused on one route can still try another. Keyed on the
 // beneficiary — the person the code is for — on every route, the way LCA /search is.
+//
+// contactEmail is part of it too: a usager who mistyped their address gets nothing but the
+// failure mail, and a resubmission under the same id would be swallowed by the worker's
+// "already recorded and mailed" guard. A corrected address is a different request.
 export const lcaJobId = (data: LcaJobData): string =>
   createHash('sha256')
     .update(
-      [data.aide, ...BENEFICIARY_HASH_FIELDS.map((field) => data.beneficiary[field])]
+      [
+        data.aide,
+        ...BENEFICIARY_HASH_FIELDS.map((field) => data.beneficiary[field]),
+        data.contactEmail,
+      ]
         .map((part) => (part ?? '').trim().toLowerCase())
         .join('|'),
     )

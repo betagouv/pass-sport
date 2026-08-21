@@ -18,10 +18,28 @@ import type { PivotIdentity } from "../eligibility/types";
 // of values the column can hold.
 export type Verdict =
   | "eligible_confirmed"
+  | "eligible_confirmed_but_email_not_matching"
   | "eligible_pending"
   | "eligible_pending_lca"
   | "not_eligible"
   | "not_assessed";
+
+/**
+ * What allocataire_identite holds. The identité pivot minus `sub`, which lives in
+ * allocataire_fc_sub — Partial because the two-step form knows an allocataire by name alone
+ * and boursiers have none at all.
+ *
+ * `residence_insee` is NOT part of the pivot: FranceConnect never serves it, the usager
+ * declares it in our own form. It is duplicated here from the residence_insee column so the
+ * jsonb is the allocataire as declared, readable without joining the flat columns. Snake_case
+ * like every other key, which are FranceConnect's own.
+ *
+ * Deliberately not widening PivotIdentity itself: that type is handed WHOLE to API
+ * Particulier (eligibility/sequence.ts), so anything added to it risks reaching the API.
+ */
+export type AllocataireIdentite = Partial<Omit<PivotIdentity, "sub">> & {
+  residence_insee?: string;
+};
 
 export const eligibilityResults = pgTable(
   "eligibility_results",
@@ -32,9 +50,7 @@ export const eligibilityResults = pgTable(
     // 'self' | 'enfant'. self rows leave enfant_* NULL.
     source: text("source").notNull(),
 
-    // Identité pivot only — `sub` is excluded, it lives in allocataire_fc_sub below. Partial:
-    // the two-step form knows an allocataire by name alone, and boursiers have none at all.
-    allocataireIdentite: jsonb("allocataire_identite").$type<Partial<Omit<PivotIdentity, "sub">>>(),
+    allocataireIdentite: jsonb("allocataire_identite").$type<AllocataireIdentite>(),
     enfantIdentite: jsonb("enfant_identite").$type<Partial<PivotIdentity>>(),
 
     // FranceConnect pairwise pseudonym for the allocataire. Opaque and NOT derived from
@@ -55,6 +71,12 @@ export const eligibilityResults = pgTable(
     // unrelated situations, and gets flipped by the email_sent UPDATE. Written once here
     // so the site never has to re-derive the rule that lives in jobs/shared.ts.
     //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email
+    //   'eligible_confirmed_but_email_not_matching'
+    //                          — LCA a le bénéficiaire et un code lui a été servi, mais
+    //                            l'adresse saisie au formulaire n'est pas celle que LCA
+    //                            détient pour l'allocataire : le code n'a PAS été envoyé.
+    //                            Parcours hors FranceConnect uniquement — le parcours FC
+    //                            n'a pas d'adresse saisie à confronter.
     //   'eligible_pending'     — éligible chez nous, pas encore dans la base LCA
     //   'eligible_pending_lca' — un code a été fabriqué pour cette personne et part vers
     //                            LCA, qui ne le sert pas encore. JAMAIS écrit par le worker:
@@ -290,6 +312,11 @@ export const eligibilityHistory = pgTable(
     durationMs: integer("duration_ms"),
     error: text("error"),
 
+    // What went out on the wire: the query params or body the endpoint was called with.
+    // Null on the bookkeeping events (results.persisted, results.skipped), which call
+    // nothing.
+    bodyPayload: jsonb("body_payload").$type<Record<string, unknown>>(),
+
     // The RAW response. Deliberately unfiltered: id_psp, matricule, courriel and ine all
     // land here, so a case can be replayed exactly as it happened. The single exception
     // is pdf_base_64, dropped for its weight (lca/process.ts) — nothing reads it back.
@@ -297,7 +324,7 @@ export const eligibilityHistory = pgTable(
     // Rows are kept INDEFINITELY: there is no purge, so this table only ever grows and
     // nothing bounds how long the codes and matricules in it live. That makes it the most
     // sensitive table in the schema — hence no GRANT to site_readonly.
-    payload: jsonb("payload").$type<Record<string, unknown>>(),
+    responsePayload: jsonb("response_payload").$type<Record<string, unknown>>(),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },

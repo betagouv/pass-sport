@@ -12,8 +12,11 @@ export type ExistingApplication = {
 // was never asked about, and is filtered out before display. 'eligible_pending_lca' means a
 // code has been minted for this person but LCA does not serve it yet — BeneficiaryRecap
 // shows the code with its own caveat rather than in the confirmed bucket.
+// 'eligible_confirmed_but_email_not_matching' is written by the no-FranceConnect form only,
+// so it never reaches application_results_by_sub, which is keyed on a FranceConnect sub.
 export type Verdict =
   | 'eligible_confirmed'
+  | 'eligible_confirmed_but_email_not_matching'
   | 'eligible_pending'
   | 'eligible_pending_lca'
   | 'not_eligible'

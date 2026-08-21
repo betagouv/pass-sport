@@ -2,8 +2,8 @@ import type { EligibilityTestRequest, VerdictResponseBody } from '@/types/Eligib
 
 const VERDICT_PATH = '/api/eligibility-test/verdict';
 
-// The form's only call. Both LCA steps happen behind it, so nothing here ever sees a
-// "this person exists" answer on its own.
+// The form's only call. Both LCA steps happen behind it, and the answer is the same whatever
+// LCA held: the browser learns that the request was processed, never what it concluded.
 export const requestPassSportCode = async (
   request: EligibilityTestRequest,
 ): Promise<VerdictResponseBody> => {
@@ -15,5 +15,5 @@ export const requestPassSportCode = async (
 
   const body = (await response.json().catch(() => null)) as VerdictResponseBody | null;
 
-  return body ?? { outcome: 'error', message: 'Internal error' };
+  return body ?? { outcome: 'error' };
 };

@@ -306,7 +306,11 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       birthplace: "75056",
       birthcountry: "99100",
       email: "camille.martin@example.test",
+      // Declared in our own form, not served by FranceConnect — hence duplicated here from
+      // the residence_insee column.
+      residence_insee: "75113",
     });
+    expect(r[0].residence_insee).toBe("75113");
     // Not duplicated into the jsonb: it has its own indexed column.
     expect(r[0].allocataire_fc_sub).toBe(sub);
     // A 'self' row describes the allocataire, so there is no enfant to store.

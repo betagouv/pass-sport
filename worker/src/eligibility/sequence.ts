@@ -1,5 +1,10 @@
 import type { Job, Queue } from "bullmq";
-import { type ApiParticulierClient, RESOURCE_META, toAahParams } from "./client";
+import {
+  type ApiParticulierClient,
+  RESOURCE_META,
+  toCnousParams,
+  toDssParams,
+} from "./client";
 import { createCheckpointRunner } from "./checkpoint";
 import type { HistoryRecorder } from "../db/history";
 import {
@@ -98,8 +103,10 @@ export async function runEligibilitySequence(
     cnous: () => client.cnous(data.identity),
   };
 
-  const parentParams: Partial<Record<ResourceKey, unknown>> = {
-    aah: toAahParams(data.identity),
+  const parentParams: Record<ResourceKey, Record<string, unknown>> = {
+    qf: toDssParams(data.identity),
+    aah: toDssParams(data.identity),
+    cnous: toCnousParams(data.identity),
   };
 
   for (const key of parentKeys) {
@@ -128,6 +135,7 @@ export async function runEligibilitySequence(
         resource: RESOURCE_META.aeeh.resource,
         subject: "enfant",
         childIndex: check.childIndex,
+        params: toDssParams(check.identity),
         invoke: () => client.aeeh(check.identity, check.childIndex),
       });
     }

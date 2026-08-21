@@ -10,7 +10,7 @@ type CheckpointedCall = {
   resource: string;
   subject: "self" | "enfant";
   childIndex?: number;
-  params?: unknown;
+  params?: Record<string, unknown>;
   invoke: () => Promise<ResourceResult>;
 };
 

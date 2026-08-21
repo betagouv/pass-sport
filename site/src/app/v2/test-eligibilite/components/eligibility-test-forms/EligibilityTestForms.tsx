@@ -6,7 +6,7 @@ import YoungMsaForm from '../step-two-forms/YoungMsaForm';
 import AahCafForm from '../step-two-forms/AahCafForm';
 import AahMsaForm from '../step-two-forms/AahMsaForm';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
-import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
+import EmailSentPanel from '@/app/v2/test-eligibilite/components/email-sent-panel/EmailSentPanel';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { CAISSE } from '@/utils/eligibility-test';
@@ -21,11 +21,10 @@ const EligibilityTestForms = () => {
     allowance,
     caisse,
     portalNode,
-    benefIsEligible,
     stepOneFields,
     setStepOneFields,
-    verdict,
-    setVerdict,
+    submittedEmail,
+    setSubmittedEmail,
   } = useContext(EligibilityTestContext);
 
   const isAah = allowance === ALLOWANCE.AAH;
@@ -33,7 +32,7 @@ const EligibilityTestForms = () => {
 
   const editStepOne = () => {
     setStepOneFields(null);
-    setVerdict(null);
+    setSubmittedEmail(null);
   };
 
   return (
@@ -70,11 +69,11 @@ const EligibilityTestForms = () => {
         </div>
       )}
 
-      {verdict &&
+      {submittedEmail &&
         portalNode &&
         createPortal(
           <div className="fr-mt-6w">
-            <VerdictPanel isSuccess={verdict.outcome === 'code'} isEligible={benefIsEligible} />
+            <EmailSentPanel />
           </div>,
           portalNode,
         )}

@@ -5,10 +5,13 @@ import type { Allowance } from "../../src/eligibility/types";
 // eligibility_history is the trace of HOW an outcome was reached: one row per external
 // call, written outside the PHASE 2 transaction so it survives a job that dies partway.
 //
-// Unlike eligibility_results, the payload here is stored RAW — pass Sport code and
+// Unlike eligibility_results, the payloads here are stored RAW — pass Sport code and
 // matricule included — and rows are never purged. That is a deliberate decision, so it is
 // asserted, not guarded against; see the "keeps the raw payload" case below. The lone
 // exception is pdf_base_64, dropped for weight.
+//
+// Two columns, two directions: body_payload is what went out on the wire, response_payload
+// is what came back.
 
 let stack: Stack;
 
@@ -95,17 +98,42 @@ describe("eligibility_history", () => {
     // pipeline.e2e.test.ts "never stores the pass Sport code"), and the retention purge
     // is what bounds them here. Without this assertion the next reader of schema.ts
     // "fixes" a bug that is not one.
-    expect(confirm?.payload?.item?.id_psp).toBe("PSP-CODE-123");
-    expect(confirm?.payload?.item?.allocataire?.matricule).toBe("SECRET-MATRICULE");
+    expect(confirm?.response_payload?.item?.id_psp).toBe("PSP-CODE-123");
+    expect(confirm?.response_payload?.item?.allocataire?.matricule).toBe("SECRET-MATRICULE");
 
     // Same for the search: the matricule LCA returns is kept as answered.
     const search = rows.find((r) => r.action === "lca.search");
-    expect(search?.payload?.result_count).toBe(1);
-    expect(search?.payload?.results?.[0]?.matricule).toBe("SECRET-MATRICULE");
+    expect(search?.response_payload?.result_count).toBe(1);
+    expect(search?.response_payload?.results?.[0]?.matricule).toBe("SECRET-MATRICULE");
 
     // And the digest, codes and names and all.
     const email = rows.find((r) => r.action === "email.digest");
-    expect(email?.payload?.entries?.[0]?.code).toBe("PSP-CODE-123");
+    expect(email?.body_payload?.entries?.[0]?.code).toBe("PSP-CODE-123");
+  });
+
+  it("records what each endpoint was called with, not only what it answered", async () => {
+    const sub = "fc-sub-history-body";
+    await stack.enqueueAndWait(selfCrous(sub));
+
+    const rows = await historyFor(sub);
+
+    // API Particulier: the identité pivot as it goes on the wire (CNOUS v5 camelCase).
+    const cnous = rows.find((r) => r.action === "cnous.etudiant_boursier_identite");
+    expect(cnous?.body_payload?.nomNaissance).toBe("Martin");
+    expect(cnous?.body_payload?.anneeDateNaissance).toBe("2004");
+
+    // LCA search: the beneficiary and the commune the search was run on.
+    const search = rows.find((r) => r.action === "lca.search");
+    expect(search?.body_payload?.beneficiaryLastname).toBe("Martin");
+    expect(search?.body_payload?.recipientResidencePlace).toBe("75113");
+
+    // LCA confirm: keyed on the search result, matricule included like every raw payload.
+    const confirm = rows.find((r) => r.action === "lca.confirm");
+    expect(confirm?.body_payload?.id).toBeDefined();
+    expect(confirm?.body_payload?.recipientIneNumber).toBe("SECRET-MATRICULE");
+
+    // The bookkeeping events call nothing, so they have no request side.
+    expect(rows.find((r) => r.action === "results.persisted")?.body_payload).toBeNull();
   });
 
   it("drops pdf_base_64, the one field not worth its weight", async () => {
@@ -116,8 +144,8 @@ describe("eligibility_history", () => {
     const confirm = rows.find((r) => r.action === "lca.confirm");
 
     // The fake LCA client DOES return one, so this is a real drop, not an empty check.
-    expect(confirm?.payload?.item?.id_psp).toBe("PSP-CODE-123");
-    expect(confirm?.payload?.item?.pdf_base_64).toBeUndefined();
+    expect(confirm?.response_payload?.item?.id_psp).toBe("PSP-CODE-123");
+    expect(confirm?.response_payload?.item?.pdf_base_64).toBeUndefined();
 
     // Column-layout independent, like the eligibility_results guard: the attestation
     // appears nowhere in the whole table.

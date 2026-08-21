@@ -50,7 +50,7 @@ with marked as (
   returning r.id, r.job_id, r.allocataire_fc_sub, r.source, r.residence_insee, r.pass_sport_code
 )
 insert into eligibility_history
-  (allocataire_fc_sub, job_id, attempt, actor, action, status, subject, payload)
+  (allocataire_fc_sub, job_id, attempt, actor, action, status, subject, response_payload)
 select
   m.allocataire_fc_sub,
   m.job_id,
@@ -88,7 +88,7 @@ select
     where not exists (select 1 from eligibility_results r where r.id = c.eligibility_result_id)) as ids_introuvables,
   (select count(*)
      from eligibility_history h
-     join fc_codes c on c.eligibility_result_id = (h.payload ->> 'eligibility_result_id')::uuid
+     join fc_codes c on c.eligibility_result_id = (h.response_payload ->> 'eligibility_result_id')::uuid
     where h.action = 'psp.code_writeback') as lignes_historisees;
 
 commit;

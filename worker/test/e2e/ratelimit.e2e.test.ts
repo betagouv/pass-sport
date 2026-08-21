@@ -67,7 +67,7 @@ describe("rate-limit pause + retry-from-header", () => {
     expect(limited.actor).toBe("api_particulier");
     expect(limited.attempt).toBe(0);
     expect(limited.http_status).toBe(429);
-    expect(limited.payload.retry_after).toBe(RETRY_AFTER);
+    expect(limited.response_payload.retry_after).toBe(RETRY_AFTER);
 
     // The resumed call is a second row for the SAME action: the 429 never reached the
     // checkpoint, so it is re-called rather than skipped.

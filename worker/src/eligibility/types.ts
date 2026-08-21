@@ -190,7 +190,12 @@ export type LcaHistoryEvent = {
   status: "success" | "not_found" | "error";
   durationMs: number;
   error?: string;
-  payload: Record<string, unknown>;
+  bodyPayload?: Record<string, unknown>;
+  responsePayload?: Record<string, unknown>;
+  // Where jobs enqueued before the payload split carry their answer. Optional on this side
+  // only: the site always sends responsePayload. Drop both once the queue has drained past
+  // the deploy that renamed the column.
+  payload?: Record<string, unknown>;
 };
 
 // What the two-step form (no FranceConnect) puts on the queue, once the usager already has
@@ -211,8 +216,13 @@ export type LcaJobData = {
   lcaStatus: "confirmed" | "not_found" | "error";
   passSportCode: string | null;
 
+  // Typed by the usager at the end of step two, and the only address the outcome is ever
+  // mailed to. Always present.
+  contactEmail: string;
+
   // Read off the LCA /confirm answer (allocataire.courriel), so it only ever exists when a
-  // code was found. Null otherwise, and then nobody is mailed.
+  // code was found. Never a recipient: it is compared against contactEmail to decide whether
+  // the code may be mailed at all.
   email: string | null;
 
   history: LcaHistoryEvent[];

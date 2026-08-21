@@ -43,7 +43,7 @@ COPY (
     -- donc identique entre deux resoumissions : c'est l'ordre sur created_at qui isole le
     -- run courant. Les 'action' sont les RESOURCE_META[*].resource du worker
     -- (worker/src/eligibility/client.ts).
-    select distinct on (job_id, action) job_id, action, payload
+    select distinct on (job_id, action) job_id, action, response_payload
     from eligibility_history
     where actor = 'api_particulier' and status = 'success'
     order by job_id, action, created_at desc
@@ -77,11 +77,11 @@ COPY (
     -- eligibility_results ne mémorise pas QUELLE aide a rendu la personne éligible. Ces
     -- payloads sont ce qui permet de reconstruire la route (jeune/AEEH/AAH/boursier) dans
     -- clean_fc_lib.resolve_situation, et l'organisme dans resolve_organisme.
-    qf.payload -> 'data' -> 'quotient_familial' ->> 'valeur'        as qf_valeur,
-    qf.payload -> 'data' -> 'quotient_familial' ->> 'fournisseur'   as qf_fournisseur,
-    qf.payload -> 'data' -> 'enfants'                               as qf_enfants,
-    aah.payload   -> 'data' ->> 'est_beneficiaire'                  as aah_est_beneficiaire,
-    crous.payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier
+    qf.response_payload -> 'data' -> 'quotient_familial' ->> 'valeur'        as qf_valeur,
+    qf.response_payload -> 'data' -> 'quotient_familial' ->> 'fournisseur'   as qf_fournisseur,
+    qf.response_payload -> 'data' -> 'enfants'                               as qf_enfants,
+    aah.response_payload   -> 'data' ->> 'est_beneficiaire'                  as aah_est_beneficiaire,
+    crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier
 
   from eligibility_results r
 

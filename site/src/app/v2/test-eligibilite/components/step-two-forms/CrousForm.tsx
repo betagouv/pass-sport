@@ -10,6 +10,8 @@ import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
+import { useRecipientEmail } from '../../hooks/use-recipient-email';
+import RecipientEmailInput from './common-inputs/RecipientEmailInput';
 
 const initialInputsState: CrousInputsState = {
   recipientIneNumber: { state: 'default' },
@@ -29,6 +31,7 @@ const CrousForm = () => {
   const { allowance } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<CrousInputsState>(initialInputsState);
   const { isFormDisabled, error, submit } = useStepTwoSubmit();
+  const email = useRecipientEmail();
   const [identificationError, setIdentificationError] = useState<string | null>(null);
   const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(false);
 
@@ -40,6 +43,8 @@ const CrousForm = () => {
     const ine = (formData.get('recipientIneNumber') ?? '').toString().trim();
     const birthCountry = (formData.get('recipientBirthCountry') ?? '').toString().trim();
     const birthPlace = (formData.get('recipientBirthPlace') ?? '').toString().trim();
+    // Runs before the identification branches so both errors surface in the same pass
+    const recipientEmail = email.validate(formData);
 
     if (!ine && !birthCountry) {
       setIdentificationError(IDENTIFICATION_ERROR);
@@ -54,7 +59,12 @@ const CrousForm = () => {
       return;
     }
 
+    if (!recipientEmail) {
+      return;
+    }
+
     await submit({
+      recipientEmail,
       recipientIneNumber: ine || undefined,
       // LCA reads the commune for someone born in France, and the country for everyone else
       recipientBirthCountry:
@@ -122,6 +132,13 @@ const CrousForm = () => {
           isCountryRequired={false}
           countryLabel="Pays de naissance"
           birthPlaceLabel="Commune de naissance"
+        />
+
+        <RecipientEmailInput
+          inputState={email.inputState}
+          isDisabled={isFormDisabled}
+          onChange={email.onChange}
+          onBlur={email.onBlur}
         />
 
         <FormButton isDisabled={isFormDisabled} />

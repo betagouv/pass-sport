@@ -4,6 +4,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createHistoryRecorder, type HistoryRecorder } from "../db/history";
 import * as schema from "../db/schema";
 import { audit, eligibilityResults, type Verdict } from "../db/schema";
+import type { SendEmailResult } from "../email/link-mobility";
 import { type DigestEntry, type DigestRecipientIdentity, sendBeneficiaryDigestEmail } from "../email/notify";
 import { logPii } from "../log";
 
@@ -42,40 +43,36 @@ export const verdictFor = (hasCode: boolean, isEligible: boolean): Verdict =>
 export const emailKindFor = (hasCode: boolean, isEligible: boolean): EmailKind =>
   hasCode ? "code" : isEligible ? "eligible_soon" : "not_eligible";
 
-// One recapitulative email per job, then a single UPDATE flipping email_sent on the rows
-// it covered. Rows with no emailKind (an LCA error, or a beneficiary nobody claimed an
-// aide for) are excluded — nothing was mailed for them.
+// One email per job, then a single UPDATE flipping email_sent on the rows it covered. Rows
+// with no emailKind (an LCA error, or a beneficiary nobody claimed an aide for) are excluded
+// — nothing was mailed for them.
 //
 // A failure here is recorded and swallowed: the verdicts are already persisted, and
 // failing the job would re-run every external call just to re-send one email.
-export async function sendJobDigest(params: {
+export async function recordEmailDelivery(params: {
   job: Job<unknown>;
   database: Database;
   history: HistoryRecorder;
   recipient: string | undefined;
-  entries: DigestEntry[];
-  allocataire: DigestRecipientIdentity;
+  bodyPayload: Record<string, unknown>;
+  send: () => Promise<SendEmailResult | null>;
 }): Promise<boolean> {
-  const { job, database, history, recipient, entries, allocataire } = params;
-
-  if (entries.length === 0) return false;
-
-  // The digest carries names and codes; kept whole, like every other payload here.
-  const payload = { to: recipient ?? null, beneficiaries: entries.length, entries };
+  const { job, database, history, recipient, bodyPayload, send } = params;
 
   try {
-    const result = await sendBeneficiaryDigestEmail(recipient, entries, allocataire);
+    const result = await send();
 
     if (!result?.sent) {
       console.warn(
-        `[pass-sport-worker] job ${job.id}: recap email NOT sent, recipient=${recipient ? "present" : "missing"}`,
+        `[pass-sport-worker] job ${job.id}: email NOT sent, recipient=${recipient ? "present" : "missing"}`,
       );
       await history.record({
         actor: "worker",
         action: "email.digest",
         status: "error",
         error: recipient ? "sender reported not sent" : "no recipient",
-        payload,
+        bodyPayload,
+        responsePayload: result ?? null,
       });
       return false;
     }
@@ -87,16 +84,15 @@ export async function sendJobDigest(params: {
         .where(and(eq(eligibilityResults.jobId, job.id), isNotNull(eligibilityResults.emailKind)));
     }
 
-    console.log(
-      `[pass-sport-worker] job ${job.id}: sent recap email covering ${entries.length} beneficiaries`,
-    );
-    logPii(`job ${job.id}: sent recap email to ${recipient ?? "<no recipient>"}`);
+    console.log(`[pass-sport-worker] job ${job.id}: sent email`);
+    logPii(`job ${job.id}: sent email to ${recipient ?? "<no recipient>"}`);
 
     await history.record({
       actor: "worker",
       action: "email.digest",
       status: "success",
-      payload,
+      bodyPayload,
+      responsePayload: result,
     });
 
     return true;
@@ -107,8 +103,32 @@ export async function sendJobDigest(params: {
       action: "email.digest",
       status: "error",
       error: (e as Error).message,
-      payload,
+      bodyPayload,
     });
     return false;
   }
+}
+
+// The FranceConnect recap: one email per allocataire covering every beneficiary of the job.
+export function sendJobDigest(params: {
+  job: Job<unknown>;
+  database: Database;
+  history: HistoryRecorder;
+  recipient: string | undefined;
+  entries: DigestEntry[];
+  allocataire: DigestRecipientIdentity;
+}): Promise<boolean> {
+  const { job, database, history, recipient, entries, allocataire } = params;
+
+  if (entries.length === 0) return Promise.resolve(false);
+
+  return recordEmailDelivery({
+    job,
+    database,
+    history,
+    recipient,
+    // The digest carries names and codes; kept whole, like every other payload here.
+    bodyPayload: { to: recipient ?? null, beneficiaries: entries.length, entries },
+    send: () => sendBeneficiaryDigestEmail(recipient, entries, allocataire),
+  });
 }

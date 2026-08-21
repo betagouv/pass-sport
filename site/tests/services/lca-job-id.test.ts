@@ -13,6 +13,7 @@ const job = (overrides: Partial<LcaJobData> = {}): LcaJobData => ({
   residenceInsee: '05024',
   lcaStatus: 'confirmed',
   passSportCode: '24-IIII-IIII',
+  contactEmail: 'allocataire@example.test',
   email: 'allocataire@example.test',
   history: [],
   ...overrides,
@@ -47,6 +48,10 @@ describe('lcaJobId', () => {
 
   it('separates the routes, so a refusal on one does not lock the others', () => {
     expect(lcaJobId(job({ aide: 'AEEH' }))).not.toEqual(lcaJobId(job()));
+  });
+
+  it('separates a corrected address, so a mistyped one can be resubmitted', () => {
+    expect(lcaJobId(job({ contactEmail: 'typo@example.test' }))).not.toEqual(lcaJobId(job()));
   });
 
   it('is not reversible into an identity', () => {

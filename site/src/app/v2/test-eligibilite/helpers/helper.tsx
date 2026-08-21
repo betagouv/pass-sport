@@ -12,6 +12,7 @@ export const mapper: Record<EligibilityFieldName, ReactNode> = {
   recipientBirthCountry: 'Le pays de naissance est requis',
   recipientIneNumber: 'Le numéro de matricule INE est requis',
   recipientCafNumber: <>Le matricule CAF est requis</>,
+  recipientEmail: 'Une adresse e-mail valide est requise',
 };
 
 export const convertDate = (date: string): string | null => {

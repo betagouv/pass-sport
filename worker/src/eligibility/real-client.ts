@@ -5,7 +5,7 @@ import {
   type Response as ApiResponse,
 } from "@api-gouv-dinum/api-particulier";
 import type { ApiParticulierClient } from "./client";
-import { CNOUS_IDENTITE_PATH, RESOURCE_META, toAahParams, toCnousParams, toDssParams } from "./client";
+import { CNOUS_IDENTITE_PATH, RESOURCE_META, toCnousParams, toDssParams } from "./client";
 import type { ApiParticulierData, PivotIdentity, ResourceResult } from "./types";
 
 export class RealClient implements ApiParticulierClient {
@@ -86,7 +86,7 @@ export class RealClient implements ApiParticulierClient {
 
   aah(identity: PivotIdentity): Promise<ResourceResult> {
     return this.call(RESOURCE_META.aah, () =>
-      this.client.dss.allocation_adulte_handicape_identite(toAahParams(identity)),
+      this.client.dss.allocation_adulte_handicape_identite(toDssParams(identity)),
     );
   }
 

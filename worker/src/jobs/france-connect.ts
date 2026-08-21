@@ -7,7 +7,7 @@ import { listBeneficiaryCandidates } from "../lca/candidates";
 import { processCandidateThroughLca } from "../lca/process";
 import type { DigestEntry } from "../email/notify";
 import { emailKindFor, sendJobDigest, startJob, verdictFor, type Database, type EmailKind } from "./shared";
-import { eligibilityResults, type Verdict } from "../db/schema";
+import { eligibilityResults, type AllocataireIdentite, type Verdict } from "../db/schema";
 import { logPii } from "../log";
 
 export type FranceConnectDeps = {
@@ -181,8 +181,11 @@ export async function processEligibilityJob(
   }));
 
   // The `sub` is not part of the identité pivot and has its own indexed column, so
-  // keep it out of the jsonb rather than storing it twice.
-  const { sub: _sub, ...allocataireIdentite } = identity;
+  // keep it out of the jsonb rather than storing it twice. The commune de résidence goes the
+  // other way: FranceConnect never serves it, the usager declared it, and the jsonb is meant
+  // to read as the allocataire as declared.
+  const { sub: _sub, ...pivot } = identity;
+  const allocataireIdentite: AllocataireIdentite = { ...pivot, residence_insee: residenceInsee };
 
   if (pending.length === 0) {
     // No candidate at all — a QF/AEEH demande whose QF answer carried no exploitable
@@ -198,7 +201,7 @@ export async function processEligibilityJob(
       actor: "worker",
       action: "results.skipped",
       status: "skipped",
-      payload: { rows: 0, reason: "no_beneficiary" },
+      responsePayload: { rows: 0, reason: "no_beneficiary" },
     });
   } else {
     console.log(
@@ -242,7 +245,7 @@ export async function processEligibilityJob(
       actor: "worker",
       action: "results.persisted",
       status: "success",
-      payload: { rows: pending.length, reason: "batch" },
+      responsePayload: { rows: pending.length, reason: "batch" },
     });
   }
 

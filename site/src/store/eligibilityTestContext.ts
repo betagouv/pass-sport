@@ -1,5 +1,5 @@
 import React, { Dispatch, SetStateAction } from 'react';
-import { StepOneFields, VerdictResponseBody } from '@/types/EligibilityTest';
+import { StepOneFields } from '@/types/EligibilityTest';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { CAISSE } from '@/utils/eligibility-test';
 
@@ -10,11 +10,11 @@ type EligibilityTestContextProps = {
   // Answered in step 1 and held here until step 2 submits: the two are sent to LCA together.
   stepOneFields: StepOneFields | null;
   setStepOneFields: Dispatch<SetStateAction<StepOneFields | null>>;
-  verdict: VerdictResponseBody | null;
-  setVerdict: Dispatch<SetStateAction<VerdictResponseBody | null>>;
+  // The address step two was submitted with, held only to name the mailbox on screen. Set
+  // once the request went through, whatever LCA concluded — that is all the browser knows.
+  submittedEmail: string | null;
+  setSubmittedEmail: Dispatch<SetStateAction<string | null>>;
   dob?: string;
-  benefIsEligible: boolean;
-  setBenefIsEligible: Dispatch<SetStateAction<boolean>>;
   setAllowance: Dispatch<SetStateAction<ALLOWANCE | null>>;
   allowance: ALLOWANCE | null;
   caisse: CAISSE | null;
@@ -26,11 +26,9 @@ const EligibilityTestContext = React.createContext<EligibilityTestContextProps>(
   setPortalNode: () => {},
   stepOneFields: null,
   setStepOneFields: () => {},
-  verdict: null,
-  setVerdict: () => {},
+  submittedEmail: null,
+  setSubmittedEmail: () => {},
   dob: undefined,
-  benefIsEligible: false,
-  setBenefIsEligible: () => {},
   setAllowance: () => {},
   allowance: null,
   caisse: null,

@@ -16,7 +16,6 @@ import {
   type SituationType,
   type VerdictResponseBody,
 } from '@/types/EligibilityTest';
-import { generatePdfBuffer } from './generate-pdf-buffer';
 
 // CROUS students often have no address on file — retry the search with this default INSEE.
 const DEFAULT_INSEE_CODE = '75113';
@@ -28,6 +27,7 @@ const schema = z.object({
   beneficiaryFirstname: z.string().min(1),
   beneficiaryBirthDate: z.string().min(1),
   recipientResidencePlace: z.string().min(1),
+  recipientEmail: z.string().email(),
   recipientLastname: z.string().optional(),
   recipientFirstname: z.string().optional(),
   recipientCafNumber: z.string().optional(),
@@ -99,8 +99,11 @@ const matchesDeclaration = (
 /**
  * LCA /search then /confirm behind a single request. Splitting them, as the form used to,
  * turned the first step into an oracle: it answered "this person exists in our base" to
- * anyone who typed a name, a birthdate and a commune. Chained here, nothing is disclosed
- * until the allocataire's own identifiers check out.
+ * anyone who typed a name, a birthdate and a commune.
+ *
+ * Nothing is disclosed at all now. Every outcome answers the same 'sent', and the code, the
+ * identity LCA holds and the attestation only ever leave through the email the worker sends.
+ * Whoever fills the form learns exactly one thing: that it was processed.
  */
 export async function POST(request: Request): Promise<Response> {
   const history: LcaHistoryEvent[] = [];
@@ -113,7 +116,7 @@ export async function POST(request: Request): Promise<Response> {
     const organisme = declaredOrganisme(payload);
 
     if (!situation || !aide) {
-      return Response.json({ outcome: 'error', message: 'Unsupported allowance' }, { status: 400 });
+      return Response.json({ outcome: 'error' } satisfies VerdictResponseBody, { status: 400 });
     }
 
     const isBoursier = situation === LCA_SITUATION.BOURSIER;
@@ -147,6 +150,7 @@ export async function POST(request: Request): Promise<Response> {
         residenceInsee: payload.recipientResidencePlace,
         lcaStatus,
         passSportCode,
+        contactEmail: payload.recipientEmail,
         email,
         history,
         clientIp: getClientIp(request.headers),
@@ -159,6 +163,7 @@ export async function POST(request: Request): Promise<Response> {
     const recordSearch = (
       action: string,
       durationMs: number,
+      body: Record<string, unknown>,
       outcome: Awaited<ReturnType<typeof fetchEligible>>,
       extra?: Record<string, unknown>,
     ): void => {
@@ -169,7 +174,8 @@ export async function POST(request: Request): Promise<Response> {
         status: failed ? 'error' : outcome.length === 0 ? 'not_found' : 'success',
         durationMs,
         error: failed ? outcome.message : undefined,
-        payload: {
+        bodyPayload: body,
+        responsePayload: {
           results: failed ? null : outcome,
           result_count: failed ? null : outcome.length,
           ...extra,
@@ -179,32 +185,26 @@ export async function POST(request: Request): Promise<Response> {
 
     const searchTimer = startTimer();
     let search = await fetchEligible(searchPayload, { keepMatricule: true });
-    recordSearch('lca.search', searchTimer(), search, { is_from_crous: isBoursier });
+    recordSearch('lca.search', searchTimer(), searchPayload, search, {
+      is_from_crous: isBoursier,
+    });
 
     if (isLcaError(search)) {
       await enqueue('error', null, null);
-      return Response.json({
-        outcome: 'error',
-        message: search.message,
-      } satisfies VerdictResponseBody);
+      return Response.json({ outcome: 'error' } satisfies VerdictResponseBody);
     }
 
     if (search.length === 0 && isBoursier) {
+      const retryPayload = { ...searchPayload, recipientResidencePlace: DEFAULT_INSEE_CODE };
       const retryTimer = startTimer();
-      const retry = await fetchEligible(
-        { ...searchPayload, recipientResidencePlace: DEFAULT_INSEE_CODE },
-        { keepMatricule: true },
-      );
-      recordSearch('lca.search.crous_retry', retryTimer(), retry, {
+      const retry = await fetchEligible(retryPayload, { keepMatricule: true });
+      recordSearch('lca.search.crous_retry', retryTimer(), retryPayload, retry, {
         insee_fallback: DEFAULT_INSEE_CODE,
       });
 
       if (isLcaError(retry)) {
         await enqueue('error', null, null);
-        return Response.json({
-          outcome: 'error',
-          message: retry.message,
-        } satisfies VerdictResponseBody);
+        return Response.json({ outcome: 'error' } satisfies VerdictResponseBody);
       }
 
       search = retry;
@@ -213,20 +213,19 @@ export async function POST(request: Request): Promise<Response> {
     const item = search.find((candidate) => matchesDeclaration(candidate, situation, organisme));
 
     if (!item) {
-      // Deliberately the same answer as "found but the identifiers do not check out": telling
-      // the two apart is exactly the oracle this route exists to close.
       history.push({
         action: search.length === 0 ? 'lca.search.not_found' : 'lca.search.declaration_mismatch',
         status: 'not_found',
         durationMs: 0,
-        payload: {
+        bodyPayload: searchPayload,
+        responsePayload: {
           declared: { situation, organisme },
           answered: search.map((c) => ({ situation: c.situation, organisme: c.organisme })),
         },
       });
       await handleSupportCookie(searchPayload, 'search');
       await enqueue('not_found', null, null);
-      return Response.json({ outcome: 'not_found' } satisfies VerdictResponseBody);
+      return Response.json({ outcome: 'sent' } satisfies VerdictResponseBody);
     }
 
     const confirmPayload = {
@@ -245,6 +244,7 @@ export async function POST(request: Request): Promise<Response> {
     const recordConfirm = (
       action: string,
       durationMs: number,
+      body: Record<string, unknown>,
       outcome: Awaited<ReturnType<typeof fetchCode>>,
       extra?: Record<string, unknown>,
     ): void => {
@@ -255,7 +255,8 @@ export async function POST(request: Request): Promise<Response> {
         status: failed ? 'error' : outcome.length === 0 ? 'not_found' : 'success',
         durationMs,
         error: failed ? outcome.message : undefined,
-        payload: {
+        bodyPayload: body,
+        responsePayload: {
           item: failed || outcome.length === 0 ? null : withoutPdf(outcome[0]),
           item_count: failed ? null : outcome.length,
           ...extra,
@@ -265,29 +266,24 @@ export async function POST(request: Request): Promise<Response> {
 
     const confirmTimer = startTimer();
     let confirm = await fetchCode(confirmPayload);
-    recordConfirm('lca.confirm', confirmTimer(), confirm);
+    recordConfirm('lca.confirm', confirmTimer(), confirmPayload, confirm);
 
     if (isLcaError(confirm)) {
       await enqueue('error', null, null);
-      return Response.json({
-        outcome: 'error',
-        message: confirm.message,
-      } satisfies VerdictResponseBody);
+      return Response.json({ outcome: 'error' } satisfies VerdictResponseBody);
     }
 
     if (confirm.length === 0 && isBoursier && payload.recipientIneNumber) {
+      const retryPayload = { ...confirmPayload, recipientBirthPlace: DEFAULT_INSEE_CODE };
       const retryTimer = startTimer();
-      const retry = await fetchCode({ ...confirmPayload, recipientBirthPlace: DEFAULT_INSEE_CODE });
-      recordConfirm('lca.confirm.boursier_retry', retryTimer(), retry, {
+      const retry = await fetchCode(retryPayload);
+      recordConfirm('lca.confirm.boursier_retry', retryTimer(), retryPayload, retry, {
         insee_fallback: DEFAULT_INSEE_CODE,
       });
 
       if (isLcaError(retry)) {
         await enqueue('error', null, null);
-        return Response.json({
-          outcome: 'error',
-          message: retry.message,
-        } satisfies VerdictResponseBody);
+        return Response.json({ outcome: 'error' } satisfies VerdictResponseBody);
       }
 
       confirm = retry;
@@ -298,38 +294,15 @@ export async function POST(request: Request): Promise<Response> {
     if (!confirmed?.id_psp) {
       await handleSupportCookie(confirmPayload, 'confirm');
       await enqueue('not_found', null, null);
-      return Response.json({ outcome: 'not_found' } satisfies VerdictResponseBody);
+      return Response.json({ outcome: 'sent' } satisfies VerdictResponseBody);
     }
-
-    const pdfBase64 = await generatePdfBuffer({
-      lastname: confirmed.nom,
-      firstname: confirmed.prenom,
-      dob: confirmed.date_naissance,
-      gender: confirmed.genre,
-      code: confirmed.id_psp,
-    })
-      .then((buffer) => buffer.toString('base64'))
-      .catch((e: unknown) => {
-        // The code alone is enough to present at a club; the attestation is a convenience.
-        Sentry.captureException(e, { tags: { component: 'pdf', app: 'site' } });
-        return null;
-      });
 
     await enqueue('confirmed', confirmed.id_psp, confirmed.allocataire?.courriel ?? null);
 
-    return Response.json({
-      outcome: 'code',
-      code: confirmed.id_psp,
-      beneficiaryLastname: confirmed.nom,
-      beneficiaryFirstname: confirmed.prenom,
-      pdfBase64,
-    } satisfies VerdictResponseBody);
+    return Response.json({ outcome: 'sent' } satisfies VerdictResponseBody);
   } catch (e) {
     if (e instanceof ZodError) {
-      return Response.json(
-        { outcome: 'error', message: 'Some fields are missing' },
-        { status: 400 },
-      );
+      return Response.json({ outcome: 'error' } satisfies VerdictResponseBody, { status: 400 });
     }
 
     Sentry.withScope((scope) => {
@@ -340,6 +313,6 @@ export async function POST(request: Request): Promise<Response> {
       scope.captureException(e);
     });
 
-    return Response.json({ outcome: 'error', message: 'Internal error' }, { status: 500 });
+    return Response.json({ outcome: 'error' } satisfies VerdictResponseBody, { status: 500 });
   }
 }

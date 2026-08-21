@@ -33,6 +33,7 @@ type LcaEvent = {
   subject: "self" | "enfant";
   durationMs: number;
   httpStatus: number;
+  bodyPayload: Record<string, unknown>;
   extra?: Record<string, unknown>;
 };
 
@@ -52,7 +53,8 @@ export const recordLcaSearch = async (
     durationMs: event.durationMs,
     httpStatus: event.httpStatus,
     error: failed ? outcome.message : undefined,
-    payload: {
+    bodyPayload: event.bodyPayload,
+    responsePayload: {
       results: failed ? null : outcome,
       result_count: failed ? null : outcome.length,
       ...event.extra,
@@ -76,9 +78,10 @@ export const recordLcaConfirm = async (
     durationMs: event.durationMs,
     httpStatus: event.httpStatus,
     error: failed ? outcome.message : undefined,
-    payload: {
+    bodyPayload: event.bodyPayload,
+    responsePayload: {
       // A confirm answers about exactly one beneficiary, so the item is stored as an
-      // object rather than an array — `payload->'item'->>'id_psp'` stays queryable.
+      // object rather than an array — `response_payload->'item'->>'id_psp'` stays queryable.
       item: failed || outcome.length === 0 ? null : withoutPdf(outcome[0]),
       item_count: failed ? null : outcome.length,
       ...event.extra,

@@ -127,7 +127,7 @@ select count(*) from eligibility_results where verdict = 'eligible_pending';
 
 - **la situation** — `eligibility_results` ne retient que `source` (self/enfant) et un
   booléen d'éligibilité, jamais quelle aide a ouvert le droit. Elle se redéduit des réponses
-  brutes d'API Particulier, conservées dans `eligibility_history.payload`, en rejouant les
+  brutes d'API Particulier, conservées dans `eligibility_history.response_payload`, en rejouant les
   règles de [candidates.ts](../../../../worker/src/lca/candidates.ts) ;
 - **le genre des enfants** — `enfant_identite` ne porte que nom, prénom et date de naissance ;
   le sexe est retrouvé par appariement dans le tableau `enfants` de la réponse quotient

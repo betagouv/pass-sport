@@ -21,7 +21,8 @@ const GENERIC_ERROR = 'Une erreur a eu lieu. Merci de réessayer plus tard';
  * the identifiers its caisse asks for; what happens to them afterwards is identical.
  */
 export const useStepTwoSubmit = () => {
-  const { allowance, caisse, dob, stepOneFields, setVerdict } = useContext(EligibilityTestContext);
+  const { allowance, caisse, dob, stepOneFields, setSubmittedEmail } =
+    useContext(EligibilityTestContext);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,15 +57,10 @@ export const useStepTwoSubmit = () => {
       return;
     }
 
-    setVerdict(verdict);
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Eligibility test completed',
-      verdict.outcome === 'code'
-        ? 'Eligibility test successful'
-        : 'Eligibility test unsuccessful - final step',
-    ]);
+    setSubmittedEmail(recipientFields.recipientEmail);
+    // No success/failure split any more: the answer is the same whatever LCA held, and only
+    // the worker knows which email went out (eligibility_results.verdict).
+    push(['trackEvent', 'Eligibility Test', 'Eligibility test completed', 'Outcome emailed']);
   };
 
   return { isFormDisabled, error, submit };

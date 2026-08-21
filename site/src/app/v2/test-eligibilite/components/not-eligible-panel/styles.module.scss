@@ -1,0 +1,30 @@
+@use '../../../../variables';
+
+.section-cta,
+.section-failure {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 792px;
+
+  @media (max-width: variables.$md) {
+    padding: 0 36px;
+  }
+}
+
+.section-failure {
+  margin: 0 auto;
+}
+
+.section-cta {
+  margin: 24px auto 0 auto;
+  gap: 24px;
+}
+
+.section-je-donne-mon-avis {
+  max-width: 792px;
+  margin: 0 auto;
+  text-align: right;
+  padding-top: 24px;
+  padding-bottom: 24px;
+}

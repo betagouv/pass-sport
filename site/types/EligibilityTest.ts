@@ -20,6 +20,7 @@ export interface EligibilityFormInputsState {
   recipientBirthDate: InputState;
   recipientBirthCountry: InputState;
   recipientBirthPlace: InputState;
+  recipientEmail: InputState;
 }
 
 export type EligibilityFieldName = keyof EligibilityFormInputsState;
@@ -168,6 +169,9 @@ export interface EligibilityTestRequest {
   beneficiaryFirstname: string;
   beneficiaryBirthDate: string;
   recipientResidencePlace: string;
+  // Collected at the very end of step two. Never sent to LCA: the only consumer is the
+  // worker, which mails the outcome there.
+  recipientEmail: string;
   recipientLastname?: string;
   recipientFirstname?: string;
   recipientCafNumber?: string;
@@ -178,17 +182,14 @@ export interface EligibilityTestRequest {
 }
 
 /**
- * What the browser gets back from the single round-trip. LCA answers /confirm with the
- * allocataire's courriel, matricule and postal address; none of it crosses back — the only
- * consumer is the worker, which is handed the code and the address out of band.
+ * What the browser gets back from the single round-trip: whether the request was processed,
+ * and nothing else.
+ *
+ * 'sent' covers a confirmed beneficiary and an unknown one alike. Telling them apart was the
+ * last piece of the enumeration oracle: anyone could type a name, a birthdate and a commune
+ * and read the answer off the network tab. The outcome, the code and the attestation now only
+ * ever reach the mailbox the usager declared.
+ *
+ * 'error' means nothing was concluded and nothing was mailed — the usager is asked to retry.
  */
-export type VerdictResponseBody =
-  | {
-      outcome: 'code';
-      code: string;
-      beneficiaryLastname: string;
-      beneficiaryFirstname: string;
-      pdfBase64: string | null;
-    }
-  | { outcome: 'not_found' }
-  | { outcome: 'error'; message: string };
+export type VerdictResponseBody = { outcome: 'sent' } | { outcome: 'error' };

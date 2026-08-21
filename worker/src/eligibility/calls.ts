@@ -19,7 +19,11 @@ export const resultStatus = (r: ResourceResult): HistoryStatus => {
   return "error";
 };
 
-export const resourceEvent = (r: ResourceResult, durationMs: number): HistoryEvent => ({
+export const resourceEvent = (
+  r: ResourceResult,
+  durationMs: number,
+  params?: Record<string, unknown>,
+): HistoryEvent => ({
   actor: "api_particulier",
   action: r.resource,
   status: resultStatus(r),
@@ -27,7 +31,8 @@ export const resourceEvent = (r: ResourceResult, durationMs: number): HistoryEve
   httpStatus: r.httpStatus,
   durationMs,
   error: r.error,
-  payload: {
+  bodyPayload: params ?? null,
+  responsePayload: {
     data: r.data,
     rate_limit_remaining: r.rateLimitRemaining ?? null,
     rate_limit_reset_ms: r.rateLimitResetMs ?? null,
@@ -92,10 +97,11 @@ export type ResourceCall = {
   resource: string;
   subject?: "self" | "enfant";
   logSuffix?: string;
-  // Query params as they go on the wire. An identité pivot, so it only ever reaches the
-  // logs behind LOG_PII — and only from here, where the call is actually made rather than
-  // replayed from the checkpoint.
-  params?: unknown;
+  // Query params as they go on the wire. An identité pivot: the logs only carry it behind
+  // LOG_PII, eligibility_history.body_payload keeps it like every other raw payload there.
+  // Set only from here, where the call is actually made rather than replayed from the
+  // checkpoint.
+  params?: Record<string, unknown>;
   invoke: () => Promise<ResourceResult>;
   commit?: (r: ResourceResult) => Promise<void>;
 };
@@ -114,7 +120,10 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
 
   // Before handleRateLimit: it throws Worker.RateLimitError(), which would carry off
   // the 429 event — the one most worth having.
-  await history.record({ ...resourceEvent(r, elapsed()), ...(subject ? { subject } : {}) });
+  await history.record({
+    ...resourceEvent(r, elapsed(), params),
+    ...(subject ? { subject } : {}),
+  });
 
   if (r.rateLimited) await handleRateLimit(jobId, queue, r);
 

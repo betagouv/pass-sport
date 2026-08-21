@@ -10,6 +10,8 @@ import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
 import { formDefaultsFor } from '../../helpers/test-defaults';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
+import { useRecipientEmail } from '../../hooks/use-recipient-email';
+import RecipientEmailInput from './common-inputs/RecipientEmailInput';
 
 const initialInputsState: YoungMsaInputsState = {
   recipientLastname: { state: 'default' },
@@ -24,6 +26,7 @@ const YoungMsaForm = () => {
   const { allowance, caisse } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<YoungMsaInputsState>(initialInputsState);
   const { isFormDisabled, error, submit } = useStepTwoSubmit();
+  const email = useRecipientEmail();
   const defaults = formDefaultsFor(allowance, caisse);
   const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(
     defaults?.recipientBirthCountry === FRANCE_ISO_CODE,
@@ -57,10 +60,11 @@ const YoungMsaForm = () => {
 
     const formData = new FormData(formRef.current!);
     const { isValid, states } = isFormValid(formData);
+    const recipientEmail = email.validate(formData);
 
     setInputStates(states);
 
-    if (!isValid) {
+    if (!isValid || !recipientEmail) {
       return;
     }
 
@@ -73,6 +77,7 @@ const YoungMsaForm = () => {
       // LCA reads the commune for someone born in France, and the country for everyone else
       recipientBirthCountry: birthCountry === FRANCE_ISO_CODE ? undefined : birthCountry,
       recipientBirthPlace: (formData.get('recipientBirthPlace') ?? '').toString() || undefined,
+      recipientEmail,
     });
   };
 
@@ -178,6 +183,13 @@ const YoungMsaForm = () => {
           shouldAutoFocus={false}
           defaultBirthCountry={defaults?.recipientBirthCountry}
           defaultBirthPlace={defaults?.recipientBirthPlace}
+        />
+
+        <RecipientEmailInput
+          inputState={email.inputState}
+          isDisabled={isFormDisabled}
+          onChange={email.onChange}
+          onBlur={email.onBlur}
         />
 
         <FormButton isDisabled={isFormDisabled} />
