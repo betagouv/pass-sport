@@ -68,6 +68,13 @@
     # avec `--extra-vars pass_sport_fc_cron_enabled=true` une fois les prérequis validés
     # (empreinte SSH amorcée, essai à blanc réussi).
     pass_sport_fc_cron_enabled: false
+    # Chemin, sous le home de passsport, vers la clé privée que `db-tunnel` doit utiliser —
+    # `run_fc_pipeline.sh` retombe sinon sur l'agent SSH puis sur ~/.ssh/id_rsa, qui n'a
+    # aucune raison d'exister sous ce compte. Vide par défaut : le playbook ne génère ni ne
+    # copie la clé — c'est un geste manuel, au même titre que l'amorçage de l'empreinte SSH
+    # (voir deploy/ansible/README.md). Renseigner via
+    # `--extra-vars scalingo_ssh_identity=/home/passsport/.ssh/<clé>`.
+    scalingo_ssh_identity: ""
 
   tasks:
     - name: Groupe d'exploitation et comptes

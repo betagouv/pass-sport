@@ -24,11 +24,17 @@
 #   FC_TUNNEL_PORT                port local du tunnel      (défaut 10000)
 #   FC_LOG_DIR                    journaux                  (défaut <ce dossier>/logs)
 #   FC_LOCK_FILE                  verrou anti-chevauchement (défaut /tmp/pass-sport-fc.lock)
+#   SCALINGO_SSH_IDENTITY         clé privée SSH pour db-tunnel (optionnel, voir plus bas)
 #
 # Les chemins relatifs de data/.env sont résolus depuis data/, comme pour les notebooks.
 #
 # Prérequis sur la machine : `psql`, `scalingo` authentifié (SCALINGO_API_TOKEN) avec une clé
-# SSH sans phrase de passe — db-tunnel monte une connexion SSH — et le virtualenv data/.venv.
+# SSH sans phrase de passe, et le virtualenv data/.venv.
+#
+# db-tunnel monte sa propre connexion SSH, indépendante de l'authentification `scalingo` :
+# `scalingo login --ssh-identity` ne configure que la poignée de main de login, pas db-tunnel.
+# Sans SCALINGO_SSH_IDENTITY, db-tunnel retombe sur l'agent SSH puis sur ~/.ssh/id_rsa — à
+# renseigner si la clé à utiliser porte un autre nom.
 
 set -euo pipefail
 # Le CSV déposé porte des identités et des courriels : il ne doit jamais naître lisible par
@@ -53,7 +59,7 @@ resolve_path() {
 # --- Environnement -----------------------------------------------------------------
 
 CONFIG_VARS=(
-  SCALINGO_APP SCALINGO_API_TOKEN
+  SCALINGO_APP SCALINGO_API_TOKEN SCALINGO_SSH_IDENTITY
   FC_EXPORT_PATHFILE_2026 DB_FC_EXPORT_2026 EXISTING_CODES_PATHFILE_2026
   FC_PROD_DROP_DIR FC_TUNNEL_PORT FC_LOG_DIR FC_LOCK_FILE
 )
@@ -140,8 +146,13 @@ cleanup() {
 trap cleanup EXIT
 
 log "ouverture du tunnel vers $SCALINGO_APP, port local $FC_TUNNEL_PORT"
-scalingo --app "$SCALINGO_APP" db-tunnel -p "$FC_TUNNEL_PORT" SCALINGO_POSTGRESQL_URL \
-  >>"$LOG_FILE" 2>&1 &
+# db-tunnel monte sa propre connexion SSH, indépendante de `scalingo login` : sans -i, elle
+# retombe sur l'agent SSH puis sur ~/.ssh/id_rsa, qui peut ne pas exister sur cette machine.
+tunnel_args=(--app "$SCALINGO_APP" db-tunnel -p "$FC_TUNNEL_PORT")
+[[ -n "${SCALINGO_SSH_IDENTITY:-}" ]] && tunnel_args+=(-i "$SCALINGO_SSH_IDENTITY")
+tunnel_args+=(SCALINGO_POSTGRESQL_URL)
+
+scalingo "${tunnel_args[@]}" >>"$LOG_FILE" 2>&1 &
 TUNNEL_PID=$!
 
 for _ in $(seq 1 30); do

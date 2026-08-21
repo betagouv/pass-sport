@@ -76,8 +76,14 @@ l'étape 3** — les codes sont déjà fabriqués et comptabilisés dans
 `EXISTING_CODES_PATHFILE_2026`, y compris lorsque le passage a échoué après les avoir tirés.
 
 La machine doit porter : `psql`, un `scalingo` authentifié sans interaction
-(`SCALINGO_API_TOKEN`) avec une clé SSH sans phrase de passe — `db-tunnel` monte une
-connexion SSH — et le virtualenv `data/.venv`.
+(`SCALINGO_API_TOKEN`) avec une clé SSH sans phrase de passe, et le virtualenv `data/.venv`.
+
+`db-tunnel` monte sa propre connexion SSH, indépendante de l'authentification `scalingo` :
+`scalingo login --ssh-identity` ne configure que la poignée de main de login, pas `db-tunnel`.
+Sans indication, `db-tunnel` retombe sur l'agent SSH puis sur `~/.ssh/id_rsa`. Si la clé à
+utiliser porte un autre nom, soit passer `-i`/`--identity` à la main (voir ci-dessous), soit
+renseigner `SCALINGO_SSH_IDENTITY` dans `data/.env` ou `/etc/default/pass-sport-fc` pour que
+`run_fc_pipeline.sh` la reprenne automatiquement.
 
 ## Étape 1 — extraction
 
@@ -85,6 +91,8 @@ Ouvrir le tunnel Scalingo dans un terminal dédié, et le laisser tourner :
 
 ```bash
 scalingo --app "$SCALINGO_APP" db-tunnel SCALINGO_POSTGRESQL_URL
+# Si la clé n'est ni dans l'agent SSH ni ~/.ssh/id_rsa, ajouter -i ~/.ssh/<la-clé> :
+# scalingo --app "$SCALINGO_APP" db-tunnel -i ~/.ssh/<la-clé> SCALINGO_POSTGRESQL_URL
 # -> Tunnel ouvert, port local 10000
 ```
 

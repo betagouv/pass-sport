@@ -194,6 +194,11 @@ scalingo_app: <application hébergeant la base>
 scalingo_api_token: <jeton>
 ```
 
+Si `db-tunnel` ne trouve pas la clé attendue via l'agent SSH ou `~/.ssh/id_rsa` sous le compte
+`passsport` (voir ci-dessous), lui indiquer le chemin de la clé avec
+`scalingo_ssh_identity: /home/passsport/.ssh/<clé>` dans ce même fichier — vide par défaut,
+la ligne `SCALINGO_SSH_IDENTITY` n'est alors pas posée dans `/etc/default/pass-sport-fc`.
+
 Trois choses ne vont dans aucun dépôt, public ou privé — un dépôt privé n'étant pas un
 gestionnaire de secrets, il ne ferait que déplacer le problème :
 
@@ -204,9 +209,17 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
 
 ## Ce que le playbook ne fait pas
 
+- **La clé SSH que `db-tunnel` utilise.** Ni générée ni copiée par le playbook : la déposer à
+  la main sous le home de `passsport` (`sudo -u passsport -H bash` ou équivalent), en `600`,
+  appartenant à `passsport` seul — *pas* `0640` partagé avec le groupe d'exploitation comme
+  `/etc/default/pass-sport-fc` : OpenSSH refuse une clé privée lisible par le groupe
+  (« UNPROTECTED PRIVATE KEY FILE »). Sa clé publique doit être enregistrée sur le compte
+  Scalingo qui a accès à `$SCALINGO_APP`. Si son nom n'est pas `id_rsa`, indiquer son chemin
+  via `scalingo_ssh_identity` (voir « Secrets » ci-dessus).
 - **L'empreinte SSH de Scalingo.** `db-tunnel` monte une connexion SSH vers
   `ssh.osc-fr1.scalingo.com` ; sur un `known_hosts` vide il attend une réponse que la cron ne
-  donnera jamais. À amorcer une fois, à la main, sous le compte qui portera la cron :
+  donnera jamais. À amorcer une fois, à la main, **sous le compte `passsport` lui-même** — pas
+  sous un compte opérateur, dont le `known_hosts` est distinct :
   `scalingo --app "$SCALINGO_APP" db-tunnel SCALINGO_POSTGRESQL_URL` (interactif, `Ctrl+C`
   pour l'arrêter une fois l'empreinte acceptée).
 - **`data/.env` et `worker/.env.local`** — chemins de campagne et jeton API Particulier. Ils
@@ -262,3 +275,6 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
 11. **git à deux** — sous `<compte1>` puis `<compte2>` : `cd /srv/pass-sport && git status` ne
     doit pas dire « detected dubious ownership », et
     `git config --get core.sharedRepository` doit rendre `0660`.
+
+List fc cron tab
+sudo crontab -l -u passsport 
