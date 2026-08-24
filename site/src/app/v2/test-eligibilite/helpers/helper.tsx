@@ -1,23 +1,13 @@
 import { ReactNode } from 'react';
-import {
-  CrousInputsState,
-  StepOneFormInputsState,
-  YoungCafInputsState,
-  YoungMsaInputsState,
-} from 'types/EligibilityTest';
+import { EligibilityFieldName } from 'types/EligibilityTest';
 
-export const mapper: Record<
-  | keyof StepOneFormInputsState
-  | keyof YoungCafInputsState
-  | keyof YoungMsaInputsState
-  | keyof CrousInputsState,
-  ReactNode
-> = {
+export const mapper: Record<EligibilityFieldName, ReactNode> = {
   beneficiaryLastname: 'Le nom est requis',
   beneficiaryFirstname: 'Le prénom est requis',
   recipientResidencePlace: 'La commune de résidence est requise',
   recipientLastname: 'Le nom est requis',
   recipientFirstname: 'Le prénom est requis',
+  recipientGenre: 'Le genre est requis',
   recipientBirthDate: 'La date de naissance est requise',
   recipientBirthPlace: 'La commune de naissance est requise',
   recipientBirthCountry: 'Le pays de naissance est requis',

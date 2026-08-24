@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { isPasSportClosed } from '@/utils/date';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 const ELIGIBILITY_PATH = '/v2/api/eligibility-test/';
 
@@ -69,10 +70,10 @@ export function proxy(request: NextRequest) {
 
   const disabledRoutes = [
     '/v2/budget',
-    '/v2/test-eligibilite-base',
-    '/v2/test-eligibilite',
-    '/v2/test-ou-code',
     '/v2/partenaires',
+    ...(CODES_OBTAINABLE
+      ? []
+      : ['/v2/test-eligibilite-base', '/v2/test-eligibilite', '/v2/test-ou-code']),
   ];
 
   if (disabledRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {

@@ -5,10 +5,10 @@ import PageTitle from '@/components/PageTitle/PageTitle';
 import Image from 'next/image';
 import breakdance from '@/images/eligibility-test/break-dance.webp';
 import cn from 'classnames';
-import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 import KnowMore from '@/app/components/know-more/KnowMore';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",
@@ -18,7 +18,7 @@ const EligibilityTest = () => {
   return (
     <main className={styles.main} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
       <PageTitle
-        title="Récupérer mon pass Sport"
+        title="Demander mon pass Sport"
         classes={{
           container: styles['page-header'],
         }}
@@ -34,18 +34,14 @@ const EligibilityTest = () => {
           />
           <div className={styles['top-section-tile__description']}>
             <p className="fr-text--xl fr-mb-1w">
-              Si vous êtes éligible, vous recevrez un courriel ou un SMS avec votre pass Sport :
-            </p>
-            <ul className="fr-text--xl fr-ml-2w">
-              <li>
-                26-28 août : pour les bénéficiaires de l&apos;ARS, de l&apos;AEEH et de l&apos;AAH ;
-              </li>
-              <li>Entre fin octobre et fin novembre : pour les étudiants boursiers.</li>
-            </ul>
-            <p className="fr-text--xl">
-              Exception pour les bénéficiaires de l’
-              <AEEH /> entre 6 et 13 ans : demandez votre pass Sport directement sur notre site à
-              partir du 1er septembre.
+              Si vous êtes éligible, vous recevrez un courrier électronique avec votre code pass
+              Sport, entre le xx et le xx septembre. <br />À partir du xx septembre 2026, les
+              personnes qui n’auront pas reçu leur code pourront le récupérer directement sur le
+              site{' '}
+              <Link href="https://pass.sports.gouv.fr" target="_blank">
+                https://pass.sports.gouv.fr
+              </Link>{' '}
+              , sous réserve de remplir les conditions d’éligibilité.
             </p>
           </div>
         </div>
@@ -56,9 +52,9 @@ const EligibilityTest = () => {
           <KnowMore
             variant="purple"
             knowMore={{
-              title: 'A savoir',
+              title: 'À savoir',
               description:
-                'Si vous avez plusieurs enfants, vous devez récupérer un pass pour chaque enfant.',
+                "Si vous avez plusieurs enfants, vous devez demander un code pass Sport pour chaque enfant, sous réserve d'éligibilité.",
             }}
           />
         </div>

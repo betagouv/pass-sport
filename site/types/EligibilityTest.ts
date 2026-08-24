@@ -4,41 +4,31 @@ import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 // Form step, search being the first step & confirm being the final step
 export type FormStep = 'search' | 'confirm';
 
-export interface StepOneFormInputsState {
+/**
+ * Every field the merged form can render, all scenarios confounded. Which ones are displayed
+ * depends on the allowance, and which ones are required is only known once /search has answered
+ * with the caisse.
+ */
+export interface EligibilityFormInputsState {
   beneficiaryLastname: InputState;
   beneficiaryFirstname: InputState;
-  // beneficiaryBirthDate: InputState;
   recipientResidencePlace: InputState;
-}
-
-export interface YoungCafInputsState {
+  recipientLastname: InputState;
+  recipientFirstname: InputState;
+  recipientGenre: InputState;
   recipientCafNumber: InputState;
-  recipientLastname: InputState;
-  recipientFirstname: InputState;
-}
-
-export interface CrousInputsState {
-  recipientIneNumber?: InputState;
-  recipientBirthCountry?: InputState;
-  recipientBirthPlace?: InputState;
-}
-
-export interface YoungMsaInputsState {
-  recipientLastname: InputState;
-  recipientFirstname: InputState;
+  recipientIneNumber: InputState;
   recipientBirthDate: InputState;
   recipientBirthCountry: InputState;
-  recipientBirthPlace?: InputState;
+  recipientBirthPlace: InputState;
 }
 
-export interface AahCafInputsState {
-  recipientCafNumber: InputState;
-}
+export type EligibilityFieldName = keyof EligibilityFormInputsState;
 
-export interface AahMsaInputsState {
-  recipientBirthCountry: InputState;
-  recipientBirthPlace?: InputState;
-}
+export type BirthInputsState = Pick<
+  EligibilityFormInputsState,
+  'recipientBirthCountry' | 'recipientBirthPlace'
+>;
 
 export type SituationType = 'jeune' | 'AAH' | 'boursier';
 export type OrganismType = 'MSA' | 'CAF' | 'cnous';

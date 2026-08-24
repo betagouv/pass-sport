@@ -154,8 +154,8 @@ const VerdictPanel = ({ isSuccess, isEligible }: Props) => {
                   <p>Le dispositif est ouvert :</p>
                   <ul className="fr-ml-2w">
                     <li>
-                      Aux jeunes de 14 à 17 ans bénéficiaires de l&apos;ARS (Allocation de Rentrée
-                      Scolaire) ;
+                      Aux jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le
+                      quotient familial est inférieur ou égal à 699 ;
                     </li>
                     <li>
                       Aux jeunes en situation de handicap :
