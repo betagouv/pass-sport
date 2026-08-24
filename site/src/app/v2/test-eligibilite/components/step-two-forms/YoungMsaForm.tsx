@@ -2,16 +2,16 @@ import Input from '@codegouvfr/react-dsfr/Input';
 import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
 import { YoungMsaInputsState } from '@/types/EligibilityTest';
 import { convertDate, mapper } from '../../helpers/helper';
-import FormButton from './FormButton';
 import ErrorAlert from '../error-alert/ErrorAlert';
-import CommonInputs from './common-inputs/CommonInputs';
 import { MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
 import { formDefaultsFor } from '../../helpers/test-defaults';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
-import RecipientEmailInput from './common-inputs/RecipientEmailInput';
+import CommonInputs from '@/app/v2/test-eligibilite/components/merged-eligibility-form/common-inputs/CommonInputs';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/merged-eligibility-form/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/merged-eligibility-form/FormButton';
 
 const initialInputsState: YoungMsaInputsState = {
   recipientLastname: { state: 'default' },

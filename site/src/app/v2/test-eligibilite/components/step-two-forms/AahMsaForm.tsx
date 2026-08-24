@@ -1,13 +1,13 @@
 import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import { AahMsaInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
-import FormButton from './FormButton';
 import ErrorAlert from '../error-alert/ErrorAlert';
-import CommonInputs from './common-inputs/CommonInputs';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
-import RecipientEmailInput from './common-inputs/RecipientEmailInput';
+import CommonInputs from '@/app/v2/test-eligibilite/components/merged-eligibility-form/common-inputs/CommonInputs';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/merged-eligibility-form/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/merged-eligibility-form/FormButton';
 
 const initialInputsState: AahMsaInputsState = {
   recipientBirthCountry: { state: 'default' },
