@@ -93,7 +93,7 @@ export class RealClient implements ApiParticulierClient {
   cnous(identity: PivotIdentity): Promise<ResourceResult> {
     // v5 is not in the SDK (caps at v4) — generic GET.
     return this.call(RESOURCE_META.cnous, () =>
-      this.client.get(CNOUS_IDENTITE_PATH, { params: toCnousParams(identity) }),
+      this.client.cnous.etudiant_boursier_identite(toCnousParams(identity)),
     );
   }
 

@@ -42,9 +42,11 @@ export const enfantToIdentity = (
   enfant: PersonneQuotientFamilial,
   parent: PivotIdentity,
 ): PivotIdentity | null => {
-  const familyName = enfant.nom_naissance || enfant.nom_usage;
+  const familyName = enfant.nom_naissance;
   const birthdate = toIsoBirthdate(enfant.date_naissance);
+
   if (!familyName || !enfant.prenoms || !birthdate) return null;
+
   return {
     family_name: familyName,
     preferred_username: enfant.nom_usage || undefined,

@@ -31,33 +31,31 @@ const splitBirthdate = (birthdate?: string) => {
 const splitPrenoms = (givenName?: string): string[] | undefined =>
   givenName ? givenName.split(" ").filter(Boolean) : undefined;
 
-// DSS "_identite" params (QF, AAH, AEEH): snake_case (SDK maps to camelCase). Queried on the
-// état civil alone — nom_usage narrows the match and costs answers.
-export const toDssParams = (identity: PivotIdentity) => ({
-  nomNaissance: identity.family_name,
-  prenoms: splitPrenoms(identity.given_name),
-  sexeEtatCivil: mapGender(identity.gender),
-  codeCogInseeCommuneNaissance: identity.birthplace || undefined,
-  codeCogInseePaysNaissance: identity.birthcountry || undefined,
-  ...splitBirthdate(identity.birthdate),
-});
+// DSS "_identite" params (QF, AAH, AEEH): the SDK takes snake_case options and maps them to
+// the camelCase query params itself — camelCase keys here are silently dropped on the wire.
+// Queried on the état civil alone — nom_usage narrows the match and costs answers.
+export const toDssParams = (identity: PivotIdentity) => {
+  return {
+    nom_naissance: identity.family_name,
+    prenoms: splitPrenoms(identity.given_name),
+    sexe_etat_civil: mapGender(identity.gender),
+    code_cog_insee_commune_naissance: identity.birthplace || undefined,
+    code_cog_insee_pays_naissance: identity.birthcountry || undefined,
+    ...splitBirthdate(identity.birthdate)
+  };
+};
 
 // CNOUS v5 is not in the SDK (caps at v4) — generic client.get() with camelCase
 // keys (no snake_case mapping). v5 adds the INE to the response (EtudiantBoursierData.ine).
 export const CNOUS_IDENTITE_PATH = "/v5/cnous/etudiant_boursier/identite";
 
 export const toCnousParams = (identity: PivotIdentity) => {
-  const { annee_date_naissance, mois_date_naissance, jour_date_naissance } = splitBirthdate(
-    identity.birthdate,
-  );
   return {
-    nomNaissance: identity.family_name,
+    nom_naissance: identity.family_name,
     prenoms: splitPrenoms(identity.given_name),
-    anneeDateNaissance: annee_date_naissance,
-    moisDateNaissance: mois_date_naissance,
-    jourDateNaissance: jour_date_naissance,
-    sexeEtatCivil: mapGender(identity.gender),
-    codeCogInseeCommuneNaissance: identity.birthplace || undefined,
+    sexe_etat_civil: mapGender(identity.gender),
+    code_cog_insee_commune_naissance: identity.birthplace || undefined,
+    ...splitBirthdate(identity.birthdate)
   };
 };
 
