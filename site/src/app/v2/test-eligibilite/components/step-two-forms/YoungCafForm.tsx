@@ -9,8 +9,8 @@ import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { formDefaultsFor } from '../../helpers/test-defaults';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
-import RecipientEmailInput from '@/app/v2/test-eligibilite/components/merged-eligibility-form/common-inputs/RecipientEmailInput';
-import FormButton from '@/app/v2/test-eligibilite/components/merged-eligibility-form/FormButton';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/FormButton';
 
 const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },

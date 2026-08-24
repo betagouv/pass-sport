@@ -9,9 +9,9 @@ import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
-import CommonInputs from '@/app/v2/test-eligibilite/components/merged-eligibility-form/common-inputs/CommonInputs';
-import RecipientEmailInput from '@/app/v2/test-eligibilite/components/merged-eligibility-form/common-inputs/RecipientEmailInput';
-import FormButton from '@/app/v2/test-eligibilite/components/merged-eligibility-form/FormButton';
+import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/FormButton';
 
 const initialInputsState: CrousInputsState = {
   recipientIneNumber: { state: 'default' },
