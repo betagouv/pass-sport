@@ -167,16 +167,28 @@ const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
     }
   }, [allowance]);
 
-  const papersHint = (what: 'Nom' | 'Prénom'): ReactNode =>
-    isDirectBeneficiary ? (
-      <>
-        Format attendu : {what} tel qu’il est écrit sur vos papiers du <CROUS />.
-      </>
-    ) : (
-      <>
-        Format attendu : {what} tel qu’il est écrit sur vos papiers de la <CAF /> ou la <MSA />.
-      </>
-    );
+  const documentsHint = (what: 'Nom' | 'Prénom') => {
+    if (allowance === ALLOWANCE.CROUS) {
+      return (
+        <>
+          Format attendu : {what} tel qu&apos;il est écrit sur vos papiers du <CROUS />.
+        </>
+      );
+    } else if (allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) {
+      return (
+        <>
+          Format attendu : Nom tel qu&apos;il est écrit sur votre notification de bourse régionale
+        </>
+      );
+    } else {
+      return (
+        <>
+          Format attendu : {what} tel qu&apos;il est écrit sur vos documents de la <CAF /> ou la{' '}
+          <MSA />.
+        </>
+      );
+    }
+  };
 
   return (
     <form ref={formRef} onSubmit={onSubmitHandler}>
@@ -195,7 +207,7 @@ const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
           required: true,
           autoFocus: true,
         }}
-        hintText={papersHint('Nom')}
+        hintText={documentsHint('Nom')}
       />
 
       <Input
@@ -212,7 +224,7 @@ const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
           'aria-autocomplete': 'none',
           required: true,
         }}
-        hintText={papersHint('Prénom')}
+        hintText={documentsHint('Prénom')}
       />
 
       <CityFinder

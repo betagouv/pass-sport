@@ -48,7 +48,7 @@ const defaultOptions = [
   },
   {
     value: ALLOCATION.QF,
-    label: 'Quotient familial du foyer allocataire inférieur ou égal à 699 €',
+    label: 'Quotient familial (CAF ou MSA) du foyer allocataire inférieur ou égal à 699 €',
   },
   {
     value: ALLOCATION.AEEH,
@@ -128,7 +128,7 @@ export default function SimplifiedEligibilityTest({
         })}
       >
         <p className="fr-h5 fr-mb-0">
-          <>Vérifier votre éligibilité ou celle de l&apos;un de vos enfants</>
+          <>Vérifiez votre éligibilité ou celle de l&apos;un de vos enfants</>
         </p>
 
         <form

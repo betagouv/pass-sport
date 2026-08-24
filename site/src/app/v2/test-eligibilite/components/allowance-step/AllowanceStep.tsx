@@ -288,7 +288,7 @@ const AllowanceStep = () => {
                   {
                     label: (
                       <p className="fr-text--bold">
-                        Quotient familial inférieur à 700
+                        Quotient familial du foyer allocataire inférieur ou égal à 699 €
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0"></span>
                       </p>

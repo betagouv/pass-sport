@@ -117,8 +117,8 @@ const YoungMsaForm = () => {
           }}
           hintText={
             <>
-              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos papiers de
-              la <MSA />.
+              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos documents
+              de la <MSA />.
             </>
           }
         />
@@ -143,8 +143,8 @@ const YoungMsaForm = () => {
           }}
           hintText={
             <>
-              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur vos papiers
-              de la <MSA />.
+              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur vos
+              documents de la <MSA />.
             </>
           }
         />

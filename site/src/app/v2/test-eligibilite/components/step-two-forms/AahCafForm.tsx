@@ -80,7 +80,7 @@ const AahCafForm = () => {
                 Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
-            hintText: 'Personne responsable du compte de l’allocation.',
+            hintText: 'Personne responsable du compte de l’allocataire.',
             nativeInputProps: {
               name: 'recipientCafNumber',
               defaultValue: defaults?.recipientCafNumber,
