@@ -94,7 +94,7 @@ const YoungCafForm = () => {
                 Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
-            hintText: 'Personne responsable du compte de l’allocation.',
+            hintText: 'Personne responsable du compte de l’allocataire.',
             nativeInputProps: {
               name: 'recipientCafNumber',
               defaultValue: defaults?.recipientCafNumber,
@@ -139,8 +139,8 @@ const YoungCafForm = () => {
           }}
           hintText={
             <>
-              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos papiers de
-              la <CAF />.
+              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos documents
+              de la <CAF />.
             </>
           }
         />
@@ -165,8 +165,8 @@ const YoungCafForm = () => {
           }}
           hintText={
             <>
-              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur les papiers
-              de la <CAF />.
+              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur les
+              documents de la <CAF />.
             </>
           }
         />

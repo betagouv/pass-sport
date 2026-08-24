@@ -15,7 +15,7 @@ export function AccordionsBecomePartner() {
           Pour rester partenaire du dispositif cette année, vous avez simplement à mettre à jour
           votre{' '}
           <Link
-            href="https://lecompteasso.associations.gouv.fr/"
+            href="https://associations.gouv.fr/le-compte-asso"
             target="_blank"
             className="fr-link"
             title="Lien vers Le Compte Asso (nouvelle fenêtre)"
@@ -73,7 +73,7 @@ export function AccordionsBecomePartner() {
           Si vous êtes affiliée à l&apos;une des fédérations éligible agréées par le ministère
           chargé des Sports, vous devrez vous créer un compte sur{' '}
           <Link
-            href="https://lecompteasso.associations.gouv.fr/"
+            href="https://associations.gouv.fr/le-compte-asso"
             target="_blank"
             className="fr-link"
             title="Lien vers Le Compte Asso (nouvelle fenêtre)"
@@ -129,7 +129,7 @@ export function AccordionsBecomePartner() {
         <p className="fr-mb-2w">
           Si c&apos;est le cas, vous devrez vous créer un compte sur{' '}
           <Link
-            href="https://lecompteasso.associations.gouv.fr/"
+            href="https://associations.gouv.fr/le-compte-asso"
             target="_blank"
             title="Lien vers Le Compte Asso (nouvelle fenêtre)"
             className="fr-link"
@@ -216,7 +216,7 @@ export function AccordionsBecomePartner() {
         <p className="fr-mb-2w">
           Si c&apos;est le cas, vous devrez vous créer un compte sur{' '}
           <Link
-            href="https://lecompteasso.associations.gouv.fr/"
+            href="https://associations.gouv.fr/le-compte-asso"
             target="_blank"
             title="Lien vers Le Compte Asso (nouvelle fenêtre)"
             className="fr-link"

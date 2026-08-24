@@ -128,7 +128,7 @@ export default function SimplifiedEligibilityTest({
         })}
       >
         <p className="fr-h5 fr-mb-0">
-          <>Vérifier votre éligibilité ou celle de l&apos;un de vos enfants</>
+          <>Vérifiez votre éligibilité ou celle de l&apos;un de vos enfants</>
         </p>
 
         <form
