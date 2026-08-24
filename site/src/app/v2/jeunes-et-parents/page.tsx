@@ -197,7 +197,7 @@ export default function Page() {
               <li>
                 <span className="fr-text--bold">A partir de fin août : </span>pour les jeunes
                 faisant partie d&apos;un foyer dont le quotient familial est inférieur ou égal à 699
-                fin août, les bénéficiaires de l&apos;AEEH et de l&apos;AAH.
+                € fin août, les bénéficiaires de l&apos;AEEH et de l&apos;AAH.
               </li>
               <li>
                 <span className="fr-text--bold">Entre fin octobre et fin novembre : </span>pour les
