@@ -19,8 +19,6 @@ export default async function ClubPage({ params }: { params: Promise<{ 'club-nam
   const { 'club-name': clubSlug } = await params;
   const clubName = decodeURIComponent(clubSlug);
 
-  console.log({ clubName, params });
-
   return (
     <>
       <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">

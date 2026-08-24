@@ -19,8 +19,6 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/structures': 'Structures sportives',
   '/v2/test-eligibilite': 'Récupération du code pass Sport',
   '/v2/test-eligibilite/hors-france-connect': 'Récupérer mon pass Sport',
-  // '/v2/budget': 'Budget',
-  // '/v2/partenaires': 'Partenaires',
 };
 
 export default function PassSportBreadcrumbStandard() {

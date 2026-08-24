@@ -99,7 +99,6 @@ async function processConversations(conversations = [], logs = []) {
 
   for (let conversation of conversations) {
     const sessionId = conversation.session_id;
-    console.log({ conversation });
 
     console.log(`Processing message ${sessionId}`);
 
