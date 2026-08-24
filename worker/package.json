@@ -11,6 +11,7 @@
     "dev:debug": "tsx watch --inspect=0.0.0.0:9229 src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:reset": "./scripts/db-reset.sh",
     "test": "tsc --noEmit && vitest run",
     "qf:batch": "tsx src/scripts/qf-batch.ts",
     "redis:decode": "tsx src/scripts/redis-decode.ts"

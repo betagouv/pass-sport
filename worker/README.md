@@ -24,7 +24,10 @@ pnpm test     # typecheck + vitest
 ```bash
 pnpm db:generate  # generate a drizzle migration
 pnpm db:migrate   # apply migrations
+pnpm db:reset     # empty the local dev tables (schema and migrations untouched)
 ```
+
+`db:reset` truncates `audit`, `eligibility_history`, `eligibility_results` and `email_verifications` in the compose `db` service. Prefer it over `docker compose down -v`, which also removes the `node_modules` and pnpm store volumes and turns a data wipe into a full dependency reinstall.
 
 ## Scripts
 
