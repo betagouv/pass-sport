@@ -6,7 +6,8 @@ import YoungMsaForm from '../step-two-forms/YoungMsaForm';
 import AahCafForm from '../step-two-forms/AahCafForm';
 import AahMsaForm from '../step-two-forms/AahMsaForm';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
-import EmailSentPanel from '@/app/v2/test-eligibilite/components/email-sent-panel/EmailSentPanel';
+import EmailSentPanel from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentPanel';
+import EmailSentAlert from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentAlert';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { CAISSE } from '@/utils/eligibility-test';
@@ -37,6 +38,8 @@ const EligibilityTestForms = () => {
 
   return (
     <>
+      {submittedEmail && <EmailSentAlert />}
+
       {stepOneFields ? (
         <>
           <StepChecker

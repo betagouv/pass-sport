@@ -2,6 +2,7 @@ import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import { AahMsaInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import ErrorAlert from '../error-alert/ErrorAlert';
+import Actions from '@/app/components/actions/Actions';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
@@ -77,6 +78,8 @@ const AahMsaForm = () => {
 
   return (
     <div>
+      {error && <ErrorAlert title={error} />}
+
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <CommonInputs
           birthCountryInputName="recipientBirthCountry"
@@ -101,7 +104,7 @@ const AahMsaForm = () => {
 
       {error && (
         <div className="fr-mt-4w">
-          <ErrorAlert title={error} />
+          <Actions />
         </div>
       )}
     </div>

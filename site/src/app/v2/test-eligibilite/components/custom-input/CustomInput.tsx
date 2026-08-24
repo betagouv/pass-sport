@@ -17,7 +17,7 @@ const CustomInput = ({ inputProps, secondHint }: Props) => (
           className={cn('fr-icon--sm', 'fr-icon-info-fill', styles.color, styles.position)}
           aria-hidden="true"
         />
-        <p className={cn('fr-mb-4w', 'fr-text--xs', styles.color)}>{secondHint}</p>
+        <p className={cn('fr-mb-2w', 'fr-text--xs', styles.color)}>{secondHint}</p>
       </div>
     )}
   </>

@@ -3,6 +3,7 @@ import { AahCafInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
+import Actions from '@/app/components/actions/Actions';
 import { CAF } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { formDefaultsFor } from '../../helpers/test-defaults';
@@ -72,6 +73,8 @@ const AahCafForm = () => {
 
   return (
     <div>
+      {error && <ErrorAlert title={error} />}
+
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <CustomInput
           inputProps={{
@@ -121,7 +124,7 @@ const AahCafForm = () => {
 
       {error && (
         <div className="fr-mt-4w">
-          <ErrorAlert title={error} />
+          <Actions />
         </div>
       )}
     </div>

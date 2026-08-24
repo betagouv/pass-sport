@@ -7,6 +7,10 @@ type EligibilityTestContextProps = {
   performNewTest: VoidFunction;
   portalNode: HTMLElement | null;
   setPortalNode: (node: HTMLElement | null) => void;
+  // Sits above the "Quelle est votre situation ?" heading: every verdict is drawn there,
+  // whichever step of the parcours pronounced it.
+  verdictNode: HTMLElement | null;
+  setVerdictNode: (node: HTMLElement | null) => void;
   // Answered in step 1 and held here until step 2 submits: the two are sent to LCA together.
   stepOneFields: StepOneFields | null;
   setStepOneFields: Dispatch<SetStateAction<StepOneFields | null>>;
@@ -24,6 +28,8 @@ const EligibilityTestContext = React.createContext<EligibilityTestContextProps>(
   performNewTest: () => {},
   portalNode: null,
   setPortalNode: () => {},
+  verdictNode: null,
+  setVerdictNode: () => {},
   stepOneFields: null,
   setStepOneFields: () => {},
   submittedEmail: null,

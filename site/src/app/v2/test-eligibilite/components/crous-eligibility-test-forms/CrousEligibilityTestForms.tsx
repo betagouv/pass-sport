@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import StepOneForm from '../step-one-form/StepOneForm';
 import CrousForm from '../step-two-forms/CrousForm';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
-import EmailSentPanel from '@/app/v2/test-eligibilite/components/email-sent-panel/EmailSentPanel';
+import EmailSentPanel from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentPanel';
+import EmailSentAlert from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentAlert';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 
 // Boursiers are their own beneficiary and their organisme is always the CNOUS, so there is
@@ -19,6 +20,8 @@ const CrousEligibilityTestForms = () => {
 
   return (
     <>
+      {submittedEmail && <EmailSentAlert />}
+
       {stepOneFields && (
         <StepChecker title="Vos informations" onClick={editStepOne} className="fr-mt-2w" />
       )}

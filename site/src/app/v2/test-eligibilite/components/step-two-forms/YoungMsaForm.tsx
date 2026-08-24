@@ -3,6 +3,7 @@ import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
 import { YoungMsaInputsState } from '@/types/EligibilityTest';
 import { convertDate, mapper } from '../../helpers/helper';
 import ErrorAlert from '../error-alert/ErrorAlert';
+import Actions from '@/app/components/actions/Actions';
 import { MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
@@ -95,6 +96,8 @@ const YoungMsaForm = () => {
 
   return (
     <div>
+      {error && <ErrorAlert title={error} />}
+
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
           label={
@@ -197,7 +200,7 @@ const YoungMsaForm = () => {
 
       {error && (
         <div className="fr-mt-4w">
-          <ErrorAlert title={error} />
+          <Actions />
         </div>
       )}
     </div>
