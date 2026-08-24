@@ -27,7 +27,7 @@ const NotEligibleAlert = () => {
         <ul className="fr-ml-2w">
           <li>
             Aux jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
-            familial est inférieur ou égal à 699 ;
+            familial est inférieur ou égal à 699 €;
           </li>
           <li>
             Aux jeunes en situation de handicap :
