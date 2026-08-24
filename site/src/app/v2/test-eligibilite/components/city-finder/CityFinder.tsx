@@ -81,7 +81,7 @@ const CityFinder = ({
       >
         {legend}
         <p className={cn('fr-text--xs', styles.hint, 'fr-mb-1w', 'fr-mt-1v')}>
-          Personne responsable du compte de l&apos;allocation.
+          Personne responsable du compte de l&apos;allocataire.
         </p>
       </label>
 
