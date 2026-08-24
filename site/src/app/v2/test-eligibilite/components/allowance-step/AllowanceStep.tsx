@@ -10,7 +10,7 @@ import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
 import cn from 'classnames';
 import styles from './styles.module.scss';
-import NotEligiblePanel from '@/app/v2/test-eligibilite/components/not-eligible-panel/NotEligiblePanel';
+import NotEligiblePanel from '@/app/v2/test-eligibilite/components/panels/not-eligible/NotEligiblePanel';
 import { StepOneFields } from '@/types/EligibilityTest';
 import Input from '@codegouvfr/react-dsfr/Input';
 import {
@@ -22,7 +22,7 @@ import {
 } from '@/utils/eligibility-test';
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
-import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import BoursierAlert from '@/app/v2/test-eligibilite/components/boursier-alert/BoursierAlert';
 import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { InputState } from '@/types/form';
 
@@ -49,6 +49,7 @@ const initialInputsState: AllowanceFormInputsState = {
 
 const AllowanceStep = () => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+  const [verdictNode, setVerdictNode] = useState<HTMLElement | null>(null);
   const [stepOneFields, setStepOneFields] = useState<StepOneFields | null>(null);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
@@ -207,11 +208,20 @@ const AllowanceStep = () => {
         performNewTest: restartTest,
         portalNode,
         setPortalNode,
+        verdictNode,
+        setVerdictNode,
         setAllowance,
         setStepOneFields,
         setSubmittedEmail,
       }}
     >
+      <div className="fr-container" ref={setVerdictNode} />
+
+      {isValidated &&
+        benefIsEligible &&
+        (allowance === ALLOWANCE.CROUS || allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
+        !CODES_OBTAINABLE_FOR_CROUS && <BoursierAlert allowance={allowance} />}
+
       <div className={cn(styles.background)}>
         <div className={styles.wrapper}>
           <h2 className="fr-text--bold fr-mb-2w fr-text--xl">Quelle est votre situation ?</h2>
@@ -454,43 +464,6 @@ const AllowanceStep = () => {
       </div>
 
       <div ref={setPortalNode}>
-        {isValidated &&
-          benefIsEligible &&
-          (allowance === ALLOWANCE.CROUS ||
-            allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
-          !CODES_OBTAINABLE_FOR_CROUS && (
-            <div
-              style={{
-                maxWidth: 792,
-                margin: '0 auto 24px auto',
-              }}
-            >
-              {allowance === ALLOWANCE.CROUS ? (
-                <Alert
-                  severity="info"
-                  title="Les étudiants boursiers de l'enseignement supérieur recevront leur code par courriel entre le 9 octobre et le 15 novembre."
-                  description={
-                    <p>
-                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
-                      pourrez venir le récupérer sur le site du pass Sport.
-                    </p>
-                  }
-                />
-              ) : (
-                <Alert
-                  severity="info"
-                  title="Les étudiants boursiers des formations sanitaires et sociales recevront leur code par courriel entre le 9 octobre et le 15 novembre."
-                  description={
-                    <p>
-                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
-                      pourrez venir le récupérer sur le site du pass Sport.
-                    </p>
-                  }
-                />
-              )}
-            </div>
-          )}
-
         {isValidated && allowance && dob && !benefIsEligible && <NotEligiblePanel />}
       </div>
     </EligibilityTestContext.Provider>

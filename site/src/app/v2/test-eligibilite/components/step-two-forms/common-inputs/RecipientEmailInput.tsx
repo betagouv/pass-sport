@@ -16,6 +16,7 @@ const RecipientEmailInput = ({ inputState, isDisabled, onChange, onBlur }: Props
         Votre adresse e-mail <span className="text--required">*</span>
       </>
     }
+    className="fr-mt-2w"
     hintText="Le résultat de votre demande y sera envoyé. Exemple : marie.dupont@exemple.fr"
     state={inputState.state}
     stateRelatedMessage={inputState.errorMsg}

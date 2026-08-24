@@ -3,6 +3,7 @@ import { CrousInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
+import Actions from '@/app/components/actions/Actions';
 import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
@@ -88,6 +89,8 @@ const CrousForm = () => {
 
   return (
     <div>
+      {(identificationError || error) && <ErrorAlert title={identificationError ?? error!} />}
+
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <CustomInput
           inputProps={{
@@ -146,7 +149,7 @@ const CrousForm = () => {
 
       {(identificationError || error) && (
         <div className="fr-mt-4w">
-          <ErrorAlert title={identificationError ?? error!} />
+          <Actions />
         </div>
       )}
     </div>
