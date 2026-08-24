@@ -48,7 +48,7 @@ const defaultOptions = [
   },
   {
     value: ALLOCATION.QF,
-    label: 'Quotient familial du foyer allocataire inférieur ou égal à 699 €',
+    label: 'Quotient familial (CAF ou MSA) du foyer allocataire inférieur ou égal à 699€',
   },
   {
     value: ALLOCATION.AEEH,

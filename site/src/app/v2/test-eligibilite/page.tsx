@@ -8,7 +8,7 @@ import cn from 'classnames';
 import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 import KnowMore from '@/app/components/know-more/KnowMore';
-import { AAH, AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",
@@ -18,7 +18,7 @@ const EligibilityTest = () => {
   return (
     <main className={styles.main} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
       <PageTitle
-        title="Récupérer mon pass Sport"
+        title="Demander mon pass Sport"
         classes={{
           container: styles['page-header'],
         }}
@@ -34,17 +34,15 @@ const EligibilityTest = () => {
           />
           <div className={styles['top-section-tile__description']}>
             <p className="fr-text--xl fr-mb-1w">
-              Si vous êtes éligible, vous recevrez un courriel avec votre pass Sport :
+              Si vous êtes éligible, vous recevrez un courrier électronique avec votre code pass
+              Sport, entre le xx et le xx septembre. <br />À partir du xx septembre 2026, les
+              personnes qui n’auront pas reçu leur code pourront le récupérer directement sur le
+              site{' '}
+              <Link href="https://pass.sports.gouv.fr" target="_blank">
+                https://pass.sports.gouv.fr
+              </Link>{' '}
+              , sous réserve de remplir les conditions d’éligibilité.
             </p>
-            <ul className="fr-text--xl fr-ml-2w">
-              <li>
-                26-28 août : pour les bénéficiaires de l&apos;
-                <AEEH />, de l&apos;
-                <AAH />, et les jeunes faisant partie d&apos;un foyer dont le quotient familial est
-                inférieur ou égal à 699 fin août ;
-              </li>
-              <li>Entre fin août et fin novembre : pour les étudiants boursiers.</li>
-            </ul>
           </div>
         </div>
       </section>
@@ -54,9 +52,9 @@ const EligibilityTest = () => {
           <KnowMore
             variant="purple"
             knowMore={{
-              title: 'A savoir',
+              title: 'À savoir',
               description:
-                'Si vous avez plusieurs enfants, vous devez récupérer un pass pour chaque enfant.',
+                "Si vous avez plusieurs enfants, vous devez demander un code pass Sport pour chaque enfant, sous réserve d'éligibilité.",
             }}
           />
         </div>

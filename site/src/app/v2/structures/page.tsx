@@ -120,7 +120,7 @@ export default function Page() {
             className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
             target="_blank"
             aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
-            href="https://lecompteasso.associations.gouv.fr/"
+            href="https://associations.gouv.fr/le-compte-asso"
           >
             Le Compte Asso
           </Link>
