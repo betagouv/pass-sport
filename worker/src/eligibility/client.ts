@@ -34,12 +34,12 @@ const splitPrenoms = (givenName?: string): string[] | undefined =>
 // DSS "_identite" params (QF, AAH, AEEH): snake_case (SDK maps to camelCase). Queried on the
 // état civil alone — nom_usage narrows the match and costs answers.
 export const toDssParams = (identity: PivotIdentity) => ({
-  nom_naissance: identity.family_name,
+  nomNaissance: identity.family_name,
   prenoms: splitPrenoms(identity.given_name),
+  sexeEtatCivil: mapGender(identity.gender),
+  codeCogInseeCommuneNaissance: identity.birthplace || undefined,
+  codeCogInseePaysNaissance: identity.birthcountry || undefined,
   ...splitBirthdate(identity.birthdate),
-  sexe_etat_civil: mapGender(identity.gender),
-  code_cog_insee_commune_naissance: identity.birthplace || undefined,
-  code_cog_insee_pays_naissance: identity.birthcountry || undefined,
 });
 
 // CNOUS v5 is not in the SDK (caps at v4) — generic client.get() with camelCase
