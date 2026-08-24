@@ -1,0 +1,152 @@
+services:
+  nginx-waf:
+    image: owasp/modsecurity-crs:4.23-nginx-alpine-202602250702
+    environment:
+      - PARANOIA=1
+      - BACKEND=http://app:3000
+      # Allow specific content types only (JSON, Form Data) - Bans XML
+      - ALLOWED_REQUEST_CONTENT_TYPE=|application/x-www-form-urlencoded| |multipart/form-data| |application/json|
+      # Limit Body Size to 10MB
+      - MODSEC_REQ_BODY_LIMIT=10485760
+      - MAX_FILE_SIZE=10485760
+      # Block PHP extensions via CRS Restricted Extensions
+      - RESTRICTED_EXTENSIONS=.asa/ .asax/ .ascx/ .axd/ .backup/ .bak/ .bat/ .cdx/ .cer/ .cfg/ .cmd/ .com/ .config/ .conf/ .cs/ .csproj/ .csr/ .dat/ .db/ .dbf/ .dll/ .dos/ .htr/ .htw/ .ida/ .idc/ .idq/ .inc/ .ini/ .key/ .licx/ .lnk/ .log/ .mdb/ .old/ .pass/ .pdb/ .pol/ .printer/ .pwd/ .rdb/ .resources/ .resx/ .sql/ .swp/ .sys/ .vb/ .vbs/ .vbproj/ .vsdisco/ .webinfo/ .xsd/ .xsx/ .php/
+    ports:
+      - 3000:8080
+    volumes:
+      - ./proxy-prod/waf_rules.conf:/etc/modsecurity.d/waf_rules.conf:ro
+    depends_on:
+      app:
+        condition: service_started
+  app:
+    # Debian rather than alpine: musl gives worker threads a 128 KB stack where glibc gives
+    # 8 MB, and Next's CSS pipeline overflows it parsing dsfr.min.css — 737 KB on a single
+    # line — as an intermittent "Maximum call stack size exceeded".
+    image: node:25
+    working_dir: /site
+    ports:
+      - '3001:3000'
+    env_file:
+      - ./site/.env.local
+    environment:
+      - SCALINGO_POSTGRESQL_URL=postgres://passsport:passsport@db:5432/passsport
+      - SCALINGO_REDIS_URL=redis://passsport:passsport@redis:6379
+      - APPLICATIONS_DATABASE_URL=postgres://site_readonly:passsport@db:5432/passsport
+      - PGSSL_DISABLE=true
+    command: >
+      sh -c "
+        npm install -g pnpm@11.4.0 &&
+        CI=true pnpm install --frozen-lockfile --ignore-scripts --store-dir /pnpm-store &&
+        npm run dev
+      "
+    volumes:
+      - ./site:/site
+      # Keeps pnpm's hard-link farm off the macOS bind mount, which loses entries under it
+      # often enough to fail a module read mid-build. Same treatment as the worker.
+      - site-node-modules:/site/node_modules
+      - site-pnpm-store:/pnpm-store
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # No `develop.watch` here on purpose: reload comes from the ./site bind mount above,
+    # which Next's own watcher picks up (inotify crosses a Linux bind mount fine). Compose
+    # ignores any watch rule whose path is already bind-mounted ("this path won't be
+    # monitored"), so a watch block can only hurt — and the previous one did: `action:
+    # rebuild` on a service running a stock `image:` with no build context makes
+    # `docker compose watch` abort the service outright ("can't watch service app with
+    # action rebuild without a build context"), leaving no dev server to reload anything.
+    # Run this stack with `docker compose up`, not `docker compose watch`.
+  worker:
+    build:
+      context: ./worker
+      target: dev
+    working_dir: /app
+    ports:
+      # Node inspector, for an IDE debugger to attach. Bound to 127.0.0.1: an open
+      # inspector is arbitrary code execution on this container.
+      - '127.0.0.1:9229:9229'
+    env_file:
+      - ./worker/.env.local
+    environment:
+      - SCALINGO_REDIS_URL=redis://passsport:passsport@redis:6379
+      - SCALINGO_POSTGRESQL_URL=postgres://passsport:passsport@db:5432/passsport
+      - PGSSL_DISABLE=true
+    volumes:
+      - ./worker:/app
+      - worker-node-modules:/app/node_modules
+      - worker-pnpm-store:/pnpm-store
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  # Dev-only BullMQ dashboard. Bound to 127.0.0.1 so it is never exposed on the LAN,
+  # and behind basic auth. Job payloads are stored in clear, so this displays real
+  # identités pivot — keep it off anything but a local machine.
+  bull-board:
+    image: venatum/bull-board:3.3.20
+    ports:
+      - '127.0.0.1:3002:3000'
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_USER=passsport
+      - REDIS_PASSWORD=passsport
+      - BULL_PREFIX=bull
+      - BULL_VERSION=BULLMQ
+      - USER_LOGIN=passsport
+      - USER_PASSWORD=passsport
+    depends_on:
+      redis:
+        condition: service_healthy
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: passsport
+      POSTGRES_PASSWORD: passsport
+      POSTGRES_DB: passsport
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs only on a fresh volume, before anything else connects.
+      - ./.ci/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U passsport -d passsport']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    # ACL user instead of a bare requirepass: the default user is disabled, so an
+    # unauthenticated client can do nothing at all.
+    command:
+      [
+        'redis-server',
+        '--user',
+        'default',
+        'off',
+        '--user',
+        'passsport',
+        'on',
+        '>passsport',
+        '~*',
+        '&*',
+        '+@all',
+      ]
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test:
+        ['CMD', 'redis-cli', '--no-auth-warning', '--user', 'passsport', '-a', 'passsport', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  pgdata:
+  worker-node-modules:
+  worker-pnpm-store:
+  site-node-modules:
+  site-pnpm-store:

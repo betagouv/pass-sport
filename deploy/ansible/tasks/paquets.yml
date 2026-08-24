@@ -1,0 +1,30 @@
+---
+# psql pour les 3 .sql de franceconnect, util-linux pour le flock du script,
+# openssh-client parce que scalingo db-tunnel monte une connexion SSH.
+# `acl` n'est pas décoratif : sans lui, toute tâche en become_user vers un compte non
+# privilégié échoue sur « Failed to set permissions on the temporary files ». Il est
+# installé ici, donc avant la première de ces tâches.
+# `libatomic1` non plus : sans elle, le Node installé plus bas (apt/NodeSource) ne s'exécute
+# même pas (« error while loading shared libraries: libatomic.so.1 ») — absente d'un Ubuntu
+# minimal, trouvé en testant ce playbook avec Molecule sur une image ubuntu:26.04 nue.
+# `cron` non plus : rien ne garantit sa présence sur une machine nue, et tasks/ordonnancement.yml
+# s'appuie sur `ansible.builtin.cron` (donc sur le binaire `crontab`) pour la crontab FC — même
+# trouvaille que libatomic1, via le même scénario Molecule.
+- name: Paquets
+  become: true
+  ansible.builtin.apt:
+    name:
+      [
+        postgresql-client,
+        util-linux,
+        openssh-client,
+        curl,
+        git,
+        python3-venv,
+        acl,
+        libatomic1,
+        visidata,
+        cron,
+      ]
+    state: present
+    update_cache: true

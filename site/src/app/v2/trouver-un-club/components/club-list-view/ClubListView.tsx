@@ -1,4 +1,4 @@
-import { SportGouvJSONRecordsResponse } from 'types/Club';
+import { SportGouvJSONRecordsResponse } from '@/types/Club';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import Card from '@codegouvfr/react-dsfr/Card';

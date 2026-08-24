@@ -1,0 +1,506 @@
+{
+  "id": "5f0d1c8e-7f3b-4d2a-9a61-3c6b1e4f8ad2",
+  "prevId": "01007cb5-869c-40a7-88b0-7de835916d57",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.audit": {
+      "name": "audit",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "job_name": {
+          "name": "job_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.eligibility_history": {
+      "name": "eligibility_history",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "allocataire_fc_sub": {
+          "name": "allocataire_fc_sub",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempt": {
+          "name": "attempt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "http_status": {
+          "name": "http_status",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration_ms": {
+          "name": "duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body_payload": {
+          "name": "body_payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_payload": {
+          "name": "response_payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eligibility_history_allocataire_fc_sub_idx": {
+          "name": "eligibility_history_allocataire_fc_sub_idx",
+          "columns": [
+            {
+              "expression": "allocataire_fc_sub",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eligibility_history_job_id_idx": {
+          "name": "eligibility_history_job_id_idx",
+          "columns": [
+            {
+              "expression": "job_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eligibility_history_created_at_idx": {
+          "name": "eligibility_history_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.eligibility_results": {
+      "name": "eligibility_results",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "allocataire_identite": {
+          "name": "allocataire_identite",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enfant_identite": {
+          "name": "enfant_identite",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allocataire_fc_sub": {
+          "name": "allocataire_fc_sub",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_eligible": {
+          "name": "is_eligible",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_france_connected": {
+          "name": "is_france_connected",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "residence_insee": {
+          "name": "residence_insee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pass_sport_code": {
+          "name": "pass_sport_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lca_status": {
+          "name": "lca_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_kind": {
+          "name": "email_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email_sent": {
+          "name": "email_sent",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eligibility_results_allocataire_fc_sub_idx": {
+          "name": "eligibility_results_allocataire_fc_sub_idx",
+          "columns": [
+            {
+              "expression": "allocataire_fc_sub",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.email_verifications": {
+      "name": "email_verifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "email_verifications_job_id_idx": {
+          "name": "email_verifications_job_id_idx",
+          "columns": [
+            {
+              "expression": "job_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "email_verifications_token_hash_unique": {
+          "name": "email_verifications_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {
+    "public.application_results_by_job_id": {
+      "columns": {
+        "email_sent": {
+          "name": "email_sent",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "definition": "select \"job_id\" as \"job_id\", \n  case\n    when \"email\" is null then null\n    else left(split_part(\"email\", '@', 1), 1)\n      || '***'\n      || case\n           when length(split_part(\"email\", '@', 1)) > 1\n           then right(split_part(\"email\", '@', 1), 1)\n           else ''\n         end\n      || '@'\n      || split_part(\"email\", '@', 2)\n  end as \"email_mask\", \"email_sent\", \"created_at\" from \"eligibility_results\" where \"eligibility_results\".\"allocataire_fc_sub\" is null\n        and \"eligibility_results\".\"job_id\" is not null\n        and \"eligibility_results\".\"created_at\" = (\n          select max(latest.created_at)\n          from eligibility_results latest\n          where latest.job_id = \"eligibility_results\".\"job_id\"\n        )",
+      "name": "application_results_by_job_id",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    },
+    "public.application_results_by_sub": {
+      "columns": {
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pass_sport_code": {
+          "name": "pass_sport_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "definition": "select \"allocataire_fc_sub\" as \"sub\", \"source\", \"enfant_identite\"->>'given_name' as \"given_name\", \"verdict\", \"pass_sport_code\", \"created_at\" from \"eligibility_results\" where \"eligibility_results\".\"allocataire_fc_sub\" is not null\n        and \"eligibility_results\".\"created_at\" = (\n          select max(latest.created_at)\n          from eligibility_results latest\n          where latest.allocataire_fc_sub = \"eligibility_results\".\"allocataire_fc_sub\"\n        )",
+      "name": "application_results_by_sub",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    },
+    "public.applications_by_job_id": {
+      "columns": {},
+      "definition": "select \"job_id\" as \"job_id\", min(\"created_at\") as \"first_application\", max(\"created_at\") as \"last_application\" from \"eligibility_results\" where \"eligibility_results\".\"allocataire_fc_sub\" is null and \"eligibility_results\".\"job_id\" is not null group by \"eligibility_results\".\"job_id\"",
+      "name": "applications_by_job_id",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    },
+    "public.applications_by_sub": {
+      "columns": {},
+      "definition": "select \"allocataire_fc_sub\" as \"sub\", min(\"created_at\") as \"first_application\", max(\"created_at\") as \"last_application\" from \"eligibility_results\" where \"eligibility_results\".\"allocataire_fc_sub\" is not null group by \"eligibility_results\".\"allocataire_fc_sub\"",
+      "name": "applications_by_sub",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    }
+  },
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

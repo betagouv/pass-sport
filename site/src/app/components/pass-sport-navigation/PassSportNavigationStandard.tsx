@@ -12,7 +12,21 @@ import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-repl
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 
-export default function PassSportNavigation() {
+interface Props {
+  // POC FranceConnect + API Particulier: while a session is live (read server-side in
+  // the root layout), the header shows the user's civil name — qualification criterion
+  // 18 asks that a connected user can tell at a glance who they are connected as — plus
+  // a "Se déconnecter" quick-access item. Undefined means no session.
+  pocUserName?: string;
+}
+
+// Route that destroys the POC session then server-redirects to the FranceConnect
+// session/end endpoint (mode 2). Uses a Button quick-access item + a full-page
+// navigation on purpose: the registered DSFR Link is next/link, whose client-side
+// RSC fetch cannot follow the external FranceConnect redirect.
+const POC_LOGOUT_URL = '/api/france-connect/logout';
+
+export default function PassSportNavigation({ pocUserName }: Props) {
   const paths: string | null = usePathname();
 
   const isActive = (path: string) => {
@@ -60,6 +74,29 @@ export default function PassSportNavigation() {
           href: '/v2/accueil',
           'aria-label': `Retourner sur la page d'accueil du pass Sport`,
         }}
+        quickAccessItems={
+          pocUserName
+            ? [
+                // Plain node rather than a quick-access link: there is no account space
+                // to navigate to, so the identity must read as a status, not a control.
+                <p key="poc-identity" className={styles['poc-identity']}>
+                  <span className="fr-icon-account-line" aria-hidden="true" />
+                  <span>
+                    Connecté avec FranceConnect en tant que <strong>{pocUserName}</strong>
+                  </span>
+                </p>,
+                {
+                  iconId: 'fr-icon-logout-box-r-line',
+                  text: 'Se déconnecter',
+                  buttonProps: {
+                    onClick: () => {
+                      window.location.assign(POC_LOGOUT_URL);
+                    },
+                  },
+                },
+              ]
+            : []
+        }
         navigation={navigationItemStandard.map((item) => ({
           isActive: isActive(item.link),
           linkProps: {

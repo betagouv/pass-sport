@@ -1,0 +1,29 @@
+---
+# Ce que la machine seule connaît, et qui n'a rien à faire dans data/.env : le script le
+# source lui-même (run_fc_pipeline.sh). scalingo_app / scalingo_api_token viennent des
+# --extra-vars, jamais de ce dépôt.
+# 0640 et non 0600 : un opérateur doit pouvoir jouer run_fc_pipeline.sh à la main — c'est
+# la procédure de reprise que documente le README de franceconnect/ après un échec à
+# l'étape 3. En 0600 il ne pourrait pas lire ce fichier et le script s'arrêterait sur
+# « variable d'environnement manquante : SCALINGO_APP ».
+# Arbitrage assumé : le jeton Scalingo devient lisible par le groupe d'exploitation, qui
+# lit déjà data/.env et exploite la campagne. Rien pour les autres comptes.
+# Tag `fc-cron`, partagé avec la tâche crontab de tasks/ordonnancement.yml : `--skip-tags
+# fc-cron` reporte le volet FC en bloc, donc ce fichier avec (SCALINGO_APP/TOKEN n'ont
+# souvent pas de sens tant que la cron elle-même est reportée).
+- name: /etc/default/pass-sport-fc
+  become: true
+  ansible.builtin.template:
+    src: pass-sport-fc.env.j2
+    dest: /etc/default/pass-sport-fc
+    owner: "{{ pass_sport_user }}"
+    group: "{{ pass_sport_group }}"
+    mode: '0640'      # il porte SCALINGO_API_TOKEN
+  tags: [fc-cron]
+
+- name: Dossier de dépôt inscriptible
+  ansible.builtin.command: "test -w {{ fc_prod_drop_dir }}"
+  changed_when: false
+  tags: [fc-cron]
+  # Le montage NFS n'est pas géré ici : il appartient à l'infra, on vérifie seulement que
+  # le passage FC ne mourra pas au dernier moment, après avoir marqué la base.

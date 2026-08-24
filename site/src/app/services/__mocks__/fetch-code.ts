@@ -2,7 +2,7 @@ import {
   ConfirmResponseBody,
   EnhancedConfirmResponseBody,
   EnhancedConfirmResponseBodyItem,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 
 export const fetchCode = (responseBody: ConfirmResponseBody): EnhancedConfirmResponseBody => {
   const enhancedEligible: EnhancedConfirmResponseBodyItem = { ...responseBody[0] };

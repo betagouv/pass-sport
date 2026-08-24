@@ -4,7 +4,7 @@ import styles from './style.module.scss';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { getClubs, getClubsWithoutLimit, SqlSearchParams } from '../../agent';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ActivityResponse, ClubsOnList, ClubsOnMap } from 'types/Club';
+import { ActivityResponse, ClubsOnList, ClubsOnMap } from '@/types/Club';
 import cn from 'classnames';
 import ClubCount from '../club-count/ClubCount';
 import { SEARCH_QUERY_PARAMS, UrlQueryParameters } from '@/app/constants/search-query-params';
@@ -13,15 +13,15 @@ import {
   UseAppendQueryStringPairs,
 } from '@/app/hooks/use-append-query-string';
 import { useRemoveQueryString } from '@/app/hooks/use-remove-query-string';
-import { escapeSingleQuotes } from '../../../../../../utils/string';
+import { escapeSingleQuotes } from '@/utils/string';
 import ClubMapView from '../club-map-view/ClubMapView';
 import ClubListView from '../club-list-view/ClubListView';
 import MissingClubInformationPanel from '../missing-club-information-panel/MissingClubInformationPanel';
 import { SegmentedControl } from '@codegouvfr/react-dsfr/SegmentedControl';
 import { GeolocationContext } from '@/store/geolocationContext';
-import { LIST_LIMIT, MAP_DEFAULT_DISTANCE } from 'utils/club-finder';
+import { LIST_LIMIT, MAP_DEFAULT_DISTANCE } from '@/utils/club-finder';
 import { push } from '@socialgouv/matomo-next';
-import { setFocusOn } from 'utils/dom';
+import { setFocusOn } from '@/utils/dom';
 import dynamic from 'next/dynamic';
 
 interface Props {

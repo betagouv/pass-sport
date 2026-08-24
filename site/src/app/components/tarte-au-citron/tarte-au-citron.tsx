@@ -8,7 +8,7 @@ import {
   SUPPORT_COOKIE_KEY,
   SUPPORT_COOKIE_NAME,
   SUPPORT_COOKIE_READ_MORE_URL,
-  WAITING_STATE,
+  WAIT_STATE,
 } from '@/app/constants/cookie-manager';
 import { useEnhanceCookieManagerAccessibility } from '@/app/hooks/accessibility/use-enhance-cookie-manager-accessibility';
 
@@ -51,7 +51,7 @@ export const TarteAuCitron = ({ nonce }: { nonce?: string }) => {
             name: SUPPORT_COOKIE_NAME,
             needConsent: true,
             cookies: [SUPPORT_COOKIE_KEY],
-            defaultState: WAITING_STATE,
+            defaultState: WAIT_STATE,
             readmoreLink: SUPPORT_COOKIE_READ_MORE_URL,
             uri: PASS_SPORT_URI,
             js: () => {},

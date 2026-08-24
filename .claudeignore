@@ -1,0 +1,9 @@
+# Never read env files (secrets).
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Except example templates (no secrets).
+!.env.example
+!**/.env.example

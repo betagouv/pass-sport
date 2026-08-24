@@ -7,3 +7,9 @@
 
 *.parquet
 *.txt
+
+.~lock.*
+
+# Venv de test du scénario Molecule (deploy/ansible/molecule/) — outillage de dev, jamais
+# versionné, au même titre que data/.venv et worker/node_modules.
+/deploy/ansible/.venv-molecule/

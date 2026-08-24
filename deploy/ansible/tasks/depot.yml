@@ -1,0 +1,32 @@
+---
+# Propriétaire du dépôt — tôt, à dessein.
+#
+# Le va-et-vient réel : les notebooks (compte humain) écrivent l'entrée qf-batch, l'unité
+# (compte de service) écrit la sortie, un humain la relit en phase 2. Sans propriété de
+# groupe, chaque passage de témoin casse.
+#
+# Propriétaire ET groupe, récursivement. Le clone initial est fait par root (voir le
+# README) et `git pull` sous un compte humain crée des fichiers à son nom : cette tâche
+# ramène tout au compte de service à chaque passage. Ce n'est pas l'accès qui en dépend —
+# il passe par les bits de groupe, et les opérateurs travaillent sous leur propre compte —
+# mais c'est passsport qui exécute l'unité, autant qu'il soit le propriétaire stable.
+#
+# Ce fichier est importé avant tout ce qui écrit dans pass_sport_repo en become_user (pnpm,
+# le virtualenv, le kernel Jupyter — voir node.yml et venv.yml) : sur un dépôt fraîchement
+# cloné (root, voir le README), ces tâches échouaient en EACCES tant que le dépôt appartenait
+# encore à root — trouvé en testant ce playbook avec Molecule sur un dépôt copié à neuf, sans
+# l'état "déjà préparé" d'un conteneur réutilisé qui masquait le problème.
+#
+# Le balayage de permissions (chmod, setgid, config git) est volontairement AILLEURS —
+# tasks/permissions.yml, importé en tout dernier — et non ici : node.yml (pnpm install) et
+# venv.yml (le virtualenv, le kernel Jupyter) créent des fichiers APRÈS cette tâche, avec les
+# permissions par défaut de pnpm/pip, pas les nôtres. Un balayage fait ici les aurait
+# manqués. Trouvé en vérifiant `find {{ pass_sport_repo }} -perm /o=rwx` après un passage
+# Molecule complet : des fichiers de node_modules/ restaient lisibles par tout le monde.
+- name: Propriété du dépôt
+  become: true
+  ansible.builtin.file:
+    path: "{{ pass_sport_repo }}"
+    owner: "{{ pass_sport_user }}"
+    group: "{{ pass_sport_group }}"
+    recurse: true

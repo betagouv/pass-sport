@@ -1,10 +1,10 @@
-import { ClubsOnMap, ExportedClub } from 'types/Club';
+import { ClubsOnMap, ExportedClub } from '@/types/Club';
 import { useContext } from 'react';
 import dynamic from 'next/dynamic';
 import { GeolocationContext } from '@/store/geolocationContext';
 import { useSearchParams } from 'next/navigation';
 import { SEARCH_QUERY_PARAMS } from '@/app/constants/search-query-params';
-import { MAP_DEFAULT_DISTANCE, MAP_LIMIT } from 'utils/club-finder';
+import { MAP_DEFAULT_DISTANCE, MAP_LIMIT } from '@/utils/club-finder';
 import { LatLngLiteral } from 'leaflet';
 import { getCenter } from 'geolib';
 import styles from './styles.module.scss';

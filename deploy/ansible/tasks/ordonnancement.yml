@@ -1,0 +1,44 @@
+---
+# scalingo (comme la CLI installée par scalingo.yml) vit dans /usr/local/bin. En session
+# interactive c'est déjà sur le PATH, par deux mécanismes système indépendants
+# (/etc/login.defs ENV_PATH, /etc/environment) — mais la crontab d'un utilisateur suit
+# SES PROPRES règles, et le paquet `cron` de Debian a changé de comportement entre
+# versions récentes (son changelog montre des allers-retours sur ce qu'il met dans le
+# PATH par défaut). Sans cette ligne, `command -v scalingo` dans run_fc_pipeline.sh
+# échouerait selon la version du paquet installée — silencieusement, jusqu'au premier
+# passage de cron. `job:` porte la VALEUR quand `env: true`, ce n'est pas une commande.
+- name: PATH de la crontab (scalingo vit dans /usr/local/bin)
+  become: true
+  ansible.builtin.cron:
+    name: PATH
+    env: true
+    job: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    user: "{{ pass_sport_user }}"
+
+# `name` porte l'idempotence : rejouer ne duplique pas la ligne, contrairement à un
+# crontab édité à la main. Posée DÉSACTIVÉE tant que pass_sport_fc_cron_enabled n'est
+# pas passé à true : voir l'en-tête de lamp-setup.yml.
+# Tag `fc-cron`, distinct de ce réglage : `--skip-tags fc-cron` saute la tâche entièrement
+# (rien posé, rien à retirer), là où pass_sport_fc_cron_enabled ne fait que commenter une
+# entrée déjà posée. Sert à reporter tout le volet FC — le reste du provisioning tourne.
+- name: Passage FranceConnect toutes les 6 heures
+  become: true
+  ansible.builtin.cron:
+    name: pass-sport-fc
+    user: "{{ pass_sport_user }}"
+    minute: '30'
+    hour: '0,6,12,18'
+    job: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run_fc_pipeline.sh"
+    disabled: "{{ not pass_sport_fc_cron_enabled }}"
+  tags: [fc-cron]
+
+- name: Unité systemd qf-batch (templatée par partenaire)
+  become: true
+  ansible.builtin.template:
+    src: 'pass-sport-qf-batch@.service.j2'
+    dest: '/etc/systemd/system/pass-sport-qf-batch@.service'
+    mode: '0644'
+  notify: daemon-reload
+  # Volontairement pas de `systemctl enable`/`state: started` ici : qf-batch se déclenche
+  # à la main, un partenaire à la fois (`systemctl start pass-sport-qf-batch@msa`),
+  # jamais tout seul à l'installation ni au démarrage de la machine.

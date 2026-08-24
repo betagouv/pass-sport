@@ -1,28 +1,19 @@
-import {
-  ConfirmResponseErrorBody,
-  EnhancedConfirmResponseBody,
-  SearchResponseBody,
-  SearchResponseErrorBody,
-} from 'types/EligibilityTest';
+import type { EligibilityTestRequest, VerdictResponseBody } from '@/types/EligibilityTest';
 
-export const fetchEligible = (
-  formData: FormData,
-): Promise<{ status: number; body: SearchResponseBody | SearchResponseErrorBody }> => {
-  const url = `/v2/api/eligibility-test/search`;
+const VERDICT_PATH = '/api/eligibility-test/verdict';
 
-  return fetch(url, { method: 'POST', body: formData }).then(async (response) => ({
-    status: response.status,
-    body: (await response.json()) as SearchResponseBody | SearchResponseErrorBody,
-  }));
-};
+// The form's only call. Both LCA steps happen behind it, and the answer is the same whatever
+// LCA held: the browser learns that the request was processed, never what it concluded.
+export const requestPassSportCode = async (
+  request: EligibilityTestRequest,
+): Promise<VerdictResponseBody> => {
+  const response = await fetch(VERDICT_PATH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
 
-export const fetchPspCode = (
-  formData: FormData,
-): Promise<{ status: number; body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody }> => {
-  const url = `/v2/api/eligibility-test/confirm`;
+  const body = (await response.json().catch(() => null)) as VerdictResponseBody | null;
 
-  return fetch(url, { method: 'POST', body: formData }).then(async (response) => ({
-    status: response.status,
-    body: (await response.json()) as EnhancedConfirmResponseBody | ConfirmResponseErrorBody,
-  }));
+  return body ?? { outcome: 'error' };
 };

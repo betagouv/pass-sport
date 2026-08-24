@@ -1,9 +1,9 @@
-import { City } from 'types/City';
+import { City } from '@/types/City';
 import {
   ActivityResponse,
   SportGouvJSONExportsResponse,
   SportGouvJSONRecordsResponse,
-} from 'types/Club';
+} from '@/types/Club';
 import * as Sentry from '@sentry/nextjs';
 import { MAP_LIMIT } from '@/utils/club-finder';
 

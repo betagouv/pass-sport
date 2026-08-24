@@ -1,0 +1,26 @@
+---
+# Droits du groupe d'exploitation.
+#
+- name: sudoers du groupe d'exploitation
+  become: true
+  ansible.builtin.template:
+    src: pass-sport-sudoers.j2
+    dest: /etc/sudoers.d/pass-sport-qf-batch
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: umask 007 pour les sessions du groupe
+  become: true
+  ansible.builtin.template:
+    src: pass-sport-umask.sh.j2
+    dest: /etc/profile.d/pass-sport-umask.sh
+    mode: '0644'
+
+# `nb <notebook.ipynb>` pour le groupe d'exploitation, à la place de la fonction shell que
+# data/2026/README.md demandait jusqu'ici de redéfinir à la main à chaque session.
+- name: fonction nb() pour l'exécution des notebooks
+  become: true
+  ansible.builtin.template:
+    src: pass-sport-nb.sh.j2
+    dest: /etc/profile.d/pass-sport-nb.sh
+    mode: '0644'
