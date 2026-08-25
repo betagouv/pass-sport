@@ -3,12 +3,17 @@
 import { useState } from 'react';
 import PostLoginInfoForm from './PostLoginInfoForm';
 import ResultPanel from './ResultPanel';
+import type { AllocataireIdentity } from './BeneficiaryRecap';
 
-export default function PostLoginFlow() {
+interface Props {
+  allocataireIdentity: AllocataireIdentity;
+}
+
+export default function PostLoginFlow({ allocataireIdentity }: Props) {
   const [queued, setQueued] = useState(false);
 
   if (queued) {
-    return <ResultPanel />;
+    return <ResultPanel allocataireIdentity={allocataireIdentity} />;
   }
 
   return (

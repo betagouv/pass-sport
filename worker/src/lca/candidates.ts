@@ -134,6 +134,9 @@ export const listBeneficiaryCandidates = (
     const birthdate = toIsoDate(enfant.date_naissance);
     if (!lastname || !firstname || !birthdate) return;
 
+    // Same conversion as enfantToIdentity in ../eligibility/sequence.ts.
+    const gender = enfant.sexe === "F" ? "female" : enfant.sexe === "M" ? "male" : undefined;
+
     const age = ageAtReferenceDate(birthdate);
     const eligibilities: Allowance[] = [];
     const reasons: string[] = [];
@@ -155,7 +158,15 @@ export const listBeneficiaryCandidates = (
       reasons.push(`AEEH: bénéficiaire, ${age} ans (17-19)`);
     }
 
-    candidates.push({ source: "enfant", lastname, firstname, birthdate, eligibilities, reasons });
+    candidates.push({
+      source: "enfant",
+      lastname,
+      firstname,
+      birthdate,
+      gender,
+      eligibilities,
+      reasons,
+    });
   });
 
   return candidates;

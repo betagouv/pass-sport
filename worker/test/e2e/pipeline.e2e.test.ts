@@ -167,6 +167,22 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(await eligibleBirthdates()).toEqual(["2008-01-01", "2009-01-01"]);
   });
 
+  // The site's PDF route needs an enfant's own gender (see site/src/app/api/france-connect/pdf)
+  // — this is the QF fake's own sexe ("M" for Aine born 2008, "F" for Milieu born 2009,
+  // per harness.ts), carried all the way through to what actually lands in Postgres.
+  it("enfant_identite carries the QF-derived gender through to the persisted row", async () => {
+    routeOnly();
+    await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
+
+    const genderByBirthdate = Object.fromEntries(
+      (await rows())
+        .filter((x) => x.source === "enfant" && x.is_eligible)
+        .map((x) => [x.enfant_identite?.birthdate, x.enfant_identite?.gender]),
+    );
+
+    expect(genderByBirthdate).toEqual({ "2008-01-01": "male", "2009-01-01": "female" });
+  });
+
   it("QF seule au-dessus du seuil: aucun droit ouvert, aucun appel AEEH", async () => {
     routeOnly();
     const { apCalls } = (await stack.enqueueAndWait(selfCrous({ aides: ["QF"] }))) as {

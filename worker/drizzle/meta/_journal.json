@@ -57,6 +57,13 @@
       "when": 1787270400000,
       "tag": "0007_split_history_payload",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787645556533,
+      "tag": "0008_widen_enfant_projection",
+      "breakpoints": true
     }
   ]
 }

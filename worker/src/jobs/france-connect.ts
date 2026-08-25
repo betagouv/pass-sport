@@ -219,6 +219,7 @@ export async function processEligibilityJob(
               family_name: candidate.lastname,
               given_name: candidate.firstname,
               birthdate: candidate.birthdate,
+              gender: candidate.gender,
             }
           : null;
 

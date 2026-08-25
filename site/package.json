@@ -16,6 +16,7 @@
     "format:check": "prettier --check --ignore-path .gitignore \"**/*.+(ts|tsx|json|mjs|scss)\"",
     "format:write": "npm run format:check -- --write",
     "test": "jest --runInBand",
+    "test:ct": "playwright test -c playwright-ct.config.ts",
     "docker:run:dev": "docker-compose -f ../compose.yml down && docker-compose -f ../compose.yml up",
     "scripts:send-in-mass": "node -r dotenv/config ./scripts/send-in-mass.mjs dotenv_config_path=./.env.local",
     "scripts:send-in-mass-march-2025": "node -r dotenv/config ./scripts/send-in-mass-march-2025.mjs dotenv_config_path=./.env.local",
@@ -54,6 +55,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
+    "@playwright/experimental-ct-react": "^1.62.1",
     "@testing-library/jest-dom": "^6.4.8",
     "@testing-library/react": "^16.0.0",
     "@types/jest": "^30.0.0",

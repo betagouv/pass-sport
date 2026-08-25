@@ -1,10 +1,13 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import Notice from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import Card from '@codegouvfr/react-dsfr/Card';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
 import PostLoginFlow from './components/PostLoginFlow';
-import BeneficiaryRecap from './components/BeneficiaryRecap';
+import BeneficiaryRecap, { StatusBadge, PENDING_CODE_MESSAGE } from './components/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
@@ -79,7 +82,13 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
   // time, while Postgres holds the moment the rows were committed. Word the line to
   // match rather than calling both "enregistrée".
   const existingJobDateLabel =
-    existingJob?.state === 'processed' ? 'Demande traitée le' : 'Demande enregistrée le';
+    existingJob?.state === 'processed' ? 'Demande prise en compte le' : 'Demande soumise le';
+  const existingJobInfo = existingJobDate ? (
+    <>
+      {existingJobDateLabel}{' '}
+      <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+    </>
+  ) : null;
 
   return (
     <main
@@ -138,9 +147,13 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
         </section>
       ) : (
         <section className={styles.section}>
-          <div className="fr-alert fr-alert--success fr-mb-3w">
-            <p>Connexion FranceConnect réussie.</p>
-          </div>
+          <Alert
+            severity="success"
+            small={false}
+            closable
+            title="Connexion FranceConnect réussie"
+            className="fr-mb-3w"
+          />
 
           {debuggingEnabled && (
             <>
@@ -155,25 +168,42 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                   rather than a status. Same component the polling panel renders, so a
                   returning user and a just-submitted one read exactly the same thing. */}
               {results.length > 0 ? (
-                <BeneficiaryRecap beneficiaries={results} />
+                <BeneficiaryRecap
+                  beneficiaries={results}
+                  allocataireIdentity={result.identity}
+                  jobInfo={existingJobInfo}
+                />
               ) : (
-                <div className="fr-alert fr-alert--info fr-mb-3w" role="status">
-                  <h2 className="fr-alert__title">Demande déjà enregistrée</h2>
-                  <p>
-                    Votre demande est en cours de traitement. Le résultat vous sera envoyé par
-                    email.
-                  </p>
-                </div>
-              )}
-              {existingJobDate && (
-                <p>
-                  {existingJobDateLabel}{' '}
-                  <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
-                </p>
+                <>
+                  <Card
+                    className="fr-mb-3w"
+                    border
+                    nativeDivProps={{ role: 'status' }}
+                    title="Demande enregistrée"
+                    titleAs="h2"
+                    start={<StatusBadge verdict="not_assessed" />}
+                    desc={
+                      <>
+                        {PENDING_CODE_MESSAGE} Si votre demande dépasse le délai de 72h, merci de
+                        consulter la{' '}
+                        <Link href="/v2/une-question" className="fr-link">
+                          FAQ
+                        </Link>
+                        .
+                      </>
+                    }
+                  />
+                  {existingJobDate && (
+                    <p>
+                      {existingJobDateLabel}{' '}
+                      <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+                    </p>
+                  )}
+                </>
               )}
             </>
           ) : (
-            <PostLoginFlow />
+            <PostLoginFlow allocataireIdentity={result.identity} />
           )}
           {/* Logout moved to the header quick-access item ("Se déconnecter"),
               shown while the POC session is live (see the root layout). */}

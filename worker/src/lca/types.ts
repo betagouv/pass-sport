@@ -69,6 +69,10 @@ export type BeneficiaryCandidate = {
   lastname: string;
   firstname: string;
   birthdate: string; // YYYY-MM-DD
+  // Only ever set for 'enfant' — derived from the QF response's own sexe field (see
+  // candidates.ts). 'self' candidates leave this unset: the PDF route sources the
+  // allocataire's gender from their FranceConnect session identity, not from here.
+  gender?: "male" | "female";
   eligibilities: Allowance[];
   reasons: string[];
 };
