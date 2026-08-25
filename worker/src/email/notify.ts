@@ -1,266 +1,270 @@
-import type { BeneficiaryCandidate } from "../lca/types";
+import * as Sentry from "@sentry/node";
+import type { Job } from "bullmq";
+import { eq } from "drizzle-orm";
+import type { Database } from "../db/client";
+import type { HistoryRecorder } from "../db/history";
+import { eligibilityResults } from "../db/schema";
+import { logPii } from "../log";
 import { type SendEmailResult, sendTransactionalEmail } from "./link-mobility";
 
-// If the matching LINK_MOBILITY_TEMPLATE_* env holds a template id, send with that
-// templateId; otherwise fall back to the inline HTML below.
-const templateIdFrom = (envVar: string): number | undefined => {
-  const raw = process.env[envVar];
-  const n = raw ? Number(raw) : Number.NaN;
-  return Number.isFinite(n) ? n : undefined;
+// Every outcome email the worker can send, for both paths. The copy lives in the Link
+// Mobility templates; this file picks which one, with which merge fields.
+
+export type EmailKind = "code" | "eligible_soon" | "not_eligible" | "not_eligible_hors_fc";
+
+export type FranceConnectEmailKind = Extract<EmailKind, "code" | "eligible_soon" | "not_eligible">;
+export type LcaEmailKind = Extract<EmailKind, "code" | "not_eligible_hors_fc">;
+
+type EmailTemplate = {
+  // Overridden per environment by templateEnv; unset, which is the normal case, this is
+  // what goes out.
+  templateId: number;
+  templateEnv: string;
+  // Link Mobility indexes `nom` as searchable metadata: constant, never a code or a name.
+  campaign: string;
+  // `sujet` is posted by us even in template mode (error 18, "le sujet est trop court"). It
+  // names the beneficiary because a parent gets one mail per child, and identical subjects
+  // collapse into a thread that reads as a duplicate.
+  subject: (vars?: BeneficiaryVariables) => string;
+  historyAction: string;
 };
 
-async function deliver(
-  recipient: string | undefined,
-  opts: {
-    subject: string;
-    name: string;
-    alternativeText: string;
-    html: string;
-    templateEnv: string;
-    // Merge fields for the Link Mobility template. Only meaningful in templateId mode —
-    // the inline HTML below already has the values interpolated.
-    variables?: Record<string, string | number>;
+export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
+  code: {
+    templateId: 1187050,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_CODE",
+    campaign: "pass-sport-code",
+    subject: (vars) =>
+      vars?.prenom ? `Le code pass Sport de ${vars.prenom}` : "Votre code pass Sport",
+    historyAction: "email.code",
   },
-): Promise<SendEmailResult | null> {
-  if (!recipient) return null;
-  const templateId = templateIdFrom(opts.templateEnv);
-  return sendTransactionalEmail({
-    subject: opts.subject,
-    recipients: [recipient],
-    name: opts.name,
-    alternativeText: opts.alternativeText,
-    ...(templateId !== undefined && opts.variables
-      ? { variables: { [recipient]: opts.variables } }
-      : {}),
-    // Exactly one of templateId / html (the wrapper enforces this).
-    ...(templateId !== undefined ? { templateId } : { html: opts.html }),
-  });
-}
-
-// Names and codes come from FranceConnect / API Particulier / LCA and are dropped
-// into HTML — escape them rather than trusting an upstream to never return a `<`.
-const escapeHtml = (value: string): string =>
-  value.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
-  );
-
-// One line of the recapitulative email: a beneficiary and the verdict for them.
-// Prénom AND nom, so a parent with several children can tell the lines apart.
-export type DigestEntry = {
-  firstname: string;
-  lastname: string;
-  kind: "code" | "eligible_soon" | "not_eligible";
-  code?: string;
+  eligible_soon: {
+    templateId: 1187053,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_ELIGIBLE_SOON",
+    campaign: "pass-sport-eligible-soon",
+    subject: (vars) =>
+      vars?.prenom ? `${vars.prenom} est éligible au pass Sport` : "Votre demande pass Sport",
+    historyAction: "email.eligible_soon",
+  },
+  not_eligible: {
+    templateId: 1187056,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE",
+    campaign: "pass-sport-not-eligible",
+    subject: (vars) =>
+      vars?.beneficiaire
+        ? `Votre demande pass Sport pour ${vars.beneficiaire}`
+        : "Votre demande pass Sport",
+    historyAction: "email.not_eligible",
+  },
+  not_eligible_hors_fc: {
+    templateId: 1187059,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC",
+    campaign: "pass-sport-not-eligible-hors-fc",
+    subject: () => "Votre demande pass Sport",
+    historyAction: "email.not_eligible_hors_fc",
+  },
 };
 
-// Who the email is addressed to. FranceConnect splits the two name fields:
-// `family_name` is the nom de naissance, `preferred_username` the nom d'usage —
-// prefer the latter when present, it is the name the person goes by.
-export type DigestRecipientIdentity = {
+const templateIdFor = (kind: EmailKind): number => {
+  const { templateId, templateEnv } = EMAIL_TEMPLATES[kind];
+  const raw = process.env[templateEnv];
+  if (!raw?.trim()) return templateId;
+
+  // `> 0` rejects NaN and 0 alike: `message=0` is answered with error 2, "le message est vide".
+  const override = Number(raw);
+  if (override > 0) return override;
+
+  // A typo in an override must not cost the mails.
+  console.warn(
+    `[pass-sport-worker] ${templateEnv}="${raw}" is not a template id, using ${templateId}`,
+  );
+  return templateId;
+};
+
+// ─── Parcours FranceConnect ──────────────────────────────────────────────────
+
+// FranceConnect vouches for the mailbox, so these mails may name the beneficiary. Nothing
+// was typed by the usager here, so there is no mismatch case.
+export const franceConnectEmailKind = (
+  hasCode: boolean,
+  isEligible: boolean,
+): FranceConnectEmailKind => (hasCode ? "code" : isEligible ? "eligible_soon" : "not_eligible");
+
+// These run against an LCA whose courriel is a mailbox we control, while their FranceConnect
+// identities are test ones nobody reads — so the priority is reversed there.
+const LCA_FIRST_ENVS = ["local", "staging"];
+
+// Two addresses for the same allocataire: the one LCA holds, from the CAF/MSA file, and the
+// one FranceConnect just served. In production the FranceConnect one wins, being the address
+// the usager authenticated with minutes ago rather than whatever the caisse recorded years ago.
+export const franceConnectRecipient = (
+  lcaEmail: string | undefined,
+  franceConnectEmail: string | undefined,
+): string | undefined =>
+  LCA_FIRST_ENVS.includes(process.env.ENV ?? "")
+    ? (lcaEmail ?? franceConnectEmail)
+    : (franceConnectEmail ?? lcaEmail);
+
+// ─── Parcours hors FranceConnect ─────────────────────────────────────────────
+
+// 'not_found' and "found, but the typed address is not the one LCA holds" MUST produce a
+// byte-identical send. Whoever filled the form chose that address, so two distinguishable
+// mails would tell them whether the person they named is a beneficiary — the enumeration
+// oracle the site closes by answering `outcome: 'sent'` in both cases.
+export const lcaEmailKind = (
+  lcaStatus: "confirmed" | "not_found",
+  emailsMatch: boolean,
+): LcaEmailKind => (lcaStatus === "confirmed" && emailsMatch ? "code" : "not_eligible_hors_fc");
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+type BeneficiaryVariables = {
+  // Rendered here rather than in the template: the allocataire is optional on both paths, and
+  // a template doing "Bonjour {prenom_allocataire}," would render "Bonjour ,".
+  salutation: string;
+  prenom: string;
+  nom: string;
+  beneficiaire: string;
+};
+
+export type EmailVariables =
+  | ({ kind: "code"; code: string } & BeneficiaryVariables)
+  | ({ kind: "eligible_soon" | "not_eligible" } & BeneficiaryVariables)
+  // No merge field at all, so no later spread can put a name back into the mail that goes
+  // to an address nobody verified.
+  | { kind: "not_eligible_hors_fc" };
+
+// `family_name` is the nom de naissance, `preferred_username` the nom d'usage.
+export type AllocataireIdentity = {
   given_name?: string;
   family_name?: string;
   preferred_username?: string;
 };
 
-const fullName = (firstname: string | undefined, lastname: string | undefined): string =>
+const fullName = (firstname?: string, lastname?: string): string =>
   [firstname, lastname].filter(Boolean).join(" ").trim();
 
-const listHtml = (entries: DigestEntry[], render: (e: DigestEntry) => string): string =>
-  `<ul>${entries.map((e) => `<li>${render(e)}</li>`).join("")}</ul>`;
-
-// A single email per allocataire covering every beneficiary of the job (themselves
-// and/or their children), rather than one email per beneficiary — the allocataire's
-// inbox is the same for all of them.
-//
-// Written in the third person on purpose: the recipient is the allocataire, while the
-// beneficiary named on each line is usually their child. "Bonjour {prénom de
-// l'enfant}, vous êtes éligible" addressed the wrong person for both.
-//
-// The site shows the code too, from eligibility_results. This email stays the durable
-// copy: the on-screen recap needs a live FranceConnect session to be reachable at all.
-export function sendBeneficiaryDigestEmail(
-  recipient: string | undefined,
-  entries: DigestEntry[],
-  allocataire?: DigestRecipientIdentity,
-): Promise<SendEmailResult | null> {
-  if (entries.length === 0) {
-    return Promise.resolve(null);
-  }
-  const codes = entries.filter((e) => e.kind === "code" && e.code);
-  const soon = entries.filter((e) => e.kind === "eligible_soon");
-  const notEligible = entries.filter((e) => e.kind === "not_eligible");
-
-  const subject =
-    codes.length > 1
-      ? "Vos codes pass Sport"
-      : codes.length === 1
-        ? "Votre code pass Sport"
-        : "Votre demande pass Sport";
-
+export const beneficiaryVariables = (
+  beneficiary: { firstname: string; lastname: string },
+  allocataire: AllocataireIdentity,
+): BeneficiaryVariables => {
   const allocataireName = fullName(
-    allocataire?.given_name,
-    allocataire?.preferred_username || allocataire?.family_name,
+    allocataire.given_name,
+    allocataire.preferred_username || allocataire.family_name,
   );
-  const salutation = allocataireName ? `Bonjour ${allocataireName},` : "Bonjour,";
-  const greeting = allocataireName ? `Bonjour ${escapeHtml(allocataireName)},` : "Bonjour,";
-  const who = (e: DigestEntry): string => fullName(e.firstname, e.lastname);
+  return {
+    salutation: allocataireName ? `Bonjour ${allocataireName},` : "Bonjour,",
+    prenom: beneficiary.firstname,
+    nom: beneficiary.lastname,
+    beneficiaire: fullName(beneficiary.firstname, beneficiary.lastname),
+  };
+};
 
-  const sections: string[] = [];
-  const lines: string[] = [];
+export function sendOutcomeEmail(
+  recipient: string,
+  vars: EmailVariables,
+): Promise<SendEmailResult> {
+  const template = EMAIL_TEMPLATES[vars.kind];
+  const templateId = templateIdFor(vars.kind);
 
-  if (codes.length > 0) {
-    sections.push(
-      `<p>${codes.length > 1 ? "Les codes pass Sport suivants sont disponibles" : "Le code pass Sport suivant est disponible"}&nbsp;:</p>`,
-      listHtml(
-        codes,
-        (e) =>
-          `${escapeHtml(who(e))}&nbsp;: <strong style="font-size:18px">${escapeHtml(e.code ?? "")}</strong>`,
-      ),
-      `<p>Présentez ${codes.length > 1 ? "chaque code" : "ce code"} à une structure sportive partenaire pour bénéficier de l'aide.</p>`,
-    );
-    lines.push(...codes.map((e) => `- ${who(e)} : code pass Sport ${e.code}`));
-  }
-
-  if (soon.length > 0) {
-    sections.push(
-      `<p>Éligibilité confirmée, code à venir&nbsp;:</p>`,
-      listHtml(soon, (e) => escapeHtml(who(e))),
-      `<p>Le code sera envoyé prochainement par e-mail.</p>`,
-    );
-    lines.push(...soon.map((e) => `- ${who(e)} : éligible, code à venir`));
-  }
-
-  if (notEligible.length > 0) {
-    sections.push(
-      `<p>D'après les informations disponibles, aucun droit n'a été trouvé pour&nbsp;:</p>`,
-      listHtml(notEligible, (e) => escapeHtml(who(e))),
-      `<p>Si vous pensez qu'il s'agit d'une erreur, rapprochez-vous d'une structure partenaire.</p>`,
-    );
-    lines.push(...notEligible.map((e) => `- ${who(e)} : aucun droit trouvé`));
-  }
-
-  return deliver(recipient, {
-    subject,
-    // Constant campaign name: Link Mobility indexes it as searchable metadata on
-    // their side, so it must never carry a pass Sport code.
-    name: "pass-sport-recapitulatif",
-    alternativeText: `${salutation}\n${lines.join("\n")}`,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_DIGEST",
-    html: [`<p>${greeting}</p>`, ...sections].join("\n").trim(),
-  });
-}
-
-// The two outcomes of the no-FranceConnect form. Unlike the FranceConnect digest, this path
-// knows exactly one beneficiary and exactly one recipient — the address the usager typed at
-// step two — so it gets its own pair of templates rather than a bucketed recap.
-//
-// The code only ever appears in the success mail, which is sent only when the typed address
-// is the one LCA already holds for the allocataire.
-export function sendLcaOutcomeEmail(
-  recipient: string | undefined,
-  params: {
-    outcome: "success" | "failure";
-    beneficiary: { firstname: string; lastname: string };
-    code?: string;
-  },
-): Promise<SendEmailResult | null> {
-  const { outcome, beneficiary, code } = params;
-  const prenom = beneficiary.firstname;
-  const nom = beneficiary.lastname;
-  const who = fullName(prenom, nom);
-
-  if (outcome === "success") {
-    return deliver(recipient, {
-      subject: "Votre code pass Sport",
-      // Constant campaign name: Link Mobility indexes it as searchable metadata on their
-      // side, so it must never carry the code.
-      name: "pass-sport-lca-succes",
-      alternativeText: `Bonjour,\n${who} : code pass Sport ${code ?? ""}`,
-      templateEnv: "LINK_MOBILITY_TEMPLATE_LCA_SUCCESS",
-      variables: { code: code ?? "", prenom, nom },
-      html: `
-    <p>Bonjour,</p>
-    <p>Le code pass Sport de ${escapeHtml(who)} est&nbsp;: <strong style="font-size:18px">${escapeHtml(code ?? "")}</strong></p>
-    <p>Présentez ce code à une structure sportive partenaire pour bénéficier de l'aide.</p>
-  `.trim(),
+  if (vars.kind === "not_eligible_hors_fc") {
+    return sendTransactionalEmail({
+      subject: template.subject(),
+      name: template.campaign,
+      templateId,
+      recipients: [recipient],
     });
   }
 
-  return deliver(recipient, {
-    subject: "Votre demande pass Sport",
-    name: "pass-sport-lca-echec",
-    alternativeText: `Bonjour,\nAucun droit n'a pu être confirmé pour ${who}.`,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_LCA_FAILURE",
-    variables: { prenom, nom },
-    html: `
-    <p>Bonjour,</p>
-    <p>D'après les informations disponibles, aucun droit n'a pu être confirmé pour ${escapeHtml(who)}.</p>
-    <p>Si vous pensez qu'il s'agit d'une erreur, rapprochez-vous d'une structure partenaire.</p>
-  `.trim(),
+  const { kind: _kind, ...merge } = vars;
+
+  return sendTransactionalEmail({
+    subject: template.subject(merge),
+    name: template.campaign,
+    templateId,
+    recipients: [recipient],
+    variables: { [recipient]: merge },
   });
 }
 
-// Gates the combined form: nothing is enqueued until this link is opened. It is not a login
-// and carries no verdict and no code — opening it only starts the processing whose result
-// goes back to this same address, so an intercepted link discloses nothing.
-export function sendVerificationEmail(
-  recipient: string | undefined,
-  link: string,
-): Promise<SendEmailResult | null> {
-  const href = escapeHtml(link);
-  return deliver(recipient, {
-    subject: "Confirmez votre adresse e-mail — pass Sport",
-    // Constant campaign name, like the digest: Link Mobility indexes it as searchable
-    // metadata, so it must never carry the token.
-    name: "pass-sport-verification-email",
-    alternativeText: `Bonjour,\nConfirmez votre adresse e-mail pour lancer le traitement de votre demande pass Sport :\n${link}\nCe lien est valable 24 heures.`,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_EMAIL_VERIFICATION",
-    variables: { lien: link },
-    html: `
-    <p>Bonjour,</p>
-    <p>Confirmez votre adresse e-mail pour lancer le traitement de votre demande pass Sport&nbsp;:</p>
-    <p><a href="${href}">Confirmer mon adresse e-mail</a></p>
-    <p>Ce lien est valable 24&nbsp;heures. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail&nbsp;: aucun traitement ne sera lancé.</p>
-  `.trim(),
-  });
-}
+// A failure here is recorded and swallowed: the verdicts are already persisted, and failing
+// the job would re-run every external call just to re-send one email.
+export async function recordEmailDelivery(params: {
+  job: Job<unknown>;
+  database: Database;
+  history: HistoryRecorder;
+  resultId: string;
+  kind: EmailKind;
+  subject: "self" | "enfant";
+  recipient: string;
+  bodyPayload: Record<string, unknown>;
+  send: () => Promise<SendEmailResult>;
+}): Promise<boolean> {
+  const { job, database, history, resultId, kind, subject, recipient, bodyPayload, send } = params;
+  const action = EMAIL_TEMPLATES[kind].historyAction;
 
-// Eligible but NOT found in LCA -> "code coming soon".
-export function sendEligibleSoonEmail(
-  recipient: string | undefined,
-  candidate: BeneficiaryCandidate,
-): Promise<SendEmailResult | null> {
-  const prenom = candidate.firstname;
-  return deliver(recipient, {
-    subject: "Vous êtes éligible au pass Sport",
-    name: "pass-sport-eligible-soon",
-    alternativeText: `Bonjour ${prenom}, vous êtes éligible au pass Sport. Votre code arrivera prochainement.`,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_ELIGIBLE_SOON",
-    html: `
-    <p>Bonjour ${prenom},</p>
-    <p>Bonne nouvelle&nbsp;: vous êtes éligible au pass Sport.</p>
-    <p>Votre code n'est pas encore disponible. Vous le recevrez prochainement par e-mail.</p>
-  `.trim(),
-  });
-}
+  try {
+    const result = await send();
 
-// NOT found in LCA AND not eligible -> "not eligible" notice.
-export function sendNotEligibleEmail(
-  recipient: string | undefined,
-  candidate: BeneficiaryCandidate,
-): Promise<SendEmailResult | null> {
-  const prenom = candidate.firstname;
-  return deliver(recipient, {
-    subject: "Votre demande pass Sport",
-    name: "pass-sport-not-eligible",
-    alternativeText: `Bonjour ${prenom}, vous n'êtes pas éligible au pass Sport selon les informations disponibles.`,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE",
-    html: `
-    <p>Bonjour ${prenom},</p>
-    <p>D'après les informations disponibles, vous n'êtes pas éligible au pass Sport.</p>
-    <p>Si vous pensez qu'il s'agit d'une erreur, rapprochez-vous d'une structure partenaire.</p>
-  `.trim(),
-  });
+    if (!result.sent) {
+      console.warn(
+        `[pass-sport-worker] job ${job.id}: ${kind} email NOT sent: ${result.errorMessages.join("; ")}`,
+      );
+      // Nothing re-sends, so a rate limit is a silent loss and has to be told apart from a
+      // payload Link Mobility would reject every time.
+      if (result.errorCodes.includes("63")) {
+        Sentry.captureMessage("Link Mobility rate limit reached", {
+          level: "warning",
+          tags: { component: "email" },
+        });
+      }
+      await history.record({
+        actor: "worker",
+        action,
+        status: "error",
+        subject,
+        error: result.errorMessages.join("; "),
+        bodyPayload,
+        responsePayload: result,
+      });
+      return false;
+    }
+
+    // updated_at is maintained by a BEFORE UPDATE trigger, never by the writer.
+    await database
+      .update(eligibilityResults)
+      .set({ emailSent: true })
+      .where(eq(eligibilityResults.id, resultId));
+
+    console.log(`[pass-sport-worker] job ${job.id}: sent ${kind} email`);
+    logPii(`job ${job.id}: sent ${kind} email to ${recipient}`);
+
+    await history.record({
+      actor: "worker",
+      action,
+      status: "success",
+      subject,
+      bodyPayload,
+      responsePayload: result,
+    });
+
+    return true;
+  } catch (e) {
+    console.warn(
+      `[pass-sport-worker] job ${job.id}: ${kind} email send threw: ${(e as Error).message}`,
+    );
+    Sentry.captureException(e, {
+      tags: { component: "email", emailKind: kind },
+      extra: { jobId: job.id },
+    });
+    await history.record({
+      actor: "worker",
+      action,
+      status: "error",
+      subject,
+      error: (e as Error).message,
+      bodyPayload,
+    });
+    return false;
+  }
 }

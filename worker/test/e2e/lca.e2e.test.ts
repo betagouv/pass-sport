@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { startStack, type Stack } from "./harness";
+import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 import { CAISSE, SITUATION, type LcaJobData } from "../../src/eligibility/types";
 
 // The two-step form answers inside the usager's request: LCA is called by the site, which
@@ -73,10 +73,27 @@ describe("lca job", () => {
     expect(row.email_kind).toBe("code");
     expect(row.email_sent).toBe(true);
 
-    const sent = stack.sentEmails().slice(before);
+    const sent = stack.parsedEmails().slice(before);
     expect(sent).toHaveLength(1);
-    expect(decodeURIComponent(sent[0])).toContain("24-IIII-IIII");
-    expect(decodeURIComponent(sent[0])).toContain("pass-sport-lca-succes");
+    expect(sent[0].campaign).toBe("pass-sport-code");
+    expect(sent[0].templateId).toBe(String(TEMPLATE_IDS.code));
+    expect(sent[0].variables["allocataire@example.test"]).toMatchObject({
+      code: "24-IIII-IIII",
+      prenom: "MANON",
+      nom: "DUPOND",
+      beneficiaire: "MANON DUPOND",
+      salutation: "Bonjour BABETTE DUPOND,",
+    });
+  });
+
+  it("greets without a dangling comma when the allocataire has no name", async () => {
+    const jobId = "lca-nameless-allocataire";
+    const before = stack.sentEmails().length;
+
+    await stack.enqueueLcaAndWait(job({ allocataire: {} }), jobId);
+
+    const [sent] = stack.parsedEmails().slice(before);
+    expect(sent.variables["allocataire@example.test"].salutation).toBe("Bonjour,");
   });
 
   it("still writes the answer of a job enqueued before the payload split", async () => {
@@ -114,21 +131,43 @@ describe("lca job", () => {
     await stack.enqueueLcaAndWait(job({ contactEmail: "quelquun-dautre@example.test" }), jobId);
 
     const [row] = await resultsFor(jobId);
-    // LCA holds the beneficiary and served a code, but nothing was mailed: the verdict says so
-    // rather than claim a delivered code.
+    // LCA holds the beneficiary and served a code, but nothing was mailed. The mail is the
+    // same neutral notice a refusal gets, so the verdict is the only place that says so.
     expect(row.verdict).toBe("eligible_confirmed_but_email_not_matching");
-    expect(row.email_kind).toBe("code_withheld");
+    expect(row.email_kind).toBe("not_eligible_hors_fc");
     expect(row.email).toBe("quelquun-dautre@example.test");
     expect(row.email_sent).toBe(true);
 
-    const sent = stack.sentEmails().slice(before);
-    expect(sent).toHaveLength(1);
-    const body = decodeURIComponent(sent[0]);
-    expect(body).toContain("pass-sport-lca-echec");
-    expect(body).toContain("quelquun-dautre@example.test");
+    const [sent] = stack.parsedEmails().slice(before);
+    expect(sent.campaign).toBe("pass-sport-not-eligible-hors-fc");
+    expect(sent.templateId).toBe(String(TEMPLATE_IDS.not_eligible_hors_fc));
+    expect(sent.recipients).toEqual(["quelquun-dautre@example.test"]);
+    // Nothing about the beneficiary reaches an address nobody verified.
+    expect(sent.variables).toEqual({});
+
+    const [body] = stack.sentEmails().slice(before);
     expect(body).not.toContain("24-IIII-IIII");
+    expect(body).not.toContain("MANON");
+    expect(body).not.toContain("DUPOND");
     // The address LCA holds is only ever compared against, never written to.
     expect(body).not.toContain("allocataire@example.test");
+  });
+
+  it("mails the same thing whether LCA holds the beneficiary or not", async () => {
+    const contactEmail = "tiers@example.test";
+    const before = stack.sentEmails().length;
+
+    // Same typed address, so the two bodies are comparable byte for byte.
+    await stack.enqueueLcaAndWait(job({ contactEmail }), "lca-oracle-confirmed");
+    await stack.enqueueLcaAndWait(
+      job({ contactEmail, lcaStatus: "not_found", passSportCode: null, email: null }),
+      "lca-oracle-not-found",
+    );
+
+    const [withheld, refused] = stack.sentEmails().slice(before);
+    // Whoever filled the form chose that address: two distinguishable mails would tell them
+    // whether the person they named is a beneficiary.
+    expect(withheld).toBe(refused);
   });
 
   it("replays the LCA calls the site made into eligibility_history", async () => {
@@ -156,13 +195,15 @@ describe("lca job", () => {
     const [row] = await resultsFor(jobId);
     expect(row.verdict).toBe("not_eligible");
     expect(row.pass_sport_code).toBeNull();
-    expect(row.email_kind).toBe("not_eligible");
+    expect(row.email_kind).toBe("not_eligible_hors_fc");
     expect(row.email).toBe("allocataire@example.test");
     expect(row.email_sent).toBe(true);
 
-    const sent = stack.sentEmails().slice(before);
+    const sent = stack.parsedEmails().slice(before);
     expect(sent).toHaveLength(1);
-    expect(decodeURIComponent(sent[0])).toContain("pass-sport-lca-echec");
+    expect(sent[0].campaign).toBe("pass-sport-not-eligible-hors-fc");
+    expect(sent[0].templateId).toBe(String(TEMPLATE_IDS.not_eligible_hors_fc));
+    expect(sent[0].variables).toEqual({});
   });
 
   it("claims nothing, and mails nothing, when LCA was unreachable", async () => {

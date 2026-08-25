@@ -1,16 +1,18 @@
 import type { Job } from "bullmq";
 import { and, eq } from "drizzle-orm";
 import { isChildAide, type LcaJobData } from "../eligibility/types";
+import type { Database } from "../db/client";
 import { eligibilityResults, type Verdict } from "../db/schema";
-import { sendLcaOutcomeEmail } from "../email/notify";
+import {
+  beneficiaryVariables,
+  lcaEmailKind,
+  recordEmailDelivery,
+  sendOutcomeEmail,
+} from "../email/notify";
 import { logPii } from "../log";
-import { recordEmailDelivery, startJob, type Database } from "./shared";
+import { startJob } from "./shared";
 
 export type LcaDeps = { db: Database };
-
-// This path's own email_kind vocabulary. Not DigestEntry["kind"]: that one describes the
-// FranceConnect recap, and has no way to say "LCA holds a code but it was not mailed".
-type LcaEmailKind = "code" | "code_withheld" | "not_eligible";
 
 const normalizeEmail = (value: string | null | undefined): string | null =>
   value ? value.trim().toLowerCase() : null;
@@ -41,12 +43,14 @@ export async function processLcaJob(
 
   const history = await startJob(job, database, null, data);
 
+  const source = isChildAide(data.aide) ? "enfant" : "self";
+
   for (const event of data.history) {
     await history.record({
       actor: "lca",
       action: event.action,
       status: event.status,
-      subject: isChildAide(data.aide) ? "enfant" : "self",
+      subject: source,
       durationMs: event.durationMs,
       error: event.error,
       bodyPayload: event.bodyPayload,
@@ -81,12 +85,8 @@ export async function processLcaJob(
   }
 
   // Past the early return only 'confirmed' and 'not_found' remain, so an email always goes out.
-  const emailKind: LcaEmailKind = isConfirmed
-    ? emailsMatch
-      ? "code"
-      : "code_withheld"
-    : "not_eligible";
-  const outcome = emailKind === "code" ? "success" : "failure";
+  const lcaStatus = isConfirmed ? "confirmed" : "not_found";
+  const emailKind = lcaEmailKind(lcaStatus, emailsMatch);
 
   // BullMQ drops a job once it completes, so a usager who submits the same request twice
   // gets a second one through. The row already written is what recognises it.
@@ -115,28 +115,31 @@ export async function processLcaJob(
     }
   }
 
-  await database.insert(eligibilityResults).values({
-    jobId: job.id ?? null,
-    source: isChildAide(data.aide) ? "enfant" : "self",
-    allocataireIdentite: data.allocataire,
-    allocataireFcSub: null,
-    enfantIdentite: isChildAide(data.aide)
-      ? {
-          family_name: data.beneficiary.lastname,
-          given_name: data.beneficiary.firstname,
-          birthdate: data.beneficiary.birthdate,
-        }
-      : null,
-    isEligible: data.lcaStatus === "confirmed",
-    isFranceConnected: false,
-    residenceInsee: data.residenceInsee,
-    lcaStatus: data.lcaStatus,
-    verdict,
-    passSportCode: data.passSportCode,
-    emailKind,
-    emailSent: false,
-    email: data.contactEmail,
-  });
+  const [inserted] = await database
+    .insert(eligibilityResults)
+    .values({
+      jobId: job.id ?? null,
+      source,
+      allocataireIdentite: data.allocataire,
+      allocataireFcSub: null,
+      enfantIdentite: isChildAide(data.aide)
+        ? {
+            family_name: data.beneficiary.lastname,
+            given_name: data.beneficiary.firstname,
+            birthdate: data.beneficiary.birthdate,
+          }
+        : null,
+      isEligible: data.lcaStatus === "confirmed",
+      isFranceConnected: false,
+      residenceInsee: data.residenceInsee,
+      lcaStatus: data.lcaStatus,
+      verdict,
+      passSportCode: data.passSportCode,
+      emailKind,
+      emailSent: false,
+      email: data.contactEmail,
+    })
+    .returning({ id: eligibilityResults.id });
 
   await history.record({
     actor: "worker",
@@ -153,19 +156,26 @@ export async function processLcaJob(
     job,
     database,
     history,
+    resultId: inserted.id,
+    kind: emailKind,
+    subject: source,
     recipient: data.contactEmail,
     bodyPayload: {
       to: data.contactEmail,
-      outcome,
       email_kind: emailKind,
       emails_match: emailsMatch,
     },
     send: () =>
-      sendLcaOutcomeEmail(data.contactEmail, {
-        outcome,
-        beneficiary: data.beneficiary,
-        code: outcome === "success" ? (data.passSportCode ?? undefined) : undefined,
-      }),
+      sendOutcomeEmail(
+        data.contactEmail,
+        emailKind === "code"
+          ? {
+              kind: "code",
+              code: data.passSportCode ?? "",
+              ...beneficiaryVariables(data.beneficiary, data.allocataire),
+            }
+          : { kind: "not_eligible_hors_fc" },
+      ),
   });
 
   console.log(`[pass-sport-worker] job ${job.id}: verdict=${verdict}, emailed=${emailed}`);

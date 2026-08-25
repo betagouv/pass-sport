@@ -246,7 +246,7 @@ class FakeLcaClient implements LcaClient {
           situation: "boursier",
           organisme: "cnous",
           // matricule is stripped by process.ts sanitize before storage.
-          allocataire: { matricule: "SECRET-MATRICULE" },
+          allocataire: { matricule: "SECRET-MATRICULE", courriel: LCA_COURRIEL },
           // Present so the history test can prove it is dropped rather than pass vacuously.
           pdf_base_64: "JVBERi0xLjQK-FAKE-ATTESTATION",
         },
@@ -254,6 +254,49 @@ class FakeLcaClient implements LcaClient {
     };
   }
 }
+
+// The address the fake LCA holds for the allocataire, distinct from the FranceConnect one so
+// a test can tell which of the two an email went to.
+export const LCA_COURRIEL = "allocataire-lca@example.test";
+
+// Distinct on purpose: `message=<id>` is the only evidence of which mail went out.
+export const TEMPLATE_IDS = {
+  code: 1001,
+  eligible_soon: 1002,
+  not_eligible: 1003,
+  not_eligible_hors_fc: 1004,
+} as const;
+
+export type SentEmail = {
+  subject: string;
+  campaign: string | null;
+  templateId: string;
+  recipients: string[];
+  variables: Record<string, Record<string, string>>;
+};
+
+// URLSearchParams, never decodeURIComponent: form encoding writes a space as '+', which
+// decodeURIComponent leaves as a literal '+'.
+export const parseSentEmail = (raw: string): SentEmail => {
+  const params = new URLSearchParams(raw);
+  const variables: SentEmail["variables"] = {};
+
+  for (const [key, value] of params.entries()) {
+    const match = key.match(/^destinataires\[([^\]]+)\]\[([^\]]+)\]$/);
+    if (match) (variables[match[1]] ??= {})[match[2]] = value;
+  }
+
+  // Two recipient forms: PHP-array style with merge variables, plain list without.
+  const plain = params.get("destinataires");
+
+  return {
+    subject: params.get("sujet") ?? "",
+    campaign: params.get("nom"),
+    templateId: params.get("message") ?? "",
+    recipients: plain ? plain.split(",") : Object.keys(variables),
+    variables,
+  };
+};
 
 export type Stack = {
   pool: pg.Pool;
@@ -272,6 +315,7 @@ export type Stack = {
 
   // Raw form bodies received by the fake Link Mobility server, newest last.
   sentEmails: () => string[];
+  parsedEmails: () => SentEmail[];
 
   setLcaAnswer: (answer: { situation: SituationType; organisme: OrganismType } | null) => void;
   setLcaSearchHttpStatus: (status: number | null) => void;
@@ -325,6 +369,12 @@ export async function startStack(
   process.env.LINK_MOBILITY_API_KEY = "test-key";
   process.env.LINK_MOBILITY_SENDER_EMAIL = "sender@example.test";
   process.env.LINK_MOBILITY_SENDER_NAME = "pass Sport";
+  process.env.LINK_MOBILITY_TEMPLATE_CODE = String(TEMPLATE_IDS.code);
+  process.env.LINK_MOBILITY_TEMPLATE_ELIGIBLE_SOON = String(TEMPLATE_IDS.eligible_soon);
+  process.env.LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE = String(TEMPLATE_IDS.not_eligible);
+  process.env.LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC = String(
+    TEMPLATE_IDS.not_eligible_hors_fc,
+  );
 
   const pool = new pg.Pool({ connectionString: pgC.getConnectionUri() });
   await runMigrations(pool);
@@ -448,6 +498,7 @@ export async function startStack(
     enqueueLcaAndWait,
     enqueueLcaAndWaitFailure,
     sentEmails: () => sentEmails,
+    parsedEmails: () => sentEmails.map(parseSentEmail),
     setLcaAnswer: (answer) => {
       lcaClient.answerAs = answer;
     },

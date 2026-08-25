@@ -5,8 +5,16 @@ import { ALLOWANCE, type EligibilityJobData, type QuotientFamilialData } from ".
 import { type LcaClient } from "../lca/client";
 import { listBeneficiaryCandidates } from "../lca/candidates";
 import { processCandidateThroughLca } from "../lca/process";
-import type { DigestEntry } from "../email/notify";
-import { emailKindFor, sendJobDigest, startJob, verdictFor, type Database, type EmailKind } from "./shared";
+import {
+  beneficiaryVariables,
+  franceConnectEmailKind,
+  franceConnectRecipient,
+  recordEmailDelivery,
+  sendOutcomeEmail,
+  type FranceConnectEmailKind,
+} from "../email/notify";
+import { startJob, verdictFor } from "./shared";
+import type { Database } from "../db/client";
 import { eligibilityResults, type AllocataireIdentite, type Verdict } from "../db/schema";
 import { logPii } from "../log";
 
@@ -22,7 +30,7 @@ export type BeneficiaryOutcome = {
   isEligible: boolean;
   lcaStatus: string;
   verdict: Verdict;
-  emailKind: EmailKind | null;
+  emailKind: FranceConnectEmailKind;
   emailSent: boolean;
 };
 
@@ -81,16 +89,17 @@ export async function processEligibilityJob(
 
   // PHASE 1 — every external call, no write of our own.
   let confirmed = 0;
-  let recipient: string | undefined;
+  // The courriel of the first confirmed beneficiary: it is the allocataire's, so the later
+  // ones would only repeat it.
+  let lcaEmail: string | undefined;
 
-  const digest: DigestEntry[] = [];
   const pending: {
     candidate: (typeof candidates)[number];
     status: string;
     isEligible: boolean;
     verdict: Verdict;
     passSportCode: string | null;
-    emailKind: EmailKind | null;
+    emailKind: FranceConnectEmailKind;
   }[] = [];
 
   for (const candidate of toProcess) {
@@ -123,7 +132,7 @@ export async function processEligibilityJob(
     if (outcome.status === "confirmed") {
       confirmed += 1;
       passSportCode = outcome.passSportCode;
-      recipient ??= (outcome.confirm.allocataire as { courriel?: string } | undefined)?.courriel;
+      lcaEmail ??= (outcome.confirm.allocataire as { courriel?: string } | undefined)?.courriel;
     }
 
     // A confirmed LCA beneficiary IS eligible whatever our own rules concluded: the LCA
@@ -131,17 +140,8 @@ export async function processEligibilityJob(
     const hasCode = passSportCode !== null;
     const isEligible = hasCode || candidate.eligibilities.length > 0;
 
-    // The pass Sport code goes two ways: persisted below so the site can show it, and
-    // mailed. The send itself happens once after the loop — here we only decide what this
-    // beneficiary contributes to it.
-    const emailKind = emailKindFor(hasCode, isEligible);
-
-    digest.push({
-      firstname: candidate.firstname,
-      lastname: candidate.lastname,
-      kind: emailKind,
-      code: passSportCode ?? undefined,
-    });
+    // The pass Sport code goes two ways: persisted below so the site can show it, and mailed.
+    const emailKind = franceConnectEmailKind(hasCode, isEligible);
 
     pending.push({
       candidate,
@@ -155,7 +155,8 @@ export async function processEligibilityJob(
 
   // Only ever the connected user: an enfant always passes worthAnLcaCall, and a self
   // candidate only exists when AAH or CROUS was claimed. So this is a real refusal on an
-  // aide the usager did ask about, never an unexamined case.
+  // aide the usager did ask about, never an unexamined case — hence the same refusal email
+  // as a beneficiary LCA turned down.
   for (const candidate of skipped) {
     pending.push({
       candidate,
@@ -164,9 +165,7 @@ export async function processEligibilityJob(
       isEligible: false,
       verdict: "not_eligible",
       passSportCode: null,
-      // Left out of the digest on purpose: we do not email someone a refusal for an aide
-      // they never claimed, and emailKind drives both the digest and the email_sent UPDATE.
-      emailKind: null,
+      emailKind: "not_eligible",
     });
   }
 
@@ -186,6 +185,12 @@ export async function processEligibilityJob(
   // to read as the allocataire as declared.
   const { sub: _sub, ...pivot } = identity;
   const allocataireIdentite: AllocataireIdentite = { ...pivot, residence_insee: residenceInsee };
+
+  // Resolvable only now: the LCA loop above is what may have produced an lcaEmail.
+  const to = franceConnectRecipient(lcaEmail, identity.email);
+
+  // Index-aligned with `pending` and `outcomes`.
+  let resultIds: string[] = [];
 
   if (pending.length === 0) {
     // No candidate at all — a QF/AEEH demande whose QF answer carried no exploitable
@@ -210,7 +215,10 @@ export async function processEligibilityJob(
 
     // A single transaction: a failure here rolls the whole batch back, so a retry
     // cannot find half a job already written.
-    await database.transaction(async (tx) => {
+    resultIds = await database.transaction(async (tx) => {
+      // Row by row: the order of a multi-row INSERT … RETURNING is not guaranteed.
+      const ids: string[] = [];
+
       for (const { candidate, status, isEligible, verdict, passSportCode, emailKind } of pending) {
         // allocataire = connected FranceConnect user, enfant = the QF child ('self' rows leave enfant_* NULL).
         const isEnfant = candidate.source === "enfant";
@@ -223,23 +231,30 @@ export async function processEligibilityJob(
             }
           : null;
 
-        await tx.insert(eligibilityResults).values({
-          jobId: job.id ?? null,
-          source: candidate.source,
-          allocataireIdentite,
-          allocataireFcSub: identity.sub ?? null,
-          enfantIdentite,
-          isEligible,
-          isFranceConnected,
-          residenceInsee,
-          lcaStatus: status,
-          verdict,
-          passSportCode,
-          emailKind,
-          // Flipped by the single UPDATE below once the recapitulative email is accepted.
-          emailSent: false,
-        });
+        const [inserted] = await tx
+          .insert(eligibilityResults)
+          .values({
+            jobId: job.id ?? null,
+            source: candidate.source,
+            allocataireIdentite,
+            allocataireFcSub: identity.sub ?? null,
+            enfantIdentite,
+            isEligible,
+            isFranceConnected,
+            residenceInsee,
+            lcaStatus: status,
+            verdict,
+            passSportCode,
+            emailKind,
+            emailSent: false,
+            email: to ?? null,
+          })
+          .returning({ id: eligibilityResults.id });
+
+        ids.push(inserted.id);
       }
+
+      return ids;
     });
 
     await history.record({
@@ -250,20 +265,50 @@ export async function processEligibilityJob(
     });
   }
 
-  const sent = await sendJobDigest({
-    job,
-    database,
-    history,
-    recipient: recipient ?? identity.email,
-    entries: digest,
-    allocataire: identity,
-  });
+  // One email per beneficiary, all to the same mailbox, and only after the LCA loop: a send
+  // inside it would mail a code for a batch that still rolls back. Sequential because Link
+  // Mobility rate-limits (error 63).
+  let emailed = 0;
 
-  const emailed = sent ? digest.length : 0;
+  if (pending.length > 0 && !to) {
+    await history.record({
+      actor: "worker",
+      action: "email.skipped",
+      status: "skipped",
+      responsePayload: { beneficiaries: pending.length, reason: "no_recipient" },
+    });
+  } else if (to) {
+    for (const [index, p] of pending.entries()) {
+      const emailKind = p.emailKind;
+      const variables = beneficiaryVariables(p.candidate, identity);
 
-  if (sent) {
-    for (const o of outcomes) {
-      if (o.emailKind) o.emailSent = true;
+      const sent = await recordEmailDelivery({
+        job,
+        database,
+        history,
+        resultId: resultIds[index],
+        kind: emailKind,
+        subject: p.candidate.source === "enfant" ? "enfant" : "self",
+        recipient: to,
+        bodyPayload: {
+          to,
+          email_kind: emailKind,
+          source: p.candidate.source,
+          firstname: p.candidate.firstname,
+          lastname: p.candidate.lastname,
+          code: p.passSportCode,
+        },
+        send: () =>
+          sendOutcomeEmail(
+            to,
+            emailKind === "code"
+              ? { kind: "code", code: p.passSportCode ?? "", ...variables }
+              : { kind: emailKind, ...variables },
+          ),
+      });
+
+      outcomes[index].emailSent = sent;
+      if (sent) emailed += 1;
     }
   }
 

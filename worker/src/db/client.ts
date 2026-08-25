@@ -6,5 +6,7 @@ const SCALINGO_POSTGRESQL_URL =
   process.env.SCALINGO_POSTGRESQL_URL ??
   "postgres://passport:passport@localhost:5432/passport";
 
+export type Database = NodePgDatabase<typeof schema>;
+
 export const pool = new pg.Pool({ connectionString: SCALINGO_POSTGRESQL_URL });
-export const db: NodePgDatabase<typeof schema> = drizzle(pool, { schema });
+export const db: Database = drizzle(pool, { schema });
