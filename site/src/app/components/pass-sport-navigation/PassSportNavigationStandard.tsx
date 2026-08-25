@@ -82,7 +82,7 @@ export default function PassSportNavigation({ pocUserName }: Props) {
                 <p key="poc-identity" className={styles['poc-identity']}>
                   <span className="fr-icon-account-line" aria-hidden="true" />
                   <span>
-                    Connecté avec FranceConnect en tant que <strong>{pocUserName}</strong>
+                    Connecté en tant que <strong>{pocUserName}</strong>
                   </span>
                 </p>,
                 {
