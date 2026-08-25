@@ -47,10 +47,18 @@ const authenticate = (identity: Partial<PivotIdentity> = IDENTITY) => {
 const result = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryResult => ({
   source: 'self',
   givenName: null,
+  familyName: null,
+  birthdate: null,
+  gender: null,
   verdict: 'eligible_confirmed',
   code: null,
   ...overrides,
 });
+
+// GET reads `code` off the request URL — every call site needs a real Request, even the ones
+// that exercise the 'self' (no `code`) path.
+const request = (search = ''): Request =>
+  new Request(`http://localhost/api/france-connect/pdf${search}`);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -61,7 +69,7 @@ describe('GET /api/france-connect/pdf', () => {
   it('rejects an unauthenticated caller before looking anything up', async () => {
     mockedLoadPocResult.mockResolvedValue(null);
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(response.status).toBe(401);
     expect(mockedFindResultsForSub).not.toHaveBeenCalled();
@@ -72,7 +80,7 @@ describe('GET /api/france-connect/pdf', () => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([result({ code: '24-ZORV-QYXA' })]);
 
-    await GET();
+    await GET(request());
 
     expect(mockedFindResultsForSub).toHaveBeenCalledWith(IDENTITY.sub);
     expect(mockedFindResultsForSub).toHaveBeenCalledTimes(1);
@@ -82,7 +90,7 @@ describe('GET /api/france-connect/pdf', () => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([result({ verdict: 'eligible_pending' })]);
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(response.status).toBe(404);
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
@@ -94,13 +102,84 @@ describe('GET /api/france-connect/pdf', () => {
       result({ verdict: 'eligible_pending_lca', code: '24-WOLX-TREP' }),
     ]);
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(response.status).toBe(404);
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
   });
 
-  it('ignores an enfant row entirely, even one with a confirmed code', async () => {
+  it('ignores an enfant row when no code is requested, even one with a confirmed code', async () => {
+    authenticate();
+    mockedFindResultsForSub.mockResolvedValue([
+      result({
+        source: 'enfant',
+        givenName: 'Zephyrin',
+        familyName: 'OSTRENYA',
+        birthdate: '2015-06-02',
+        gender: 'male',
+        verdict: 'eligible_confirmed',
+        code: '24-AZUR-KLMB',
+      }),
+    ]);
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(404);
+    expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when the requested code does not match any of the caller’s own enfant rows', async () => {
+    authenticate();
+    mockedFindResultsForSub.mockResolvedValue([
+      result({
+        source: 'enfant',
+        givenName: 'Zephyrin',
+        familyName: 'OSTRENYA',
+        birthdate: '2015-06-02',
+        gender: 'male',
+        verdict: 'eligible_confirmed',
+        code: '24-AZUR-KLMB',
+      }),
+    ]);
+
+    const response = await GET(request('?code=24-DOES-NOT-EXIST'));
+
+    expect(response.status).toBe(404);
+    expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
+  });
+
+  it('builds a child’s PDF from application_results_by_sub when its code is requested', async () => {
+    authenticate();
+    mockedFindResultsForSub.mockResolvedValue([
+      result({ code: '24-ZORV-QYXA' }), // the allocataire's own row, must not be picked
+      result({
+        source: 'enfant',
+        givenName: 'Zephyrin',
+        familyName: 'OSTRENYA',
+        birthdate: '2015-06-02',
+        gender: 'male',
+        verdict: 'eligible_confirmed',
+        code: '24-AZUR-KLMB',
+      }),
+    ]);
+
+    const response = await GET(request('?code=24-AZUR-KLMB'));
+
+    expect(mockedGeneratePdfBuffer).toHaveBeenCalledWith({
+      firstname: 'Zephyrin',
+      lastname: 'OSTRENYA',
+      dob: '2015-06-02',
+      code: '24-AZUR-KLMB',
+      gender: 'M',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="pass-sport-24-AZUR-KLMB.pdf"',
+    );
+  });
+
+  it('returns 422 for an enfant row written before family_name/birthdate/gender were captured', async () => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([
       result({
@@ -111,9 +190,9 @@ describe('GET /api/france-connect/pdf', () => {
       }),
     ]);
 
-    const response = await GET();
+    const response = await GET(request('?code=24-AZUR-KLMB'));
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(422);
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
   });
 
@@ -121,7 +200,7 @@ describe('GET /api/france-connect/pdf', () => {
     authenticate({ family_name: undefined });
     mockedFindResultsForSub.mockResolvedValue([result({ code: '24-ZORV-QYXA' })]);
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(response.status).toBe(422);
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
@@ -134,7 +213,7 @@ describe('GET /api/france-connect/pdf', () => {
       result({ code: '24-ZORV-QYXA' }),
     ]);
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(mockedGeneratePdfBuffer).toHaveBeenCalledWith({
       firstname: 'Velmorak',
@@ -159,7 +238,7 @@ describe('GET /api/france-connect/pdf', () => {
     authenticate({ gender: 'male' });
     mockedFindResultsForSub.mockResolvedValue([result({ code: '24-ZORV-QYXA' })]);
 
-    await GET();
+    await GET(request());
 
     expect(mockedGeneratePdfBuffer).toHaveBeenCalledWith(expect.objectContaining({ gender: 'M' }));
   });
@@ -169,7 +248,7 @@ describe('GET /api/france-connect/pdf', () => {
     mockedFindResultsForSub.mockResolvedValue([result({ code: '24-ZORV-QYXA' })]);
     mockedGeneratePdfBuffer.mockRejectedValue(new Error('renderer exploded'));
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(response.status).toBe(500);
     const body = (await response.json()) as { error: string };

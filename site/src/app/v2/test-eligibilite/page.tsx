@@ -82,7 +82,13 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
   // time, while Postgres holds the moment the rows were committed. Word the line to
   // match rather than calling both "enregistrée".
   const existingJobDateLabel =
-    existingJob?.state === 'processed' ? 'Demande traitée le' : 'Demande enregistrée le';
+    existingJob?.state === 'processed' ? 'Demande prise en compte le' : 'Demande soumise le';
+  const existingJobInfo = existingJobDate ? (
+    <>
+      {existingJobDateLabel}{' '}
+      <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+    </>
+  ) : null;
 
   return (
     <main
@@ -162,28 +168,38 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                   rather than a status. Same component the polling panel renders, so a
                   returning user and a just-submitted one read exactly the same thing. */}
               {results.length > 0 ? (
-                <BeneficiaryRecap beneficiaries={results} allocataireIdentity={result.identity} />
-              ) : (
-                <Card
-                  className="fr-mb-3w"
-                  border
-                  nativeDivProps={{ role: 'status' }}
-                  title="Demande enregistrée"
-                  titleAs="h2"
-                  start={<StatusBadge verdict="not_assessed" />}
-                  desc={
-                    <>
-                      {PENDING_CODE_MESSAGE} Si votre demande dépasse le délai de 72h, merci de
-                      consulter la <Link href="/v2/une-question">FAQ</Link>.
-                    </>
-                  }
+                <BeneficiaryRecap
+                  beneficiaries={results}
+                  allocataireIdentity={result.identity}
+                  jobInfo={existingJobInfo}
                 />
-              )}
-              {existingJobDate && (
-                <p>
-                  {existingJobDateLabel}{' '}
-                  <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
-                </p>
+              ) : (
+                <>
+                  <Card
+                    className="fr-mb-3w"
+                    border
+                    nativeDivProps={{ role: 'status' }}
+                    title="Demande enregistrée"
+                    titleAs="h2"
+                    start={<StatusBadge verdict="not_assessed" />}
+                    desc={
+                      <>
+                        {PENDING_CODE_MESSAGE} Si votre demande dépasse le délai de 72h, merci de
+                        consulter la{' '}
+                        <Link href="/v2/une-question" className="fr-link">
+                          FAQ
+                        </Link>
+                        .
+                      </>
+                    }
+                  />
+                  {existingJobDate && (
+                    <p>
+                      {existingJobDateLabel}{' '}
+                      <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+                    </p>
+                  )}
+                </>
               )}
             </>
           ) : (

@@ -19,16 +19,25 @@ const formatBirthdate = (birthdate: string): string =>
 // the subset of PivotIdentity this component actually needs.
 export type AllocataireIdentity = Pick<PivotIdentity, 'given_name' | 'family_name' | 'birthdate'>;
 
-// application_results_by_sub deliberately exposes only a first name for 'enfant' rows (see
-// the Verdict comment in @/app/services/applications) — full name and birthdate are only
-// ever known for the allocataire themselves, from their own FranceConnect session identity.
-const who = (b: BeneficiaryResult, allocataireIdentity: AllocataireIdentity): string => {
-  if (b.source !== 'self') {
-    return b.givenName ?? 'Votre enfant';
-  }
-  const { given_name, family_name, birthdate } = allocataireIdentity;
-  const name = [family_name, given_name].filter(Boolean).join(' ');
+// Same "FAMILY_NAME given_name, né(e) le dd/mm/yyyy" shape for every card. The allocataire's
+// identity comes from their FranceConnect session; an enfant's comes from
+// application_results_by_sub, which now carries their family_name/birthdate too.
+const formatIdentity = (
+  familyName: string | null | undefined,
+  givenName: string | null | undefined,
+  birthdate: string | null | undefined,
+  fallback: string,
+): string => {
+  const name = [familyName, givenName].filter(Boolean).join(' ') || fallback;
   return birthdate ? `${name}, né(e) le ${formatBirthdate(birthdate)}` : name;
+};
+
+const who = (b: BeneficiaryResult, allocataireIdentity: AllocataireIdentity): string => {
+  if (b.source === 'self') {
+    const { given_name, family_name, birthdate } = allocataireIdentity;
+    return formatIdentity(family_name, given_name, birthdate, '');
+  }
+  return formatIdentity(b.familyName, b.givenName, b.birthdate, 'Votre enfant');
 };
 
 type StatusDisplay = {
@@ -69,8 +78,7 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
       // the email stays the only place it can be read.
       return b.code ? (
         <>
-          Le code pass Sport suivant est disponible&nbsp;: <strong>{b.code}</strong>. Vous pouvez le
-          télécharger en cliquant sur le bouton &quot;Télécharger&quot;.
+          Le code pass Sport suivant est disponible&nbsp;: <strong>{b.code}</strong>.
         </>
       ) : (
         PENDING_CODE_MESSAGE
@@ -84,7 +92,10 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
           Vos informations ont été trouvées, mais vous ne remplissez pas les conditions requises
           pour bénéficier du pass Sport cette année. Si vous pensez qu’il s’agit d’une erreur, nous
           vous invitons à vérifier votre situation auprès de l’organisme concerné. Consultez la{' '}
-          <Link href="/v2/une-question">FAQ</Link>.
+          <Link href="/v2/une-question" className="fr-link">
+            FAQ
+          </Link>
+          .
         </>
       );
     case 'not_assessed':
@@ -95,20 +106,25 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
 
 // Rendered into the Card's `footer` slot rather than alongside verdictMessage in `desc`: DownloadLink
 // renders a <div>, which desc's own <p> wrapper cannot contain.
-// 'self' only: /api/france-connect/pdf re-derives the identity from the FranceConnect session,
-// and application_results_by_sub never carries enough of an enfant's identity (no family_name,
-// no birthdate) to put their name on a document.
+// /api/france-connect/pdf re-derives the allocataire's own identity from the FranceConnect
+// session; for an 'enfant' it instead re-derives it from application_results_by_sub, keyed by
+// the code so the route knows which of the caller's own children to serve — hence the `code`
+// query param here for 'enfant' rows, and none for 'self'.
 const downloadLink = (b: BeneficiaryResult): ReactNode | undefined => {
-  if (b.source !== 'self' || b.verdict !== 'eligible_confirmed' || !b.code) {
+  if (b.verdict !== 'eligible_confirmed' || !b.code) {
     return undefined;
   }
+  const href =
+    b.source === 'self' ? '/api/france-connect/pdf' : `/api/france-connect/pdf?code=${b.code}`;
   return (
-    <DownloadLink
-      details={`PDF — ${b.code}`}
-      label="Télécharger"
-      href="/api/france-connect/pdf"
-      filename={`pass-sport-${b.code}.pdf`}
-    />
+    <div className="fr-grid-row fr-grid-row--right">
+      <DownloadLink
+        details={`PDF — ${b.code}`}
+        label="Télécharger"
+        href={href}
+        filename={`pass-sport-${b.code}.pdf`}
+      />
+    </div>
   );
 };
 
@@ -131,9 +147,14 @@ export const StatusBadge = ({ verdict }: { verdict: Verdict }) => {
 interface Props {
   beneficiaries: BeneficiaryResult[];
   allocataireIdentity: AllocataireIdentity;
+  // Submission/processing date of the underlying job, e.g. "Demande soumise le 12/03/2024
+  // à 10:23:45." — rendered as a subtitle under the section title rather than as a standalone
+  // paragraph further down the page, so it reads as part of "Résultat de votre demande" instead
+  // of a disconnected footnote.
+  jobInfo?: ReactNode;
 }
 
-export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity }: Props) {
+export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, jobInfo }: Props) {
   if (beneficiaries.length === 0) {
     return (
       <div className="fr-alert fr-alert--info fr-mb-3w">
@@ -141,7 +162,10 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity }:
         <p>
           Après vérification, nous n’avons pas retrouvé vos informations dans les bases de données
           des bénéficiaires, avec les informations saisies. Consultez la{' '}
-          <Link href="/v2/une-question">FAQ</Link>.
+          <Link href="/v2/une-question" className="fr-link">
+            FAQ
+          </Link>
+          .
         </p>
       </div>
     );
@@ -149,7 +173,8 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity }:
 
   return (
     <section className="fr-mb-3w">
-      <h2 className="fr-h4">Résultat de votre demande</h2>
+      <h2 className="fr-h4 fr-mb-1w">Résultat de votre demande</h2>
+      {jobInfo && <p className="fr-text--sm fr-mb-3w">{jobInfo}</p>}
 
       {beneficiaries.map((b, i) => (
         <Card
@@ -160,6 +185,10 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity }:
           titleAs="h3"
           start={<StatusBadge verdict={b.verdict} />}
           desc={verdictMessage(b)}
+          // fr-card__desc defaults to 0.875rem; fr-text--md (1rem, !important) bumps the
+          // verdict wording back to the base body size so it doesn't read smaller than the
+          // rest of the page.
+          classes={{ desc: 'fr-text--md' }}
           footer={downloadLink(b)}
         />
       ))}

@@ -13,6 +13,9 @@ const ALLOCATAIRE_IDENTITY = {
 const beneficiary = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryResult => ({
   source: 'self',
   givenName: null,
+  familyName: null,
+  birthdate: null,
+  gender: null,
   verdict: 'eligible_confirmed',
   code: null,
   ...overrides,
@@ -71,7 +74,7 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByRole('link', { name: 'Télécharger' })).toHaveCount(0);
   });
 
-  test('never shows a PDF download link for an enfant beneficiary, even eligible_confirmed with a code', async ({
+  test('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their own code', async ({
     mount,
   }) => {
     const component = await mount(
@@ -80,9 +83,51 @@ test.describe('BeneficiaryRecap', () => {
           beneficiary({
             source: 'enfant',
             givenName: 'Zephyrin',
+            familyName: 'OSTRENYA',
+            birthdate: '2015-06-02',
+            gender: 'male',
             verdict: 'eligible_confirmed',
             code: '24-AZUR-KLMB',
           }),
+        ]}
+        allocataireIdentity={ALLOCATAIRE_IDENTITY}
+      />,
+    );
+
+    await expect(component.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015')).toBeVisible();
+    const downloadLink = component.getByRole('link', { name: 'Télécharger' });
+    await expect(downloadLink).toBeVisible();
+    await expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
+  });
+
+  test('shows a child’s full identity on their card, the same shape as the allocataire’s', async ({
+    mount,
+  }) => {
+    const component = await mount(
+      <BeneficiaryRecap
+        beneficiaries={[
+          beneficiary({
+            source: 'enfant',
+            givenName: 'Zephyrin',
+            familyName: 'OSTRENYA',
+            birthdate: '2015-06-02',
+            verdict: 'eligible_pending',
+          }),
+        ]}
+        allocataireIdentity={ALLOCATAIRE_IDENTITY}
+      />,
+    );
+
+    await expect(component.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015')).toBeVisible();
+  });
+
+  test('does not show a PDF download link for an enfant beneficiary without a confirmed code', async ({
+    mount,
+  }) => {
+    const component = await mount(
+      <BeneficiaryRecap
+        beneficiaries={[
+          beneficiary({ source: 'enfant', givenName: 'Zephyrin', verdict: 'eligible_pending' }),
         ]}
         allocataireIdentity={ALLOCATAIRE_IDENTITY}
       />,
@@ -92,7 +137,9 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByRole('link', { name: 'Télécharger' })).toHaveCount(0);
   });
 
-  test('names an enfant beneficiary by their first name only', async ({ mount }) => {
+  test('falls back to the given name alone when a child has no family_name/birthdate yet', async ({
+    mount,
+  }) => {
     const component = await mount(
       <BeneficiaryRecap
         beneficiaries={[
@@ -138,12 +185,16 @@ test.describe('BeneficiaryRecap', () => {
     const secondCard = cards.nth(1);
 
     await expect(firstCard.getByText('Zephyrin')).toBeVisible();
-    await expect(firstCard.getByText('24-AZUR-KLMB')).toBeVisible();
+    // exact: this beneficiary is eligible_confirmed with a code, so the download link's own
+    // detail text ("PDF — 24-AZUR-KLMB") also contains this code as a substring.
+    await expect(firstCard.getByText('24-AZUR-KLMB', { exact: true })).toBeVisible();
     await expect(firstCard.getByText('Balthazine')).toHaveCount(0);
     await expect(firstCard.getByText('24-VORT-XQPL')).toHaveCount(0);
 
     await expect(secondCard.getByText('Balthazine')).toBeVisible();
-    await expect(secondCard.getByText('24-VORT-XQPL')).toBeVisible();
+    // exact: same reason as above — the download link's own detail text also contains this
+    // code as a substring.
+    await expect(secondCard.getByText('24-VORT-XQPL', { exact: true })).toBeVisible();
     await expect(secondCard.getByText('Zephyrin')).toHaveCount(0);
     await expect(secondCard.getByText('24-AZUR-KLMB')).toHaveCount(0);
   });
@@ -173,7 +224,9 @@ test.describe('BeneficiaryRecap', () => {
     const notEligibleCard = cards.nth(1);
 
     await expect(eligibleCard.getByText('Nyxarel')).toBeVisible();
-    await expect(eligibleCard.getByText('24-QUIL-MPRS')).toBeVisible();
+    // exact: same reason as above — the download link's own detail text also contains this
+    // code as a substring.
+    await expect(eligibleCard.getByText('24-QUIL-MPRS', { exact: true })).toBeVisible();
     const eligibleBadge = eligibleCard.getByText('Eligible');
     await expect(eligibleBadge).toHaveClass(/fr-badge--success/);
 

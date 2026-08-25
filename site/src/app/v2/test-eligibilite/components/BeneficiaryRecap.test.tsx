@@ -14,6 +14,9 @@ const ALLOCATAIRE_IDENTITY = {
 const beneficiary = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryResult => ({
   source: 'self',
   givenName: null,
+  familyName: null,
+  birthdate: null,
+  gender: null,
   verdict: 'eligible_confirmed',
   code: null,
   ...overrides,
@@ -66,21 +69,52 @@ describe('BeneficiaryRecap', () => {
     expect(screen.queryByRole('link', { name: 'Télécharger' })).not.toBeInTheDocument();
   });
 
-  it('never shows a PDF download link for an enfant beneficiary, even eligible_confirmed with a code', () => {
+  it('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their own code', () => {
     renderRecap([
       beneficiary({
         source: 'enfant',
         givenName: 'Zephyrin',
+        familyName: 'OSTRENYA',
+        birthdate: '2015-06-02',
+        gender: 'male',
         verdict: 'eligible_confirmed',
         code: '24-AZUR-KLMB',
       }),
+    ]);
+
+    expect(
+      screen.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015', { exact: false }),
+    ).toBeInTheDocument();
+    const downloadLink = screen.getByRole('link', { name: 'Télécharger' });
+    expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
+  });
+
+  it('shows a child’s full identity on their card, the same shape as the allocataire’s', () => {
+    renderRecap([
+      beneficiary({
+        source: 'enfant',
+        givenName: 'Zephyrin',
+        familyName: 'OSTRENYA',
+        birthdate: '2015-06-02',
+        verdict: 'eligible_pending',
+      }),
+    ]);
+
+    expect(
+      screen.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015'),
+    ).toBeInTheDocument();
+  });
+
+  it('does not show a PDF download link for an enfant beneficiary without a confirmed code', () => {
+    renderRecap([
+      beneficiary({ source: 'enfant', givenName: 'Zephyrin', verdict: 'eligible_pending' }),
     ]);
 
     expect(screen.getByText('Zephyrin')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Télécharger' })).not.toBeInTheDocument();
   });
 
-  it('names an enfant beneficiary by their first name only', () => {
+  it('falls back to the given name alone when a child has no family_name/birthdate yet', () => {
     const { container } = renderRecap([
       beneficiary({ source: 'enfant', givenName: 'Zephyrin', verdict: 'eligible_pending' }),
     ]);

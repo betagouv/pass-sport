@@ -123,9 +123,12 @@ export const applicationsBySub = pgView("applications_by_sub").as((qb) =>
 );
 
 // Per-beneficiary verdicts and codes for one FranceConnect user, restricted to their LAST
-// run. This is the read surface the site is granted — hence the narrow projection: no
-// allocataire_identite, no family_name/birthdate, no residence_insee, no lca_status, no
-// job_id. A given_name is all the screen needs to name a child to their own parent.
+// run. This is the read surface the site is granted. It now also projects an enfant's
+// family_name/birthdate/gender alongside given_name — enough identity for the site to
+// generate that child's own PDF, the same way it already does for the allocataire (whose
+// identity instead comes from their FranceConnect session, not from this view). Still kept
+// out: allocataire_identite, residence_insee, lca_status, job_id — none of that is needed to
+// name a beneficiary or hand them their own document.
 //
 // "Last run" keys on created_at, which is safe because it is DEFAULT now() and now() is
 // transaction-scoped in Postgres: every row of a PHASE 2 batch carries the exact same
@@ -138,6 +141,13 @@ export const applicationResultsBySub = pgView("application_results_by_sub").as((
       givenName: sql<string | null>`${eligibilityResults.enfantIdentite}->>'given_name'`.as(
         "given_name",
       ),
+      familyName: sql<string | null>`${eligibilityResults.enfantIdentite}->>'family_name'`.as(
+        "family_name",
+      ),
+      birthdate: sql<string | null>`${eligibilityResults.enfantIdentite}->>'birthdate'`.as(
+        "birthdate",
+      ),
+      gender: sql<string | null>`${eligibilityResults.enfantIdentite}->>'gender'`.as("gender"),
       verdict: eligibilityResults.verdict,
       passSportCode: eligibilityResults.passSportCode,
       createdAt: eligibilityResults.createdAt,

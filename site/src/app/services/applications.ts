@@ -26,6 +26,12 @@ export type BeneficiaryResult = {
   source: 'self' | 'enfant';
   // Null on 'self' rows: the allocataire is named by the session, not by the view.
   givenName: string | null;
+  // familyName/birthdate/gender are likewise null on 'self' rows (the session covers that
+  // case) and, on 'enfant' rows written before this identity was captured, may still be
+  // null — that absence is what drives the PDF route's 422 for those older rows.
+  familyName: string | null;
+  birthdate: string | null;
+  gender: 'male' | 'female' | null;
   verdict: Verdict;
   // Set on 'eligible_confirmed' and on 'eligible_pending_lca' (a minted code LCA does not
   // serve yet). Null elsewhere, and on rows written before the code was stored at all —
@@ -107,15 +113,21 @@ export const findResultsForSub = async (sub: string): Promise<BeneficiaryResult[
     const { rows } = await getPool().query<{
       source: BeneficiaryResult['source'];
       given_name: string | null;
+      family_name: string | null;
+      birthdate: string | null;
+      gender: 'male' | 'female' | null;
       verdict: Verdict;
       pass_sport_code: string | null;
     }>(
-      'SELECT source, given_name, verdict, pass_sport_code FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name',
+      'SELECT source, given_name, family_name, birthdate, gender, verdict, pass_sport_code FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name',
       [sub],
     );
     return rows.map((r) => ({
       source: r.source,
       givenName: r.given_name,
+      familyName: r.family_name,
+      birthdate: r.birthdate,
+      gender: r.gender,
       verdict: r.verdict,
       code: r.pass_sport_code,
     }));

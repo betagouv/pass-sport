@@ -16,7 +16,11 @@ const STILL_PROCESSING_MESSAGE = (
   <>
     Vérification de votre éligibilité en cours. Vous allez recevoir un mail d&apos;information dans
     moins de 72h le temps de vérifier votre situation. Si votre demande dépasse le délai de 72h,
-    merci de consulter la <Link href="/v2/une-question">FAQ</Link>.
+    merci de consulter la{' '}
+    <Link href="/v2/une-question" className="fr-link">
+      FAQ
+    </Link>
+    .
   </>
 );
 
