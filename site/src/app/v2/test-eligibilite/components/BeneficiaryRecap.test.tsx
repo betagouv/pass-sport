@@ -34,7 +34,6 @@ describe('BeneficiaryRecap', () => {
     const { container } = renderRecap([]);
 
     expect(screen.getByText('Demande enregistrée')).toBeInTheDocument();
-    expect(screen.queryByText(/Statut/)).not.toBeInTheDocument();
     expect(cards(container)).toHaveLength(0);
 
     const faqLink = screen.getByRole('link', { name: 'FAQ' });

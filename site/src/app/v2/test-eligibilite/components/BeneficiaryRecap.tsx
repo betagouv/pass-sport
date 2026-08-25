@@ -120,7 +120,6 @@ export const StatusBadge = ({ verdict }: { verdict: Verdict }) => {
   const { severity, label } = STATUS_DISPLAY_BY_VERDICT[verdict];
   return (
     <p className="fr-mb-0">
-      <span className="fr-text--bold">Statut&nbsp;: </span>
       {/* Badge defaults to rendering as a <p>, which this wrapping <p> can't contain. */}
       <Badge as="span" severity={severity}>
         {label}

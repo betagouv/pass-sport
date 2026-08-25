@@ -25,7 +25,6 @@ test.describe('BeneficiaryRecap', () => {
     );
 
     await expect(component.getByText('Demande enregistrée')).toBeVisible();
-    await expect(component.getByText(/Statut/)).toHaveCount(0);
     await expect(component.locator('.fr-card')).toHaveCount(0);
 
     const faqLink = component.getByRole('link', { name: 'FAQ' });
