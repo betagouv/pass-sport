@@ -7,17 +7,18 @@
 const DEFAULT_BASE_URL = "https://diffusion.linkmobility.fr";
 const EMAIL_PATH = "/api/envoyer/e-mail";
 
+// Link Mobility authorises senders by domain, and info.pass.sports.gouv.fr is the verified
+// one. Both are overridable per environment, so a change needs a restart, not a deploy.
+const DEFAULT_SENDER_EMAIL = "ne-pas-repondre@info.pass.sports.gouv.fr";
+const DEFAULT_SENDER_NAME = "pass Sport — ministère des Sports";
+
 export interface TransactionalEmailParams {
   subject: string;
-  html?: string;
-  templateId?: number;
+  templateId: number;
   recipients: string[];
   variables?: Record<string, Record<string, string | number>>;
-  senderEmail?: string;
-  senderName?: string;
   replyTo?: string;
   name?: string;
-  alternativeText?: string;
 }
 
 export type SendEmailResult =
@@ -50,21 +51,17 @@ const buildEmailRequestBody = (params: TransactionalEmailParams): URLSearchParam
   if (params.recipients.length === 0) {
     throw new Error("Error: at least one recipient is required");
   }
-  if ((params.html === undefined) === (params.templateId === undefined)) {
-    throw new Error("Error: provide exactly one of html or templateId");
-  }
-
   const body = new URLSearchParams({
     key: requireEnv("LINK_MOBILITY_API_KEY"),
     sujet: params.subject,
-    message: params.html ?? String(params.templateId),
-    expediteur: params.senderEmail ?? requireEnv("LINK_MOBILITY_SENDER_EMAIL"),
-    nom_expediteur: params.senderName ?? requireEnv("LINK_MOBILITY_SENDER_NAME"),
+    message: String(params.templateId),
+    expediteur: process.env.LINK_MOBILITY_SENDER_EMAIL || DEFAULT_SENDER_EMAIL,
+    nom_expediteur: process.env.LINK_MOBILITY_SENDER_NAME || DEFAULT_SENDER_NAME,
+    type_message: "creation",
     erreur_texte: "1",
   });
 
-  if (params.templateId !== undefined) body.set("type_message", "creation");
-
+  // A template with no merge field is legitimate, hence the plain recipient list below.
   if (params.variables) {
     const missing = params.recipients.filter((email) => !params.variables?.[email]);
     if (missing.length > 0) {
@@ -82,7 +79,6 @@ const buildEmailRequestBody = (params: TransactionalEmailParams): URLSearchParam
 
   if (params.replyTo) body.set("email_reponse", params.replyTo);
   if (params.name) body.set("nom", params.name);
-  if (params.alternativeText) body.set("alternatif", params.alternativeText);
 
   return body;
 };

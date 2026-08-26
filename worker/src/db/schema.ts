@@ -10,6 +10,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { EmailKind } from "../email/notify";
 import type { PivotIdentity } from "../eligibility/types";
 
 // The verdict as the USAGER should read it. The verdict column below is where each
@@ -67,9 +68,9 @@ export const eligibilityResults = pgTable(
     lcaStatus: text("lca_status").notNull(),
 
     // The verdict as the USAGER should read it, and the only column the site is granted.
-    // Deliberately not email_kind: that one describes what was SENT, is null in three
-    // unrelated situations, and gets flipped by the email_sent UPDATE. Written once here
-    // so the site never has to re-derive the rule that lives in jobs/shared.ts.
+    // Deliberately not email_kind: that one describes what was SENT and is null whenever
+    // nothing was. Written once here so the site never has to re-derive the rule that lives
+    // in jobs/shared.ts.
     //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email
     //   'eligible_confirmed_but_email_not_matching'
     //                          — LCA a le bénéficiaire et un code lui a été servi, mais
@@ -87,13 +88,17 @@ export const eligibilityResults = pgTable(
     //                            passage refabriquerait un code aux mêmes personnes.
     //   'not_eligible'         — aucune route ouverte et aucun match LCA
     //   'not_assessed'         — personne non évaluée (rien de demandé pour elle)
-    // The only column the site is granted. Deliberately not email_kind: that one describes
-    // what was SENT, is null in three unrelated situations, and gets flipped by the
-    // email_sent UPDATE. Written once by the job so the site never has to re-derive it.
-    // See the Verdict type above for the values.
     verdict: text("verdict").$type<Verdict>().notNull(),
 
-    emailKind: text("email_kind"),
+    // Which template was sent for this beneficiary, null when none was — the same vocabulary
+    // as EmailKind, by design.
+    //
+    // Rows written before the templates carry the retired vocabulary of the hors FranceConnect
+    // path: 'code_withheld' and 'not_eligible' where a row written today says
+    // 'not_eligible_hors_fc'. This table is never purged, so a query over the hors FC mails has
+    // to match all three. What 'code_withheld' distinguished lives in verdict
+    // ('eligible_confirmed_but_email_not_matching'), which is the authoritative column anyway.
+    emailKind: text("email_kind").$type<EmailKind>(),
     emailSent: boolean("email_sent").notNull().default(false),
 
     // Where the recapitulative email went. Kept so a usager coming back can be told which
@@ -230,40 +235,6 @@ export const applicationResultsByJobId = pgView("application_results_by_job_id")
     ),
 );
 
-// Retired. It used to gate the asynchronous no-FranceConnect path: nothing was enqueued until
-// the link mailed to the declared address was clicked. That path now answers inside the
-// request and queries LCA only, so no row is ever written here again — the table is kept for
-// the ones minted before the switch, which sweepEmailVerifications drains.
-export const emailVerifications = pgTable(
-  "email_verifications",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-
-    // sha256 hex of the token. The token itself is only ever in the email — a read of this
-    // table yields no working link.
-    tokenHash: text("token_hash").notNull().unique(),
-
-    // The job payload the click replayed. Carries a declared identité pivot, the n° CAF or
-    // INE and the address, which is what makes the sweep a retention boundary and not
-    // housekeeping.
-    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
-
-    // The identity hash the site derived before enqueuing, which the job was keyed on.
-    jobId: text("job_id").notNull(),
-
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-
-    // Set by the atomic UPDATE that consumes the token — the single-use guarantee is the
-    // `where consumed_at is null` of that statement, not an application-side check.
-    consumedAt: timestamp("consumed_at", { withTimezone: true }),
-
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [index("email_verifications_job_id_idx").on(t.jobId)],
-);
-
-export type EmailVerificationRow = typeof emailVerifications.$inferInsert;
-
 export const audit = pgTable("audit", {
   id: uuid("id").defaultRandom().primaryKey(),
 
@@ -308,7 +279,11 @@ export const eligibilityHistory = pgTable(
 
     // 'dss.quotient_familial' | 'dss.aah' | 'cnous.etudiant_boursier' | 'dss.aeeh'
     // | 'lca.search' | 'lca.search.crous_retry' | 'lca.confirm'
-    // | 'email.digest' | 'results.persisted'
+    // | 'email.code' | 'email.eligible_soon' | 'email.not_eligible'
+    // | 'email.not_eligible_hors_fc' | 'email.skipped'
+    // | 'email.digest' — RETIRED, written before the per-beneficiary split. This table is
+    //   never purged, so a query over email events still has to match it.
+    // | 'results.persisted' | 'results.skipped'
     // | 'psp.code_writeback' — written by data/, like the 'eligible_pending_lca' verdict
     action: text("action").notNull(),
 

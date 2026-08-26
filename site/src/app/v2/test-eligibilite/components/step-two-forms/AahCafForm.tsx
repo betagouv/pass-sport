@@ -87,7 +87,7 @@ const AahCafForm = () => {
             nativeInputProps: {
               name: 'recipientCafNumber',
               defaultValue: defaults?.recipientCafNumber,
-              placeholder: 'Exemple : 0123456',
+              placeholder: 'Exemple : 1234567',
               type: 'text',
               required: true,
               onChange: (e: ChangeEvent<HTMLInputElement>) =>

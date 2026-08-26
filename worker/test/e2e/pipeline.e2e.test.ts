@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { startStack, type Stack } from "./harness";
+import { LCA_COURRIEL, startStack, TEMPLATE_IDS, type Stack } from "./harness";
 
 // End-to-end pipeline tests against real Redis + Postgres (Testcontainers), a real
 // BullMQ Worker, and deterministic fake upstream clients (see harness.ts). Exercises:
@@ -83,6 +83,8 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   });
 
   it("QF children chain -> enfant rows confirmed with code email", async () => {
+    const before = stack.sentEmails().length;
+
     // AEEH pulls QF, whose deterministic children are all sent to LCA.
     await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
     const enfants = (await rows()).filter((x) => x.source === "enfant");
@@ -91,6 +93,11 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(enfants.every((x) => x.lca_status === "confirmed")).toBe(true);
     expect(enfants.every((x) => x.email_kind === "code" && x.email_sent === true)).toBe(true);
     expect(enfants.every((x) => x.verdict === "eligible_confirmed")).toBe(true);
+
+    const sent = stack.parsedEmails().slice(before);
+    expect(sent).toHaveLength(enfants.length);
+    expect(sent.every((e) => e.templateId === String(TEMPLATE_IDS.code))).toBe(true);
+    expect(new Set(sent.flatMap((e) => e.recipients)).size).toBe(1);
   });
 
   // Nothing was claimed for the adult (AEEH is about the children), so they are not a
@@ -112,10 +119,12 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   // resubmission re-runs the whole API Particulier chain.
   it("aide enfants sans enfant exploitable: aucune ligne", async () => {
     stack.setQfChildless(true);
+    const before = stack.sentEmails().length;
     try {
       await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
 
       expect(await rows()).toHaveLength(0);
+      expect(stack.sentEmails()).toHaveLength(before);
     } finally {
       stack.setQfChildless(false);
     }
@@ -126,6 +135,8 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   // children left NOTHING in the table — which is exactly the refusal the site has to
   // show them.
   it("AAH refusée avec des enfants: l'adulte a bien une ligne 'not_eligible'", async () => {
+    const before = stack.sentEmails().length;
+
     // AAH (the fake answers est_beneficiaire=false) + AEEH to pull QF and its children.
     await stack.enqueueAndWait(selfCrous({ aides: ["AAH", "AEEH"] }));
     const r = await rows();
@@ -137,7 +148,13 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(self[0].is_eligible).toBe(false);
 
     // The children are unaffected — they still go through LCA on their own merit.
-    expect(r.filter((x) => x.source === "enfant").length).toBeGreaterThan(0);
+    const enfants = r.filter((x) => x.source === "enfant");
+    expect(enfants.length).toBeGreaterThan(0);
+
+    // The adult asked about AAH and was refused, so they are told, like every child was.
+    expect(self[0].email_kind).toBe("not_eligible");
+    expect(self[0].email_sent).toBe(true);
+    expect(stack.sentEmails().slice(before)).toHaveLength(enfants.length + 1);
   });
 
   // The fake QF returns three children: 2008 (18 ans, AEEH window only), 2009 (17 ans,
@@ -349,9 +366,10 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(r).toHaveLength(1);
     expect(r[0].lca_status).toBe("not_applicable");
     expect(r[0].is_eligible).toBe(false);
-    expect(r[0].email_kind).toBeNull();
+    expect(r[0].email_kind).toBe("not_eligible");
+    expect(r[0].email_sent).toBe(true);
     // They asked about themselves via AAH and the answer is no — a real refusal, not an
-    // absence of question, so the site does show it.
+    // absence of question, so the site shows it and the refusal email goes out.
     expect(r[0].verdict).toBe("not_eligible");
     // The part that makes the dedup fallback work.
     expect(r[0].allocataire_fc_sub).toBe(sub);
@@ -395,6 +413,52 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(r[0].lca_status).toBe("confirmed");
     expect(r[0].email_kind).toBe("code");
     expect(r[0].email_sent).toBe(false);
+  });
+
+  it("mails the FranceConnect address, and the LCA one in local and staging", async () => {
+    const before = stack.sentEmails().length;
+    await stack.enqueueAndWait(selfCrous());
+
+    // The address the usager authenticated with minutes ago, not the one the caisse recorded.
+    const [deployed] = stack.parsedEmails().slice(before);
+    expect(deployed.recipients).toEqual(["camille.martin@example.test"]);
+    expect((await rows())[0].email).toBe("camille.martin@example.test");
+
+    const prevEnv = process.env.ENV;
+    try {
+      for (const env of ["local", "staging"]) {
+        process.env.ENV = env;
+        await stack.enqueueAndWait({
+          ...selfCrous(),
+          identity: { ...selfCrous().identity, sub: `sub-recipient-${env}` },
+        });
+
+        const [sent] = stack.parsedEmails().slice(-1);
+        expect(sent.recipients).toEqual([LCA_COURRIEL]);
+      }
+    } finally {
+      process.env.ENV = prevEnv;
+    }
+  });
+
+  it("falls back to the built-in template id when no env overrides it", async () => {
+    const prev = process.env.LINK_MOBILITY_TEMPLATE_CODE;
+    delete process.env.LINK_MOBILITY_TEMPLATE_CODE;
+    const sub = "sub-default-template";
+    const before = stack.sentEmails().length;
+    try {
+      await stack.enqueueAndWait({ ...selfCrous(), identity: { ...selfCrous().identity, sub } });
+    } finally {
+      process.env.LINK_MOBILITY_TEMPLATE_CODE = prev;
+    }
+
+    // Production is expected to run without any LINK_MOBILITY_TEMPLATE_* set at all.
+    const [sent] = stack.parsedEmails().slice(before);
+    expect(sent.templateId).toBe("1187050");
+
+    const r = (await rows()).filter((x) => x.allocataire_fc_sub === sub);
+    expect(r).toHaveLength(1);
+    expect(r[0].email_sent).toBe(true);
   });
 
   it("one row per beneficiary, no duplicates across repeated jobs", async () => {

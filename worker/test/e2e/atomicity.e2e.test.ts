@@ -5,9 +5,9 @@ import { startStack, type Stack } from "./harness";
 //
 // The failure modelled here is the one that used to corrupt the record: a batch of
 // several beneficiaries where an LCA call blows up partway through. The old loop had
-// already inserted rows (and, before the digest change, mailed codes) for the
-// beneficiaries it had gone past. Now the batch is all-or-nothing: the job fails,
-// eligibility_results is untouched, and the retry replays from a clean slate.
+// already inserted rows, and mailed codes, for the beneficiaries it had gone past. Now the
+// batch is all-or-nothing: the job fails, eligibility_results is untouched, nothing was
+// mailed, and the retry replays from a clean slate.
 //
 // eligibility_history is the deliberate exception — it is written outside the
 // transaction precisely so a run that ends this way still explains itself.
@@ -53,6 +53,9 @@ describe("a failed batch leaves no result", () => {
 
     // The whole point: not one row, not even for the beneficiary that succeeded.
     expect(await rows()).toHaveLength(0);
+
+    // A send inside the LCA loop would hand out a code for a batch that then rolls back.
+    expect(stack.sentEmails()).toHaveLength(0);
 
     // And the site sees no application for that pseudonym, so it still lets them
     // through and the retry is not treated as a duplicate.
