@@ -7,12 +7,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import basketball from '@/images/jeunes-et-parents/basketball.webp';
 import code from '@/images/code.svg';
-import KnowMore from '@/app/components/know-more/KnowMore';
 import { JEUNES_PARENTS_PAGE_ANCHORS } from '@/app/v2/jeunes-et-parents/constants/anchors';
 import ObtainCodeButton from '@/app/v2/jeunes-et-parents/components/ObtainCodeButton';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
 import { AccordionsFaq } from '@/app/v2/jeunes-et-parents/components/AccordionsFaq';
+import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -23,97 +24,40 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function Page() {
   return (
     <main className={styles['container']} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <PageTitle title="Jeunes et parents" height={100} />
+      <PageTitle title="Jeunes et parents" />
 
-      <div className="fr-container">
-        {/*<section className={styles['guiding-block__container']}>*/}
-        {/*  <GuidingBlock*/}
-        {/*    description="Le pass Sport permet de bénéficier d'une réduction immédiate de 50€ lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."*/}
-        {/*    variant="purple"*/}
-        {/*    fullWidth*/}
-        {/*    points={[*/}
-        {/*      {*/}
-        {/*        title: 'Testez votre éligibilité en 1 min',*/}
-        {/*        linkProps: {*/}
-        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,*/}
-        {/*        },*/}
-        {/*      },*/}
-        {/*      {*/}
-        {/*        title: 'Trouvez une structure sportive partenaire',*/}
-        {/*        linkProps: {*/}
-        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,*/}
-        {/*        },*/}
-        {/*      },*/}
-        {/*      {*/}
-        {/*        title: 'Recevez ou demandez votre pass Sport',*/}
-        {/*        linkProps: {*/}
-        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,*/}
-        {/*        },*/}
-        {/*      },*/}
-        {/*      {*/}
-        {/*        title: 'Utilisez votre code',*/}
-        {/*        linkProps: {*/}
-        {/*          href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,*/}
-        {/*        },*/}
-        {/*      },*/}
-        {/*    ]}*/}
-        {/*    knowMore={{*/}
-        {/*      title: 'A savoir',*/}
-        {/*      description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre 2026.',*/}
-        {/*    }}*/}
-        {/*  />*/}
-        {/*</section>*/}
-
-        {/*<section id={JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}>*/}
-        {/*  <div className={styles['eligibility-section__description']}>*/}
-        {/*    <h2 className="fr-mb-2w fr-h1">Testez votre éligibilité en 1 min</h2>*/}
-
-        {/*    <section className="fr-mb-2w">*/}
-        {/*      <p>Qui est concerné par le pass Sport ?</p>*/}
-        {/*      <ul className="fr-mt-2w fr-pl-4w">*/}
-        {/*        <li>*/}
-        {/*          Les jeunes de 14 à 17 ans bénéficiaires de l’Allocation de Rentrée Scolaire (ARS)*/}
-        {/*          ;*/}
-        {/*        </li>*/}
-        {/*        <li>*/}
-        {/*          Les jeunes en situation de handicap :*/}
-        {/*          <ul className="list-style-type--circle">*/}
-        {/*            <li>*/}
-        {/*              de 6 à 19 ans bénéficiaires de l’Allocation d’Éducation de l’Enfant Handicapé*/}
-        {/*              (AEEH) ;*/}
-        {/*            </li>*/}
-        {/*            <li>*/}
-        {/*              de 16 à 30 ans bénéficiaires de l’Allocation aux Adultes Handicapés (AAH) ;*/}
-        {/*            </li>*/}
-        {/*          </ul>*/}
-        {/*        </li>*/}
-        {/*        <li>*/}
-        {/*          Les étudiants boursiers de moins de 28 ans bénéficiaires d’une bourse attribuée*/}
-        {/*          avant le 15 octobre 2026 :*/}
-        {/*          <ul className="list-style-type--circle">*/}
-        {/*            <li>bourse du CROUS (y compris l’aide annuelle) ;</li>*/}
-        {/*            <li>bourse régionale formations sanitaires et sociales.</li>*/}
-        {/*          </ul>*/}
-        {/*        </li>*/}
-        {/*      </ul>*/}
-        {/*    </section>*/}
-        {/*  </div>*/}
-
-        {/*  <section*/}
-        {/*    className={styles['eligibility-section']}*/}
-        {/*    id={SKIP_LINKS_ID.eligibilityTestButton}*/}
-        {/*  >*/}
-        {/*    <div className={cn('fr-container', styles['eligibility-section__wrapper'])}>*/}
-        {/*      <SimplifiedEligibilityTest*/}
-        {/*        display="row"*/}
-        {/*        buttonVariant="primary"*/}
-        {/*        headingLevel="h3"*/}
-        {/*        jeDonneMonAvisBtnPadding={false}*/}
-        {/*        displaySeparator={false}*/}
-        {/*      />*/}
-        {/*    </div>*/}
-        {/*  </section>*/}
-        {/*</section>*/}
+      <div className={cn(['fr-container', styles.container])}>
+        <section className={styles['guiding-block__container']}>
+          <GuidingBlock
+            description="Le pass Sport permet de bénéficier d'une réduction immédiate de 50€ lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."
+            variant="purple"
+            fullWidth
+            points={[
+              {
+                title: 'Trouvez une structure sportive partenaire',
+                linkProps: {
+                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
+                },
+              },
+              {
+                title: 'Recevez ou demandez votre pass Sport',
+                linkProps: {
+                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
+                },
+              },
+              {
+                title: 'Utilisez votre code',
+                linkProps: {
+                  href: `#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
+                },
+              },
+            ]}
+            knowMore={{
+              title: 'A savoir',
+              description: 'Vous pouvez utiliser votre pass Sport jusqu’au 31 décembre 2026.',
+            }}
+          />
+        </section>
 
         <section id={JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB} className={styles['find-club-section']}>
           <Image
@@ -168,56 +112,17 @@ export default function Page() {
           className={styles['receive-code-section']}
         >
           <h2 className="fr-h1 fr-mb-0">Recevez votre pass Sport</h2>
-          <KnowMore
-            variant="purple"
-            titleAs="h3"
-            knowMore={{
-              title: 'À savoir',
-              description: (
-                <>
-                  Les bénéficiaires recevront leur code pass Sport directement par e-mail entre le
-                  XX et le XX septembre 2026, à l’adresse transmise par les organismes partenaires.{' '}
-                  <br />
-                  <br />À partir du 4 septembre 2026, les personnes qui n’auront pas reçu leur code
-                  pourront le récupérer directement sur le site{' '}
-                  <Link href="https://pass.sports.gouv.fr" target="_blank">
-                    https://pass.sports.gouv.fr
-                  </Link>{' '}
-                  , sous réserve de remplir les conditions d’éligibilité au dispositif.
-                </>
-              ),
-            }}
-          />
           <div>
-            <p className="fr-mb-0">
-              Si vous êtes <span className="fr-text--bold">éligible</span>, vous recevrez un
-              courriel avec votre pass Sport :
+            <p>
+              Les bénéficiaires recevront leur code pass Sport directement par e-mail entre le XX et
+              le XX septembre 2026, à l’adresse transmise par les organismes partenaires (<CAF />,{' '}
+              <MSA />, <CROUS />
+              ). Pensez à vérifier vos courriers indésirables ou spams.
+              <br />
+              <br />À partir du XX septembre 2026, les personnes qui n’auront pas reçu leur code
+              pourront le récupérer directement sur ce site , sous réserve de remplir les conditions
+              d’éligibilité au dispositif.
             </p>
-            <ol className="fr-ml-2w" start={1}>
-              <li>
-                <span className="fr-text--bold">A partir de fin août : </span>pour les jeunes
-                faisant partie d&apos;un foyer dont le quotient familial est inférieur ou égal à 699
-                € fin août, les bénéficiaires de l&apos;AEEH et de l&apos;AAH.
-              </li>
-              <li>
-                <span className="fr-text--bold">Entre fin octobre et fin novembre : </span>pour les
-                étudiants boursiers.
-              </li>
-            </ol>
-
-            <p className="fr-mt-2w fr-mb-0">
-              Si, après cette date vous n&apos;avez pas reçu votre pass Sport :
-            </p>
-            <ol className="fr-ml-2w" start={1}>
-              <li>Vérifiez dans vos spams ou indésirables.</li>
-              {/*<li>*/}
-              {/*  Vérifiez votre éligibilité à l&apos;aide du test. <br />*/}
-              {/*  <Link href={`#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`}>*/}
-              {/*    Testez votre éligibilité.*/}
-              {/*  </Link>*/}
-              {/*</li>*/}
-              <li>Récupérer votre code sur ce site (après le 1er septembre).</li>
-            </ol>
             <ObtainCodeButton />
           </div>
         </section>
@@ -251,7 +156,7 @@ export default function Page() {
 
             <p>
               Le pass Sport est{' '}
-              <span className="fr-text--bold">valable du 1er septembre au 31 décembre 2026.</span>
+              <span className="fr-text--bold">valable jusqu&apos;au 31 décembre 2026.</span>
             </p>
           </div>
         </section>

@@ -11,6 +11,7 @@ import { isPasSportClosed } from '@/utils/date';
 import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import styles from './styles.module.scss';
+import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -146,7 +147,7 @@ export default async function Accueil() {
           <div className={styles['benef-faq']}>
             <section>
               <h2 className="fr-mb-2w fr-h1">Qu&apos;est-ce que le pass Sport ?</h2>
-              <p className="fr-mb-2w">
+              <p className="fr-mb-4w">
                 Le pass Sport est une aide financière destinée à couvrir tout ou partie des frais
                 d&apos;inscription dans un club, une association sportive ou une salle de sport
                 partenaire. Elle prend la forme d&apos;une réduction immédiate lors de
@@ -184,7 +185,7 @@ export default async function Accueil() {
                   </ul>
                 </li>
               </ul>
-              <p className="fr-mb-2w">
+              <p className="fr-mb-4w">
                 Cette aide du ministère chargé des Sports s&apos;adresse aux enfants et aux jeunes
                 qui rencontrent des obstacles à la pratique sportive – qu&apos;ils soient
                 d&apos;ordre financier, social ou liés à un handicap. L&apos;objectif : leur
@@ -196,15 +197,22 @@ export default async function Accueil() {
             <section>
               <h2 className="fr-mb-2w fr-h1">Quand vais-je recevoir mon pass Sport ?</h2>
               <p className="fr-mb-2w">
-                Les bénéficiaires recevront leur code pass Sport directement par e-mail entre le XX
-                et le XX septembre 2026, à l’adresse transmise par les organismes partenaires.
-                Pensez à vérifier vos courriers indésirables et conservez bien le message.
+                Les bénéficiaires recevront leur code pass Sport directement par courrier
+                électronique entre le XX et le XX septembre 2026, à l’adresse transmise par les
+                organismes partenaires (<CAF />, <MSA />, <CROUS />
+                ). Pensez à vérifier vos courriers indésirables et conservez bien le message.
               </p>
+
               <p className="fr-mb-2w">
-                À partir du 4 septembre, les personnes qui n’auront pas reçu leur code pourront le
-                récupérer directement sur le site{' '}
-                <Link href="https://pass.sports.gouv.fr">https://pass.sports.gouv.fr</Link>, sous
-                réserve de remplir les conditions d’éligibilité au dispositif.
+                Si plusieurs de vos enfants mineurs sont éligibles au pass Sport, vous recevrez un
+                courrier électronique distinct pour chacun d&apos;eux, contenant leur code pass
+                Sport personnel.
+              </p>
+
+              <p className="fr-mb-4w">
+                À partir du XX septembre 2026, les personnes qui n’auront pas reçu leur code
+                pourront le récupérer directement sur ce site, sous réserve de remplir les
+                conditions d’éligibilité au dispositif.
               </p>
             </section>
 
@@ -233,14 +241,14 @@ export default async function Accueil() {
                 soit partenaire mais non référencé. N&apos;hésitez pas à vérifier directement auprès
                 du club ou de la salle de sport.
               </p>
-              <p className="fr-mb-2w">
+              <p className="fr-mb-4w">
                 Le pass Sport est valable du 1er septembre au 31 décembre 2026.
               </p>
             </section>
 
             <section>
               <h2 className="fr-mb-2w fr-h1">Une question ?</h2>
-              <p className="fr-mb-2w">
+              <p className="fr-mb-4w">
                 Vous avez consulté les différentes pages sans trouver l&apos;information que vous
                 cherchiez ? Vous vous posez des questions sur le pass Sport ?
               </p>
