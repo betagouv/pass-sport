@@ -1,1 +1,1 @@
-DROP TABLE "email_verifications" CASCADE;
+DROP TABLE IF EXISTS "email_verifications" CASCADE;
