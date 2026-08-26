@@ -108,10 +108,16 @@ export default function PassSportNavigation({ pocUserName }: Props) {
           text: item.text,
         }))}
       />
-
       <Notice
         severity="info"
-        title="La campagne pass Sport 2026-2027 ouvre le 1er septembre 2026."
+        title="La campagne pass Sport 2026-2027 sera prochainement lancée."
+        // link={{
+        //   linkProps: {
+        //     href: '/v2/une-question',
+        //     title: "Plus d'informations - nouvelle fenêtre",
+        //   },
+        //   text: "Plus d'informations",
+        // }}
       />
     </div>
   );

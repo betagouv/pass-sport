@@ -12,10 +12,4 @@ export const socialMedia: SocialMediaLinkData[] = [
     href: 'https://www.instagram.com/passsportofficiel/',
     iconClassName: 'fr-icon-instagram-line',
   },
-  {
-    id: 2,
-    label: 'TikTok',
-    href: 'https://www.tiktok.com/@passsportofficiel',
-    iconClassName: 'fr-icon-tiktok-line',
-  },
 ];

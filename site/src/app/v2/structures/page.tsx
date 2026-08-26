@@ -26,89 +26,41 @@ export default function Page() {
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport permet de bénéficier d'une réduction immédiate lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."
+            description="Vous êtes un club, une association sportive ou un loisir sportif marchand ? Adhérez au pass Sport et contribuez à faciliter l’accès à la pratique sportive des jeunes"
             variant="yellow"
             fullWidth
             points={[
-              // {
-              //   title: 'Consultez les outils pour les structures sportives',
-              //   linkProps: {
-              //     href: `#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
-              //   },
-              // },
-              // {
-              //   title: 'Téléchargez votre kit de communication',
-              //   linkProps: {
-              //     href: `#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
-              //   },
-              // },
               {
                 title: 'Créez votre Compte Asso',
                 linkProps: {
                   href: `#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
                 },
               },
-              // {
-              //   title: 'Saisissez les codes des bénéficiaires',
-              //   linkProps: {
-              //     href: `#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
-              //   },
-              // },
-              // {
-              //   title: 'Recevez le remboursement',
-              //   linkProps: {
-              //     href: `#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
-              //   },
-              // },
+              {
+                title: 'Saisissez les codes des bénéficiaires',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
+                },
+              },
+              {
+                title: 'Recevez le remboursement',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
+                },
+              },
             ]}
             knowMore={{
               title: 'À savoir',
-              description:
-                'Si des bénéficiaires n’ont pas encore reçu leur code pass Sport, vous pouvez leur proposer de déposer un chèque de caution en attendant sa réception. Merci pour votre mobilisation.',
+              description: `Vous pouvez enregistrer les codes pass Sport sur votre Compte Asso jusqu'au 31 décembre 2026.`,
             }}
           />
         </section>
-
-        {/*<section*/}
-        {/*  id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}*/}
-        {/*  className={styles['become-partner-section']}*/}
-        {/*>*/}
-        {/*  <h2 className="fr-mb-0 fr-h1">Consultez les outils pour les structures sportives</h2>*/}
-        {/*</section>*/}
-
-        {/*<section className={styles['become-partner-section__accordions']}>*/}
-        {/*  <AccordionsBecomePartner />*/}
-        {/*</section>*/}
-
-        {/*<section*/}
-        {/*  id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}*/}
-        {/*  className={styles['communication-kit-section']}*/}
-        {/*>*/}
-        {/*  <Image*/}
-        {/*    src={athletism}*/}
-        {/*    className={cn('fr-responsive-img', styles['communication-kit-section__image'])}*/}
-        {/*    alt=""*/}
-        {/*  />*/}
-
-        {/*  <div className={styles['communication-kit-section__description']}>*/}
-        {/*    <h2>Téléchargez votre kit de communication</h2>*/}
-        {/*    <p>*/}
-        {/*      Le ministère chargé des Sports a élaboré un ensemble d&apos;outils et supports de*/}
-        {/*      communication qui sont mis à disposition des acteurs et peuvent être utilisés pour*/}
-        {/*      assurer la promotion du dispositif.*/}
-        {/*    </p>*/}
-        {/*  </div>*/}
-        {/*</section>*/}
-
-        {/*<section className={styles['communication-kit-section__accordions']}>*/}
-        {/*  <AccordionsKitCommunication />*/}
-        {/*</section>*/}
 
         <section
           id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
           className={styles['lca-section']}
           style={{
-            marginTop: '-48px',
+            marginTop: '-24px',
           }}
         >
           <h2 className="fr-h1 fr-mb-0">Créez votre Compte Asso</h2>
@@ -142,37 +94,6 @@ export default function Page() {
           </ul>
 
           {/* todo: enable later when we have up to date versions of the tutorials */}
-          {/*<section>*/}
-          {/*  <p className="fr-mt-2w">*/}
-          {/*    <Link*/}
-          {/*      href="https://view.genially.com/68ca5c87e161eb800feb72cf/guide-clubs-affiliees-a-une-fede-agreee-ministere-charge-des-sports"*/}
-          {/*      target="_blank"*/}
-          {/*      className="fr-link"*/}
-          {/*    >*/}
-          {/*      Consulter le tutoriel pour les structures affiliées*/}
-          {/*    </Link>*/}
-          {/*  </p>*/}
-
-          {/*  <p className="fr-mt-2w">*/}
-          {/*    <Link*/}
-          {/*      href="https://view.genially.com/68c96700f88999c4be85cef4/guide-assos-avec-un-agrement-jep-ou-sport"*/}
-          {/*      target="_blank"*/}
-          {/*      className="fr-link"*/}
-          {/*    >*/}
-          {/*      Consulter le tutoriel pour les structures agréées Sport ou JEP*/}
-          {/*    </Link>*/}
-          {/*  </p>*/}
-
-          {/*  <p className="fr-mt-2w">*/}
-          {/*    <Link*/}
-          {/*      href="https://view.genially.com/68a832edc26eae6fb0633be1/guide-loisirs-sportifs-marchands-lsm"*/}
-          {/*      target="_blank"*/}
-          {/*      className="fr-link"*/}
-          {/*    >*/}
-          {/*      Consulter le tutoriel pour les structures Loisirs Sportifs Marchands*/}
-          {/*    </Link>*/}
-          {/*  </p>*/}
-          {/*</section>*/}
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.INPUT_CODES} className={styles['input-codes-section']}>
@@ -192,7 +113,7 @@ export default function Page() {
           </ol>
           <p className="fr-mb-0">
             Vous pouvez saisir les codes des bénéficiaires{' '}
-            <span className="fr-text--bold">du 1er septembre jusqu&apos;au 31 décembre 2026</span>.
+            <span className="fr-text--bold">jusqu&apos;au 31 décembre 2026</span>.
           </p>
 
           <p className="fr-mb-0">
@@ -216,20 +137,8 @@ export default function Page() {
 
           <div className={styles['get-refunds-section__description']}>
             <h2 className="fr-h1 fr-mb-0">Modalités de remboursement du pass Sport</h2>
-            {/*todo: enable later*/}
-            {/*<KnowMore*/}
-            {/*  variant="yellow"*/}
-            {/*  knowMore={{*/}
-            {/*    title: 'A savoir',*/}
-            {/*    description: `Une 2ème vague de paiement est en cours. Les structures concernées recevront un remboursement le 31 octobre.`,*/}
-            {/*  }}*/}
-            {/*/>*/}
-
             <ol>
-              <li>
-                Saisissez vos pass Sport sur Le Compte Asso entre le 1er septembre et le 31 décembre
-                2026.
-              </li>
+              <li>Saisissez vos pass Sport sur Le Compte Asso jusqu&apos;au 31 décembre 2026.</li>
               <li>Une fois les pass Sport saisis, votre dossier est instruit.</li>
               <li>
                 Après vérification et validation du dossier, le paiement vous sera versé le mois
@@ -239,7 +148,7 @@ export default function Page() {
 
             <p>
               Vous pouvez saisir les codes des bénéficiaires{' '}
-              <span className="fr-text--bold">du 1er septembre jusqu’au 31 décembre 2026</span>.
+              <span className="fr-text--bold">jusqu&apos;au 31 décembre 2026</span>.
             </p>
 
             <p className="fr-mb-0">

@@ -3,224 +3,7 @@
 import Accordion from '@codegouvfr/react-dsfr/Accordion';
 import cn from 'classnames';
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
-import { AAH, AEEH, CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
-
-// old
-// export function AccordionsFaq() {
-//   return (
-//     <>
-//       <Accordion label="Quel est le format du pass Sport cette année ?" onExpandedChange={() => {}}>
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Pour appliquer la réduction de 70€, le bénéficiaire doit vous fournir le pass Sport
-//             qu&apos;il a reçu par e-mail ou via démarches-simplifiées.
-//           </p>
-//           <p className="fr-mb-2w">
-//             Le code alphanumérique commençant par 25 est à enregistrer sur votre Compte Asso.
-//           </p>
-//           <p className="fr-mb-4w">
-//             Le pass Sport peut se présenter sous la forme du code seul OU du modèle ci-dessous :
-//           </p>
-//           <Image
-//             src={code}
-//             className={cn('fr-responsive-img', styles['activate-code-section__image'])}
-//             alt="Modèle pass Sport 2026"
-//           />
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Comment s'assurer que le pass Sport est valide ?"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Lors de la saisie du code, le nom du jeune bénéficiaire s&apos;affiche. Vous devez
-//             vérifier qu&apos;il s&apos;agit bien de votre adhérent et non d&apos;une autre personne
-//             (comme un membre de la fratrie). Le pass Sport est une aide individuelle, non
-//             transférable.
-//           </p>
-//
-//           <p className="fr-mb-2w">
-//             Si un message affiche que le code n&apos;existe pas, il s&apos;agit probablement
-//             d&apos;une erreur de saisie ou d&apos;un faux pass. Demandez au bénéficiaire de vous le
-//             redonner.
-//           </p>
-//
-//           <div className="text-align--center fr-my-1w">
-//             <Image
-//               src="/images/structures/pass_sport_not_existing_error.png"
-//               width={700}
-//               height={72}
-//               alt="Message d'erreur: le n° pass Sport saisi n'existe pas. Veuillez SVP vérifier le n° et corriger la saisie"
-//             />
-//           </div>
-//
-//           <p className="fr-mb-2w">
-//             Si un message affiche que le bénéficiaire est déjà inscrit, deux situations sont
-//             possibles :
-//           </p>
-//           <ul className="fr-ml-2w">
-//             <li>Soit le code a déjà été enregistré sur votre Compte Asso. Pensez à vérifier.</li>
-//             <li>Soit le code a déjà été saisi par une autre structure.</li>
-//           </ul>
-//
-//           <p>Le code ne peut en effet être utilisé qu’une seule fois dans Le Compte Asso.</p>
-//
-//           <div className="text-align--center fr-my-1w">
-//             <Image
-//               src="/images/structures/pass_sport_can_only_be_used_once_error_message.png"
-//               width={700}
-//               height={72}
-//               alt="Message d'erreur : ce bénéficiaire est déjà inscrit au sein de la même structure ou d'une autre structure. Il ne peut pas être inscrit deux fois."
-//             />
-//           </div>
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Comment obtenir le remboursement des pass Sport ?"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Pour obtenir le remboursement des pass Sport, suivez ces étapes :
-//           </p>
-//           <ol className="fr-ml-2w">
-//             <li>
-//               Saisie du pass Sport : sur{' '}
-//               <Link
-//                 className="fr-link"
-//                 href="https://lecompteasso.associations.gouv.fr"
-//                 target="_blank"
-//                 title="Le Compte Asso - Nouvelle fenêtre"
-//               >
-//                 Le Compte Asso
-//               </Link>{' '}
-//               saisissez le pass Sport de votre adhérent entre le 1er septembre et le 31 décembre
-//               2026.
-//             </li>
-//             <li>
-//               Ouverture du dossier de remboursement : au premier pass Sport saisi, un dossier de
-//               remboursement est ouvert pour votre structure.
-//             </li>
-//             <li>
-//               Vérification des justificatifs : le service instructeur vérifiera votre justificatif
-//               d’éligibilité (attestation d’affiliation ou agrément ou charte d&apos;engagement) et
-//               votre RIB.
-//             </li>
-//             <li>
-//               Virement bancaire : votre structure sera remboursée par virement bancaire de l’Agence
-//               de Services et de Paiement (ASP), tiers payeur de l&apos;État.
-//             </li>
-//           </ol>
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Un jeune n’a pas encore reçu son code pass Sport. Que faire ?"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Si un jeune n&apos;a pas encore reçu son code pass Sport vous pouvez, si vous le
-//             souhaitez, proposer la solution suivante :
-//           </p>
-//           <ul className="fr-ml-2w">
-//             <li>Inscrire le jeune en appliquant immédiatement la réduction de 70€ ;</li>
-//             <li>
-//               Demander au jeune (ou à sa famille) un chèque de caution de 70€, qui leur sera
-//               restitué dès réception du code pass Sport.
-//             </li>
-//           </ul>
-//           <p className="fr-mb-2w">
-//             Si le jeune n&apos;est finalement pas éligible, vous êtes en droit d&apos;encaisser le
-//             chèque.
-//           </p>
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Comment ajouter un bénéficiaire sur le Compte Asso ?"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Si le bénéficiaire vous a présenté son code alphanumérique (25-XXXX-XXXX) et que votre
-//             structure a accordé une déduction immédiate de 70€ sur l&apos;inscription :
-//           </p>
-//
-//           <ul className="fr-ml-2w">
-//             <li>
-//               Vous devez avoir un compte sur{' '}
-//               <Link
-//                 className="fr-link"
-//                 href="https://lecompteasso.associations.gouv.fr"
-//                 target="_blank"
-//                 title="Le Compte Asso - Nouvelle fenêtre"
-//               >
-//                 Le compte Asso (LCA)
-//               </Link>
-//               . Si vous en avez déjà un, il vous suffit de le mettre à jour. Cela vous permettra
-//               d&apos;apparaître sur la cartographie en ligne sur le site.
-//             </li>
-//             <li>
-//               Veuillez ensuite compléter votre profil en téléversant votre justificatif
-//               d&apos;éligibilité au dispositif (un des trois suivants) dans la rubrique
-//               &ldquo;affiliations et adhérents personnes morales&rdquo; :
-//               <ul className="fr-ml-2w">
-//                 <li>
-//                   Association : attestation d&apos;affiliation à une fédération sportive agréée par
-//                   le ministère chargé des Sports ;
-//                 </li>
-//                 <li>Association : agrément JEP ou Sport valide ;</li>
-//                 <li>
-//                   Structures à but lucratif (Loisirs Sportifs Marchands) : charte d&apos;engagement
-//                   2026.
-//                 </li>
-//               </ul>
-//             </li>
-//           </ul>
-//
-//           <p className="fr-mb-2w">
-//             Pour obtenir de l&apos;aide, vous pouvez également contacter votre Délégation Régionale
-//             Académique à la Jeunesse, à l’Engagement et aux Sports (DRAJES) ou nous{' '}
-//             <Link
-//               className="fr-link"
-//               href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=pro&${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-//               title="Ouvrir le formulaire de contact"
-//             >
-//               contacter via le formulaire
-//             </Link>
-//             .
-//           </p>
-//
-//           <p className="fr-mb-2w">Comment ajouter un nouveau bénéficiaire ?</p>
-//           <p className="fr-mb-2w">
-//             Allez dans la rubrique{' '}
-//             <span className="fr-text--bold">&ldquo;Gérer les inscriptions pass Sport&rdquo;</span>{' '}
-//             (voir copie d&apos;écran ci-jointe). Vous devez impérativement saisir tous les codes
-//             avant le 31 décembre 2026.
-//           </p>
-//
-//           <div className="text-align--center fr-my-1w">
-//             <Image
-//               src="/images/structures/lca_gerer_les_pass_sports.png"
-//               width={700}
-//               height={155}
-//               alt="Gérer les pass Sport"
-//             />
-//           </div>
-//
-//           <div className="text-align--center fr-my-1w">
-//             <Image
-//               src="/images/structures/lca_ajouter_benef.png"
-//               width={700}
-//               height={271}
-//               alt="Ajouter un bénéficiaire sur Le Compte Asso"
-//             />
-//           </div>
-//         </article>
-//       </Accordion>
-//     </>
-//   );
-// }
+import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 export function AccordionsFaq() {
   return (
@@ -273,9 +56,9 @@ export function AccordionsFaq() {
               fédérations sportives agréées par le ministère chargé des Sports, de la Jeunesse et de
               la Vie associative (à l&apos;exclusion des fédérations scolaires).
               <DownloadLink
-                details="PDF ~ 466 kB"
+                details="PDF ~ 455 kB"
                 label="Télécharger le tableau des fédérations sportives agréées"
-                href="/assets/partenaires/tableau-des-119-f-d-rations-sportives-et-22-groupements-nationaux-5951.pdf"
+                href="/assets/partenaires/tableau-federations.pdf"
               />
             </li>
             <li>
@@ -299,9 +82,9 @@ export function AccordionsFaq() {
               </ul>
               {/* todo: to update*/}
               <DownloadLink
-                details="PDF ~ 163 kB"
-                label="Télécharger la charte d'engagement 2025"
-                href="/assets/partenaires/charte-lsm-2025.pdf"
+                details="PDF ~ 121 kB"
+                label="Télécharger la charte d'engagement 2026"
+                href="/assets/partenaires/charte-lsm-2026.pdf"
               />
             </li>
           </ol>
@@ -322,43 +105,45 @@ export function AccordionsFaq() {
       >
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
           <p className="fr-mb-0">
-            L&apos;enregistrement des codes pass Sport sera ouvert à partir du 1er septembre.
+            L&apos;enregistrement des codes pass Sport sera ouvert à partir du XX septembre 2026.
           </p>
         </article>
       </Accordion>
       <Accordion label="Qui sont les bénéficiaires du pass Sport ?" onExpandedChange={() => {}}>
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-2w">
+          <p className="fr-mb-0">
             Pour la saison 2026-2027, le dispositif est ouvert aux jeunes remplissant les conditions
             suivantes :
           </p>
 
-          <ul className="fr-pl-0">
+          <ul className="fr-pl-4w">
             <li>
-              Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient familial
-              est inférieur ou égal à 699 € ;
+              Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire dont le
+              quotient familial (<CAF /> ou <MSA />) est inférieur ou égal à 699 € ;
             </li>
             <li>
               Jeunes en situation de handicap :
-              <ul>
+              <ul className="fr-m-0">
                 <li>
-                  de 6 à 19 ans révolus bénéficiaires de l&apos; <AEEH /> (Allocation d’éducation de
-                  l’enfant handicapé) ;
+                  de 6 à 19 ans révolus bénéficiaires de l&apos;AEEH (Allocation d&apos;éducation de
+                  l&apos;enfant handicapé) ;
                 </li>
                 <li>
-                  de 16 à 30 ans révolus bénéficiaires de l&apos;
-                  <AAH /> (Allocation aux adultes handicapés).
+                  de 16 à 30 ans révolus bénéficiaires de l&apos;AAH (Allocation aux adultes
+                  handicapés)
                 </li>
               </ul>
             </li>
+
             <li>
-              Boursiers au plus de 28 ans révolus, titulaires d’une bourse attribuée avant le 15
-              octobre 2026 :
+              Étudiants boursiers jusqu&apos;à 28 ans révolus, titulaires d&apos;une bourse
+              attribuée avant le 15 octobre 2026 :
               <ul>
                 <li>
-                  bourse du <CROUS /> (y compris l’aide annuelle) ;
+                  Bourse du <CROUS />
+                  {'  '} (y compris l&apos;aide annuelle) ;
                 </li>
-                <li>bourse régionale pour une formation sanitaire et sociale.</li>
+                <li>Bourse régionale pour une formation sanitaire et sociale.</li>
               </ul>
             </li>
           </ul>
