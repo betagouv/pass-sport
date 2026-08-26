@@ -29,7 +29,6 @@ services:
     env_file:
       - ./site/.env.local
     environment:
-      - SCALINGO_POSTGRESQL_URL=postgres://passsport:passsport@db:5432/passsport
       - SCALINGO_REDIS_URL=redis://passsport:passsport@redis:6379
       - APPLICATIONS_DATABASE_URL=postgres://site_readonly:passsport@db:5432/passsport
       - PGSSL_DISABLE=true

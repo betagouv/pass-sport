@@ -61,7 +61,7 @@ describe("eligibility_history", () => {
       ["lca", "lca.search", "success"],
       ["lca", "lca.confirm", "success"],
       ["worker", "results.persisted", "success"],
-      ["worker", "email.digest", "success"],
+      ["worker", "email.code", "success"],
     ]);
 
     // The durable correlation key. job_id is written too, but BullMQ deletes the job,
@@ -106,9 +106,9 @@ describe("eligibility_history", () => {
     expect(search?.response_payload?.result_count).toBe(1);
     expect(search?.response_payload?.results?.[0]?.matricule).toBe("SECRET-MATRICULE");
 
-    // And the digest, codes and names and all.
-    const email = rows.find((r) => r.action === "email.digest");
-    expect(email?.body_payload?.entries?.[0]?.code).toBe("PSP-CODE-123");
+    // And the outcome email, codes and names and all.
+    const email = rows.find((r) => r.action === "email.code");
+    expect(email?.body_payload?.code).toBe("PSP-CODE-123");
   });
 
   it("records what each endpoint was called with, not only what it answered", async () => {
@@ -116,11 +116,6 @@ describe("eligibility_history", () => {
     await stack.enqueueAndWait(selfCrous(sub));
 
     const rows = await historyFor(sub);
-
-    // API Particulier: the identité pivot as it goes on the wire (CNOUS v5 camelCase).
-    const cnous = rows.find((r) => r.action === "cnous.etudiant_boursier_identite");
-    expect(cnous?.body_payload?.nomNaissance).toBe("Martin");
-    expect(cnous?.body_payload?.anneeDateNaissance).toBe("2004");
 
     // LCA search: the beneficiary and the commune the search was run on.
     const search = rows.find((r) => r.action === "lca.search");

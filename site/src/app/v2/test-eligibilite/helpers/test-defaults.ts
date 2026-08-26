@@ -28,7 +28,7 @@ const QF_CAF_DEFAULTS: FormDefaults = {
   recipientResidencePlace: PARIS_2E,
   recipientLastname: 'MERCIER',
   recipientFirstname: 'PIERRE',
-  recipientCafNumber: '0123456',
+  recipientCafNumber: '1234567',
   recipientBirthDate: '1969-03-17',
   recipientBirthCountry: FRANCE_ISO_CODE,
   recipientBirthPlace: GONESSE,

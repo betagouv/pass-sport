@@ -64,6 +64,13 @@
       "when": 1787645556533,
       "tag": "0008_widen_enfant_projection",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787671113689,
+      "tag": "0009_drop_email_verifications",
+      "breakpoints": true
     }
   ]
 }
