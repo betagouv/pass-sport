@@ -147,7 +147,7 @@ export default function SimplifiedEligibilityTest({
                   description: (
                     <>
                       Les codes pass Sport seront envoyés aux bénéficiaires entre le XX et le XX
-                      septembre 2026. À partir du 4 septembre, si vous n’avez pas reçu votre code
+                      septembre 2026. À partir du XX septembre, si vous n’avez pas reçu votre code
                       pass Sport, vous pourrez le récupérer directement sur{' '}
                       <Link href="https://pass.sports.gouv.fr" target="_blank">
                         https://pass.sports.gouv.fr
@@ -159,7 +159,28 @@ export default function SimplifiedEligibilityTest({
 
                 const errorInitialMeta = {
                   title: `Vous n’êtes pas éligible au pass Sport.`,
-                  description: '',
+                  description: (
+                    <>
+                      <p className="fr-mb-0 fr-mt-2w">
+                        Pour la saison 2026-2027, le dispositif est ouvert aux :
+                      </p>
+
+                      <ul>
+                        <li>
+                          Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire
+                          dont le quotient familial (CAF ou MSA) est inférieur ou égal à 699 € ;
+                        </li>
+                        <li>
+                          Jeunes de 6 à 30 ans révolus bénéficiaires de l&apos;AEEH ou l&apos;AAH ;
+                        </li>
+                        <li>
+                          Étudiants boursiers jusqu&apos;à 28 ans révolus bénéficiaires d&apos;une
+                          bourse ou d&apos;une aide annuelle du CROUS, ou encore d&apos;une bourse
+                          régionale pour une formation sanitaire et sociale.
+                        </li>
+                      </ul>
+                    </>
+                  ),
                 };
 
                 if (isBenefEligible && targetDate) {
@@ -179,8 +200,8 @@ export default function SimplifiedEligibilityTest({
                         description: (
                           <>
                             Les codes pass Sport seront envoyés aux bénéficiaires entre le XX et le
-                            XX septembre 2026. À partir du 4 septembre, si vous n&apos;avez pas reçu
-                            votre code pass Sport, vous pourrez le récupérer directement sur{' '}
+                            XX septembre 2026. À partir du XX septembre, si vous n&apos;avez pas
+                            reçu votre code pass Sport, vous pourrez le récupérer directement sur{' '}
                             <Link href="https://pass.sports.gouv.fr" target="_blank">
                               https://pass.sports.gouv.fr
                             </Link>
@@ -220,7 +241,7 @@ export default function SimplifiedEligibilityTest({
             >
               <div className={cn('fr-fieldset__element', styles['eligibility-test__field'])}>
                 <Input
-                  label="Date de naissance de la personne éligible"
+                  label="Date de naissance du jeune éligible"
                   state={inputStates.dob?.state}
                   stateRelatedMessage={inputStates.dob?.errorMsg}
                   hintText="Exemple : 31/12/2015."

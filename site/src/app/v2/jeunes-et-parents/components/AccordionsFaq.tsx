@@ -3,251 +3,11 @@
 import Accordion from '@codegouvfr/react-dsfr/Accordion';
 import cn from 'classnames';
 import Link from 'next/link';
+import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
-// old
-// export function AccordionsFaq() {
-//   return (
-//     <>
-//       <Accordion label="J'ai perdu ou supprimé mon pass Sport" onExpandedChange={() => {}}>
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Si vous avez perdu ou supprimé votre pass Sport, vous pouvez le récupérer directement
-//             sur le site en cliquant sur le lien suivant :{' '}
-//             <Link
-//               className="fr-link"
-//               href="/v2/test-eligibilite"
-//               title="Aller vers le test d'éligibilité"
-//             >
-//               récupérer mon pass Sport
-//             </Link>
-//             .
-//           </p>
-//
-//           <p className="fr-mb-2w">
-//             Le code alphanumérique commençant par 25 est à saisir sur votre Compte Asso.
-//           </p>
-//
-//           <p className="fr-mb-4w">Voici à quoi ressemble un pass Sport :</p>
-//           <Image
-//             src={code}
-//             className={cn('fr-responsive-img', styles['activate-code-section__image'])}
-//             alt="Modèle pass Sport 2026"
-//           />
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Il manque le pass Sport d'un ou plusieurs de mes enfants"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Il est possible que les enfants d&apos;une même famille reçoivent leur code pass Sport à
-//             des dates différentes. Certains peuvent aussi ne pas être éligibles.
-//           </p>
-//
-//           <p className="fr-mb-2w">
-//             La majorité des bénéficiaires ont reçu leur code par e-mail à la fin du mois
-//             d&apos;août, sauf dans les cas suivants :
-//           </p>
-//
-//           <ul className="fr-ml-2w">
-//             <li>
-//               Les enfants de 6 à 13 ans ainsi que les jeunes de 18 et 19 ans bénéficiaires de
-//               l&apos;
-//               <AEEH />.
-//               <p className="fr-mb-2w">
-//                 → La demande doit être faite en ligne, à partir du 1er septembre.{' '}
-//                 <Link href="/v2/test-eligibilite" className="fr-link">
-//                   Aller vers le formulaire d&apos;obtention du pass Sport
-//                 </Link>
-//                 .
-//               </p>
-//             </li>
-//           </ul>
-//
-//           <ul className="fr-ml-2w">
-//             <li>
-//               Étudiants boursiers
-//               <p className="fr-mb-2w">
-//                 → Les codes sont envoyés par e-mail entre mi-octobre et mi-novembre.
-//               </p>
-//             </li>
-//           </ul>
-//
-//           <p className="fr-mb-2w">
-//             Si vous n&apos;avez rien reçu (y compris dans vos courriers indésirables), vous pouvez
-//             vérifier votre droit au pass Sport grâce à ce test rapide :{' '}
-//             <Link
-//               href="/v2/test-eligibilite-base"
-//               className="fr-link"
-//               title="Aller vers le test d'éligibilité"
-//             >
-//               tester mon éligibilité
-//             </Link>
-//             .
-//           </p>
-//
-//           <p className="fr-mb-2w">
-//             Si le test confirme votre éligibilité, vous pouvez le récupérer en ligne sur le site du
-//             pass Sport :{' '}
-//             <Link
-//               href="/v2/test-eligibilite"
-//               className="fr-link"
-//               title="Aller vers le formulaire d'obtention du pass Sport"
-//             >
-//               récupérer mon pass Sport
-//             </Link>
-//             .
-//           </p>
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Je n'arrive pas à récupérer mon pass Sport en ligne"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Faites ce test rapide pour vérifier si vous avez droit au pass Sport :{' '}
-//             <Link
-//               href="/v2/test-eligibilite-base"
-//               className="fr-link"
-//               title="Aller vers le test d'éligibilité"
-//             >
-//               tester mon éligibilité
-//             </Link>
-//             .
-//           </p>
-//
-//           <p className="fr-mb-2w">
-//             Si le test confirme que vous êtes éligible au pass Sport, vous pouvez le récupérer
-//             directement sur le site :{' '}
-//             <Link
-//               href="/v2/test-eligibilite"
-//               className="fr-link"
-//               title="Aller vers le formulaire d'obtention du pass Sport"
-//             >
-//               récupérer mon pass Sport
-//             </Link>
-//             .
-//           </p>
-//
-//           <p className="fr-mb-2w">
-//             Si vous rencontrez encore des difficultés dans l&apos;obtention du pass Sport,
-//             l&apos;équipe support vous aidera à obtenir votre pass Sport :{' '}
-//             <Link
-//               className="fr-link"
-//               href={`/v2/une-question?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.BENEF}&${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-//               title="Ouvrir le formulaire de contact"
-//             >
-//               Nous contacter par email
-//             </Link>
-//             .
-//           </p>
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Mon code pass Sport ne fonctionne pas. Que faire ?"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">Pour rappel, le bon format du code est : 25-XXXX-XXXX</p>
-//           <p className="fr-mb-2w">
-//             Si votre code ne fonctionne pas, voici plusieurs raisons possibles :
-//           </p>
-//           <ul className="fr-ml-2w">
-//             <li>
-//               Votre club a peut être déjà saisi votre code une fois. Nous vous invitons à lui
-//               demander de vérifier que votre code n&apos;est pas déjà enregistré dans la base.
-//             </li>
-//             <li>
-//               Vous l&apos;avez déjà utilisé dans un autre club. Le code est valable pour une seule
-//               inscription.
-//             </li>
-//             <li>
-//               Il peut s&apos;agir d&apos;une erreur de saisie. Le code alphanumérique doit être
-//               saisi en majuscule, en conservant les tirets et sans ajouter d&apos;espace.
-//             </li>
-//           </ul>
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Je dois payer mon inscription, mais je n'ai pas encore mon code. Que faire ?"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">Vous pouvez proposer cette solution à votre club :</p>
-//           <ul className="fr-ml-2w">
-//             <li>
-//               Régler l&apos;inscription{' '}
-//               <span className="fr-text--bold">avec la déduction immédiate de 70 €</span> ;
-//             </li>
-//             <li>
-//               Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass Sport.
-//             </li>
-//           </ul>
-//
-//           <p className="fr-mb-2w">
-//             Si vous n&apos;êtes finalement <span className="fr-text--bold">pas éligible</span>, le
-//             club pourra <span className="fr-text--bold">encaisser le chèque</span>.
-//           </p>
-//           <p className="fr-text--bold">
-//             Chaque club reste libre d&apos;accepter ou non cette solution.
-//           </p>
-//         </article>
-//       </Accordion>
-//       <Accordion
-//         label="Que faire si mon club refuse d'accepter mon pass Sport ?"
-//         onExpandedChange={() => {}}
-//       >
-//         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-//           <p className="fr-mb-2w">
-//             Votre club n&apos;est pas obligé d&apos;adhérer au dispositif.{' '}
-//           </p>
-//           <p className="fr-mb-2w">
-//             Votre code peut être utilisé dans plus de 85 000 autres clubs et salles de sport à
-//             travers toute la France. Vous pouvez consulter ici une{' '}
-//             <Link
-//               className="fr-link"
-//               href="/v2/trouver-un-club"
-//               title="Aller vers la liste et cartographie des clubs"
-//             >
-//               liste indicative des établissements
-//             </Link>
-//             .
-//           </p>
-//           <p>
-//             Si une structure qui vous intéresse ne figure pas sur cette liste, il est possible
-//             qu&apos;elle soit partenaire mais non référencée. N&apos;hésitez pas à vérifier
-//             directement auprès d&apos;elle.
-//           </p>
-//         </article>
-//       </Accordion>
-//     </>
-//   );
-// }
 export function AccordionsFaq() {
   return (
     <>
-      <Accordion label="Pourquoi n'ai-je plus le droit au pass Sport ?" onExpandedChange={() => {}}>
-        <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-2w">
-            Les modalités d&apos;éligibilité au pass Sport sont étendues en 2026, afin
-            d&apos;inclure les jeunes de 12 et 13 ans bénéficiaires de l&apos;Allocation de Rentrée
-            Scolaire. Si vous n&apos;avez plus droit au pass Sport, cela signifie donc que vous ne
-            remplissez plus les critères d&apos;éligibilité, soit parce que vous n&apos;avez plus
-            l&apos;âge permettant de bénéficier du pass Sport, soit parce que vous ne remplissez
-            plus les critères sociaux permettant d&apos;obtenir le pass Sport (bénéficiaire de
-            l&apos;ARS, l&apos;AEEH, l&apos;AAH, d&apos;une bourse du CROUS ou d&apos;une bourse
-            régionale pour une formation sanitaire et sociale).
-          </p>
-
-          <p className="fr-mb-0">
-            D&apos;autres aides peuvent vous être proposées par différentes institutions.
-            Renseignez-vous auprès de votre mairie, de votre centre communal d&apos;action social,
-            de votre CAF, de votre conseil départemental, de votre conseil régional.
-          </p>
-        </article>
-      </Accordion>
       <Accordion label="Où utiliser mon pass Sport ?" onExpandedChange={() => {}}>
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
           <p className="fr-mb-2w">
@@ -264,14 +24,52 @@ export function AccordionsFaq() {
           </p>
 
           <p className="fr-mb-2w">
-            Si le club qui vous intéresse ne figure pas sur la liste, il est possible qu&apos;il
-            soit partenaire mais non référencé. N&apos;hésitez pas à vérifier directement auprès du
-            club.
+            Si la structure qui vous intéresse ne figure pas dans la liste indicative, il est
+            possible qu&apos;elle soit partenaire mais non référencée. Dans ce cas, veuillez de
+            contacter la structure choisie pour vérifier si elle accepte le pass Sport.
           </p>
 
-          <p className="fr-mb-0">
-            Pour rappel, le pass Sport est utilisable du 1er septembre au 31 décembre 2026.
+          <p className="fr-mb-2w">
+            Si vous êtes en situation de handicap, vous pouvez vous rendre sur les sites suivants et
+            contacter directement les clubs pour savoir s&apos;ils acceptent le pass Sport :
           </p>
+
+          <ul className="fr-pl-4w">
+            <li>
+              <Link className="fr-link" href="https://www.handisport.org" target="_blank">
+                https://www.handisport.org
+              </Link>{' '}
+              (handicaps physiques, moteurs, sensoriels)
+            </li>
+            <li>
+              <Link className="fr-link" href="https://sportadapte.fr" target="_blank">
+                https://sportadapte.fr
+              </Link>{' '}
+              (handicap cognitif, psychique et/ou neurodéveloppemental)
+            </li>
+            <li>
+              <Link
+                className="fr-link"
+                href="https://www.handiguide.sports.gouv.fr"
+                target="_blank"
+              >
+                https://www.handiguide.sports.gouv.fr
+              </Link>{' '}
+              (annuaire national du sport accessible)
+            </li>
+            <li>
+              <Link
+                className="fr-link"
+                href="https://trouvetonparasport.france-paralympique.fr"
+                target="_blank"
+              >
+                https://trouvetonparasport.france-paralympique.fr
+              </Link>{' '}
+              (propose des disciplines qui correspondent le mieux au jeune)
+            </li>
+          </ul>
+
+          <p>Pour rappel, le pass Sport est utilisable jusqu&apos;au 31 décembre 2026.</p>
         </article>
       </Accordion>
       <Accordion
@@ -280,19 +78,19 @@ export function AccordionsFaq() {
       >
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
           <p className="fr-mb-2w">
-            Fin août 2026, vous recevez automatiquement un email séparé pour chaque enfant éligible
-            (ou groupé selon ce qui est décidé), contenant leur code pass Sport personnel.
+            Si plusieurs de vos enfants mineurs sont éligibles au pass Sport, vous recevrez un
+            courrier électronique distinct pour chacun d’eux, contenant leur code pass Sport
+            l&apos;adresse transmise par les organismes partenaires (<CAF /> ou <MSA />
+            ). Chaque code est unique et doit être présenté au club lors de l&apos;inscription de
+            l&apos;enfant concerné.
           </p>
 
           <p className="fr-mb-2w">
-            Chaque code est unique et indispensable pour bénéficier de l&apos;aide pour chacun de
-            vos enfants.
+            Les étudiants majeurs éligibles recevront également leur code pass Sport par courrier
+            électronique, à l&apos;adresse renseignée lors de leur demande de bourse.
           </p>
 
-          <p className="fr-mb-0">
-            Lors de l&apos;inscription, veillez à fournir le bon pass Sport à chaque club pour
-            éviter toute confusion entre les enfants.
-          </p>
+          <p>Pour rappel, le pass Sport est utilisable jusqu&apos;au 31 décembre 2026.</p>
         </article>
       </Accordion>
       <Accordion
@@ -300,78 +98,124 @@ export function AccordionsFaq() {
         onExpandedChange={() => {}}
       >
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-2w">
-            En consultant{' '}
-            <Link
-              target="_blank"
-              title="La liste des structures sportives - nouvelle fenêtre"
-              href="/v2/trouver-un-club"
-            >
-              la liste des structures sportives
-            </Link>{' '}
-            , vous pourrez rechercher une structure qui propose des activités adaptées aux jeunes en
-            situation de handicap.
+          <p className="fr-mb-0">Pour trouver une structure ou une discipline adaptée :</p>
+          <ul className="fr-pl-4w fr-mb-2w">
+            <li>
+              <Link
+                className="fr-link"
+                href="https://www.handiguide.sports.gouv.fr/"
+                target="_blank"
+              >
+                Handiguide
+              </Link>{' '}
+              (annuaire national du sport accessible)
+            </li>
+            <li>
+              <Link
+                className="fr-link"
+                href="https://trouvetonparasport.france-paralympique.fr/#/"
+                target="_blank"
+              >
+                Trouve ton parasport
+              </Link>{' '}
+              (propose des disciplines qui correspondent le mieux au jeune)
+            </li>
+          </ul>
+
+          <p className="fr-mb-0">
+            Avant l&apos;inscription, il est recommandé de contacter la structure choisie pour
+            vérifier :
           </p>
 
-          <p className="fr-mb-2w">
-            Cependant, selon votre handicap, le club peut manquer de matériel ou d&apos;encadrement
-            nécessaire pour assurer une pratique en toute sécurité. Une fois le club trouvé, prenez
-            contact préalablement avec lui pour vérifier sa capacité à vous accueillir dans les
-            meilleures conditions.
-          </p>
+          <ul className="fr-pl-4w fr-mb-2w">
+            <li>Qu&apos;elle accepte le pass Sport ;</li>
+            <li>
+              Qu&apos;elle dispose du matériel et de l&apos;encadrement adaptés à votre handicap
+              pour une pratique en toute sécurité.
+            </li>
+          </ul>
 
-          <p className="fr-mb-2w">
+          <p className="fr-mb-0">
             Nous vous conseillons de prendre contact avec les ligues régionales. Elles pourront vous
             renseigner pour trouver votre sport :
           </p>
 
-          <ul className="fr-ml-2w">
+          <ul className="fr-pl-4w fr-mb-2w">
             <li>
-              <Link
-                href="https://www.handisport.org"
-                target="_blank"
-                title="Handisport (handicaps physiques, moteurs, sensoriels) - nouvelle fenêtre"
-              >
-                Handisport (handicaps physiques, moteurs, sensoriels)
-              </Link>
+              <Link className="fr-link" href="https://www.handisport.org/" target="_blank">
+                Handisport
+              </Link>{' '}
+              (handicaps physiques, moteurs, sensoriels)
             </li>
             <li>
-              <Link
-                href="https://sportadapte.fr"
-                target="_blank"
-                title="Ou du sport adapté (handicap mental, psychique) - nouvelle fenêtre"
-              >
-                Ou du sport adapté (handicap mental, psychique)
-              </Link>
+              <Link className="fr-link" href="https://sportadapte.fr/" target="_blank">
+                Sport adapté
+              </Link>{' '}
+              (handicap cognitif, psychique et/ou neurodéveloppemental)
             </li>
           </ul>
-
           <p className="fr-mb-0">
             Pour rappel, le pass Sport est utilisable jusqu&apos;au 31 décembre 2026.
           </p>
         </article>
       </Accordion>
-      <Accordion
-        label="J'ai droit au pass Sport, mais mon club me demande de payer avant septembre. Que faire ?"
-        onExpandedChange={() => {}}
-      >
+      <Accordion label="Pourquoi n'ai-je plus le droit au pass Sport ?" onExpandedChange={() => {}}>
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-0 fr-text--bold">
-            Si devez régler votre inscription entre juin et août :
-          </p>
           <p className="fr-mb-2w">
-            Le club peut vous appliquer la réduction immédiate de 50 € en échange d&apos;un chèque
-            de caution de 50 €. Ce chèque ne sera pas encaissé et vous sera restitué dès que vous
-            aurez fourni le code pass Sport (à partir du 1er septembre).
+            En 2026, les modalités d&apos;éligibilité au pass Sport sont étendues. Sont désormais
+            concernés les jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire
+            dont le quotient familial (<CAF /> ou <MSA />) est inférieur ou égal à 699 €. Si vous
+            n&apos;avez plus droit au pass Sport, cela signifie que vous ne remplissez plus les
+            critères d&apos;éligibilité, soit parce que vous n&apos;avez plus l&apos;âge pour
+            bénéficier de l&apos;aide, soit parce que vous ne remplissez plus les critères sociaux
+            permettant de l&apos;obtenir.
           </p>
 
-          <p className="fr-mb-0 fr-text--bold">Si vous avez déjà réglé votre inscription :</p>
-          <p className="fr-mb-2w">
-            Si vous avez réglé l&apos;intégralité de votre inscription, votre club peut vous
-            rembourser 50 € en échange de votre code pass sport. Cela revient à vous appliquer la
-            réduction.
+          <p className="fr-mb-0">
+            Rappel, pour la saison 2026-2027, le dispositif est ouvert aux :
           </p>
-          <p>Chaque club reste libre d&apos;accepter ou non cette solution.</p>
+
+          <ul className="fr-pl-4w">
+            <li>
+              Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire dont le
+              quotient familial (<CAF /> ou <MSA />) est inférieur ou égal à 699 € ;
+            </li>
+            <li>
+              Jeunes en situation de handicap :
+              <ul className="fr-m-0">
+                <li>
+                  de 6 à 19 ans révolus bénéficiaires de l&apos;AEEH (Allocation d&apos;éducation de
+                  l&apos;enfant handicapé) ;
+                </li>
+                <li>
+                  de 16 à 30 ans révolus bénéficiaires de l&apos;AAH (Allocation aux adultes
+                  handicapés)
+                </li>
+              </ul>
+            </li>
+
+            <li>
+              Étudiants boursiers jusqu&apos;à 28 ans révolus, titulaires d&apos;une bourse
+              attribuée avant le 15 octobre 2026 :
+              <ul>
+                <li>
+                  Bourse du <CROUS /> {'  '}(y compris l&apos;aide annuelle) ;
+                </li>
+                <li>Bourse régionale pour une formation sanitaire et sociale.</li>
+              </ul>
+            </li>
+          </ul>
+
+          <p className="fr-mb-2w">
+            D&apos;autres aides peuvent vous être proposées par différentes institutions.
+            Renseignez-vous auprès de votre mairie, de votre centre communal d&apos;action social,
+            de votre <CAF />, de votre conseil départemental, de votre conseil régional.
+          </p>
+
+          <p>
+            AEEH = Allocation d&apos;Éducation de l’Enfant Handicapé, AAH = Allocation aux Adultes
+            Handicapés
+          </p>
         </article>
       </Accordion>
       <Accordion

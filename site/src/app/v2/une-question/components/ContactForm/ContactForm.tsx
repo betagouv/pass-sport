@@ -17,14 +17,15 @@ export const visitorReasons = {
   'aije-droit-benef': `Ai-je droit au pass Sport cette année ?`,
   'paiement-phase1-benef': `J'ai droit au pass Sport, mais mon club me demande de payer avant septembre. Que faire ?`,
   'non-eligible-benef': `Pourquoi n'ai-je plus droit au pass Sport ?`,
+  'benef-ars-non-eligible': `J'ai perçu l'allocation de rentrée scolaire et je n'ai pas reçu mon pass Sport, pourquoi ?`,
   boursier: `Je suis boursier, j'ai une question`,
+  'benef-parcours-utilisateur': `Je suis éligible, mais je n’arrive pas à récupérer mon code pass Sport sur le site`,
   'other-benef': `Autre`,
 };
 
 const proReasons = {
   'aije-droit-club': `Quel public est éligible au pass Sport cette année ?`,
   'eligible-club': `Ma structure peut-elle accepter le pass Sport ?`,
-  'paiement-phase1-club': `Inscriptions entre juin et fin août : comment procéder ?`,
   'lca-club': `Je rencontre des difficultés sur le Compte Asso`,
   'other-club': `Autre`,
 };

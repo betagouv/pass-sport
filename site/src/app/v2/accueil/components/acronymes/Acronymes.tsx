@@ -5,7 +5,7 @@ export const CAF = () => <abbr title="Caisse d'Allocations Familiales">CAF</abbr
 export const CROUS = ({ includeSanitairesEtSociaux = false }) => (
   <>
     <span>
-      <abbr title="Centre Régional des Oeuvres Universitaires et Scolaires">CROUS </abbr>
+      <abbr title="Centre Régional des Oeuvres Universitaires et Scolaires">CROUS</abbr>
       {includeSanitairesEtSociaux &&
         'ou bourse régionale pour les formations sanitaires et sociales'}
     </span>
