@@ -63,7 +63,7 @@ Ce que le script garantit, et qu'un passage à la main doit respecter aussi :
   resoumissions, et c'est aussi la preuve que le passage précédent a bien refermé la boucle.
 
 Les fichiers que la cron produit sont horodatés à la seconde
-(`AAAA-MM-JJ-HHMMSS-fc-with-codes.csv`, et le `-prod.csv` qui en dérive), là où les notebooks
+(`AAAA-MM-JJTHH-MM-SS-fc-with-codes.csv`, et le `-prod.csv` qui en dérive), là où les notebooks
 s'en tiennent au jour : une cron peut passer plusieurs fois par jour, et deux passages
 écraseraient sinon le fichier du précédent — y compris dans `FC_PROD_DROP_DIR`, où il n'a
 peut-être pas encore été injecté.

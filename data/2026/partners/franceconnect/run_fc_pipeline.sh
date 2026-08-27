@@ -125,8 +125,7 @@ CODES_CSV="$(resolve_path "$EXISTING_CODES_PATHFILE_2026")"
 # les ":" dans un nom de fichier ; il est dérivé de TS_ISO plutôt que d'un second appel à `date`,
 # pour que les deux noms partagent exactement le même instant.
 TS_ISO="$(date '+%Y-%m-%dT%H:%M:%S')"
-TS_COMPACT="${TS_ISO/T/-}"
-TS_COMPACT="${TS_COMPACT//:/}"
+TS_COMPACT="${TS_ISO//:/-}"
 WITH_CODES_CSV="$(dirname "$CLEANED_CSV")/$TS_COMPACT-fc-with-codes.csv"
 PROD_CSV="${WITH_CODES_CSV/-with-codes.csv/-prod.csv}"
 
