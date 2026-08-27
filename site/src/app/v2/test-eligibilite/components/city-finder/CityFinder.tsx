@@ -19,7 +19,7 @@ import {
 import React, { ReactNode, useState } from 'react';
 import { sortCities } from '@/utils/city';
 
-interface Option {
+export interface CityOption {
   label: string;
   value: string;
 }
@@ -31,10 +31,11 @@ interface Props {
   isDisabled: boolean;
   onBlur: (text: string | null) => void;
   onChanged: (text: string | null) => void;
+  onOptionChanged?: (option: CityOption | null) => void;
   required?: boolean;
   shouldAutoFocus?: boolean;
   /* Stands in for a commune the user would have picked, without running the async search */
-  defaultOption?: Option;
+  defaultOption?: CityOption;
 }
 
 const CITY_FINDER_DESC_ERROR_ID = 'city-finder-desc-error';
@@ -47,12 +48,13 @@ const CityFinder = ({
   isDisabled,
   onBlur,
   onChanged,
+  onOptionChanged,
   required = false,
   shouldAutoFocus = false,
   defaultOption,
 }: Props) => {
   const [inputValue, setInputValue] = useState(defaultOption?.label ?? '');
-  const [value, setValue] = useState<Option>(defaultOption ?? { label: '', value: '' });
+  const [value, setValue] = useState<CityOption>(defaultOption ?? { label: '', value: '' });
 
   const onInputChange: ReactSelectProps['onInputChange'] = (inputValue, { action }) => {
     if (action === 'input-change') {
@@ -60,8 +62,9 @@ const CityFinder = ({
     }
   };
 
-  const birthPlaceChangedHandler = (newValue: SingleValue<Option>) => {
+  const birthPlaceChangedHandler = (newValue: SingleValue<CityOption>) => {
     onChanged(newValue as string | null);
+    onOptionChanged?.(newValue);
     setInputValue(newValue?.label || '');
     setValue({
       value: newValue?.value || '',
@@ -86,7 +89,7 @@ const CityFinder = ({
       </label>
 
       <div className={cn('fr-grid-row', styles['city-finder__container'])}>
-        <AsyncSelect<Option, false>
+        <AsyncSelect<CityOption, false>
           aria-labelledby="city-select-id"
           instanceId="city-select-id"
           inputId={inputName}
@@ -157,7 +160,7 @@ function fetchCityOptions(inputValue: string) {
   );
 }
 
-function parseCities(cities: City[]): Option[] {
+function parseCities(cities: City[]): CityOption[] {
   return cities.map((city) => {
     return { label: `${city.nom} (${city.codeDepartement})`, value: city.code };
   });
