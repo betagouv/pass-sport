@@ -111,12 +111,13 @@
   }
 }
 
-.lca-section {
+.lca-section,
+.eligibility-conditions-section {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  //width: 66.67%;
-  width: 83.33%;
+  width: 66.67%;
+  //width: 83.33%;
   align-self: center;
 
   p {
@@ -128,11 +129,17 @@
   }
 }
 
+.eligibility-conditions-section {
+  //width: 66.67%;
+  width: 83.33%;
+}
+
 .input-codes-section {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  width: 66.67%;
+  //width: 66.67%;
+  width: 83.33%;
   align-self: center;
 
   p,
@@ -149,7 +156,9 @@
   display: flex;
   flex-direction: row-reverse;
   gap: 32px;
-  width: 83.33%;
+  width: 66.67%;
+  //width: 83.33%;
+
   margin: 0 auto;
   align-items: center;
   justify-self: center;
@@ -184,7 +193,9 @@
 }
 
 .faq-section {
-  width: 66.67%;
+  //width: 66.67%;
+  width: 83.33%;
+
   align-self: center;
   margin-top: -16px;
 

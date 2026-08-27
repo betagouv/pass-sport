@@ -35,7 +35,9 @@ export type StepOneFormInputsState = Pick<
   'beneficiaryLastname' | 'beneficiaryFirstname' | 'recipientResidencePlace'
 >;
 
-export type StepOneFields = Record<keyof StepOneFormInputsState, string>;
+export type StepOneFields = Record<keyof StepOneFormInputsState, string> & {
+  recipientResidencePlaceLabel: string;
+};
 
 export type YoungCafInputsState = Pick<
   EligibilityFormInputsState,

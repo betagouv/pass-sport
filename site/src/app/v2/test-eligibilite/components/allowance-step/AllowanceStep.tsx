@@ -51,6 +51,7 @@ const AllowanceStep = () => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [verdictNode, setVerdictNode] = useState<HTMLElement | null>(null);
   const [stepOneFields, setStepOneFields] = useState<StepOneFields | null>(null);
+  const [isStepOneValidated, setIsStepOneValidated] = useState<boolean>(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
   const [caisse, setCaisse] = useState<CAISSE | null>(null);
@@ -115,6 +116,7 @@ const AllowanceStep = () => {
     setCaisse(null);
     setIsValidated(null);
     setStepOneFields(null);
+    setIsStepOneValidated(false);
     setSubmittedEmail(null);
     setDob('');
     clear();
@@ -132,7 +134,7 @@ const AllowanceStep = () => {
   // "Modifier": reopen the form on the answers already given instead of starting over
   const editTest = () => {
     setIsValidated(null);
-    setStepOneFields(null);
+    setIsStepOneValidated(false);
     setSubmittedEmail(null);
   };
 
@@ -212,6 +214,8 @@ const AllowanceStep = () => {
         setVerdictNode,
         setAllowance,
         setStepOneFields,
+        isStepOneValidated,
+        setIsStepOneValidated,
         setSubmittedEmail,
       }}
     >

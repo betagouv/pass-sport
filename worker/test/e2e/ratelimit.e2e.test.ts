@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { startStack, type Stack } from "./harness";
+import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 import type { Allowance } from "../../src/eligibility/types";
 
 // Verifies the worker's rate-limit behaviour end-to-end: when API Particulier
@@ -78,5 +78,22 @@ describe("rate-limit pause + retry-from-header", () => {
     // a failed attempt (see getFailedCount above), so attemptsMade never moves. `attempt`
     // separates real retries; a rate-limit resume is read from the status sequence.
     expect(cnous.every((e) => e.attempt === 0)).toBe(true);
+  });
+
+  // attemptsMade stays 0 across a resume (see above), so a guard built on it would re-mail
+  // every time the window closes. The flag lives on job.data instead.
+  it("mails the accusé de réception once, not once per resume", async () => {
+    const acks = stack
+      .parsedEmails()
+      .filter((e) => e.templateId === String(TEMPLATE_IDS.acknowledgment));
+    expect(acks).toHaveLength(1);
+
+    const traced = (
+      await stack.pool.query(
+        "select * from eligibility_history where action = 'email.acknowledgment'",
+      )
+    ).rows;
+    expect(traced).toHaveLength(1);
+    expect(traced[0].status).toBe("success");
   });
 });

@@ -22,8 +22,20 @@ export interface TransactionalEmailParams {
 }
 
 export type SendEmailResult =
-  | { sent: true; campaignId: number }
-  | { sent: false; errorCodes: string[]; errorMessages: string[] };
+  | { sent: true; httpStatus: number; campaignId: number }
+  | { sent: false; httpStatus: number; errorCodes: string[]; errorMessages: string[] };
+
+// Carries the status so eligibility_history can record it. A plain Error would leave the
+// column null on exactly the failures worth telling apart later: a 502 gateway blip that
+// a resend would fix, versus a 401 on a rotated key that no resend ever will.
+export class LinkMobilityHttpError extends Error {
+  constructor(readonly httpStatus: number) {
+    super(
+      `Request to Link Mobility on ${EMAIL_PATH} has failed. Response status is ${httpStatus}.`,
+    );
+    this.name = "LinkMobilityHttpError";
+  }
+}
 
 const LINK_MOBILITY_ERROR_MESSAGES: Record<string, string> = {
   "2": "Le message est vide",
@@ -90,9 +102,12 @@ interface LinkMobilityRawResponse {
   erreur_texte?: string;
 }
 
-const parseSendEmailResponse = (raw: LinkMobilityRawResponse): SendEmailResult => {
+const parseSendEmailResponse = (
+  raw: LinkMobilityRawResponse,
+  httpStatus: number,
+): SendEmailResult => {
   if (raw.resultat === 1 && raw.id !== undefined) {
-    return { sent: true, campaignId: raw.id };
+    return { sent: true, httpStatus, campaignId: raw.id };
   }
   const errorCodes = String(raw.erreurs ?? "")
     .split(",")
@@ -100,6 +115,7 @@ const parseSendEmailResponse = (raw: LinkMobilityRawResponse): SendEmailResult =
     .filter(Boolean);
   return {
     sent: false,
+    httpStatus,
     errorCodes,
     errorMessages: errorCodes.map(
       (code) => LINK_MOBILITY_ERROR_MESSAGES[code] ?? `Erreur Link Mobility inconnue (${code})`,
@@ -119,12 +135,13 @@ export const sendTransactionalEmail = async (
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Request to Link Mobility on ${EMAIL_PATH} has failed. Response status is ${response.status}.`,
-    );
+    throw new LinkMobilityHttpError(response.status);
   }
 
-  const result = parseSendEmailResponse((await response.json()) as LinkMobilityRawResponse);
+  const result = parseSendEmailResponse(
+    (await response.json()) as LinkMobilityRawResponse,
+    response.status,
+  );
 
   if (!result.sent) {
     console.warn(

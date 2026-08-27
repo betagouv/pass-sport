@@ -94,9 +94,13 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(enfants.every((x) => x.email_kind === "code" && x.email_sent === true)).toBe(true);
     expect(enfants.every((x) => x.verdict === "eligible_confirmed")).toBe(true);
 
+    // One accusé de réception for the job, then one code mail per child.
     const sent = stack.parsedEmails().slice(before);
-    expect(sent).toHaveLength(enfants.length);
-    expect(sent.every((e) => e.templateId === String(TEMPLATE_IDS.code))).toBe(true);
+    expect(sent[0].templateId).toBe(String(TEMPLATE_IDS.acknowledgment));
+
+    const codes = sent.slice(1);
+    expect(codes).toHaveLength(enfants.length);
+    expect(codes.every((e) => e.templateId === String(TEMPLATE_IDS.code))).toBe(true);
     expect(new Set(sent.flatMap((e) => e.recipients)).size).toBe(1);
   });
 
@@ -124,7 +128,11 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
 
       expect(await rows()).toHaveLength(0);
-      expect(stack.sentEmails()).toHaveLength(before);
+      // Only the accusé de réception, which is about the demande and not about a
+      // beneficiary — no verdict mail, since there is no verdict.
+      expect(stack.parsedEmails().slice(before).map((e) => e.templateId)).toEqual([
+        String(TEMPLATE_IDS.acknowledgment),
+      ]);
     } finally {
       stack.setQfChildless(false);
     }
@@ -154,7 +162,8 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     // The adult asked about AAH and was refused, so they are told, like every child was.
     expect(self[0].email_kind).toBe("not_eligible");
     expect(self[0].email_sent).toBe(true);
-    expect(stack.sentEmails().slice(before)).toHaveLength(enfants.length + 1);
+    // One per child, one for the refused adult, plus the job's accusé de réception.
+    expect(stack.sentEmails().slice(before)).toHaveLength(enfants.length + 2);
   });
 
   // The fake QF returns three children: 2008 (18 ans, AEEH window only), 2009 (17 ans,
@@ -416,11 +425,12 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   });
 
   it("mails the FranceConnect address, and the LCA one in local and staging", async () => {
-    const before = stack.sentEmails().length;
     await stack.enqueueAndWait(selfCrous());
 
     // The address the usager authenticated with minutes ago, not the one the caisse recorded.
-    const [deployed] = stack.parsedEmails().slice(before);
+    // slice(-1): the accusé de réception went out first and always to the FranceConnect
+    // address, so only the outcome mail can show which of the two won.
+    const [deployed] = stack.parsedEmails().slice(-1);
     expect(deployed.recipients).toEqual(["camille.martin@example.test"]);
     expect((await rows())[0].email).toBe("camille.martin@example.test");
 
@@ -441,11 +451,44 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     }
   });
 
+  // The LCA courriel is a mailbox the usager never presented to us, and `email` is optional
+  // at every layer of the FranceConnect identity — so outside local and staging there is no
+  // falling back to it. The code stays in the table for the site to hand over instead.
+  it("mails nobody rather than the LCA address when FranceConnect served no email", async () => {
+    const sub = "sub-sans-email-fc";
+    const before = stack.sentEmails().length;
+    const { email: _email, ...identityWithoutEmail } = selfCrous().identity;
+
+    await stack.enqueueAndWait({
+      ...selfCrous(),
+      identity: { ...identityWithoutEmail, sub },
+    });
+
+    expect(stack.sentEmails().slice(before)).toHaveLength(0);
+
+    const r = (await rows()).filter((x) => x.allocataire_fc_sub === sub);
+    expect(r).toHaveLength(1);
+    expect(r[0].email).toBeNull();
+    expect(r[0].email_sent).toBe(false);
+    // Not a lost verdict: LCA confirmed and the code is there for the site to show.
+    expect(r[0].pass_sport_code).toBe("PSP-CODE-123");
+
+    const skipped = (
+      await stack.pool.query(
+        "select action, status, response_payload from eligibility_history where allocataire_fc_sub = $1 and status = 'skipped' order by created_at, id",
+        [sub],
+      )
+    ).rows;
+    expect(skipped.map((e) => [e.action, e.response_payload.reason])).toEqual([
+      ["email.acknowledgment", "no_recipient"],
+      ["email.skipped", "no_recipient"],
+    ]);
+  });
+
   it("falls back to the built-in template id when no env overrides it", async () => {
     const prev = process.env.LINK_MOBILITY_TEMPLATE_CODE;
     delete process.env.LINK_MOBILITY_TEMPLATE_CODE;
     const sub = "sub-default-template";
-    const before = stack.sentEmails().length;
     try {
       await stack.enqueueAndWait({ ...selfCrous(), identity: { ...selfCrous().identity, sub } });
     } finally {
@@ -453,12 +496,95 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     }
 
     // Production is expected to run without any LINK_MOBILITY_TEMPLATE_* set at all.
-    const [sent] = stack.parsedEmails().slice(before);
+    const [sent] = stack.parsedEmails().slice(-1);
     expect(sent.templateId).toBe("1187050");
 
     const r = (await rows()).filter((x) => x.allocataire_fc_sub === sub);
     expect(r).toHaveLength(1);
     expect(r[0].email_sent).toBe(true);
+  });
+
+  describe("accusé de réception", () => {
+    it("leaves first, to the FranceConnect address, and does not replace the outcome mail", async () => {
+      const before = stack.sentEmails().length;
+      await stack.enqueueAndWait(selfCrous());
+
+      const sent = stack.parsedEmails().slice(before);
+
+      // Order is the whole point: it goes out before the chain that takes minutes.
+      expect(sent.map((e) => e.templateId)).toEqual([
+        String(TEMPLATE_IDS.acknowledgment),
+        String(TEMPLATE_IDS.code),
+      ]);
+      expect(sent[0].campaign).toBe("pass-sport-acknowledgment");
+      expect(sent[0].recipients).toEqual(["camille.martin@example.test"]);
+      // The allocataire who just authenticated, and nothing about a beneficiary: none is
+      // known this early.
+      expect(sent[0].variables["camille.martin@example.test"]).toEqual({
+        prenom: "Camille",
+        nom: "Martin",
+      });
+    });
+
+    it("is traced before the first API Particulier call", async () => {
+      const sub = "sub-accuse-reception";
+      await stack.enqueueAndWait({ ...selfCrous(), identity: { ...selfCrous().identity, sub } });
+
+      const events = (
+        await stack.pool.query(
+          "select action, status, http_status from eligibility_history where allocataire_fc_sub = $1 order by created_at, id",
+          [sub],
+        )
+      ).rows;
+
+      expect(events[0].action).toBe("email.acknowledgment");
+      expect(events[0].status).toBe("success");
+      // What Link Mobility answered on the wire, not just our reading of its body.
+      expect(events[0].http_status).toBe(200);
+      // Not vacuous: the chain did run after it.
+      expect(events.some((e) => e.action.startsWith("cnous."))).toBe(true);
+    });
+
+    it("records the HTTP status Link Mobility answered, including when it is down", async () => {
+      const sub = "sub-accuse-http-502";
+      stack.setEmailHttpStatus(502);
+      try {
+        await stack.enqueueAndWait({ ...selfCrous(), identity: { ...selfCrous().identity, sub } });
+      } finally {
+        stack.setEmailHttpStatus(null);
+      }
+
+      const events = (
+        await stack.pool.query(
+          "select action, status, http_status, error from eligibility_history where allocataire_fc_sub = $1 and action = 'email.acknowledgment'",
+          [sub],
+        )
+      ).rows;
+
+      expect(events).toHaveLength(1);
+      expect(events[0].status).toBe("error");
+      // The point of the whole thing: a 502 is a blip a resend would fix, a 401 on a
+      // rotated key is not, and the column is what tells them apart afterwards.
+      expect(events[0].http_status).toBe(502);
+      expect(events[0].error).toContain("502");
+
+      // And the job carried on: a dead mailer costs the mail, never the verdicts.
+      expect(await stack.queue.getFailedCount()).toBe(0);
+      expect((await rows()).filter((x) => x.allocataire_fc_sub === sub)).toHaveLength(1);
+    });
+
+    it("falls back to the built-in template id when no env overrides it", async () => {
+      const prev = process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT;
+      delete process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT;
+      const before = stack.sentEmails().length;
+      try {
+        await stack.enqueueAndWait(selfCrous());
+      } finally {
+        process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT = prev;
+      }
+
+      expect(stack.parsedEmails()[before].templateId).toBe("1188167");
+    });
   });
 
   it("one row per beneficiary, no duplicates across repeated jobs", async () => {

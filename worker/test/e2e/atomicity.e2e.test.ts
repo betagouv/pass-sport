@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, expect, it, describe } from "vitest";
-import { startStack, type Stack } from "./harness";
+import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 
 // No RESULT is persisted until every external call has answered.
 //
 // The failure modelled here is the one that used to corrupt the record: a batch of
 // several beneficiaries where an LCA call blows up partway through. The old loop had
 // already inserted rows, and mailed codes, for the beneficiaries it had gone past. Now the
-// batch is all-or-nothing: the job fails, eligibility_results is untouched, nothing was
+// batch is all-or-nothing: the job fails, eligibility_results is untouched, no verdict was
 // mailed, and the retry replays from a clean slate.
 //
 // eligibility_history is the deliberate exception — it is written outside the
@@ -55,7 +55,11 @@ describe("a failed batch leaves no result", () => {
     expect(await rows()).toHaveLength(0);
 
     // A send inside the LCA loop would hand out a code for a batch that then rolls back.
-    expect(stack.sentEmails()).toHaveLength(0);
+    // The accusé de réception is the one mail that stands: it acknowledges the demande and
+    // promises no verdict, so a failed batch does not make it wrong.
+    expect(stack.parsedEmails().map((e) => e.templateId)).toEqual([
+      String(TEMPLATE_IDS.acknowledgment),
+    ]);
 
     // And the site sees no application for that pseudonym, so it still lets them
     // through and the retry is not treated as a duplicate.

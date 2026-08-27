@@ -5,26 +5,24 @@ import type { Database } from "../db/client";
 import type { HistoryRecorder } from "../db/history";
 import { eligibilityResults } from "../db/schema";
 import { logPii } from "../log";
-import { type SendEmailResult, sendTransactionalEmail } from "./link-mobility";
+import {
+  LinkMobilityHttpError,
+  type SendEmailResult,
+  sendTransactionalEmail,
+} from "./link-mobility";
 
-// Every outcome email the worker can send, for both paths. The copy lives in the Link
-// Mobility templates; this file picks which one, with which merge fields.
-
-export type EmailKind = "code" | "eligible_soon" | "not_eligible" | "not_eligible_hors_fc";
-
-export type FranceConnectEmailKind = Extract<EmailKind, "code" | "eligible_soon" | "not_eligible">;
-export type LcaEmailKind = Extract<EmailKind, "code" | "not_eligible_hors_fc">;
+export type OutcomeEmailKind = "code" | "eligible_soon" | "not_eligible" | "not_eligible_hors_fc";
+export type EmailKind = OutcomeEmailKind | "acknowledgment";
+export type FranceConnectEmailKind = Extract<
+  OutcomeEmailKind,
+  "code" | "eligible_soon" | "not_eligible"
+>;
+export type LcaEmailKind = Extract<OutcomeEmailKind, "code" | "not_eligible_hors_fc">;
 
 type EmailTemplate = {
-  // Overridden per environment by templateEnv; unset, which is the normal case, this is
-  // what goes out.
   templateId: number;
   templateEnv: string;
-  // Link Mobility indexes `nom` as searchable metadata: constant, never a code or a name.
   campaign: string;
-  // `sujet` is posted by us even in template mode (error 18, "le sujet est trop court"). It
-  // names the beneficiary because a parent gets one mail per child, and identical subjects
-  // collapse into a thread that reads as a duplicate.
   subject: (vars?: BeneficiaryVariables) => string;
   historyAction: string;
 };
@@ -63,6 +61,13 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
     subject: () => "Votre demande pass Sport",
     historyAction: "email.not_eligible_hors_fc",
   },
+  acknowledgment: {
+    templateId: 1188167,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT",
+    campaign: "pass-sport-acknowledgment",
+    subject: () => "Votre demande pass Sport a bien été reçue",
+    historyAction: "email.acknowledgment",
+  },
 };
 
 const templateIdFor = (kind: EmailKind): number => {
@@ -82,9 +87,6 @@ const templateIdFor = (kind: EmailKind): number => {
 };
 
 // ─── Parcours FranceConnect ──────────────────────────────────────────────────
-
-// FranceConnect vouches for the mailbox, so these mails may name the beneficiary. Nothing
-// was typed by the usager here, so there is no mismatch case.
 export const franceConnectEmailKind = (
   hasCode: boolean,
   isEligible: boolean,
@@ -94,23 +96,15 @@ export const franceConnectEmailKind = (
 // identities are test ones nobody reads — so the priority is reversed there.
 const LCA_FIRST_ENVS = ["local", "staging"];
 
-// Two addresses for the same allocataire: the one LCA holds, from the CAF/MSA file, and the
-// one FranceConnect just served. In production the FranceConnect one wins, being the address
-// the usager authenticated with minutes ago rather than whatever the caisse recorded years ago.
 export const franceConnectRecipient = (
   lcaEmail: string | undefined,
   franceConnectEmail: string | undefined,
 ): string | undefined =>
   LCA_FIRST_ENVS.includes(process.env.ENV ?? "")
     ? (lcaEmail ?? franceConnectEmail)
-    : (franceConnectEmail ?? lcaEmail);
+    : franceConnectEmail;
 
 // ─── Parcours hors FranceConnect ─────────────────────────────────────────────
-
-// 'not_found' and "found, but the typed address is not the one LCA holds" MUST produce a
-// byte-identical send. Whoever filled the form chose that address, so two distinguishable
-// mails would tell them whether the person they named is a beneficiary — the enumeration
-// oracle the site closes by answering `outcome: 'sent'` in both cases.
 export const lcaEmailKind = (
   lcaStatus: "confirmed" | "not_found",
   emailsMatch: boolean,
@@ -160,6 +154,30 @@ export const beneficiaryVariables = (
   };
 };
 
+// Nothing is known about any beneficiary this early, so the accusé de réception can only
+// speak of the allocataire who just authenticated.
+type AcknowledgmentVariables = { prenom: string; nom: string };
+
+const acknowledgmentVariables = (identity: AllocataireIdentity): AcknowledgmentVariables => ({
+  prenom: identity.given_name ?? "",
+  nom: identity.preferred_username || identity.family_name || "",
+});
+
+export function sendAcknowledgmentEmail(
+  recipient: string,
+  identity: AllocataireIdentity,
+): Promise<SendEmailResult> {
+  const template = EMAIL_TEMPLATES.acknowledgment;
+
+  return sendTransactionalEmail({
+    subject: template.subject(),
+    name: template.campaign,
+    templateId: templateIdFor("acknowledgment"),
+    recipients: [recipient],
+    variables: { [recipient]: acknowledgmentVariables(identity) },
+  });
+}
+
 export function sendOutcomeEmail(
   recipient: string,
   vars: EmailVariables,
@@ -193,9 +211,11 @@ export async function recordEmailDelivery(params: {
   job: Job<unknown>;
   database: Database;
   history: HistoryRecorder;
-  resultId: string;
+  // Both absent on a job-level mail: it predates the eligibility_results rows and speaks
+  // of no beneficiary in particular.
+  resultId?: string;
   kind: EmailKind;
-  subject: "self" | "enfant";
+  subject?: "self" | "enfant";
   recipient: string;
   bodyPayload: Record<string, unknown>;
   send: () => Promise<SendEmailResult>;
@@ -223,6 +243,7 @@ export async function recordEmailDelivery(params: {
         action,
         status: "error",
         subject,
+        httpStatus: result.httpStatus,
         error: result.errorMessages.join("; "),
         bodyPayload,
         responsePayload: result,
@@ -231,10 +252,12 @@ export async function recordEmailDelivery(params: {
     }
 
     // updated_at is maintained by a BEFORE UPDATE trigger, never by the writer.
-    await database
-      .update(eligibilityResults)
-      .set({ emailSent: true })
-      .where(eq(eligibilityResults.id, resultId));
+    if (resultId) {
+      await database
+        .update(eligibilityResults)
+        .set({ emailSent: true })
+        .where(eq(eligibilityResults.id, resultId));
+    }
 
     console.log(`[pass-sport-worker] job ${job.id}: sent ${kind} email`);
     logPii(`job ${job.id}: sent ${kind} email to ${recipient}`);
@@ -244,6 +267,7 @@ export async function recordEmailDelivery(params: {
       action,
       status: "success",
       subject,
+      httpStatus: result.httpStatus,
       bodyPayload,
       responsePayload: result,
     });
@@ -262,6 +286,8 @@ export async function recordEmailDelivery(params: {
       action,
       status: "error",
       subject,
+      // Null on a network failure, where no response ever came back.
+      httpStatus: e instanceof LinkMobilityHttpError ? e.httpStatus : null,
       error: (e as Error).message,
       bodyPayload,
     });

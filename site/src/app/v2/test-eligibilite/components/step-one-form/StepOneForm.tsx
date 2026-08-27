@@ -10,15 +10,16 @@ import {
   useState,
 } from 'react';
 import { StepOneFields, StepOneFormInputsState } from '@/types/EligibilityTest';
-import CityFinder from '../city-finder/CityFinder';
+import CityFinder, { CityOption } from '../city-finder/CityFinder';
 import { mapper } from '../../helpers/helper';
 import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
-import { formDefaultsFor } from '../../helpers/test-defaults';
 
 interface Props {
   onValidated: (fields: StepOneFields) => void;
+  /* What the step was validated with before "Modifier" reopened it */
+  initialFields?: StepOneFields | null;
   isDirectBeneficiary?: boolean;
 }
 
@@ -34,12 +35,20 @@ const initialInputsState: StepOneFormInputsState = {
  * commune. It now only unlocks step 2; the single LCA round-trip happens once the
  * allocataire's identifiers have been given too.
  */
-const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
+const StepOneForm = ({ onValidated, initialFields, isDirectBeneficiary = false }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
-  const { allowance, caisse } = useContext(EligibilityTestContext);
+  const { allowance } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-  const defaults = formDefaultsFor(allowance, caisse);
+  const prefilledResidencePlace: CityOption | undefined = initialFields
+    ? {
+        value: initialFields.recipientResidencePlace,
+        label: initialFields.recipientResidencePlaceLabel,
+      }
+    : undefined;
+  const [residencePlace, setResidencePlace] = useState<CityOption | null>(
+    prefilledResidencePlace ?? null,
+  );
 
   const isFormValid = (
     formData: FormData,
@@ -88,6 +97,7 @@ const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
       beneficiaryLastname: formData.get('beneficiaryLastname')!.toString().trim(),
       beneficiaryFirstname: formData.get('beneficiaryFirstname')!.toString().trim(),
       recipientResidencePlace: formData.get('recipientResidencePlace')!.toString(),
+      recipientResidencePlaceLabel: residencePlace?.label ?? '',
     });
   };
 
@@ -199,7 +209,7 @@ const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
         disabled={isFormDisabled}
         nativeInputProps={{
           name: 'beneficiaryLastname',
-          defaultValue: defaults?.beneficiaryLastname,
+          defaultValue: initialFields?.beneficiaryLastname,
           onChange: (e: ChangeEvent<HTMLInputElement>) =>
             onInputChanged(e.target.value, 'beneficiaryLastname'),
           autoComplete: 'family-name',
@@ -217,7 +227,7 @@ const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
         disabled={isFormDisabled}
         nativeInputProps={{
           name: 'beneficiaryFirstname',
-          defaultValue: defaults?.beneficiaryFirstname,
+          defaultValue: initialFields?.beneficiaryFirstname,
           onChange: (e: ChangeEvent<HTMLInputElement>) =>
             onInputChanged(e.target.value, 'beneficiaryFirstname'),
           autoComplete: 'given-name',
@@ -231,9 +241,10 @@ const StepOneForm = ({ onValidated, isDirectBeneficiary = false }: Props) => {
         legend={getResidencePlaceLabel()}
         isDisabled={isFormDisabled}
         inputName="recipientResidencePlace"
-        defaultOption={defaults?.recipientResidencePlace}
+        defaultOption={prefilledResidencePlace}
         inputState={inputStates.recipientResidencePlace}
         onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
+        onOptionChanged={setResidencePlace}
         onBlur={(text) => onInputChanged(text, 'recipientResidencePlace')}
         required
       />

@@ -10,9 +10,11 @@ import {
   franceConnectEmailKind,
   franceConnectRecipient,
   recordEmailDelivery,
+  sendAcknowledgmentEmail,
   sendOutcomeEmail,
   type FranceConnectEmailKind,
 } from "../email/notify";
+import type { HistoryRecorder } from "../db/history";
 import { startJob, verdictFor } from "./shared";
 import type { Database } from "../db/client";
 import { eligibilityResults, type AllocataireIdentite, type Verdict } from "../db/schema";
@@ -25,6 +27,41 @@ export type FranceConnectDeps = {
   queue: Queue<EligibilityJobData>;
 };
 
+async function acknowledgeReception(
+  job: Job<EligibilityJobData>,
+  database: Database,
+  history: HistoryRecorder,
+  data: EligibilityJobData,
+): Promise<void> {
+  if (data.acknowledged) return;
+
+  const to = data.identity.email;
+
+  if (!to) {
+    await history.record({
+      actor: "worker",
+      action: "email.acknowledgment",
+      status: "skipped",
+      responsePayload: { reason: "no_recipient" },
+    });
+    return;
+  }
+
+  await recordEmailDelivery({
+    job,
+    database,
+    history,
+    kind: "acknowledgment",
+    recipient: to,
+    bodyPayload: { to, email_kind: "acknowledgment" },
+    send: () => sendAcknowledgmentEmail(to, data.identity),
+  });
+
+  // After the send, not before: a crash in between costs a duplicate accusé de réception,
+  // where marking first would cost the only one the usager gets.
+  await job.updateData({ ...job.data, acknowledged: true });
+}
+
 export type BeneficiaryOutcome = {
   source: string;
   isEligible: boolean;
@@ -34,8 +71,8 @@ export type BeneficiaryOutcome = {
   emailSent: boolean;
 };
 
-// Processes one eligibility job end-to-end: API Particulier chain -> LCA per
-// beneficiary -> transactional email -> one Postgres row per beneficiary.
+// Processes one eligibility job end-to-end: accusé de réception -> API Particulier chain
+// -> LCA per beneficiary -> one Postgres row per beneficiary -> transactional email.
 export async function processEligibilityJob(
   job: Job<EligibilityJobData>,
   data: EligibilityJobData,
@@ -56,6 +93,9 @@ export async function processEligibilityJob(
 
   const history = await startJob(job, database, data.identity.sub ?? null, data);
 
+  // Send email before asynchronous treatment (LCA/API Particulier)
+  await acknowledgeReception(job, database, history, data);
+
   const results = await runEligibilitySequence(job, data, apiClient, queue, history);
 
   // Every child + self (only if AAH/CROUS eligible) is processed.
@@ -66,6 +106,7 @@ export async function processEligibilityJob(
   if (qfRow) {
     const qfPayload = qfRow.data as QuotientFamilialData | null;
     const qfValue = qfPayload?.quotient_familial?.valeur;
+
     logPii(
       `job ${job.id}: quotient familial=${JSON.stringify(qfValue)} (${typeof qfValue}), route QF ${data.aides.includes(ALLOWANCE.QF) ? "demandée" : "NON demandée"}`,
     );

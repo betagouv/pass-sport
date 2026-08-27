@@ -1,13 +1,11 @@
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import { YoungMsaInputsState } from '@/types/EligibilityTest';
 import { convertDate, mapper } from '../../helpers/helper';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import Actions from '@/app/components/actions/Actions';
 import { MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
-import { formDefaultsFor } from '../../helpers/test-defaults';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
 import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
@@ -24,14 +22,10 @@ const initialInputsState: YoungMsaInputsState = {
 
 const YoungMsaForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
-  const { allowance, caisse } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<YoungMsaInputsState>(initialInputsState);
   const { isFormDisabled, error, submit } = useStepTwoSubmit();
   const email = useRecipientEmail();
-  const defaults = formDefaultsFor(allowance, caisse);
-  const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(
-    defaults?.recipientBirthCountry === FRANCE_ISO_CODE,
-  );
+  const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(false);
 
   const requiredFields = (): (keyof YoungMsaInputsState)[] => [
     'recipientLastname',
@@ -110,7 +104,6 @@ const YoungMsaForm = () => {
           disabled={isFormDisabled}
           nativeInputProps={{
             name: 'recipientLastname',
-            defaultValue: defaults?.recipientLastname,
             placeholder: 'ex: Dupont',
             required: true,
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -137,7 +130,6 @@ const YoungMsaForm = () => {
           disabled={isFormDisabled}
           nativeInputProps={{
             name: 'recipientFirstname',
-            defaultValue: defaults?.recipientFirstname,
             placeholder: 'ex: Marie',
             required: true,
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -164,7 +156,6 @@ const YoungMsaForm = () => {
           disabled={isFormDisabled}
           nativeInputProps={{
             name: 'recipientBirthDate',
-            defaultValue: defaults?.recipientBirthDate,
             type: 'date',
             min: '1900-01-01',
             max: '2099-12-31',
@@ -184,8 +175,6 @@ const YoungMsaForm = () => {
           onCountryChanged={onCountryChanged}
           onBirthPlaceChanged={(text) => setFieldState('recipientBirthPlace', text)}
           shouldAutoFocus={false}
-          defaultBirthCountry={defaults?.recipientBirthCountry}
-          defaultBirthPlace={defaults?.recipientBirthPlace}
         />
 
         <RecipientEmailInput

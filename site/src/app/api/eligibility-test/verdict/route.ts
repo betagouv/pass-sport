@@ -21,13 +21,13 @@ import {
 const DEFAULT_INSEE_CODE = '75113';
 
 const schema = z.object({
-  allowanceName: z.nativeEnum(ALLOWANCE),
-  caisse: z.nativeEnum(CAISSE).nullable(),
+  allowanceName: z.enum(ALLOWANCE),
+  caisse: z.enum(CAISSE).nullable(),
   beneficiaryLastname: z.string().min(1),
   beneficiaryFirstname: z.string().min(1),
   beneficiaryBirthDate: z.string().min(1),
   recipientResidencePlace: z.string().min(1),
-  recipientEmail: z.string().email(),
+  recipientEmail: z.email(),
   recipientLastname: z.string().optional(),
   recipientFirstname: z.string().optional(),
   recipientCafNumber: z.string().optional(),
@@ -65,8 +65,6 @@ const startTimer = (): (() => number) => {
   return () => Date.now() - t0;
 };
 
-// Volume, not privacy: the attestation runs to hundreds of kilobytes per confirm and the
-// history rows are never purged. Everything else — id_psp, matricule, courriel — is kept.
 const withoutPdf = (
   item: ConfirmResponseBodyItem,
 ): Omit<ConfirmResponseBodyItem, 'pdf_base_64'> => {
