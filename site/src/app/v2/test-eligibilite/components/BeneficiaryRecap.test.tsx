@@ -9,6 +9,7 @@ const ALLOCATAIRE_IDENTITY = {
   given_name: 'Velmorak',
   family_name: 'OSTRENYA',
   birthdate: '1990-03-14',
+  email: 'velmorak.ostrenya@example.test',
 };
 
 const beneficiary = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryResult => ({
@@ -41,6 +42,28 @@ describe('BeneficiaryRecap', () => {
 
     const faqLink = screen.getByRole('link', { name: 'FAQ' });
     expect(faqLink).toHaveAttribute('href', '/v2/une-question');
+  });
+
+  it('names the mailbox the result was sent to in the section title', () => {
+    renderRecap([beneficiary()]);
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+      'Résultat de votre demande envoyé à l’adresse velmorak.ostrenya@example.test',
+    );
+  });
+
+  it('keeps the bare title when FranceConnect served no email', () => {
+    render(
+      <BeneficiaryRecap
+        beneficiaries={[beneficiary()]}
+        allocataireIdentity={{ ...ALLOCATAIRE_IDENTITY, email: undefined }}
+      />,
+    );
+
+    // Nothing was mailed in that case, so the title must not claim otherwise.
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(heading).toHaveTextContent('Résultat de votre demande');
+    expect(heading).not.toHaveTextContent('envoyé à l’adresse');
   });
 
   it('names a self beneficiary by their FranceConnect identity, not "Vous"', () => {
