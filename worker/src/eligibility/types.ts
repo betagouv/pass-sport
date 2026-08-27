@@ -163,10 +163,11 @@ export type EligibilityJobPayload = {
   userAgent?: string | null;
 };
 
-// What BullMQ actually stores: the payload plus the checkpoint the worker writes back
-// across retries.
+// What BullMQ actually stores: the payload plus what the worker writes back across retries.
 export type EligibilityJobData = EligibilityJobPayload & {
   checkpoint?: EligibilityCheckpoint;
+  // True once he accusé de réception has gone out.
+  acknowledged?: boolean;
 };
 
 // 'FSS' (bourse régionale des formations sanitaires et sociales) is an LCA situation with

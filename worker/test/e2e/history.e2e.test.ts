@@ -57,6 +57,9 @@ describe("eligibility_history", () => {
     const rows = await historyFor(sub);
 
     expect(rows.map((r) => [r.actor, r.action, r.status])).toEqual([
+      // First, and before any external call: the accusé de réception is what the usager
+      // gets while the chain below runs.
+      ["worker", "email.acknowledgment", "success"],
       ["api_particulier", "cnous.etudiant_boursier_identite", "success"],
       ["lca", "lca.search", "success"],
       ["lca", "lca.confirm", "success"],

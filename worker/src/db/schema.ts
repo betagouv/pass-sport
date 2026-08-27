@@ -10,7 +10,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { EmailKind } from "../email/notify";
+import type { OutcomeEmailKind } from "../email/notify";
 import type { PivotIdentity } from "../eligibility/types";
 
 // The verdict as the USAGER should read it. The verdict column below is where each
@@ -91,14 +91,15 @@ export const eligibilityResults = pgTable(
     verdict: text("verdict").$type<Verdict>().notNull(),
 
     // Which template was sent for this beneficiary, null when none was — the same vocabulary
-    // as EmailKind, by design.
+    // as OutcomeEmailKind, by design. 'acknowledgment' is excluded: that mail is job-level,
+    // sent before any beneficiary is known, and belongs to eligibility_history alone.
     //
     // Rows written before the templates carry the retired vocabulary of the hors FranceConnect
     // path: 'code_withheld' and 'not_eligible' where a row written today says
     // 'not_eligible_hors_fc'. This table is never purged, so a query over the hors FC mails has
     // to match all three. What 'code_withheld' distinguished lives in verdict
     // ('eligible_confirmed_but_email_not_matching'), which is the authoritative column anyway.
-    emailKind: text("email_kind").$type<EmailKind>(),
+    emailKind: text("email_kind").$type<OutcomeEmailKind>(),
     emailSent: boolean("email_sent").notNull().default(false),
 
     // Where the recapitulative email went. Kept so a usager coming back can be told which
@@ -279,6 +280,7 @@ export const eligibilityHistory = pgTable(
 
     // 'dss.quotient_familial' | 'dss.aah' | 'cnous.etudiant_boursier' | 'dss.aeeh'
     // | 'lca.search' | 'lca.search.crous_retry' | 'lca.confirm'
+    // | 'email.acknowledgment' — accusé de réception, posé à l'ouverture d'un job FranceConnect
     // | 'email.code' | 'email.eligible_soon' | 'email.not_eligible'
     // | 'email.not_eligible_hors_fc' | 'email.skipped'
     // | 'email.digest' — RETIRED, written before the per-beneficiary split. This table is

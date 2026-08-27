@@ -265,6 +265,7 @@ export const TEMPLATE_IDS = {
   eligible_soon: 1002,
   not_eligible: 1003,
   not_eligible_hors_fc: 1004,
+  acknowledgment: 1005,
 } as const;
 
 export type SentEmail = {
@@ -316,6 +317,9 @@ export type Stack = {
   // Raw form bodies received by the fake Link Mobility server, newest last.
   sentEmails: () => string[];
   parsedEmails: () => SentEmail[];
+  // Answer every subsequent send with this HTTP status instead of {resultat:1}; null
+  // restores the success answer.
+  setEmailHttpStatus: (status: number | null) => void;
 
   setLcaAnswer: (answer: { situation: SituationType; organisme: OrganismType } | null) => void;
   setLcaSearchHttpStatus: (status: number | null) => void;
@@ -352,11 +356,19 @@ export async function startStack(
   // Bodies are kept so a test can assert on what was actually mailed — the verification
   // link only exists here, never in the database.
   const sentEmails: string[] = [];
+  // Set to make the next answers non-2xx, so a test can exercise what the worker records
+  // when Link Mobility itself is down rather than when it rejects a payload.
+  let emailHttpStatus: number | null = null;
   const emailServer: Server = createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on("data", (c: Buffer) => chunks.push(c));
     req.on("end", () => {
       sentEmails.push(Buffer.concat(chunks).toString("utf8"));
+      if (emailHttpStatus !== null) {
+        res.statusCode = emailHttpStatus;
+        res.end();
+        return;
+      }
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ resultat: 1, id: 123 }));
     });
@@ -375,6 +387,7 @@ export async function startStack(
   process.env.LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC = String(
     TEMPLATE_IDS.not_eligible_hors_fc,
   );
+  process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT = String(TEMPLATE_IDS.acknowledgment);
 
   const pool = new pg.Pool({ connectionString: pgC.getConnectionUri() });
   await runMigrations(pool);
@@ -499,6 +512,9 @@ export async function startStack(
     enqueueLcaAndWaitFailure,
     sentEmails: () => sentEmails,
     parsedEmails: () => sentEmails.map(parseSentEmail),
+    setEmailHttpStatus: (status) => {
+      emailHttpStatus = status;
+    },
     setLcaAnswer: (answer) => {
       lcaClient.answerAs = answer;
     },
