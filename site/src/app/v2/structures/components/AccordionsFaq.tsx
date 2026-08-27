@@ -9,19 +9,15 @@ export function AccordionsFaq() {
   return (
     <>
       <Accordion
-        label="Inscriptions avant septembre : comment procéder ?"
+        label="Un jeune n’a pas encore reçu son code pass Sport. Que faire ?"
         onExpandedChange={() => {}}
       >
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-2w">
-            Si vous procédez aux inscriptions avant le 1er septembre, plusieurs cas peuvent se
-            présenter :
-          </p>
-
+          <p className="fr-mb-2w">Deux cas peuvent se présenter :</p>
           <ol>
             <li>
-              <span className="fr-text--bold">Si vous avez déjà encaissé le règlement :</span> à
-              partir du 1er septembre, vous pourrez rembourser 50 € à la famille sur présentation du
+              <span className="fr-text--bold">Si vous avez déjà encaissé le règlement</span>, à
+              partir du XX septembre, vous pourrez rembourser 50 € à la famille sur présentation du
               code pass Sport.
             </li>
 
@@ -34,7 +30,7 @@ export function AccordionsFaq() {
                 <li>Paiement de l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                 <li>
                   Dépôt d&apos;un chèque de caution de 50 € qui ne sera pas encaissé et que vous
-                  restituerez dès réception du code pass Sport (à partir du 1er septembre).
+                  restituerez dès réception du code pass Sport (à partir du XX septembre).
                 </li>
               </ul>
             </li>

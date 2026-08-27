@@ -25,7 +25,7 @@ export function AccordionsFaq() {
 
           <p className="fr-mb-2w">
             Si la structure qui vous intéresse ne figure pas dans la liste indicative, il est
-            possible qu&apos;elle soit partenaire mais non référencée. Dans ce cas, veuillez de
+            possible qu&apos;elle soit partenaire mais non référencée. Dans ce cas, veuillez
             contacter la structure choisie pour vérifier si elle accepte le pass Sport.
           </p>
 
@@ -39,13 +39,13 @@ export function AccordionsFaq() {
               <Link className="fr-link" href="https://www.handisport.org" target="_blank">
                 https://www.handisport.org
               </Link>{' '}
-              (handicaps physiques, moteurs, sensoriels)
+              : handicap physique, moteur, sensoriel
             </li>
             <li>
               <Link className="fr-link" href="https://sportadapte.fr" target="_blank">
                 https://sportadapte.fr
               </Link>{' '}
-              (handicap cognitif, psychique et/ou neurodéveloppemental)
+              : handicap cognitif, psychique et/ou neurodéveloppemental
             </li>
             <li>
               <Link
@@ -55,7 +55,7 @@ export function AccordionsFaq() {
               >
                 https://www.handiguide.sports.gouv.fr
               </Link>{' '}
-              (annuaire national du sport accessible)
+              : annuaire national du sport accessible
             </li>
             <li>
               <Link
@@ -65,7 +65,7 @@ export function AccordionsFaq() {
               >
                 https://trouvetonparasport.france-paralympique.fr
               </Link>{' '}
-              (propose des disciplines qui correspondent le mieux au jeune)
+              : propose des disciplines qui correspondent le mieux au jeune
             </li>
           </ul>
 
@@ -81,8 +81,8 @@ export function AccordionsFaq() {
             Si plusieurs de vos enfants mineurs sont éligibles au pass Sport, vous recevrez un
             courrier électronique distinct pour chacun d’eux, contenant leur code pass Sport
             l&apos;adresse transmise par les organismes partenaires (<CAF /> ou <MSA />
-            ). Chaque code est unique et doit être présenté au club lors de l&apos;inscription de
-            l&apos;enfant concerné.
+            ). Chaque code est unique et doit être présenté au club ou à la salle de sport lors de
+            l&apos;inscription de l&apos;enfant concerné.
           </p>
 
           <p className="fr-mb-2w">
@@ -108,7 +108,7 @@ export function AccordionsFaq() {
               >
                 Handiguide
               </Link>{' '}
-              (annuaire national du sport accessible)
+              : annuaire national du sport accessible
             </li>
             <li>
               <Link
@@ -118,7 +118,7 @@ export function AccordionsFaq() {
               >
                 Trouve ton parasport
               </Link>{' '}
-              (propose des disciplines qui correspondent le mieux au jeune)
+              : propose des disciplines qui correspondent le mieux au jeune
             </li>
           </ul>
 
@@ -145,13 +145,13 @@ export function AccordionsFaq() {
               <Link className="fr-link" href="https://www.handisport.org/" target="_blank">
                 Handisport
               </Link>{' '}
-              (handicaps physiques, moteurs, sensoriels)
+              : handicap physique, moteur, sensoriel
             </li>
             <li>
               <Link className="fr-link" href="https://sportadapte.fr/" target="_blank">
                 Sport adapté
               </Link>{' '}
-              (handicap cognitif, psychique et/ou neurodéveloppemental)
+              : handicap cognitif, psychique et/ou neurodéveloppemental
             </li>
           </ul>
           <p className="fr-mb-0">
@@ -218,10 +218,7 @@ export function AccordionsFaq() {
           </p>
         </article>
       </Accordion>
-      <Accordion
-        label="Que faire si mon club refuse d'accepter le pass Sport ?"
-        onExpandedChange={() => {}}
-      >
+      <Accordion label="Que faire si mon club refuse le pass Sport ?" onExpandedChange={() => {}}>
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
           <p className="fr-mb-2w">Votre club n&apos;est pas obligé d&apos;adhérer au dispositif.</p>
           <p className="fr-mb-2w">

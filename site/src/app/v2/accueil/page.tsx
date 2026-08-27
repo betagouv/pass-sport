@@ -17,86 +17,6 @@ export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
   description: "Page d'accueil du site pass.sports.gouv.fr pour les particuliers",
 };
-//
-// const [guidingBlocks1, guidingBlocks2]: GuidingBlockProps[] = [
-//   {
-//     variant: 'purple',
-//     title: 'Pour les jeunes',
-//     description: 'Comment bénéficier du pass Sport pour votre inscription sportive ?',
-//     knowMore: {
-//       title: 'A savoir',
-//       description: 'Vous pouvez utiliser votre pass Sport jusqu&apos;au 31 décembre.',
-//     },
-//     points: [
-//       {
-//         title: 'Testez votre éligibilité en 1 min',
-//         linkProps: {
-//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ELIGIBILITY_TEST}`,
-//         },
-//       },
-//       {
-//         title: 'Trouvez une structure sportive partenaire',
-//         linkProps: {
-//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.FIND_CLUB}`,
-//         },
-//       },
-//       {
-//         title: 'Recevez ou demandez votre pass Sport',
-//         linkProps: {
-//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.RECEIVE_CODE}`,
-//         },
-//       },
-//       {
-//         title: 'Activez votre code',
-//         linkProps: {
-//           href: `/v2/jeunes-et-parents#${JEUNES_PARENTS_PAGE_ANCHORS.ACTIVATE_CODE}`,
-//         },
-//       },
-//     ],
-//   },
-//   {
-//     variant: 'yellow',
-//     title: 'Pour les structures',
-//     description: 'Comment devenir partenaire et accompagner vos adhérents ?',
-//     knowMore: {
-//       title: 'A savoir',
-//       description:
-//         'Tous les bénéficiaires n&apos;ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution de 50€. Nous vous remercions pour votre mobilisation.',
-//     },
-//     points: [
-//       {
-//         title: 'Consultez les outils pour les structures sportives',
-//         linkProps: {
-//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
-//         },
-//       },
-//       {
-//         title: 'Téléchargez votre kit de communication',
-//         linkProps: {
-//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
-//         },
-//       },
-//       {
-//         title: 'Créez votre Compte Asso',
-//         linkProps: {
-//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
-//         },
-//       },
-//       {
-//         title: 'Saisissez les codes des bénéficiaires',
-//         linkProps: {
-//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.INPUT_CODES}`,
-//         },
-//       },
-//       {
-//         title: 'Obtenez le remboursement',
-//         linkProps: {
-//           href: `/v2/structures#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
-//         },
-//       },
-//     ],
-//   },
-// ];
 
 export default async function Accueil() {
   return (
@@ -135,13 +55,6 @@ export default async function Accueil() {
             </div>
           </div>
         </section>
-
-        {/*{!isPasSportClosed() && (*/}
-        {/*  <section className={styles['guiding-blocks']}>*/}
-        {/*    <GuidingBlock {...guidingBlocks1} headingLevel={2} />*/}
-        {/*    <GuidingBlock {...guidingBlocks2} headingLevel={2} />*/}
-        {/*  </section>*/}
-        {/*)}*/}
 
         <section className="fr-container">
           <div className={styles['benef-faq']}>
