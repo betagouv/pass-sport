@@ -11,6 +11,7 @@ import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -31,6 +32,12 @@ export default function Page() {
             fullWidth
             points={[
               {
+                title: "Conditions d'éligibilité des structures sportives",
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.ELIGIBILITY_CONDITIONS}`,
+                },
+              },
+              {
                 title: 'Créez votre Compte Asso',
                 linkProps: {
                   href: `#${STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}`,
@@ -43,7 +50,7 @@ export default function Page() {
                 },
               },
               {
-                title: 'Recevez le remboursement',
+                title: 'Modalités de remboursement du pass Sport',
                 linkProps: {
                   href: `#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
                 },
@@ -54,6 +61,72 @@ export default function Page() {
               description: `Vous pouvez enregistrer les codes pass Sport sur votre Compte Asso jusqu'au 31 décembre 2026.`,
             }}
           />
+        </section>
+
+        <section
+          id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
+          className={styles['eligibility-conditions-section']}
+          style={{
+            marginTop: '-24px',
+          }}
+        >
+          <h2 className="fr-h1 fr-mb-0">Conditions d&apos;éligibilité des structures sportives</h2>
+          <p className="fr-mb-n8v">
+            Pour devenir partenaire du dispositif pass Sport, votre structure doit remplir au moins
+            l’une des trois conditions suivantes :
+          </p>
+          <ol>
+            <li>
+              <span className="fr-text--bold">Affiliation</span> : vous devez être affilié pour la
+              saison 2026-2027 à l&apos;une des fédérations sportives agréées par le ministère des
+              Sports, de la Jeunesse et de la Vie associative (à l&apos;exclusion des fédérations
+              scolaires).
+              <div className="fr-mb-n4v">
+                <DownloadLink
+                  details="PDF ~ 455 kB"
+                  label="Télécharger le tableau des fédérations sportives agréées"
+                  href="/assets/partenaires/tableau-federations.pdf"
+                />
+              </div>
+            </li>
+            <li>
+              <span className="fr-text--bold">Agrément</span> : votre structure doit disposer
+              d&apos;un agrément Sport (délivré après 2016) ou Jeunesse Éducation Populaire – JEP
+              (délivré après 2021) ET proposer une activité physique et sportive tout au long de
+              l&apos;année.
+            </li>
+            <li>
+              <span className="fr-text--bold">Loisir sportif marchand</span> : vous êtes une
+              structure à but lucratif du loisir sportif marchand, vous devez signer la charte
+              d’engagement du ministère des Sports, de la Jeunesse et de la Vie associative et
+              relever d’un des codes NAF suivants :
+              <ul className="fr-pl-4w">
+                <li>9311Z : gestion d&apos;installations sportives</li>
+                <li>9312Z : activités de clubs de sports</li>
+                <li>9329Z : autres activités récréatives et de loisirs</li>
+                <li>9313Z : activités des centres de culture physique</li>
+                <li>
+                  8551Z : enseignement de disciplines sportives et d&apos;activités de loisirs
+                </li>
+                <li>6420Z : activités des sociétés holding</li>
+              </ul>
+            </li>
+          </ol>
+
+          <div className="fr-mt-n8v">
+            <DownloadLink
+              details="PDF ~ 121 kB"
+              label="Télécharger la charte d'engagement 2026"
+              href="/assets/partenaires/charte-lsm-2026.pdf"
+            />
+          </div>
+
+          <p className="fr-mt-n8v fr-mb-4w">
+            Si vous ne remplissez pas l&apos;une de ces trois conditions, le dispositif ne vous est
+            pas ouvert. Le justificatif d’éligibilité (attestation d&apos;affiliation ou agrément ou
+            charte d’engagement) seront vérifiés. En cas de non-éligibilité, les pass Sport saisis
+            ne vous seront pas remboursés.
+          </p>
         </section>
 
         <section
@@ -149,17 +222,6 @@ export default function Page() {
             <p>
               Vous pouvez saisir les codes des bénéficiaires{' '}
               <span className="fr-text--bold">jusqu&apos;au 31 décembre 2026</span>.
-            </p>
-
-            <p className="fr-mb-0">
-              <Link
-                href="https://lecompteasso.associations.gouv.fr/"
-                target="_blank"
-                title="Lien vers Le Compte Asso (nouvelle fenêtre)"
-                className="fr-link"
-              >
-                Le Compte Asso
-              </Link>
             </p>
           </div>
         </section>
