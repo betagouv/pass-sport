@@ -1,13 +1,11 @@
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import { YoungCafInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import Actions from '@/app/components/actions/Actions';
 import { CAF } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
-import { formDefaultsFor } from '../../helpers/test-defaults';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
 import RecipientEmailInput from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/RecipientEmailInput';
@@ -27,11 +25,9 @@ const CAF_NUMBER_ERROR = (
 
 const YoungCafForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
-  const { allowance, caisse } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
   const { isFormDisabled, error, submit } = useStepTwoSubmit();
   const email = useRecipientEmail();
-  const defaults = formDefaultsFor(allowance, caisse);
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungCafInputsState } => {
     let isValid = true;
@@ -100,7 +96,6 @@ const YoungCafForm = () => {
             hintText: 'Personne responsable du compte de l’allocataire.',
             nativeInputProps: {
               name: 'recipientCafNumber',
-              defaultValue: defaults?.recipientCafNumber,
               placeholder: 'Exemple : 1234567',
               type: 'text',
               required: true,
@@ -133,7 +128,6 @@ const YoungCafForm = () => {
           disabled={isFormDisabled}
           nativeInputProps={{
             name: 'recipientLastname',
-            defaultValue: defaults?.recipientLastname,
             placeholder: 'ex: Dupont',
             required: true,
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
@@ -159,7 +153,6 @@ const YoungCafForm = () => {
           disabled={isFormDisabled}
           nativeInputProps={{
             name: 'recipientFirstname',
-            defaultValue: defaults?.recipientFirstname,
             placeholder: 'ex: Marie',
             required: true,
             onChange: (e: ChangeEvent<HTMLInputElement>) =>

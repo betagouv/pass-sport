@@ -1,23 +1,18 @@
-import { useContext, useEffect, useRef } from 'react';
+import { useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import styles from '../styles.module.scss';
 
 const NotEligibleAlert = () => {
-  const alertRef = useRef<HTMLDivElement>(null);
   const { verdictNode } = useContext(EligibilityTestContext);
-
-  useEffect(() => {
-    alertRef.current?.focus();
-  }, [verdictNode]);
 
   if (!verdictNode) {
     return null;
   }
 
   return createPortal(
-    <div ref={alertRef} tabIndex={-1} className={styles['top-section-content']}>
+    <div className={styles['top-section-content']}>
       <Alert
         severity="error"
         title="Nous sommes désolés, d’après les informations que vous nous avez fournies, vous n’êtes pas éligible au pass Sport."

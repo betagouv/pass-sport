@@ -80,11 +80,11 @@ export default async function Accueil() {
                   Jeunes en situation de handicap :
                   <ul>
                     <li>
-                      de 6 à 19 ans révolus bénéficiaires de l&apos;AEEH (Allocation
+                      De 6 à 19 ans révolus bénéficiaires de l&apos;AEEH (Allocation
                       d&apos;éducation de l&apos;enfant handicapé) ;
                     </li>
                     <li>
-                      de 16 à 30 ans révolus bénéficiaires de l&apos;AAH (Allocation aux adultes
+                      De 16 à 30 ans révolus bénéficiaires de l&apos;AAH (Allocation aux adultes
                       handicapés).
                     </li>
                   </ul>

@@ -6,15 +6,28 @@ import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/S
 import EmailSentPanel from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentPanel';
 import EmailSentAlert from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentAlert';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { StepOneFields } from '@/types/EligibilityTest';
 
 // Boursiers are their own beneficiary and their organisme is always the CNOUS, so there is
 // only ever one step-two form on this branch.
 const CrousEligibilityTestForms = () => {
-  const { portalNode, stepOneFields, setStepOneFields, submittedEmail, setSubmittedEmail } =
-    useContext(EligibilityTestContext);
+  const {
+    portalNode,
+    stepOneFields,
+    setStepOneFields,
+    isStepOneValidated,
+    setIsStepOneValidated,
+    submittedEmail,
+    setSubmittedEmail,
+  } = useContext(EligibilityTestContext);
+
+  const validateStepOne = (fields: StepOneFields) => {
+    setStepOneFields(fields);
+    setIsStepOneValidated(true);
+  };
 
   const editStepOne = () => {
-    setStepOneFields(null);
+    setIsStepOneValidated(false);
     setSubmittedEmail(null);
   };
 
@@ -22,17 +35,21 @@ const CrousEligibilityTestForms = () => {
     <>
       {submittedEmail && <EmailSentAlert />}
 
-      {stepOneFields && (
+      {isStepOneValidated && (
         <StepChecker title="Vos informations" onClick={editStepOne} className="fr-mt-2w" />
       )}
 
-      {!stepOneFields && (
+      {!isStepOneValidated && (
         <div id="second-step-form" className="fr-fieldset" role="presentation">
-          <StepOneForm onValidated={setStepOneFields} isDirectBeneficiary />
+          <StepOneForm
+            onValidated={validateStepOne}
+            initialFields={stepOneFields}
+            isDirectBeneficiary
+          />
         </div>
       )}
 
-      {stepOneFields && (
+      {isStepOneValidated && (
         <div id="third-step-form" className="fr-fieldset" role="presentation">
           <CrousForm />
         </div>

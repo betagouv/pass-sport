@@ -11,6 +11,7 @@ import EmailSentAlert from '@/app/v2/test-eligibilite/components/panels/email-se
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { CAISSE } from '@/utils/eligibility-test';
+import { StepOneFields } from '@/types/EligibilityTest';
 
 /**
  * Which step-two form to draw is decided from the situation and the caisse the usager
@@ -24,6 +25,8 @@ const EligibilityTestForms = () => {
     portalNode,
     stepOneFields,
     setStepOneFields,
+    isStepOneValidated,
+    setIsStepOneValidated,
     submittedEmail,
     setSubmittedEmail,
   } = useContext(EligibilityTestContext);
@@ -31,8 +34,14 @@ const EligibilityTestForms = () => {
   const isAah = allowance === ALLOWANCE.AAH;
   const isCaf = caisse === CAISSE.CAF;
 
+  const validateStepOne = (fields: StepOneFields) => {
+    setStepOneFields(fields);
+    setIsStepOneValidated(true);
+  };
+
+  // The fields stay in the context: the form reopens on them rather than empty
   const editStepOne = () => {
-    setStepOneFields(null);
+    setIsStepOneValidated(false);
     setSubmittedEmail(null);
   };
 
@@ -40,7 +49,7 @@ const EligibilityTestForms = () => {
     <>
       {submittedEmail && <EmailSentAlert />}
 
-      {stepOneFields ? (
+      {isStepOneValidated ? (
         <>
           <StepChecker
             title="Les informations du bénéficiaire"
@@ -57,13 +66,13 @@ const EligibilityTestForms = () => {
         </p>
       )}
 
-      {!stepOneFields && (
+      {!isStepOneValidated && (
         <div id="second-step-form" className="fr-fieldset" role="presentation">
-          <StepOneForm onValidated={setStepOneFields} />
+          <StepOneForm onValidated={validateStepOne} initialFields={stepOneFields} />
         </div>
       )}
 
-      {stepOneFields && (
+      {isStepOneValidated && (
         <div id="third-step-form" className="fr-fieldset" role="presentation">
           {!isAah && isCaf && <YoungCafForm />}
           {!isAah && !isCaf && <YoungMsaForm />}

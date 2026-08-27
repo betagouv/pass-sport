@@ -159,28 +159,7 @@ export default function SimplifiedEligibilityTest({
 
                 const errorInitialMeta = {
                   title: `Vous n’êtes pas éligible au pass Sport.`,
-                  description: (
-                    <>
-                      <p className="fr-mb-0 fr-mt-2w">
-                        Pour la saison 2026-2027, le dispositif est ouvert aux :
-                      </p>
-
-                      <ul>
-                        <li>
-                          Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire
-                          dont le quotient familial (CAF ou MSA) est inférieur ou égal à 699 € ;
-                        </li>
-                        <li>
-                          Jeunes de 6 à 30 ans révolus bénéficiaires de l&apos;AEEH ou l&apos;AAH ;
-                        </li>
-                        <li>
-                          Étudiants boursiers jusqu&apos;à 28 ans révolus bénéficiaires d&apos;une
-                          bourse ou d&apos;une aide annuelle du CROUS, ou encore d&apos;une bourse
-                          régionale pour une formation sanitaire et sociale.
-                        </li>
-                      </ul>
-                    </>
-                  ),
+                  description: '',
                 };
 
                 if (isBenefEligible && targetDate) {
@@ -352,14 +331,14 @@ export default function SimplifiedEligibilityTest({
 
           {!success && CODES_OBTAINABLE && alertMeta !== null && (
             <section className="fr-mt-3w">
-              <p>Le dispositif est ouvert :</p>
+              <p>Pour la saison 2026-2027, le dispositif est ouvert aux :</p>
               <ul className="fr-ml-2w">
                 <li>
-                  Aux jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer dont le quotient
-                  familial est inférieur ou égal à 699 € ;
+                  Jeunes de 6 à 17 ans révolus dont le quotient familial du foyer allocataire (CAF
+                  ou MSA) est inférieur ou égal à 699 € ;
                 </li>
                 <li>
-                  Aux jeunes en situation de handicap :
+                  Jeunes en situation de handicap :
                   <ul className="fr-ml-2w">
                     <li>
                       De 6 à 19 ans bénéficiaires de l&apos;AEEH (Allocation d&apos;Education de
@@ -372,8 +351,8 @@ export default function SimplifiedEligibilityTest({
                   </ul>
                 </li>
                 <li>
-                  Aux jeunes de moins de 28 ans bénéficiaires d&apos;une bourse attribuée avant le
-                  15 octobre 2026 :
+                  Étudiants boursiers jusqu&apos;à 28 ans révolus, titulaires d’une bourse attribuée
+                  avant le 15 octobre 2026 :
                   <ul className="fr-ml-2w">
                     <li>Bourse du CROUS (y compris l&apos;aide annuelle) ;</li>
                     <li>Bourse régionale pour une formation sanitaire et sociale.</li>

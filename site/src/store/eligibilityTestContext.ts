@@ -14,6 +14,10 @@ type EligibilityTestContextProps = {
   // Answered in step 1 and held here until step 2 submits: the two are sent to LCA together.
   stepOneFields: StepOneFields | null;
   setStepOneFields: Dispatch<SetStateAction<StepOneFields | null>>;
+  // Whether step 1 is closed. Kept apart from stepOneFields so "Modifier" reopens the form on
+  // the answers already given instead of an empty one.
+  isStepOneValidated: boolean;
+  setIsStepOneValidated: Dispatch<SetStateAction<boolean>>;
   // The address step two was submitted with, held only to name the mailbox on screen. Set
   // once the request went through, whatever LCA concluded — that is all the browser knows.
   submittedEmail: string | null;
@@ -32,6 +36,8 @@ const EligibilityTestContext = React.createContext<EligibilityTestContextProps>(
   setVerdictNode: () => {},
   stepOneFields: null,
   setStepOneFields: () => {},
+  isStepOneValidated: false,
+  setIsStepOneValidated: () => {},
   submittedEmail: null,
   setSubmittedEmail: () => {},
   dob: undefined,
