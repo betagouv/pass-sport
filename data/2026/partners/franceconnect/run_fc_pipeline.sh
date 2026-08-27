@@ -121,9 +121,9 @@ CODES_CSV="$(resolve_path "$EXISTING_CODES_PATHFILE_2026")"
 # n'a peut-être pas encore été injecté. Les notebooks gardent la granularité du jour : ils
 # traitent des exports figés, une fois.
 #
-# TS_ISO sert aussi au nom du CSV déposé en production (beneficiaires-insertion-*) ; TS_COMPACT
-# en est dérivé plutôt que d'un second appel à `date`, pour que les deux noms partagent
-# exactement le même instant.
+# TS_COMPACT sert aussi au nom du CSV déposé en production (beneficiaires-insertion-*), pour éviter
+# les ":" dans un nom de fichier ; il est dérivé de TS_ISO plutôt que d'un second appel à `date`,
+# pour que les deux noms partagent exactement le même instant.
 TS_ISO="$(date '+%Y-%m-%dT%H:%M:%S')"
 TS_COMPACT="${TS_ISO/T/-}"
 TS_COMPACT="${TS_COMPACT//:/}"
@@ -237,7 +237,7 @@ mkdir -p "$FC_PROD_DROP_DIR"
 # Le nombre de lignes n'est connu qu'une fois le CSV de prod écrit par l'étape 4 : le nom
 # déposé ne peut donc être construit qu'ici, pas en même temps que PROD_CSV plus haut.
 nb_lignes="$(($(wc -l < "$PROD_CSV") - 1))"
-nom_depose="beneficiaires-insertion-$nb_lignes-$TS_ISO.csv"
+nom_depose="beneficiaires-insertion-$nb_lignes-$TS_COMPACT.csv"
 
 # Copie sous un nom temporaire puis renommage : le renommage est atomique sur un même système
 # de fichiers, un consommateur du dossier ne voit donc jamais un fichier à moitié écrit.
