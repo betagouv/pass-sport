@@ -85,8 +85,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
     existingJob?.state === 'processed' ? 'Demande prise en compte le' : 'Demande soumise le';
   const existingJobInfo = existingJobDate ? (
     <>
-      {existingJobDateLabel}{' '}
-      <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+      {existingJobDateLabel} <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
     </>
   ) : null;
 
@@ -118,29 +117,29 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             description="Nous vous demanderons ensuite vos aides et votre commune, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
           />
 
-          <div className={styles.choiceGrid}>
-            <div className={styles.choice}>
+          <div className="fr-grid-row fr-grid-row--center fr-my-4w">
+            <div className={`fr-col-12 fr-col-md-8 ${styles.choices}`}>
               <h2 className="fr-h4">S&apos;authentifier avec FranceConnect</h2>
-              <p>
+              <p className="fr-mb-1w">
                 Nous vérifions vos droits directement auprès des administrations : aucun
                 justificatif à fournir.
               </p>
               {/* Wording imposed by the FranceConnect FS qualification (criterion 1):
                   it must appear verbatim, directly above the button. */}
-              <p className={styles.franceConnectIntro}>
+              <p className="fr-mb-3w">
                 FranceConnect est la solution proposée par l’État pour sécuriser et simplifier la
                 connexion à vos services en ligne.
               </p>
+
               <FranceConnectSection />
-            </div>
 
-            <div className={styles.choiceSeparator} role="presentation">
-              <span>Ou</span>
-            </div>
+              <p className={`fr-my-6w ${styles.separator}`}>OU</p>
 
-            <div className={styles.choice}>
               <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
-              <p>Renseignez vous-même vos informations pour vérifier votre éligibilité.</p>
+              <p className="fr-mb-3w">
+                Renseignez vous-même vos informations pour vérifier votre éligibilité.
+              </p>
+
               <NoFranceConnectSection />
             </div>
           </div>

@@ -1,70 +1,25 @@
-@use '../../variables';
-
 .section {
   margin-top: 2rem;
 }
 
-.choiceGrid {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 1.5rem;
-  margin: 2rem 0;
-
-  @media screen and (max-width: variables.$md) {
-    grid-template-columns: 1fr;
-  }
+// DSFR has no text-alignment utility, so this is the only rule the stacked choices need:
+// buttons are inline-flex, so they centre along with the copy.
+.choices {
+  text-align: center;
 }
 
-.choice {
+.separator {
   display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
-  border: 1px solid var(--border-default-grey);
-  background-color: var(--background-alt-grey);
-
-  // Bottom-align the CTAs so both cards read as one row despite unequal copy length.
-  > :last-child {
-    margin-top: 1rem;
-  }
-}
-
-// Mandatory FranceConnect wording: it sits right above the button and must not read as
-// an aside, so keep it in body colour rather than the muted mention grey.
-.franceConnectIntro {
-  margin-top: 0.5rem;
-  margin-bottom: 0;
-  font-size: 0.875rem;
-}
-
-.choiceSeparator {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1rem;
+  color: var(--text-mention-grey);
 
   &::before,
   &::after {
     content: '';
     flex: 1;
-    width: 1px;
+    height: 1px;
     background-color: var(--border-default-grey);
-  }
-
-  span {
-    color: var(--text-mention-grey);
-    text-transform: uppercase;
-    font-size: 0.875rem;
-  }
-
-  @media screen and (max-width: variables.$md) {
-    flex-direction: row;
-    gap: 1rem;
-
-    &::before,
-    &::after {
-      width: auto;
-      height: 1px;
-    }
   }
 }
 
