@@ -25,9 +25,14 @@
   ansible.builtin.set_fact:
     node_major: "{{ (nvmrc_content.content | b64decode).strip() }}"
 
+# `umask 022` explicite : sans lui, le script NodeSource pose nodesource.sources avec
+# l'umask ambiant de la session root d'Ansible sur cet hôte, plus restrictif que le 022
+# habituel (même constat que pour corepack/pnpm plus bas) — /etc/apt/sources.list.d/
+# nodesource.sources devient illisible pour passsport et les opérateurs, et tout ce qui
+# construit un apt.Cache() (ex. visidata) échoue dessus avec un Permission denied.
 - name: Dépôt NodeSource pour Node {{ node_major }}
   become: true
-  ansible.builtin.shell: curl -fsSL https://deb.nodesource.com/setup_{{ node_major }}.x | bash -
+  ansible.builtin.shell: umask 022 && curl -fsSL https://deb.nodesource.com/setup_{{ node_major }}.x | bash -
   changed_when: false        # le vrai verdict est rendu par l'installation du paquet
 
 # corepack n'est plus fourni par le binaire node depuis les versions récentes de Node.js

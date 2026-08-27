@@ -1,0 +1,31 @@
+---
+# VisiData par pipx, un venv isolé par compte plutôt que par apt.
+#
+# Le paquet apt `visidata` de cette machine plante à l'ouverture de n'importe quel CSV avec
+# `AttributeError: 'function' object has no attribute 'vd_cli'` — un défaut connu des paquets
+# `visidata` figés sur une release trop ancienne pour la version de Python de la distro, pas un
+# souci de droits. pipx installe la dernière version PyPI dans un venv dédié, qui n'a pas ce
+# problème.
+#
+# Par compte et non un seul global : pipx installe sous $HOME/.local/{bin,share/pipx}, propre à
+# chaque utilisateur — sans quoi seul le compte sous lequel `pipx install` tournerait aurait
+# `vd` sur son PATH. `command` et non `shell` : pas de state à interpréter, juste un binaire à
+# lancer ; `pipx install` est déjà idempotent en soi (no-op silencieux si la version est déjà
+# posée), d'où `changed_when: false` — même logique que les autres installateurs "toujours la
+# dernière version" de ce dépôt (CLI Scalingo, Node/NodeSource).
+- name: VisiData (pipx, par compte)
+  become: true
+  become_user: "{{ item }}"
+  ansible.builtin.command: pipx install visidata
+  changed_when: false
+  loop: "{{ [pass_sport_user] + pass_sport_operators }}"
+
+# `ensurepath` ajoute $HOME/.local/bin au PATH via ~/.bashrc — sans lui, `vd` reste installé
+# mais introuvable pour un usage interactif (SSH puis shell de connexion). Idempotent : rejoué,
+# il ne réécrit rien s'il a déjà fait l'ajout.
+- name: PATH pipx pour VisiData (ensurepath, par compte)
+  become: true
+  become_user: "{{ item }}"
+  ansible.builtin.command: pipx ensurepath
+  changed_when: false
+  loop: "{{ [pass_sport_user] + pass_sport_operators }}"

@@ -83,6 +83,9 @@
     - name: Paquets système
       ansible.builtin.import_tasks: tasks/paquets.yml
 
+    - name: VisiData (pipx, par compte)
+      ansible.builtin.import_tasks: tasks/visidata.yml
+
     # Avant CLI Scalingo / Node / venv : voir tasks/depot.yml pour pourquoi cet ordre compte.
     - name: Propriétaire du dépôt
       ansible.builtin.import_tasks: tasks/depot.yml
