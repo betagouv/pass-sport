@@ -64,7 +64,7 @@ const STATUS_DISPLAY_BY_VERDICT: Record<Verdict, StatusDisplay> = {
 // below, and re-exported for page.tsx's "Demande déjà enregistrée" card, which opens with this
 // exact sentence before adding its own FAQ mention.
 export const PENDING_CODE_MESSAGE =
-  'Vous allez recevoir votre code individuel par courrier électronique dans les prochains jours. Si vous n’avez pas reçu votre code dans les 72 heures, vous pourrez le retrouver dans votre espace en FC.';
+  'Vous allez recevoir votre code individuel par courrier électronique à l’adresse email FranceConnect dans les prochains jours. Si vous n’avez pas reçu votre code dans les 72 heures, vous pourrez le retrouver dans votre espace en FC.';
 
 // The per-card body, one beneficiary at a time — so, unlike the old per-status grouping, it
 // never needs to pluralize "le/les" or "vous est/sont" over a list of names.
@@ -119,10 +119,10 @@ const downloadLink = (b: BeneficiaryResult): ReactNode | undefined => {
   return (
     <div className="fr-grid-row fr-grid-row--right">
       <DownloadLink
-        details={`PDF — ${b.code}`}
-        label="Télécharger"
+        details={`PDF ~ 582 kB`}
+        label="Télécharger le code"
         href={href}
-        filename={`pass-sport-${b.code}.pdf`}
+        filename={`Pass Sport ${b.givenName}.pdf`}
       />
     </div>
   );
