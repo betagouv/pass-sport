@@ -8,6 +8,7 @@ const ALLOCATAIRE_IDENTITY = {
   given_name: 'Velmorak',
   family_name: 'OSTRENYA',
   birthdate: '1990-03-14',
+  email: 'velmorak.ostrenya@example.test',
 };
 
 const beneficiary = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryResult => ({
