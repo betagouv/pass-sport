@@ -10,6 +10,9 @@
 # `cron` non plus : rien ne garantit sa présence sur une machine nue, et tasks/ordonnancement.yml
 # s'appuie sur `ansible.builtin.cron` (donc sur le binaire `crontab`) pour la crontab FC — même
 # trouvaille que libatomic1, via le même scénario Molecule.
+# `pipx` sert à tasks/visidata.yml, pas à VisiData lui-même : le paquet apt `visidata` de cette
+# machine est cassé (`AttributeError: 'function' object has no attribute 'vd_cli'` à l'ouverture
+# d'un CSV) — voir tasks/visidata.yml pour l'installation par compte à la place.
 - name: Paquets
   become: true
   ansible.builtin.apt:
@@ -23,7 +26,7 @@
         python3-venv,
         acl,
         libatomic1,
-        visidata,
+        pipx,
         cron,
       ]
     state: present
