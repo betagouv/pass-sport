@@ -139,6 +139,21 @@ if ! flock -n 9; then
   exit 0
 fi
 
+# --- Garde-fou : backlog de dépôt --------------------------------------------------
+# Chaque nom déposé est unique (timestampé à la seconde) : un consommateur en panne ou en
+# retard ne fait donc jamais échouer ce script par collision de nom, il laisse juste
+# s'empiler des fichiers jamais repris. On refuse de marquer de nouveaux bénéficiaires en
+# base tant qu'un dépôt précédent n'a pas été consommé, plutôt que de découvrir le blocage
+# après coup avec des codes déjà générés sans CSV livré.
+
+shopt -s nullglob
+backlog=("$FC_PROD_DROP_DIR"/beneficiaires-insertion-*.csv "$FC_PROD_DROP_DIR"/.*.csv.partiel)
+shopt -u nullglob
+
+if (( ${#backlog[@]} > 0 )); then
+  die "dépôt précédent non consommé dans $FC_PROD_DROP_DIR : ${backlog[*]} — traitement suspendu tant qu'il n'a pas été retiré"
+fi
+
 # --- Tunnel Scalingo ---------------------------------------------------------------
 
 TUNNEL_PID=""
