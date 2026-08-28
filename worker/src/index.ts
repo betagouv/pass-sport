@@ -52,7 +52,7 @@ async function startFlow<TData extends object>(opts: {
   worker.on("failed", async (job, err) => {
     console.error(`[pass-sport-worker] job ${job?.id} failed: ${err.message}`);
 
-    // Nowhere else to put it: the job stays in `failed` on this queue for removeOnFail (24h),
+    // Nowhere else to put it: the job stays in `failed` on this queue for removeOnFail (120 j),
     // and the Sentry event below is the thing that actually tells anyone. Recovery is the
     // usager resubmitting, which the producer unblocks by clearing this stale entry.
     const maxAttempts = job?.opts?.attempts ?? 1;
