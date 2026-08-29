@@ -22,10 +22,7 @@ global.fetch = jest.fn() as jest.Mock;
 function mockFetch(
   status: number,
   responseBody:
-    | ConfirmResponseBody
-    | ConfirmResponseErrorBody
-    | SearchResponseBody
-    | SearchResponseErrorBody,
+    ConfirmResponseBody | ConfirmResponseErrorBody | SearchResponseBody | SearchResponseErrorBody,
 ) {
   (global.fetch as jest.Mock).mockImplementationOnce(() =>
     Promise.resolve({
