@@ -82,14 +82,14 @@ describe('BeneficiaryRecap', () => {
     expect(badges[0]).toHaveClass('fr-badge--success');
     expect(badges[0]).toHaveTextContent('Eligible');
 
-    const downloadLink = screen.getByRole('link', { name: 'Télécharger' });
+    const downloadLink = screen.getByRole('link', { name: 'Télécharger le code' });
     expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf');
   });
 
   it('does not show a PDF download link for an eligible_confirmed beneficiary without a code yet', () => {
     renderRecap([beneficiary({ verdict: 'eligible_confirmed', code: null })]);
 
-    expect(screen.queryByRole('link', { name: 'Télécharger' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Télécharger le code' })).not.toBeInTheDocument();
   });
 
   it('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their own code', () => {
@@ -108,7 +108,7 @@ describe('BeneficiaryRecap', () => {
     expect(
       screen.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015', { exact: false }),
     ).toBeInTheDocument();
-    const downloadLink = screen.getByRole('link', { name: 'Télécharger' });
+    const downloadLink = screen.getByRole('link', { name: 'Télécharger le code' });
     expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
   });
 
@@ -134,7 +134,7 @@ describe('BeneficiaryRecap', () => {
     ]);
 
     expect(screen.getByText('Zephyrin')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Télécharger' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Télécharger le code' })).not.toBeInTheDocument();
   });
 
   it('falls back to the given name alone when a child has no family_name/birthdate yet', () => {

@@ -19,6 +19,26 @@ promesse en code.
 | 3 | Fabriquer les codes | `../generate_new_codes.ipynb` avec `SOURCE = 'FC'` | `fc_pipeline.py codes` |
 | 4 | Marquer les bénéficiaires servis, en base | `writeback_codes.ipynb` puis `writeback_verdict.sql` | `fc_pipeline.py writeback` puis les `.sql` |
 
+```mermaid
+flowchart TD
+    DB[("eligibility_results<br/>verdict = eligible_pending")]
+
+    DB -->|"1 · export_eligible_pending.sql"| F1["fc_2026_eligible_pending.csv<br/>export brut"]
+    F1 -->|"2 · fc_pipeline.py clean"| F2["DB_FC_EXPORT_2026<br/>schéma PSP"]
+    F2 -->|"3 · fc_pipeline.py codes"| F3["AAAA-MM-JJ-fc-with-codes.csv<br/>+ pass_sport_code, + eligibility_result_id"]
+    F3 -. met à jour .-> CODES[("EXISTING_CODES_PATHFILE_2026<br/>codes déjà distribués")]
+    F3 -->|"4 · fc_pipeline.py writeback"| F4A["fc_2026_writeback.csv<br/>eligibility_result_id;id_psp"]
+    F3 -->|"4 · fc_pipeline.py writeback"| F4B["AAAA-MM-JJ-fc-prod.csv<br/>sans colonne technique"]
+    F4A -->|"writeback_verdict.sql"| DB
+    F4B -->|"copie + renommage atomique"| DEPOT["beneficiaires-insertion-N-TS.csv<br/>déposé dans FC_PROD_DROP_DIR"]
+```
+
+`fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage ; les
+fichiers horodatés (`AAAA-MM-JJ-fc-with-codes.csv`, `fc_2026_writeback.csv`,
+`AAAA-MM-JJ-fc-prod.csv`, le fichier déposé) sont propres à un passage et ne sont jamais
+réécrits. `EXISTING_CODES_PATHFILE_2026` seul survit à travers les passages : c'est la
+mémoire des codes déjà distribués, toutes sources confondues.
+
 Les notebooks et la ligne de commande appellent les **mêmes fonctions**, dans
 [fc_pipeline.py](fc_pipeline.py) : passer à la main et passer automatiquement ne peuvent pas
 diverger. Les notebooks gardent leur intérêt pour regarder les comptes d'un passage et
@@ -63,7 +83,7 @@ Ce que le script garantit, et qu'un passage à la main doit respecter aussi :
   resoumissions, et c'est aussi la preuve que le passage précédent a bien refermé la boucle.
 
 Les fichiers que la cron produit sont horodatés à la seconde
-(`AAAA-MM-JJ-HHMMSS-fc-with-codes.csv`, et le `-prod.csv` qui en dérive), là où les notebooks
+(`AAAA-MM-JJTHH-MM-SS-fc-with-codes.csv`, et le `-prod.csv` qui en dérive), là où les notebooks
 s'en tiennent au jour : une cron peut passer plusieurs fois par jour, et deux passages
 écraseraient sinon le fichier du précédent — y compris dans `FC_PROD_DROP_DIR`, où il n'a
 peut-être pas encore été injecté.

@@ -296,10 +296,10 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     JSON distinctes, à plat ici.
 
     Crée aussi les colonnes `allocataire-*` et `adresse_allocataire-*` que les sérialiseurs
-    JSON de partners_lib consomment. La plupart restent NaN : FranceConnect ne donne ni
-    matricule, ni code organisme, ni téléphone, et pas d'adresse postale — seul le code INSEE
-    de la commune de résidence est connu. Les valeurs nulles sont écartées du JSON produit,
-    ces colonnes n'apparaîtront donc pas dans le résultat.
+    JSON de partners_lib consomment. La plupart restent NaN : FranceConnect ne donne ni code
+    organisme, ni téléphone, et pas d'adresse postale — seul le code INSEE de la commune de
+    résidence est connu. Les valeurs nulles sont écartées du JSON produit, ces colonnes
+    n'apparaîtront donc pas dans le résultat.
     """
     df = df.copy()
 
@@ -334,7 +334,8 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     # d'adresse applique au code postal — ne reconnaît comme vide que '' ou None, et
     # journalise bruyamment un échec de cast sur un NaN. Une ligne de bruit par bénéficiaire
     # noierait les compteurs du notebook.
-    df['allocataire-matricule'] = None
+    
+    df['allocataire-matricule'] = '1234567'
     df['allocataire-code_organisme'] = None
     df['allocataire-telephone'] = None
 

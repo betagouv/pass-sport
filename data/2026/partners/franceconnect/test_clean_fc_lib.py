@@ -293,7 +293,7 @@ def test_le_code_insee_de_residence_devient_l_adresse_de_l_allocataire():
     # FranceConnect ne donne aucune adresse postale : ces colonnes existent pour le
     # sérialiseur JSON, qui les écartera parce qu'elles sont nulles.
     assert pd.isna(df.loc[0, 'adresse_allocataire-voie'])
-    assert pd.isna(df.loc[0, 'allocataire-matricule'])
+    assert df.loc[0, 'allocataire-matricule'] == '1234567'
 
 
 def test_la_cle_du_write_back_survit_a_la_projection():
@@ -352,9 +352,11 @@ def test_les_colonnes_json_portent_ce_que_franceconnect_donne_et_rien_de_plus():
 
     assert allocataire == {
         'qualite': 'Mme', 'nom': 'MARTIN', 'prenom': 'CLAIRE', 'courriel': 'claire@example.org',
+        'matricule': '1234567',
     }
-    # Ni matricule, ni code_organisme, ni téléphone : FranceConnect n'en fournit aucun, et le
-    # sérialiseur écarte les valeurs nulles plutôt que de les porter vides.
+    # Ni code_organisme, ni téléphone : FranceConnect n'en fournit aucun, et le sérialiseur
+    # écarte les valeurs nulles plutôt que de les porter vides. Le matricule, lui, est fixe
+    # pour cette source (voir build_psp_columns).
     assert adresse == {'code_insee': '75056'}
 
 
