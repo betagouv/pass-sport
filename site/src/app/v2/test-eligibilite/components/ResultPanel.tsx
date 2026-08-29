@@ -25,9 +25,7 @@ const STILL_PROCESSING_MESSAGE = (
 );
 
 type State =
-  | { kind: 'polling' }
-  | { kind: 'gave_up' }
-  | { kind: 'done'; beneficiaries: BeneficiaryResult[] };
+  { kind: 'polling' } | { kind: 'gave_up' } | { kind: 'done'; beneficiaries: BeneficiaryResult[] };
 
 interface Props {
   allocataireIdentity: AllocataireIdentity;
@@ -68,8 +66,7 @@ export default function ResultPanel({ allocataireIdentity }: Props) {
         if (!res.ok) return;
 
         const body = (await res.json()) as
-          | { status: 'pending' }
-          | { status: 'done'; beneficiaries: BeneficiaryResult[] };
+          { status: 'pending' } | { status: 'done'; beneficiaries: BeneficiaryResult[] };
 
         if (cancelled) return;
 
