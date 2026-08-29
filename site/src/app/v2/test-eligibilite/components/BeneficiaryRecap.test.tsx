@@ -123,9 +123,7 @@ describe('BeneficiaryRecap', () => {
       }),
     ]);
 
-    expect(
-      screen.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015')).toBeInTheDocument();
   });
 
   it('does not show a PDF download link for an enfant beneficiary without a confirmed code', () => {

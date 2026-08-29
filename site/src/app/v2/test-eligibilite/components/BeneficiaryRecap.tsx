@@ -122,7 +122,7 @@ const downloadLink = (b: BeneficiaryResult): ReactNode | undefined => {
   return (
     <div className="fr-grid-row fr-grid-row--right">
       <DownloadLink
-        details={`PDF ~ 582 kB`}
+        details="PDF ~ 582 kB"
         label="Télécharger le code"
         href={href}
         filename={`Pass Sport ${b.givenName}.pdf`}
