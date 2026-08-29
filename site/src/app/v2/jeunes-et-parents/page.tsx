@@ -114,14 +114,10 @@ export default function Page() {
           <h2 className="fr-h1 fr-mb-0">Recevez votre pass Sport</h2>
           <div>
             <p>
-              Les bénéficiaires recevront leur code pass Sport directement par e-mail entre le XX et
-              le XX septembre 2026, à l’adresse transmise par les organismes partenaires (<CAF />,{' '}
-              <MSA />, <CROUS />
+              Les bénéficiaires recevront leur code pass Sport directement par e-mail mi-septembre
+              2026, à l’adresse transmise par les organismes partenaires (<CAF />, <MSA />,{' '}
+              <CROUS />
               ). Pensez à vérifier vos courriers indésirables ou spams.
-              <br />
-              <br />À partir du XX septembre 2026, les personnes qui n’auront pas reçu leur code
-              pourront le récupérer directement sur ce site , sous réserve de remplir les conditions
-              d’éligibilité au dispositif.
             </p>
             <ObtainCodeButton />
           </div>

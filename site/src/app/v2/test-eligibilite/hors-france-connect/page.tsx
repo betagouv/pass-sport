@@ -8,7 +8,6 @@ import cn from 'classnames';
 import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 import KnowMore from '@/app/components/know-more/KnowMore';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: "Test d'éligibilité - pass Sport",
@@ -35,13 +34,7 @@ const EligibilityTest = () => {
           <div className={styles['top-section-tile__description']}>
             <p className="fr-text--xl fr-mb-1w">
               Si vous êtes éligible, vous recevrez un courrier électronique avec votre code pass
-              Sport, entre le xx et le xx septembre. <br />À partir du xx septembre 2026, les
-              personnes qui n’auront pas reçu leur code pourront le récupérer directement sur le
-              site{' '}
-              <Link href="https://pass.sports.gouv.fr" target="_blank">
-                https://pass.sports.gouv.fr
-              </Link>{' '}
-              , sous réserve de remplir les conditions d&apos;éligibilité.
+              Sport, mi-septembre.
             </p>
           </div>
         </div>

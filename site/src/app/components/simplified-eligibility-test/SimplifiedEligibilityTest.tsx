@@ -145,15 +145,7 @@ export default function SimplifiedEligibilityTest({
                 const successInitialMeta = {
                   title: `Bonne nouvelle, vous êtes éligible au pass Sport.`,
                   description: (
-                    <>
-                      Les codes pass Sport seront envoyés aux bénéficiaires entre le XX et le XX
-                      septembre 2026. À partir du XX septembre, si vous n’avez pas reçu votre code
-                      pass Sport, vous pourrez le récupérer directement sur{' '}
-                      <Link href="https://pass.sports.gouv.fr" target="_blank">
-                        https://pass.sports.gouv.fr
-                      </Link>
-                      , sous réserve de remplir les conditions d’éligibilité.
-                    </>
+                    <>Les codes pass Sport seront envoyés aux bénéficiaires mi-septembre 2026.</>
                   ),
                 };
 
@@ -178,13 +170,7 @@ export default function SimplifiedEligibilityTest({
                         title: successInitialMeta.title,
                         description: (
                           <>
-                            Les codes pass Sport seront envoyés aux bénéficiaires entre le XX et le
-                            XX septembre 2026. À partir du XX septembre, si vous n&apos;avez pas
-                            reçu votre code pass Sport, vous pourrez le récupérer directement sur{' '}
-                            <Link href="https://pass.sports.gouv.fr" target="_blank">
-                              https://pass.sports.gouv.fr
-                            </Link>
-                            , sous réserve de remplir les conditions d&apos;éligibilité.
+                            Les codes pass Sport seront envoyés aux bénéficiaires mi-septembre 2026.
                           </>
                         ),
                       });

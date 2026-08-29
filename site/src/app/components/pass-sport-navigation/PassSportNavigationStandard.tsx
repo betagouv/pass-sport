@@ -110,7 +110,7 @@ export default function PassSportNavigation({ pocUserName }: Props) {
       />
       <Notice
         severity="info"
-        title="La campagne pass Sport 2026-2027 sera prochainement lancée."
+        title="La campagne pass Sport 2026-2027 est ouverte jusqu’au 31 décembre 2026."
         // link={{
         //   linkProps: {
         //     href: '/v2/une-question',

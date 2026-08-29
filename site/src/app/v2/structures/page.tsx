@@ -77,7 +77,7 @@ export default function Page() {
           </p>
           <ol>
             <li>
-              <span className="fr-text--bold">Affiliation</span> : vous devez être affilié pour la
+              <span className="fr-text--bold">Affiliation </span> : vous devez être affilié pour la
               saison 2026-2027 à l&apos;une des fédérations sportives agréées par le ministère des
               Sports, de la Jeunesse et de la Vie associative (à l&apos;exclusion des fédérations
               scolaires).
@@ -90,7 +90,7 @@ export default function Page() {
               </div>
             </li>
             <li>
-              <span className="fr-text--bold">Agrément</span> : votre structure doit disposer
+              <span className="fr-text--bold">Agrément </span> : votre structure doit disposer
               d&apos;un agrément Sport (délivré après 2016) ou Jeunesse Éducation Populaire – JEP
               (délivré après 2021) ET proposer une activité physique et sportive tout au long de
               l&apos;année.
@@ -156,8 +156,9 @@ export default function Page() {
           </p>
           <ul className="fr-ml-2w fr-mt-n3w">
             <li>
-              Clubs affiliés à une fédération sportive agréée par le ministère chargé des Sports :
-              attestation d&apos;affiliation (une attestation par fédération affiliée) ;
+              Clubs affiliés à une fédération sportive agréée par le ministère des Sports, de la
+              Jeunesse et de la Vie associative : attestation d&apos;affiliation (une attestation
+              par fédération affiliée) ;
             </li>
             <li>
               Associations agréées Jeunesse Éducation Populaire (JEP) ou Sport : agrément JEP ou

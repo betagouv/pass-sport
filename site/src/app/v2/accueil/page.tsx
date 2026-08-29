@@ -74,7 +74,7 @@ export default async function Accueil() {
               <ul>
                 <li>
                   Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire dont le
-                  quotient familial (CAF ou MSA) est inférieur ou égal à 699 € ;
+                  quotient familial (<CAF /> ou <MSA />) est inférieur ou égal à 699 € ;
                 </li>
                 <li>
                   Jeunes en situation de handicap :
@@ -111,8 +111,8 @@ export default async function Accueil() {
               <h2 className="fr-mb-2w fr-h1">Quand vais-je recevoir mon pass Sport ?</h2>
               <p className="fr-mb-2w">
                 Les bénéficiaires recevront leur code pass Sport directement par courrier
-                électronique entre le XX et le XX septembre 2026, à l’adresse transmise par les
-                organismes partenaires (<CAF />, <MSA />, <CROUS />
+                électronique mi-septembre 2026, à l’adresse transmise par les organismes partenaires
+                (<CAF />, <MSA />, <CROUS />
                 ). Pensez à vérifier vos courriers indésirables et conservez bien le message.
               </p>
 
@@ -120,12 +120,6 @@ export default async function Accueil() {
                 Si plusieurs de vos enfants mineurs sont éligibles au pass Sport, vous recevrez un
                 courrier électronique distinct pour chacun d&apos;eux, contenant leur code pass
                 Sport personnel.
-              </p>
-
-              <p className="fr-mb-4w">
-                À partir du XX septembre 2026, les personnes qui n’auront pas reçu leur code
-                pourront le récupérer directement sur ce site, sous réserve de remplir les
-                conditions d’éligibilité au dispositif.
               </p>
             </section>
 

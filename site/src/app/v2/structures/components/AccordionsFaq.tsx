@@ -16,9 +16,8 @@ export function AccordionsFaq() {
           <p className="fr-mb-2w">Deux cas peuvent se présenter :</p>
           <ol>
             <li>
-              <span className="fr-text--bold">Si vous avez déjà encaissé le règlement</span>, à
-              partir du XX septembre, vous pourrez rembourser 50 € à la famille sur présentation du
-              code pass Sport.
+              <span className="fr-text--bold">Si vous avez déjà encaissé le règlement</span>, vous
+              pourrez rembourser 50 € à la famille sur présentation du code pass Sport.
             </li>
 
             <li>
@@ -30,7 +29,7 @@ export function AccordionsFaq() {
                 <li>Paiement de l&apos;inscription avec la déduction immédiate de 50 € ;</li>
                 <li>
                   Dépôt d&apos;un chèque de caution de 50 € qui ne sera pas encaissé et que vous
-                  restituerez dès réception du code pass Sport (à partir du XX septembre).
+                  restituerez dès réception du code pass Sport.
                 </li>
               </ul>
             </li>
@@ -64,8 +63,8 @@ export function AccordionsFaq() {
             </li>
             <li>
               Loisir sportif marchand : si vous êtes une structure à but lucratif du loisir sportif
-              marchand, vous devez signer la charte d’engagement du ministère chargé des Sports et
-              relever d&apos;un des codes NAF suivants :
+              marchand, vous devez signer la charte d’engagement du ministère des Sports, de la
+              Jeunesse et de la Vie associative et relever d&apos;un des codes NAF suivants :
               <ul>
                 <li>9311Z : gestion d&apos;installations sportives ;</li>
                 <li>9312Z : activités des clubs de sports ;</li>
@@ -95,16 +94,16 @@ export function AccordionsFaq() {
           <p>Pour rappel, vous devez enregistrer les codes pass Sport avant le 31 décembre 2026.</p>
         </article>
       </Accordion>
-      <Accordion
-        label="Enregistrement des pass Sport sur Le Compte Asso"
-        onExpandedChange={() => {}}
-      >
-        <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
-          <p className="fr-mb-0">
-            L&apos;enregistrement des codes pass Sport sera ouvert à partir du XX septembre 2026.
-          </p>
-        </article>
-      </Accordion>
+      {/*<Accordion*/}
+      {/*  label="Enregistrement des pass Sport sur Le Compte Asso"*/}
+      {/*  onExpandedChange={() => {}}*/}
+      {/*>*/}
+      {/*  <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>*/}
+      {/*    <p className="fr-mb-0">*/}
+      {/*      L&apos;enregistrement des codes pass Sport sera ouvert à partir du XX septembre 2026.*/}
+      {/*    </p>*/}
+      {/*  </article>*/}
+      {/*</Accordion>*/}
       <Accordion label="Qui sont les bénéficiaires du pass Sport ?" onExpandedChange={() => {}}>
         <article className={cn('fr-px-6w fr-py-2w background-contrast--grey')}>
           <p className="fr-mb-0">
