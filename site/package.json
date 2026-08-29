@@ -41,7 +41,7 @@
     "jose": "^6.2.3",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "next": "^16.2.2",
+    "next": "^16.2.11",
     "node-cache": "^5.1.2",
     "pg": "^8.22.0",
     "react": "^19.2.4",
