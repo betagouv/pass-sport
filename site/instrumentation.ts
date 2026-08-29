@@ -11,3 +11,5 @@ export function register() {
     console.info('Sentry initialized for ' + process.env.NEXT_RUNTIME);
   }
 }
+
+export const onRequestError = Sentry.captureRequestError;
