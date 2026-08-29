@@ -1,4 +1,4 @@
-import { SportGouvJSONRecordsResponse } from 'types/Club';
+import { SportGouvJSONRecordsResponse } from '@/types/Club';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import Card from '@codegouvfr/react-dsfr/Card';
@@ -13,7 +13,6 @@ interface Props {
 }
 const ClubListView = ({ clubs, onSeeMoreClubsClicked }: Props) => {
   const pathname = usePathname();
-  const isLastPage = clubs.total_count === clubs.results.length;
 
   return (
     <>

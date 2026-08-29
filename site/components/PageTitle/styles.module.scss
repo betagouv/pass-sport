@@ -1,4 +1,4 @@
-@import '../../src/app/sassVariables.module.scss';
+@use '../../src/app/variables';
 
 .container {
   background-color: var(--background-action-low-orange-terre-battue);
@@ -9,7 +9,7 @@
 .titlewrapper {
   margin-left: auto;
   margin-right: auto;
-  max-width: $layout-max-width;
+  max-width: variables.$layout-max-width;
 }
 
 .title {
@@ -18,7 +18,7 @@
   line-height: 40px;
   margin-bottom: 15px;
 
-  @media screen and (max-width: $xs) {
+  @media screen and (max-width: variables.$xs) {
     text-align: center;
   }
 }

@@ -1,5 +1,5 @@
 import Tag from '@codegouvfr/react-dsfr/Tag';
-import { Club } from 'types/Club';
+import { Club } from '@/types/Club';
 import styles from './styles.module.scss';
 
 interface Props {

@@ -1,0 +1,35 @@
+---
+# Groupe d'exploitation et comptes.
+#
+# Le groupe porte tout : la propriété des fichiers de campagne, le droit de piloter
+# qf-batch (sudoers), et la lecture des journaux (systemd-journal).
+- name: Groupe d'exploitation
+  become: true
+  ansible.builtin.group:
+    name: "{{ pass_sport_group }}"
+    state: present
+
+# Le playbook l'utilisait en become_user dès la tâche nvm sans jamais le créer : sur une
+# machine neuve il échouait là.
+- name: Compte de service
+  become: true
+  ansible.builtin.user:
+    name: "{{ pass_sport_user }}"
+    group: "{{ pass_sport_group }}"
+    shell: /bin/bash
+    create_home: true
+
+# systemd-journal est ce qui rend `journalctl -u pass-sport-qf-batch@msa` lisible : sans
+# lui, un compte non privilégié ne voit que ses propres entrées — les commandes
+# répondraient, mais le journal serait vide.
+# `append` parce que ces comptes existent peut-être déjà, avec d'autres appartenances.
+# L'authentification (mots de passe, clés) n'est PAS gérée ici : elle appartient au bastion.
+- name: Comptes opérateurs
+  become: true
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: "{{ pass_sport_group }},systemd-journal"
+    append: true
+    shell: /bin/bash
+    create_home: true
+  loop: "{{ pass_sport_operators }}"

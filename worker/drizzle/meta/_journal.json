@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785836316691,
+      "tag": "0000_swift_omega_red",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785851461728,
+      "tag": "0001_add_verdict_and_results_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785853297236,
+      "tag": "0002_add_pass_sport_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786111941604,
+      "tag": "0003_add_applications_by_job_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786112843729,
+      "tag": "0004_add_results_by_job_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786135167577,
+      "tag": "0005_add_email_verifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787066030886,
+      "tag": "0006_add_updated_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787270400000,
+      "tag": "0007_split_history_payload",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787645556533,
+      "tag": "0008_widen_enfant_projection",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787671113689,
+      "tag": "0009_drop_email_verifications",
+      "breakpoints": true
+    }
+  ]
+}

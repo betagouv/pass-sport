@@ -10,12 +10,23 @@ import React, { useRef } from 'react';
 import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
-import { displayOfficialClosingBanner } from '@/utils/date';
 import Notice from '@codegouvfr/react-dsfr/Notice';
-import Link from 'next/link';
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 
-export default function PassSportNavigation() {
+interface Props {
+  // POC FranceConnect + API Particulier: while a session is live (read server-side in
+  // the root layout), the header shows the user's civil name — qualification criterion
+  // 18 asks that a connected user can tell at a glance who they are connected as — plus
+  // a "Se déconnecter" quick-access item. Undefined means no session.
+  pocUserName?: string;
+}
+
+// Route that destroys the POC session then server-redirects to the FranceConnect
+// session/end endpoint (mode 2). Uses a Button quick-access item + a full-page
+// navigation on purpose: the registered DSFR Link is next/link, whose client-side
+// RSC fetch cannot follow the external FranceConnect redirect.
+const POC_LOGOUT_URL = '/api/france-connect/logout';
+
+export default function PassSportNavigation({ pocUserName }: Props) {
   const paths: string | null = usePathname();
 
   const isActive = (path: string) => {
@@ -63,6 +74,29 @@ export default function PassSportNavigation() {
           href: '/v2/accueil',
           'aria-label': `Retourner sur la page d'accueil du pass Sport`,
         }}
+        quickAccessItems={
+          pocUserName
+            ? [
+                // Plain node rather than a quick-access link: there is no account space
+                // to navigate to, so the identity must read as a status, not a control.
+                <p key="poc-identity" className={styles['poc-identity']}>
+                  <span className="fr-icon-account-line" aria-hidden="true" />
+                  <span>
+                    Connecté en tant que <strong>{pocUserName}</strong>
+                  </span>
+                </p>,
+                {
+                  iconId: 'fr-icon-logout-box-r-line',
+                  text: 'Se déconnecter',
+                  buttonProps: {
+                    onClick: () => {
+                      window.location.assign(POC_LOGOUT_URL);
+                    },
+                  },
+                },
+              ]
+            : []
+        }
         navigation={navigationItemStandard.map((item) => ({
           isActive: isActive(item.link),
           linkProps: {
@@ -74,21 +108,17 @@ export default function PassSportNavigation() {
           text: item.text,
         }))}
       />
-      {!displayOfficialClosingBanner() && (
-        <Notice
-          severity="warning"
-          title={
-            <>
-              Exfiltration de données :{' '}
-              <Link href="/v2/communication">situation et recommandations</Link>
-            </>
-          }
-        />
-      )}
-
-      {displayOfficialClosingBanner() && (
-        <Notice severity="info" title="La campagne 2026-2027 sera prochainement lancée." />
-      )}
+      <Notice
+        severity="info"
+        title="La campagne pass Sport 2026-2027 est ouverte jusqu’au 31 décembre 2026."
+        // link={{
+        //   linkProps: {
+        //     href: '/v2/une-question',
+        //     title: "Plus d'informations - nouvelle fenêtre",
+        //   },
+        //   text: "Plus d'informations",
+        // }}
+      />
     </div>
   );
 }

@@ -1,18 +1,15 @@
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
-import {
-  ConfirmResponseErrorBody,
-  EnhancedConfirmResponseBody,
-  SearchResponseBodyItem,
-  YoungCafInputsState,
-} from 'types/EligibilityTest';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { YoungCafInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
-import FormButton from './FormButton';
 import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
-import { fetchPspCode } from '../../agent';
+import Actions from '@/app/components/actions/Actions';
 import { CAF } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
+import { useRecipientEmail } from '../../hooks/use-recipient-email';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/FormButton';
 
 const initialInputsState: YoungCafInputsState = {
   recipientCafNumber: { state: 'default' },
@@ -20,83 +17,40 @@ const initialInputsState: YoungCafInputsState = {
   recipientFirstname: { state: 'default' },
 };
 
-interface Props {
-  eligibilityDataItem: SearchResponseBodyItem;
-  onDataReceived: (data: EnhancedConfirmResponseBody) => void;
-  onEligibilitySuccess: () => void;
-  onEligibilityFailure: () => void;
-}
+const CAF_NUMBER_ERROR = (
+  <>
+    Le numéro&nbsp; <CAF /> &nbsp;doit être composé de 7 chiffres
+  </>
+);
 
-const YoungCafForm = ({
-  eligibilityDataItem,
-  onDataReceived,
-  onEligibilitySuccess,
-  onEligibilityFailure,
-}: Props) => {
-  const { allowance } = useContext(EligibilityTestContext);
+const YoungCafForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungCafInputsState>(initialInputsState);
-  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-
-  const [error, setError] = useState<string | null>();
+  const { isFormDisabled, error, submit } = useStepTwoSubmit();
+  const email = useRecipientEmail();
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungCafInputsState } => {
     let isValid = true;
 
     const fieldNames = Object.keys(initialInputsState) as (keyof YoungCafInputsState)[];
-
     const states = structuredClone(initialInputsState);
 
     fieldNames.forEach((fieldName) => {
-      const value = formData.get(fieldName);
+      const value = (formData.get(fieldName) ?? '').toString().trim();
 
       if (!value) {
         states[fieldName] = { state: 'error', errorMsg: mapper[fieldName] };
         isValid = false;
-      } else {
-        if (typeof value === 'string') {
-          if (fieldName === 'recipientCafNumber') {
-            if (!/^\d{7}$/.test(value)) {
-              states[fieldName] = {
-                state: 'error',
-                errorMsg: (
-                  <>
-                    Le numéro&nbsp; <CAF /> &nbsp;doit être composé de 7 chiffres
-                  </>
-                ),
-              };
+        return;
+      }
 
-              isValid = false;
-            }
-          }
-        }
+      if (fieldName === 'recipientCafNumber' && !/^\d{7}$/.test(value)) {
+        states[fieldName] = { state: 'error', errorMsg: CAF_NUMBER_ERROR };
+        isValid = false;
       }
     });
 
     return { isValid, states };
-  };
-
-  const requestPassSportCode = (): Promise<{
-    status: number;
-    body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-  }> => {
-    const formData = new FormData(formRef.current!);
-    formData.append('id', eligibilityDataItem.id.toString());
-    formData.append('situation', eligibilityDataItem.situation);
-    formData.append('organisme', eligibilityDataItem.organisme);
-    formData.set('recipientLastname', formData.get('recipientLastname')!.toString().trim());
-    formData.set('recipientFirstname', formData.get('recipientFirstname')!.toString().trim());
-    formData.set('recipientCafNumber', formData.get('recipientCafNumber')!.toString().trim());
-
-    if (allowance) {
-      formData.set('allowanceName', allowance);
-    }
-
-    return fetchPspCode(formData);
-  };
-
-  const notifyError = () => {
-    setError('Une erreur a eu lieu. Merci de réessayer plus tard');
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -104,58 +58,33 @@ const YoungCafForm = ({
 
     const formData = new FormData(formRef.current!);
     const { isValid, states } = isFormValid(formData);
+    const recipientEmail = email.validate(formData);
 
-    setInputStates({ ...states });
+    setInputStates(states);
 
-    if (!isValid) {
+    if (!isValid || !recipientEmail) {
       return;
     }
 
-    await requestPassSportCode().then(
-      ({
-        status,
-        body,
-      }: {
-        body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-        status: number;
-      }) => {
-        if (status !== 200) {
-          notifyError();
-        } else {
-          if ('message' in body) {
-            notifyError();
-            return;
-          }
-
-          onDataReceived(body);
-
-          if (body?.length > 0) {
-            onEligibilitySuccess();
-            setIsFormDisabled(true);
-          } else {
-            onEligibilityFailure();
-          }
-        }
-      },
-    );
+    await submit({
+      recipientCafNumber: formData.get('recipientCafNumber')!.toString().trim(),
+      recipientLastname: formData.get('recipientLastname')!.toString().trim(),
+      recipientFirstname: formData.get('recipientFirstname')!.toString().trim(),
+      recipientEmail,
+    });
   };
 
   const onInputChanged = (text: string | null, field: keyof YoungCafInputsState) => {
-    if (!text) {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'error', errorMsg: mapper[field] },
-      }));
-    } else {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'default' },
-      }));
-    }
+    setInputStates((states) => ({
+      ...states,
+      [field]: text ? { state: 'default' } : { state: 'error', errorMsg: mapper[field] },
+    }));
   };
 
   return (
     <div>
+      {error && <ErrorAlert title={error} />}
+
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <CustomInput
           inputProps={{
@@ -164,23 +93,12 @@ const YoungCafForm = ({
                 Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
-            hintText: 'Personne responsable du compte de l’allocation.',
+            hintText: 'Personne responsable du compte de l’allocataire.',
             nativeInputProps: {
               name: 'recipientCafNumber',
-              placeholder: 'Exemple : 0123456',
+              placeholder: 'Exemple : 1234567',
               type: 'text',
               required: true,
-              onBlur: (e) => {
-                const inputIsValid = !!e.target?.checkValidity();
-
-                setInputStates({
-                  ...inputStates,
-                  recipientCafNumber: {
-                    state: inputIsValid ? 'default' : 'error',
-                    errorMsg: !inputIsValid ? mapper['recipientCafNumber'] : '',
-                  },
-                });
-              },
               onChange: (e: ChangeEvent<HTMLInputElement>) =>
                 onInputChanged(e.target.value, 'recipientCafNumber'),
               'aria-label': "Saisir le numéro de l'allocataire CAF",
@@ -205,76 +123,63 @@ const YoungCafForm = ({
               Nom de l’allocataire <CAF /> <span className="text--required">*</span>
             </>
           }
+          state={inputStates.recipientLastname.state}
+          stateRelatedMessage={inputStates.recipientLastname.errorMsg}
+          disabled={isFormDisabled}
           nativeInputProps={{
             name: 'recipientLastname',
             placeholder: 'ex: Dupont',
             required: true,
-            onBlur: (e) => {
-              const inputIsValid = !!e.target?.checkValidity();
-
-              setInputStates({
-                ...inputStates,
-                recipientLastname: {
-                  state: inputIsValid ? 'default' : 'error',
-                  errorMsg: !inputIsValid ? mapper['recipientLastname'] : '',
-                },
-              });
-            },
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
               onInputChanged(e.target.value, 'recipientLastname'),
             'aria-label': "Saisir le nom de l'allocataire CAF",
           }}
-          state={inputStates.recipientLastname.state}
-          stateRelatedMessage={inputStates.recipientLastname.errorMsg}
-          disabled={isFormDisabled}
           hintText={
             <>
-              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos papiers de
-              la <CAF />.
+              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos documents
+              de la <CAF />.
             </>
           }
         />
+
         <Input
           label={
             <>
               Prénom de l’allocataire <CAF /> <span className="text--required">*</span>
             </>
           }
+          state={inputStates.recipientFirstname.state}
+          stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
+          disabled={isFormDisabled}
           nativeInputProps={{
             name: 'recipientFirstname',
             placeholder: 'ex: Marie',
             required: true,
-            onBlur: (e) => {
-              const inputIsValid = !!e.target?.checkValidity();
-
-              setInputStates({
-                ...inputStates,
-                recipientFirstname: {
-                  state: inputIsValid ? 'default' : 'error',
-                  errorMsg: !inputIsValid ? mapper['recipientFirstname'] : '',
-                },
-              });
-            },
             onChange: (e: ChangeEvent<HTMLInputElement>) =>
               onInputChanged(e.target.value, 'recipientFirstname'),
             'aria-label': "Saisir le prénom de l'allocataire CAF",
           }}
-          state={inputStates.recipientFirstname.state}
-          stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
-          disabled={isFormDisabled}
           hintText={
             <>
-              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur les papiers
-              de la <CAF />.
+              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur les
+              documents de la <CAF />.
             </>
           }
         />
+
+        <RecipientEmailInput
+          inputState={email.inputState}
+          isDisabled={isFormDisabled}
+          onChange={email.onChange}
+          onBlur={email.onBlur}
+        />
+
         <FormButton isDisabled={isFormDisabled} />
       </form>
 
       {error && (
         <div className="fr-mt-4w">
-          <ErrorAlert title={error} />
+          <Actions />
         </div>
       )}
     </div>

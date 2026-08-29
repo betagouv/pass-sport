@@ -1,0 +1,50 @@
+---
+# Balayage final des permissions du dépôt — importé APRÈS node.yml (pnpm install) et venv.yml
+# (virtualenv, kernel Jupyter) : ce sont les deux étapes qui créent le plus de fichiers dans
+# pass_sport_repo, avec les permissions par défaut de pnpm/pip, pas les nôtres. Un balayage
+# placé plus tôt (comme dans tasks/depot.yml, où il vivait avant) les aurait manqués —
+# `find {{ pass_sport_repo }} -perm /o=rwx` retrouvait des fichiers de node_modules/ lisibles
+# par tout le monde après un passage complet. `tasks/depot.yml` garde la propriété
+# (chown), nécessaire tôt pour que pnpm/pip n'échouent pas en EACCES ; ce fichier ne fait que
+# le ménage final.
+
+# `X` majuscule : +x seulement sur les dossiers et sur ce qui est déjà exécutable — les
+# scripts et les binaires de data/.venv/bin et node_modules/.bin gardent le leur, les CSV
+# ne l'attrapent pas. `o-rwx` n'est pas cosmétique : l'arbre porte des identités pivot et
+# des courriels, aucun autre compte de la machine n'a à les lire.
+- name: Droits du groupe, rien pour les autres
+  become: true
+  ansible.builtin.command:
+    cmd: chmod -R g+rwX,o-rwx {{ pass_sport_repo }}
+  changed_when: false
+
+# setgid : c'est lui qui fait hériter le groupe à tout ce qui est créé ensuite, sans que
+# personne n'ait à y penser.
+- name: setgid sur les dossiers
+  become: true
+  ansible.builtin.command:
+    cmd: find {{ pass_sport_repo }} -type d -exec chmod g+s {} +
+  changed_when: false
+
+# Depuis git 2.35.2, git REFUSE un dépôt dont le propriétaire n'est pas l'utilisateur
+# courant (« detected dubious ownership »). L'arbre appartient au compte de service : les
+# opérateurs seraient bloqués dès le premier `git status`. C'est le premier mur d'un dépôt
+# partagé, et il n'a rien d'évident à diagnostiquer.
+- name: git — dépôt partagé déclaré sûr
+  become: true
+  ansible.builtin.command:
+    cmd: git config --system --add safe.directory {{ pass_sport_repo }}
+  changed_when: false
+
+# 0660 en octal explicite, et NON `group`. La différence est de sécurité, pas de style :
+# avec `group`, git ne desserre que les bits de groupe et « l'umask s'applique toujours
+# aux autres bits » — un `git pull` depuis un shell non-login (donc sans le
+# /etc/profile.d/pass-sport-umask.sh, umask 022) recréerait des fichiers en 0664, lisibles
+# par tout le monde. Un mode octal, lui, écrase l'umask : 0660 garantit rw-rw---- quelle
+# que soit la session. L'arbre porte des identités pivot, c'est ce qui doit tenir.
+- name: git — objets rw-rw---- quelle que soit la session
+  become: true
+  become_user: "{{ pass_sport_user }}"
+  ansible.builtin.command:
+    cmd: git -C {{ pass_sport_repo }} config core.sharedRepository 0660
+  changed_when: false

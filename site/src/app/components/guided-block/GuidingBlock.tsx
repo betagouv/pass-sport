@@ -11,7 +11,7 @@ export type GuidingBlockProps = {
     title: string;
     linkProps: LinkProps;
   }[];
-  knowMore: {
+  knowMore?: {
     title: string;
     description: string;
   };
@@ -48,7 +48,7 @@ export default function GuidingBlock({
 
       {points && (
         <ul className={styles.list}>
-          {points.map((point, index, i) => (
+          {points.map((point, index) => (
             <li className={styles['list__bullet']} key={point.title}>
               <span className={styles['list__bullet-index']}>{index + 1}</span>
               <Link
@@ -62,13 +62,15 @@ export default function GuidingBlock({
         </ul>
       )}
 
-      <footer className={styles.knowMore}>
-        <KnowMore
-          knowMore={knowMore}
-          variant={variant}
-          titleAs={headingLevel === 1 ? 'h2' : 'h3'}
-        />
-      </footer>
+      {knowMore && (
+        <footer className={styles.knowMore}>
+          <KnowMore
+            knowMore={knowMore}
+            variant={variant}
+            titleAs={headingLevel === 1 ? 'h2' : 'h3'}
+          />
+        </footer>
+      )}
     </section>
   );
 }

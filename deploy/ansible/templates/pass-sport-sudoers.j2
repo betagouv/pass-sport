@@ -1,0 +1,32 @@
+# Posé par deploy/ansible/lamp-setup.yml — ne pas éditer à la main.
+#
+# Pilotage des passages qf-batch par le groupe {{ pass_sport_group }}.
+#
+# Volontairement SANS enable/disable. Deux raisons, qui se renforcent :
+#   - rien ne doit démarrer au boot (voir l'en-tête du playbook) : qf-batch est un traitement
+#     one-shot déclenché à la demande, un partenaire à la fois ;
+#   - c'est le seul verbe dont l'octroi ouvrirait une escalade. `systemctl enable` sur une
+#     unité arbitraire permet de faire exécuter n'importe quoi par root au redémarrage.
+# Ne pas l'ajouter « pour faire bon poids » : il reste à root, donc au playbook.
+#
+# `systemctl status` et `journalctl` ne sont pas ici et n'en ont pas besoin : status est
+# lisible sans privilège, et les lignes de journal le sont par l'appartenance au groupe
+# systemd-journal, que le playbook accorde aux opérateurs.
+#
+# Les instances visées sont énumérées explicitement (pass_sport_qf_partners, dans
+# lamp-setup.yml) plutôt que capturées par un wildcard `pass-sport-qf-batch@*` comme tenté au
+# départ : `visudo -cf` a refusé ce motif, un argument ne pouvant pas mélanger du texte
+# littéral et un wildcard — seul un wildcard couvrant l'argument entier ou l'absence totale de
+# contrainte d'argument passent, et les deux autoriseraient de piloter n'importe quelle unité,
+# pas seulement les nôtres. Ajouter un partenaire à pass_sport_qf_partners puis redéployer ce
+# fichier à chaque onboarding qf-batch (voir worker/src/scripts/run-qf-batch.sh pour la liste
+# actuellement branchée).
+{% set qf_commands = [] -%}
+{%- for verb in ['start', 'stop', 'restart'] -%}
+{%- for partner in pass_sport_qf_partners -%}
+{%- set _ = qf_commands.append('/usr/bin/systemctl ' ~ verb ~ ' pass-sport-qf-batch@' ~ partner) -%}
+{%- endfor -%}
+{%- endfor %}
+Cmnd_Alias PASS_SPORT_QF = {{ qf_commands | join(', ') }}
+
+%{{ pass_sport_group }} ALL=(root) NOPASSWD: PASS_SPORT_QF

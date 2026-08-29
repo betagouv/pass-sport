@@ -1,0 +1,2 @@
+worker: node dist/index.js
+postdeploy: node dist/db/migrate.js

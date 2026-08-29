@@ -6,15 +6,12 @@ import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 import cn from 'classnames';
 import Link from 'next/link';
 import Image from 'next/image';
-import athletism from '@/images/structures/athletism.webp';
 import simonRunning from '@/images/structures/simon-running.webp';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
-import { AccordionsKitCommunication } from '@/app/v2/structures/components/AccordionsKitCommunication';
-import { AccordionsBecomePartner } from '@/app/v2/structures/components/AccordionsBecomePartner';
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
-import KnowMore from '@/app/components/know-more/KnowMore';
+import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -30,20 +27,14 @@ export default function Page() {
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Le pass Sport permet de bénéficier d'une réduction immédiate lors d'une inscription sportive. Ce dispositif est financé par le ministère chargé des Sports."
+            description="Vous êtes un club, une association sportive ou un loisir sportif marchand ? Adhérez au pass Sport et contribuez à faciliter l’accès à la pratique sportive des jeunes"
             variant="yellow"
             fullWidth
             points={[
               {
-                title: 'Consultez les outils pour les structures sportives',
+                title: "Conditions d'éligibilité des structures sportives",
                 linkProps: {
-                  href: `#${STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}`,
-                },
-              },
-              {
-                title: 'Téléchargez votre kit de communication',
-                linkProps: {
-                  href: `#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
+                  href: `#${STRUCTURE_PAGE_ANCHORS.ELIGIBILITY_CONDITIONS}`,
                 },
               },
               {
@@ -59,67 +50,93 @@ export default function Page() {
                 },
               },
               {
-                title: 'Recevez le remboursement',
+                title: 'Modalités de remboursement du pass Sport',
                 linkProps: {
                   href: `#${STRUCTURE_PAGE_ANCHORS.GET_REFUNDS}`,
                 },
               },
             ]}
             knowMore={{
-              title: 'A savoir',
-              description:
-                'Tous les bénéficiaires n’ont pas encore reçu leur pass Sport, vous pouvez leur proposer de prendre un chèque de caution. Nous vous remercions pour votre mobilisation.',
+              title: 'À savoir',
+              description: `Vous pouvez enregistrer les codes pass Sport sur votre Compte Asso jusqu'au 31 décembre 2026.`,
             }}
           />
         </section>
 
         <section
-          id={STRUCTURE_PAGE_ANCHORS.BECOME_PARTNER}
-          className={styles['become-partner-section']}
+          id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
+          className={styles['eligibility-conditions-section']}
+          style={{
+            marginTop: '-24px',
+          }}
         >
-          <h2 className="fr-mb-0 fr-h1">Consultez les outils pour les structures sportives</h2>
-        </section>
+          <h2 className="fr-h1 fr-mb-0">Conditions d&apos;éligibilité des structures sportives</h2>
+          <p className="fr-mb-n8v">
+            Pour devenir partenaire du dispositif pass Sport, votre structure doit remplir au moins
+            l’une des trois conditions suivantes :
+          </p>
+          <ol>
+            <li>
+              <span className="fr-text--bold">Affiliation </span> : vous devez être affilié pour la
+              saison 2026-2027 à l&apos;une des fédérations sportives agréées par le ministère des
+              Sports, de la Jeunesse et de la Vie associative (à l&apos;exclusion des fédérations
+              scolaires).
+              <div className="fr-mb-n4v">
+                <DownloadLink
+                  details="PDF ~ 455 kB"
+                  label="Télécharger le tableau des fédérations sportives agréées"
+                  href="/assets/partenaires/tableau-federations.pdf"
+                />
+              </div>
+            </li>
+            <li>
+              <span className="fr-text--bold">Agrément </span> : votre structure doit disposer
+              d&apos;un agrément Sport (délivré après 2016) ou Jeunesse Éducation Populaire – JEP
+              (délivré après 2021) ET proposer une activité physique et sportive tout au long de
+              l&apos;année.
+            </li>
+            <li>
+              <span className="fr-text--bold">Loisir sportif marchand</span> : vous êtes une
+              structure à but lucratif du loisir sportif marchand, vous devez signer la charte
+              d’engagement du ministère des Sports, de la Jeunesse et de la Vie associative et
+              relever d’un des codes NAF suivants :
+              <ul className="fr-pl-4w">
+                <li>9311Z : gestion d&apos;installations sportives</li>
+                <li>9312Z : activités de clubs de sports</li>
+                <li>9329Z : autres activités récréatives et de loisirs</li>
+                <li>9313Z : activités des centres de culture physique</li>
+                <li>
+                  8551Z : enseignement de disciplines sportives et d&apos;activités de loisirs
+                </li>
+                <li>6420Z : activités des sociétés holding</li>
+              </ul>
+            </li>
+          </ol>
 
-        <section className={styles['become-partner-section__accordions']}>
-          <AccordionsBecomePartner />
-        </section>
-
-        <section
-          id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
-          className={styles['communication-kit-section']}
-        >
-          <Image
-            src={athletism}
-            className={cn('fr-responsive-img', styles['communication-kit-section__image'])}
-            alt=""
-          />
-
-          <div className={styles['communication-kit-section__description']}>
-            <h2>Téléchargez votre kit de communication</h2>
-            <p>
-              Le ministère chargé des Sports a élaboré un ensemble d&apos;outils et supports de
-              communication qui sont mis à disposition des acteurs et peuvent être utilisés pour
-              assurer la promotion du dispositif.
-            </p>
+          <div className="fr-mt-n8v">
+            <DownloadLink
+              details="PDF ~ 121 kB"
+              label="Télécharger la charte d'engagement 2026"
+              href="/assets/partenaires/charte-lsm-2026.pdf"
+            />
           </div>
-        </section>
 
-        <section className={styles['communication-kit-section__accordions']}>
-          <AccordionsKitCommunication />
+          <p className="fr-mt-n8v fr-mb-4w">
+            Si vous ne remplissez pas l&apos;une de ces trois conditions, le dispositif ne vous est
+            pas ouvert. Le justificatif d’éligibilité (attestation d&apos;affiliation ou agrément ou
+            charte d’engagement) seront vérifiés. En cas de non-éligibilité, les pass Sport saisis
+            ne vous seront pas remboursés.
+          </p>
         </section>
 
         <section
           id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
           className={styles['lca-section']}
+          style={{
+            marginTop: '-24px',
+          }}
         >
-          <h2 className="fr-h1">Créez votre Compte Asso</h2>
-          {/*<KnowMore*/}
-          {/*  variant="yellow"*/}
-          {/*  knowMore={{*/}
-          {/*    title: 'A savoir',*/}
-          {/*    description: `Vous pouvez suivre la procédure de création pas à pas en visionnant cette vidéo tutoriel.`,*/}
-          {/*  }}*/}
-          {/*/>*/}
+          <h2 className="fr-h1 fr-mb-0">Créez votre Compte Asso</h2>
           <p>
             Sur Le Compte Asso, vous pourrez créer un compte pour devenir partenaire du dispositif,
             entrer les codes pass Sport et suivre vos remboursements.
@@ -128,65 +145,36 @@ export default function Page() {
             className="fr-link fr-icon-download-line fr-link-icon--right align-self--baseline"
             target="_blank"
             aria-label="Ouvrir une nouvelle fenêtre vers Le Compte Asso"
-            href="https://lecompteasso.associations.gouv.fr/"
+            href="https://associations.gouv.fr/le-compte-asso"
           >
             Le Compte Asso
           </Link>
           <p>
-            Si vous avez déjà un compte sur Le Compte Asso, actualisez votre profil en téléversant
-            votre justificatif d&apos;éligibilité dans la section « affiliations et adhérents
-            personnes morales » :
+            Si vous avez déjà un compte sur Le Compte Asso, actualisez votre profil (informations de
+            contact, coordonnées bancaires) et déposez votre justificatif d&apos;éligibilité dans la
+            section « affiliations et adhérents personnes morales » :
           </p>
           <ul className="fr-ml-2w fr-mt-n3w">
             <li>
-              Clubs affiliés à une fédération sportive agréée par le ministère chargé des Sports :
-              attestation d&apos;affiliation (une attestation par fédération affiliée) ;
+              Clubs affiliés à une fédération sportive agréée par le ministère des Sports, de la
+              Jeunesse et de la Vie associative : attestation d&apos;affiliation (une attestation
+              par fédération affiliée) ;
             </li>
             <li>
-              Associations agréées Jeunesse Education Populaire (JEP) ou Sport : agrément JEP ou
+              Associations agréées Jeunesse Éducation Populaire (JEP) ou Sport : agrément JEP ou
               Sport valide ;
             </li>
-            <li>Structures des loisirs sportifs marchands : charte d&apos;engagement 2025.</li>
+            <li>Structures des loisirs sportifs marchands : charte d&apos;engagement 2026.</li>
           </ul>
 
-          <section>
-            <p className="fr-mt-2w">
-              <Link
-                href="https://view.genially.com/68ca5c87e161eb800feb72cf/guide-clubs-affiliees-a-une-fede-agreee-ministere-charge-des-sports"
-                target="_blank"
-                className="fr-link"
-              >
-                Consulter le tutoriel pour les structures affiliées
-              </Link>
-            </p>
-
-            <p className="fr-mt-2w">
-              <Link
-                href="https://view.genially.com/68c96700f88999c4be85cef4/guide-assos-avec-un-agrement-jep-ou-sport"
-                target="_blank"
-                className="fr-link"
-              >
-                Consulter le tutoriel pour les structures agréées Sport ou JEP
-              </Link>
-            </p>
-
-            <p className="fr-mt-2w">
-              <Link
-                href="https://view.genially.com/68a832edc26eae6fb0633be1/guide-loisirs-sportifs-marchands-lsm"
-                target="_blank"
-                className="fr-link"
-              >
-                Consulter le tutoriel pour les structures Loisirs Sportifs Marchands
-              </Link>
-            </p>
-          </section>
+          {/* todo: enable later when we have up to date versions of the tutorials */}
         </section>
 
         <section id={STRUCTURE_PAGE_ANCHORS.INPUT_CODES} className={styles['input-codes-section']}>
-          <h2 className="fr-h1">Saisissez les codes des bénéficiaires</h2>
+          <h2 className="fr-h1 fr-mb-0">Saisissez les codes des bénéficiaires</h2>
 
           <ol className="fr-ml-2w" start={1}>
-            <li>Le bénéficiaire vous présente son code alphanumérique (25-XXXX-XXXX).</li>
+            <li>Le bénéficiaire vous présente son code alphanumérique (26-XXXX-XXXX).</li>
             <li>
               Votre structure accorde une réduction immédiate sur l&apos;inscription du
               bénéficiaire.
@@ -199,7 +187,7 @@ export default function Page() {
           </ol>
           <p className="fr-mb-0">
             Vous pouvez saisir les codes des bénéficiaires{' '}
-            <span className="fr-text--bold">du 1er septembre jusqu&apos;au 31 décembre 2025</span>.
+            <span className="fr-text--bold">jusqu&apos;au 31 décembre 2026</span>.
           </p>
 
           <p className="fr-mb-0">
@@ -222,35 +210,19 @@ export default function Page() {
           />
 
           <div className={styles['get-refunds-section__description']}>
-            <h2 className="fr-h1">Recevez le remboursement</h2>
-
-            <KnowMore
-              variant="yellow"
-              knowMore={{
-                title: 'A savoir',
-                description: `Une 2ème vague de paiement est en cours. Les structures concernées recevront un remboursement le 31 octobre.`,
-              }}
-            />
-
-            <p>
-              Si votre dossier est correct, les remboursements arriveront dans le mois suivant la
-              saisie des codes dans votre compte Asso.
-            </p>
+            <h2 className="fr-h1 fr-mb-0">Modalités de remboursement du pass Sport</h2>
+            <ol>
+              <li>Saisissez vos pass Sport sur Le Compte Asso jusqu&apos;au 31 décembre 2026.</li>
+              <li>Une fois les pass Sport saisis, votre dossier est instruit.</li>
+              <li>
+                Après vérification et validation du dossier, le paiement vous sera versé le mois
+                suivant.
+              </li>
+            </ol>
 
             <p>
               Vous pouvez saisir les codes des bénéficiaires{' '}
-              <span className="fr-text--bold">du 1er septembre jusqu’au 31 décembre 2025</span>.
-            </p>
-
-            <p className="fr-mb-0">
-              <Link
-                href="https://lecompteasso.associations.gouv.fr/"
-                target="_blank"
-                title="Lien vers Le Compte Asso (nouvelle fenêtre)"
-                className="fr-link"
-              >
-                Le Compte Asso
-              </Link>
+              <span className="fr-text--bold">jusqu&apos;au 31 décembre 2026</span>.
             </p>
           </div>
         </section>
@@ -268,18 +240,18 @@ export default function Page() {
             </Link>
           </p>
         </section>
-
-        <section className={styles['decret-section']}>
-          <h2 className="fr-h4">Texte de référence</h2>
-          <Link
-            href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"
-            target="_blank"
-            className="align-self--baseline fr-link"
-            aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"
-          >
-            Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025
-          </Link>
-        </section>
+        {/* todo: enable later when we will have the signed decret */}
+        {/*<section className={styles['decret-section']}>*/}
+        {/*  <h2 className="fr-h4">Texte de référence</h2>*/}
+        {/*  <Link*/}
+        {/*    href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"*/}
+        {/*    target="_blank"*/}
+        {/*    className="align-self--baseline fr-link"*/}
+        {/*    aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"*/}
+        {/*  >*/}
+        {/*    Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025*/}
+        {/*  </Link>*/}
+        {/*</section>*/}
       </div>
     </main>
   );

@@ -3,10 +3,9 @@ import rootStyles from '../../../../utilities.module.scss';
 import styles from './styles.module.scss';
 import AsyncSelect from 'react-select/async';
 import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';
-import { City } from 'types/City';
+import { City } from '@/types/City';
 import { Props as ReactSelectProps, SingleValue } from 'react-select';
-import { sortCities } from 'utils/city';
-import { InputState } from 'types/form';
+import { InputState } from '@/types/form';
 import {
   createCustomInput,
   CustomPlaceholder,
@@ -18,8 +17,9 @@ import {
   selectStyles,
 } from '@/app/v2/trouver-un-club/components/club-filters/custom-select/CustomSelect';
 import React, { ReactNode, useState } from 'react';
+import { sortCities } from '@/utils/city';
 
-interface Option {
+export interface CityOption {
   label: string;
   value: string;
 }
@@ -31,8 +31,11 @@ interface Props {
   isDisabled: boolean;
   onBlur: (text: string | null) => void;
   onChanged: (text: string | null) => void;
+  onOptionChanged?: (option: CityOption | null) => void;
   required?: boolean;
   shouldAutoFocus?: boolean;
+  /* Stands in for a commune the user would have picked, without running the async search */
+  defaultOption?: CityOption;
 }
 
 const CITY_FINDER_DESC_ERROR_ID = 'city-finder-desc-error';
@@ -45,14 +48,13 @@ const CityFinder = ({
   isDisabled,
   onBlur,
   onChanged,
+  onOptionChanged,
   required = false,
   shouldAutoFocus = false,
+  defaultOption,
 }: Props) => {
-  const [inputValue, setInputValue] = useState('');
-  const [value, setValue] = useState<Option>({
-    label: '',
-    value: '',
-  });
+  const [inputValue, setInputValue] = useState(defaultOption?.label ?? '');
+  const [value, setValue] = useState<CityOption>(defaultOption ?? { label: '', value: '' });
 
   const onInputChange: ReactSelectProps['onInputChange'] = (inputValue, { action }) => {
     if (action === 'input-change') {
@@ -60,8 +62,9 @@ const CityFinder = ({
     }
   };
 
-  const birthPlaceChangedHandler = (newValue: SingleValue<Option>) => {
+  const birthPlaceChangedHandler = (newValue: SingleValue<CityOption>) => {
     onChanged(newValue as string | null);
+    onOptionChanged?.(newValue);
     setInputValue(newValue?.label || '');
     setValue({
       value: newValue?.value || '',
@@ -75,15 +78,18 @@ const CityFinder = ({
         'fr-select-group--error': inputState.state === 'error',
       })}
     >
-      <label className={rootStyles['text--black']} htmlFor={inputName}>
+      <label
+        className={isDisabled ? styles['label--disabled'] : rootStyles['text--black']}
+        htmlFor={inputName}
+      >
         {legend}
         <p className={cn('fr-text--xs', styles.hint, 'fr-mb-1w', 'fr-mt-1v')}>
-          Personne responsable du compte de l&apos;allocation.
+          Personne responsable du compte de l&apos;allocataire.
         </p>
       </label>
 
       <div className={cn('fr-grid-row', styles['city-finder__container'])}>
-        <AsyncSelect<Option, false>
+        <AsyncSelect<CityOption, false>
           aria-labelledby="city-select-id"
           instanceId="city-select-id"
           inputId={inputName}
@@ -106,9 +112,18 @@ const CityFinder = ({
           autoFocus={shouldAutoFocus}
           styles={{
             ...selectStyles,
+            // The shared control style hardcodes a dark bottom border, which stays dark while
+            // every .fr-input around it fades to --border-disabled-grey. Same for the text:
+            // DSFR uses --text-disabled-grey, not an arbitrary rgb().
+            control: (baseStyles, state) => ({
+              ...selectStyles.control(baseStyles),
+              ...(state.isDisabled
+                ? { borderBottom: '2px solid var(--border-disabled-grey)' }
+                : {}),
+            }),
             input: (_, state) => {
               return {
-                color: state.isDisabled ? 'rgb(153, 153, 153)' : 'initial',
+                color: state.isDisabled ? 'var(--text-disabled-grey)' : 'initial',
                 width: '100%',
               };
             },
@@ -145,7 +160,7 @@ function fetchCityOptions(inputValue: string) {
   );
 }
 
-function parseCities(cities: City[]): Option[] {
+function parseCities(cities: City[]): CityOption[] {
   return cities.map((city) => {
     return { label: `${city.nom} (${city.codeDepartement})`, value: city.code };
   });

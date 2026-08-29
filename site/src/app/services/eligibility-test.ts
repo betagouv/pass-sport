@@ -5,7 +5,7 @@ import {
   SearchPayload,
   SearchResponseBody,
   SearchResponseErrorBody,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 
 import * as Sentry from '@sentry/nextjs';
 
@@ -96,7 +96,7 @@ export const fetchCode = async (
 
   if (!response.ok) {
     throw new Error(
-      `Request to LCA api on /confirm has failed. Response status is ${response.status}; Response body is ${JSON.stringify(await response.json())}.`,
+      `Request to LCA api on /confirm has failed. Response status is ${response.status}.`,
     );
   }
 
@@ -105,7 +105,7 @@ export const fetchCode = async (
   if ('message' in responseBody) {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
-      scope.setExtra('responseBody', responseBody);
+      scope.setExtra('responseMessage', responseBody.message);
       scope.captureMessage('Unexpected response on LCA POST api/eligibility-test/confirm');
     });
     return responseBody;
@@ -118,7 +118,12 @@ export const fetchCode = async (
   return responseBody;
 };
 
-export const fetchEligible = async (payload: SearchPayload) => {
+export const fetchEligible = async (
+  payload: SearchPayload,
+  // keepMatricule: server-side only. The matricule must NEVER reach the browser;
+  // it is kept solely so a server flow can chain fetchCode with it.
+  options?: { keepMatricule?: boolean },
+) => {
   const authenticationKey = process.env.LCA_API_KEY;
 
   if (!authenticationKey) {
@@ -131,7 +136,7 @@ export const fetchEligible = async (payload: SearchPayload) => {
 
   if (!response.ok) {
     throw new Error(
-      `Request to LCA api on /search has failed. Response status is ${response.status}; Response body is ${JSON.stringify(await response.json())}`,
+      `Request to LCA api on /search has failed. Response status is ${response.status}.`,
     );
   }
 
@@ -140,7 +145,7 @@ export const fetchEligible = async (payload: SearchPayload) => {
   if ('message' in responseBody) {
     Sentry.withScope((scope) => {
       scope.setLevel('warning');
-      scope.setExtra('responseBody', responseBody);
+      scope.setExtra('responseMessage', responseBody.message);
       scope.captureMessage('Unexpected response on LCA POST api/eligibility-test/search');
     });
 
@@ -148,6 +153,10 @@ export const fetchEligible = async (payload: SearchPayload) => {
   }
 
   return responseBody.map((item) => {
+    if (options?.keepMatricule) {
+      return { ...item, hasMatricule: !!item.matricule };
+    }
+
     // Remove matricule from final output
     const { matricule, ...remaining } = item;
 

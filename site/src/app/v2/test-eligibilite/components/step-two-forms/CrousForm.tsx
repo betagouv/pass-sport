@@ -1,237 +1,155 @@
 import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
-import {
-  ConfirmResponseErrorBody,
-  CrousInputsState,
-  EnhancedConfirmResponseBody,
-  SearchResponseBodyItem,
-} from 'types/EligibilityTest';
+import { CrousInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
-import FormButton from './FormButton';
 import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
-import { fetchPspCode } from '../../agent';
+import Actions from '@/app/components/actions/Actions';
 import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { FRANCE_ISO_CODE } from '../../helpers/countries';
+import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
+import { useRecipientEmail } from '../../hooks/use-recipient-email';
+import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/FormButton';
 
-interface Props {
-  eligibilityDataItem: SearchResponseBodyItem;
-  onDataReceived: (data: EnhancedConfirmResponseBody) => void;
-  onEligibilitySuccess: () => void;
-  onEligibilityFailure: () => void;
-}
+const initialInputsState: CrousInputsState = {
+  recipientIneNumber: { state: 'default' },
+  recipientBirthCountry: { state: 'default' },
+  recipientBirthPlace: { state: 'default' },
+};
 
-const CrousForm = ({
-  eligibilityDataItem,
-  onDataReceived,
-  onEligibilitySuccess,
-  onEligibilityFailure,
-}: Props) => {
+const IDENTIFICATION_ERROR =
+  'Renseignez votre numéro INE, ou à défaut vos pays et commune de naissance.';
+
+/**
+ * The step-one search no longer runs on its own, so whether LCA holds an INE for this student
+ * is unknown when the form is drawn. Both identifiers are offered and either one is enough.
+ */
+const CrousForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
-  const [inputStates, setInputStates] = useState<CrousInputsState>({
-    ...(eligibilityDataItem.hasMatricule ? { recipientIneNumber: { state: 'default' } } : {}),
-  });
   const { allowance } = useContext(EligibilityTestContext);
-  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>();
-
-  const onCountryChanged = (e: ChangeEvent<HTMLSelectElement>) => {
-    const country = e.target.value;
-
-    if (country.toUpperCase() === 'FR') {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        recipientBirthPlace: { state: 'default' },
-        recipientBirthCountry: { state: 'default' },
-      }));
-    } else {
-      setInputStates({});
-    }
-  };
-
-  const isBirthPlaceRequired = () => {
-    return !!Object.keys(inputStates).find((key) => key === 'recipientBirthPlace');
-  };
-
-  const onBirthPlaceChanged = (text: string | null) => {
-    if (!text) {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        recipientBirthPlace: { state: 'error' },
-      }));
-    } else {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        recipientBirthPlace: { state: 'default' },
-      }));
-    }
-  };
-
-  const isFormValid = (formData: FormData): { isValid: boolean; states: CrousInputsState } => {
-    let isValid = true;
-
-    const fieldNames = Object.keys(inputStates) as (keyof CrousInputsState)[];
-
-    const states = structuredClone(inputStates);
-
-    fieldNames.forEach((fieldName) => {
-      const value = formData.get(fieldName);
-
-      if (!value) {
-        states[fieldName] = { state: 'error', errorMsg: mapper[fieldName] };
-        isValid = false;
-      }
-    });
-
-    return { isValid, states };
-  };
-
-  const requestPassSportCode = (): Promise<{
-    status: number;
-    body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-  }> => {
-    const formData = new FormData(formRef.current!);
-
-    formData.append('id', eligibilityDataItem.id.toString());
-    formData.append('situation', eligibilityDataItem.situation);
-    formData.append('organisme', eligibilityDataItem.organisme);
-
-    // Don't ask for ine if it doesn't exist
-    if (eligibilityDataItem.hasMatricule) {
-      formData.set('recipientIneNumber', formData.get('recipientIneNumber')!.toString().trim());
-    } else {
-      const birthCountry = formData.get('recipientBirthCountry') as string;
-
-      // If from france, we only need the birthplace, birth country no longer needed
-      if (birthCountry === 'FR') {
-        formData.delete('recipientBirthCountry');
-      }
-    }
-
-    if (allowance) {
-      formData.set('allowanceName', allowance);
-    }
-
-    return fetchPspCode(formData);
-  };
-
-  const notifyError = () => {
-    setError('Une erreur a eu lieu. Merci de réessayer plus tard');
-  };
+  const [inputStates, setInputStates] = useState<CrousInputsState>(initialInputsState);
+  const { isFormDisabled, error, submit } = useStepTwoSubmit();
+  const email = useRecipientEmail();
+  const [identificationError, setIdentificationError] = useState<string | null>(null);
+  const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(false);
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIdentificationError(null);
 
     const formData = new FormData(formRef.current!);
-    const { isValid, states } = isFormValid(formData);
+    const ine = (formData.get('recipientIneNumber') ?? '').toString().trim();
+    const birthCountry = (formData.get('recipientBirthCountry') ?? '').toString().trim();
+    const birthPlace = (formData.get('recipientBirthPlace') ?? '').toString().trim();
+    // Runs before the identification branches so both errors surface in the same pass
+    const recipientEmail = email.validate(formData);
 
-    setInputStates({ ...states });
-
-    if (!isValid) {
+    if (!ine && !birthCountry) {
+      setIdentificationError(IDENTIFICATION_ERROR);
       return;
     }
 
-    await requestPassSportCode().then(
-      ({
-        status,
-        body,
-      }: {
-        body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-        status: number;
-      }) => {
-        if (status !== 200) {
-          notifyError();
-        } else {
-          if ('message' in body) {
-            notifyError();
-            return;
-          }
+    if (!ine && birthCountry === FRANCE_ISO_CODE && !birthPlace) {
+      setInputStates((states) => ({
+        ...states,
+        recipientBirthPlace: { state: 'error', errorMsg: mapper.recipientBirthPlace },
+      }));
+      return;
+    }
 
-          onDataReceived(body);
+    if (!recipientEmail) {
+      return;
+    }
 
-          if (body?.length > 0) {
-            onEligibilitySuccess();
-            setIsFormDisabled(true);
-          } else {
-            onEligibilityFailure();
-          }
-        }
-      },
-    );
+    await submit({
+      recipientEmail,
+      recipientIneNumber: ine || undefined,
+      // LCA reads the commune for someone born in France, and the country for everyone else
+      recipientBirthCountry:
+        birthCountry === FRANCE_ISO_CODE ? undefined : birthCountry || undefined,
+      recipientBirthPlace: birthPlace || undefined,
+    });
   };
 
-  const onInputChanged = (text: string | null, field: keyof CrousInputsState) => {
-    if (!text) {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'error', errorMsg: mapper[field] },
-      }));
-    } else {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'default' },
-      }));
-    }
+  const setFieldState = (field: keyof CrousInputsState, hasValue: unknown) => {
+    setInputStates((states) => ({
+      ...states,
+      [field]: hasValue ? { state: 'default' } : { state: 'error', errorMsg: mapper[field] },
+    }));
+  };
+
+  const onCountryChanged = (e: ChangeEvent<HTMLSelectElement>) => {
+    setIsBirthPlaceRequired(e.target.value.toUpperCase() === FRANCE_ISO_CODE);
+    setFieldState('recipientBirthCountry', e.target.value);
+    setIdentificationError(null);
   };
 
   return (
     <div>
-      <form ref={formRef} onSubmit={onSubmitHandler}>
-        {eligibilityDataItem.hasMatricule && inputStates.recipientIneNumber && (
-          <CustomInput
-            inputProps={{
-              label:
-                allowance === ALLOWANCE.CROUS ? (
-                  <>
-                    Numéro INE provenant du <CROUS /> <span className="text--required">*</span>
-                  </>
-                ) : (
-                  <>
-                    Numéro INE provenant des formations sanitaires et sociales{' '}
-                    <span className="text--required">*</span>
-                  </>
-                ),
-              hintText:
-                'Format attendu : composé de 11 caractères, soit 10 chiffres et 1 lettre soit 9 chiffres et 2 lettres',
-              nativeInputProps: {
-                name: 'recipientIneNumber',
-                placeholder: 'ex: 0000000000X ou 00000000XX',
-                type: 'text',
-                required: true,
-                onChange: (e: ChangeEvent<HTMLInputElement>) =>
-                  onInputChanged(e.target.value, 'recipientIneNumber'),
-                'aria-label': 'Saisir le numéro INE',
-                autoFocus: true,
-              },
-              state: inputStates.recipientIneNumber.state,
-              stateRelatedMessage: inputStates.recipientIneNumber.errorMsg,
-              disabled: isFormDisabled,
-            }}
-            secondHint={null}
-          />
-        )}
+      {(identificationError || error) && <ErrorAlert title={identificationError ?? error!} />}
 
-        {!eligibilityDataItem.hasMatricule && (
-          <CommonInputs
-            birthCountryInputName="recipientBirthCountry"
-            birthPlaceInputName="recipientBirthPlace"
-            inputStates={inputStates}
-            areInputsDisabled={isFormDisabled}
-            isBirthInputRequired={isBirthPlaceRequired()}
-            onCountryChanged={onCountryChanged}
-            onBirthPlaceChanged={onBirthPlaceChanged}
-            isDirectBeneficiary
-            shouldAutoFocus
-          />
-        )}
+      <form ref={formRef} onSubmit={onSubmitHandler}>
+        <CustomInput
+          inputProps={{
+            label:
+              allowance === ALLOWANCE.CROUS ? (
+                <>
+                  Numéro INE provenant du <CROUS />
+                </>
+              ) : (
+                <>Numéro INE provenant des formations sanitaires et sociales</>
+              ),
+            hintText:
+              'Format attendu : composé de 11 caractères, soit 10 chiffres et 1 lettre soit 9 chiffres et 2 lettres',
+            nativeInputProps: {
+              name: 'recipientIneNumber',
+              placeholder: 'ex: 0000000000X ou 00000000XX',
+              type: 'text',
+              onChange: (e: ChangeEvent<HTMLInputElement>) => {
+                setFieldState('recipientIneNumber', e.target.value);
+                setIdentificationError(null);
+              },
+              'aria-label': 'Saisir le numéro INE',
+              autoFocus: true,
+            },
+            state: inputStates.recipientIneNumber?.state,
+            stateRelatedMessage: inputStates.recipientIneNumber?.errorMsg,
+            disabled: isFormDisabled,
+          }}
+          secondHint="Si vous ne disposez pas de numéro INE, renseignez vos pays et commune de naissance ci-dessous."
+        />
+
+        <CommonInputs
+          birthCountryInputName="recipientBirthCountry"
+          birthPlaceInputName="recipientBirthPlace"
+          inputStates={inputStates}
+          areInputsDisabled={isFormDisabled}
+          isBirthInputRequired={isBirthPlaceRequired}
+          onCountryChanged={onCountryChanged}
+          onBirthPlaceChanged={(text) => setFieldState('recipientBirthPlace', text)}
+          isDirectBeneficiary
+          shouldAutoFocus={false}
+          isCountryRequired={false}
+          countryLabel="Pays de naissance"
+          birthPlaceLabel="Commune de naissance"
+        />
+
+        <RecipientEmailInput
+          inputState={email.inputState}
+          isDisabled={isFormDisabled}
+          onChange={email.onChange}
+          onBlur={email.onBlur}
+        />
 
         <FormButton isDisabled={isFormDisabled} />
       </form>
 
-      {error && (
+      {(identificationError || error) && (
         <div className="fr-mt-4w">
-          <ErrorAlert title={error} />
+          <Actions />
         </div>
       )}
     </div>

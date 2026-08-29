@@ -1,96 +1,51 @@
-import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
-import {
-  AahCafInputsState,
-  ConfirmResponseErrorBody,
-  EnhancedConfirmResponseBody,
-  SearchResponseBodyItem,
-} from 'types/EligibilityTest';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { AahCafInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
-import FormButton from './FormButton';
+import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
-import { fetchPspCode } from '../../agent';
-import CustomInput from '@/app/v2/test-eligibilite/components/custom-input/CustomInput';
+import Actions from '@/app/components/actions/Actions';
 import { CAF } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
+import { useRecipientEmail } from '../../hooks/use-recipient-email';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/FormButton';
 
 const initialInputsState: AahCafInputsState = {
   recipientCafNumber: { state: 'default' },
 };
 
-interface Props {
-  eligibilityDataItem: SearchResponseBodyItem;
-  onDataReceived: (data: EnhancedConfirmResponseBody) => void;
-  onEligibilitySuccess: () => void;
-  onEligibilityFailure: () => void;
-}
+const CAF_NUMBER_ERROR = (
+  <>
+    Le numéro&nbsp; <CAF /> &nbsp;doit être composé de 7 chiffres
+  </>
+);
 
-const AahCafForm = ({
-  eligibilityDataItem,
-  onDataReceived,
-  onEligibilitySuccess,
-  onEligibilityFailure,
-}: Props) => {
+const AahCafForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AahCafInputsState>(initialInputsState);
-  const [error, setError] = useState<string | null>();
-  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-  const { allowance } = useContext(EligibilityTestContext);
+  const { isFormDisabled, error, submit } = useStepTwoSubmit();
+  const email = useRecipientEmail();
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: AahCafInputsState } => {
-    let isValid = true;
+    const value = (formData.get('recipientCafNumber') ?? '').toString().trim();
 
-    const fieldNames = Object.keys(initialInputsState) as (keyof AahCafInputsState)[];
-
-    const states = structuredClone(initialInputsState);
-
-    fieldNames.forEach((fieldName) => {
-      const value = formData.get(fieldName);
-
-      if (!value) {
-        states[fieldName] = { state: 'error', errorMsg: mapper[fieldName] };
-        isValid = false;
-      } else {
-        if (typeof value === 'string') {
-          if (fieldName === 'recipientCafNumber') {
-            if (!/^\d{7}$/.test(value)) {
-              states[fieldName] = {
-                state: 'error',
-                errorMsg: (
-                  <>
-                    Le numéro&nbsp; <CAF /> &nbsp;doit être composé de 7 chiffres
-                  </>
-                ),
-              };
-
-              isValid = false;
-            }
-          }
-        }
-      }
-    });
-
-    return { isValid, states };
-  };
-
-  const requestPassSportCode = (): Promise<{
-    status: number;
-    body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-  }> => {
-    const formData = new FormData(formRef.current!);
-    formData.append('id', eligibilityDataItem.id.toString());
-    formData.append('situation', eligibilityDataItem.situation);
-    formData.append('organisme', eligibilityDataItem.organisme);
-    formData.set('recipientCafNumber', formData.get('recipientCafNumber')!.toString().trim());
-
-    if (allowance) {
-      formData.set('allowanceName', allowance);
+    if (!value) {
+      return {
+        isValid: false,
+        states: {
+          recipientCafNumber: { state: 'error', errorMsg: mapper.recipientCafNumber },
+        },
+      };
     }
 
-    return fetchPspCode(formData);
-  };
+    if (!/^\d{7}$/.test(value)) {
+      return {
+        isValid: false,
+        states: { recipientCafNumber: { state: 'error', errorMsg: CAF_NUMBER_ERROR } },
+      };
+    }
 
-  const notifyError = () => {
-    setError('Une erreur a eu lieu. Merci de réessayer plus tard');
+    return { isValid: true, states: initialInputsState };
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
@@ -98,58 +53,24 @@ const AahCafForm = ({
 
     const formData = new FormData(formRef.current!);
     const { isValid, states } = isFormValid(formData);
+    const recipientEmail = email.validate(formData);
 
-    setInputStates({ ...states });
+    setInputStates(states);
 
-    if (!isValid) {
+    if (!isValid || !recipientEmail) {
       return;
     }
 
-    await requestPassSportCode().then(
-      ({
-        status,
-        body,
-      }: {
-        body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-        status: number;
-      }) => {
-        if (status !== 200) {
-          notifyError();
-        } else {
-          if ('message' in body) {
-            notifyError();
-            return;
-          }
-
-          onDataReceived(body);
-
-          if (body?.length > 0) {
-            onEligibilitySuccess();
-            setIsFormDisabled(true);
-          } else {
-            onEligibilityFailure();
-          }
-        }
-      },
-    );
-  };
-
-  const onInputChanged = (text: string, field: keyof AahCafInputsState) => {
-    if (!text) {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'error', errorMsg: mapper[field] },
-      }));
-    } else {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        [`${field}`]: { state: 'default' },
-      }));
-    }
+    await submit({
+      recipientCafNumber: formData.get('recipientCafNumber')!.toString().trim(),
+      recipientEmail,
+    });
   };
 
   return (
-    <>
+    <div>
+      {error && <ErrorAlert title={error} />}
+
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <CustomInput
           inputProps={{
@@ -158,14 +79,18 @@ const AahCafForm = ({
                 Numéro de l’allocataire <CAF /> <span className="text--required">*</span>
               </>
             ),
-            hintText: 'Personne responsable du compte de l’allocation.',
+            hintText: 'Personne responsable du compte de l’allocataire.',
             nativeInputProps: {
               name: 'recipientCafNumber',
-              placeholder: 'Exemple : 0123456',
+              placeholder: 'Exemple : 1234567',
               type: 'text',
               required: true,
               onChange: (e: ChangeEvent<HTMLInputElement>) =>
-                onInputChanged(e.target.value, 'recipientCafNumber'),
+                setInputStates({
+                  recipientCafNumber: e.target.value
+                    ? { state: 'default' }
+                    : { state: 'error', errorMsg: mapper.recipientCafNumber },
+                }),
               'aria-label': "Saisir le numéro de l'allocataire CAF",
               autoFocus: true,
             },
@@ -182,15 +107,22 @@ const AahCafForm = ({
           }
         />
 
+        <RecipientEmailInput
+          inputState={email.inputState}
+          isDisabled={isFormDisabled}
+          onChange={email.onChange}
+          onBlur={email.onBlur}
+        />
+
         <FormButton isDisabled={isFormDisabled} />
       </form>
 
       {error && (
         <div className="fr-mt-4w">
-          <ErrorAlert title={error} />
+          <Actions />
         </div>
       )}
-    </>
+    </div>
   );
 };
 

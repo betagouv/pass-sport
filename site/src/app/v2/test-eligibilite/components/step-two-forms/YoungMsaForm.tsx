@@ -1,59 +1,47 @@
 import Input from '@codegouvfr/react-dsfr/Input';
-import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
-import {
-  ConfirmResponseErrorBody,
-  EnhancedConfirmResponseBody,
-  SearchResponseBodyItem,
-  YoungMsaInputsState,
-} from 'types/EligibilityTest';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
+import { YoungMsaInputsState } from '@/types/EligibilityTest';
 import { convertDate, mapper } from '../../helpers/helper';
-import FormButton from './FormButton';
 import ErrorAlert from '../error-alert/ErrorAlert';
-import { fetchPspCode } from '../../agent';
+import Actions from '@/app/components/actions/Actions';
 import { MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import { FRANCE_ISO_CODE } from '../../helpers/countries';
+import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
+import { useRecipientEmail } from '../../hooks/use-recipient-email';
 import CommonInputs from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/CommonInputs';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
+import RecipientEmailInput from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/RecipientEmailInput';
+import FormButton from '@/app/v2/test-eligibilite/components/step-two-forms/common-inputs/FormButton';
 
 const initialInputsState: YoungMsaInputsState = {
   recipientLastname: { state: 'default' },
   recipientFirstname: { state: 'default' },
   recipientBirthDate: { state: 'default' },
   recipientBirthCountry: { state: 'default' },
+  recipientBirthPlace: { state: 'default' },
 };
 
-interface Props {
-  eligibilityDataItem: SearchResponseBodyItem;
-  onDataReceived: (data: EnhancedConfirmResponseBody) => void;
-  onEligibilitySuccess: () => void;
-  onEligibilityFailure: () => void;
-}
-
-const YoungMsaForm = ({
-  eligibilityDataItem,
-  onDataReceived,
-  onEligibilitySuccess,
-  onEligibilityFailure,
-}: Props) => {
+const YoungMsaForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<YoungMsaInputsState>(initialInputsState);
-  const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>();
-  const { allowance } = useContext(EligibilityTestContext);
+  const { isFormDisabled, error, submit } = useStepTwoSubmit();
+  const email = useRecipientEmail();
+  const [isBirthPlaceRequired, setIsBirthPlaceRequired] = useState<boolean>(false);
+
+  const requiredFields = (): (keyof YoungMsaInputsState)[] => [
+    'recipientLastname',
+    'recipientFirstname',
+    'recipientBirthDate',
+    'recipientBirthCountry',
+    // Only asked for, and only accepted by LCA, when the country is France
+    ...(isBirthPlaceRequired ? (['recipientBirthPlace'] as const) : []),
+  ];
 
   const isFormValid = (formData: FormData): { isValid: boolean; states: YoungMsaInputsState } => {
     let isValid = true;
-
-    const fieldNames = Object.keys(inputStates) as (keyof YoungMsaInputsState)[];
     const states = structuredClone(initialInputsState);
 
-    fieldNames.forEach((fieldname) => {
-      states[fieldname] = { state: 'default' };
-    });
-
-    fieldNames.forEach((fieldName) => {
-      const value = formData.get(fieldName);
-
-      if (!value) {
+    requiredFields().forEach((fieldName) => {
+      if (!(formData.get(fieldName) ?? '').toString().trim()) {
         states[fieldName] = { state: 'error', errorMsg: mapper[fieldName] };
         isValid = false;
       }
@@ -62,134 +50,71 @@ const YoungMsaForm = ({
     return { isValid, states };
   };
 
-  const requestPassSportCode = (): Promise<{
-    status: number;
-    body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-  }> => {
-    const formData = new FormData(formRef.current!);
-
-    formData.append('id', eligibilityDataItem.id.toString());
-    formData.append('situation', eligibilityDataItem.situation);
-    formData.append('organisme', eligibilityDataItem.organisme);
-    formData.set('recipientLastname', formData.get('recipientLastname')!.toString().trim());
-    formData.set('recipientFirstname', formData.get('recipientFirstname')!.toString().trim());
-
-    const formattedRecipientBirthDate =
-      convertDate(formData.get('recipientBirthDate') as string) ?? '';
-    formData.set('recipientBirthDate', formattedRecipientBirthDate);
-
-    const birthCountry = formData.get('recipientBirthCountry') as string;
-
-    if (birthCountry === 'FR') {
-      formData.delete('recipientBirthCountry');
-    }
-
-    if (allowance) {
-      formData.set('allowanceName', allowance);
-    }
-
-    return fetchPspCode(formData);
-  };
-
-  const notifyError = () => {
-    setError('Une erreur a eu lieu. Merci de réessayer plus tard');
-  };
-
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(formRef.current!);
     const { isValid, states } = isFormValid(formData);
+    const recipientEmail = email.validate(formData);
 
-    setInputStates({ ...states });
+    setInputStates(states);
 
-    if (!isValid) {
+    if (!isValid || !recipientEmail) {
       return;
     }
 
-    await requestPassSportCode().then(
-      ({
-        status,
-        body,
-      }: {
-        body: EnhancedConfirmResponseBody | ConfirmResponseErrorBody;
-        status: number;
-      }) => {
-        if (status !== 200) {
-          notifyError();
-        } else {
-          if ('message' in body) {
-            notifyError();
-            return;
-          }
+    const birthCountry = (formData.get('recipientBirthCountry') ?? '').toString();
 
-          onDataReceived(body);
-
-          if (body?.length > 0) {
-            onEligibilitySuccess();
-            setIsFormDisabled(true);
-          } else {
-            onEligibilityFailure();
-          }
-        }
-      },
-    );
+    await submit({
+      recipientLastname: formData.get('recipientLastname')!.toString().trim(),
+      recipientFirstname: formData.get('recipientFirstname')!.toString().trim(),
+      recipientBirthDate: convertDate(formData.get('recipientBirthDate')!.toString()) ?? '',
+      // LCA reads the commune for someone born in France, and the country for everyone else
+      recipientBirthCountry: birthCountry === FRANCE_ISO_CODE ? undefined : birthCountry,
+      recipientBirthPlace: (formData.get('recipientBirthPlace') ?? '').toString() || undefined,
+      recipientEmail,
+    });
   };
 
-  const onCountrySelectedHandler = (e: ChangeEvent<HTMLSelectElement>) => {
-    const country = e.target.value;
-
-    if (country.toUpperCase() === 'FR') {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        recipientBirthPlace: { state: 'default' },
-      }));
-    } else {
-      setInputStates(initialInputsState);
-    }
+  const setFieldState = (field: keyof YoungMsaInputsState, hasValue: unknown) => {
+    setInputStates((states) => ({
+      ...states,
+      [field]: hasValue ? { state: 'default' } : { state: 'error', errorMsg: mapper[field] },
+    }));
   };
 
-  const onBirthPlaceChanged = (text: string | null) => {
-    if (!text) {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        recipientBirthPlace: { state: 'error' },
-      }));
-    } else {
-      setInputStates((inputStates) => ({
-        ...inputStates,
-        recipientBirthPlace: { state: 'default' },
-      }));
-    }
-  };
-
-  const isBirthPlaceRequired = () => {
-    return !!Object.keys(inputStates).find((key) => key === 'recipientBirthPlace');
+  const onCountryChanged = (e: ChangeEvent<HTMLSelectElement>) => {
+    setIsBirthPlaceRequired(e.target.value.toUpperCase() === FRANCE_ISO_CODE);
+    setFieldState('recipientBirthCountry', e.target.value);
   };
 
   return (
-    <>
+    <div>
+      {error && <ErrorAlert title={error} />}
+
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <Input
           label={
             <>
-              Nom de l&apos;allocataire <span className="text--required">*</span>
+              Nom de l’allocataire <MSA /> <span className="text--required">*</span>
             </>
           }
-          nativeInputProps={{
-            name: 'recipientLastname',
-            placeholder: 'ex: Dupont',
-            'aria-label': "Saisir le nom de l'allocataire",
-            required: true,
-            autoFocus: true,
-          }}
           state={inputStates.recipientLastname.state}
           stateRelatedMessage={inputStates.recipientLastname.errorMsg}
           disabled={isFormDisabled}
+          nativeInputProps={{
+            name: 'recipientLastname',
+            placeholder: 'ex: Dupont',
+            required: true,
+            onChange: (e: ChangeEvent<HTMLInputElement>) =>
+              setFieldState('recipientLastname', e.target.value),
+            'aria-label': "Saisir le nom de l'allocataire",
+            autoFocus: true,
+          }}
           hintText={
             <>
-              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos papiers de
-              la <MSA />.
+              Format attendu : Nom de l&apos;allocataire tel qu&apos;il est écrit sur vos documents
+              de la <MSA />.
             </>
           }
         />
@@ -197,22 +122,24 @@ const YoungMsaForm = ({
         <Input
           label={
             <>
-              Prénom de l’allocataire <span className="text--required">*</span>
+              Prénom de l’allocataire <MSA /> <span className="text--required">*</span>
             </>
           }
-          nativeInputProps={{
-            name: 'recipientFirstname',
-            placeholder: 'ex: Marie',
-            'aria-label': "Saisir le prénom de l'allocataire",
-            required: true,
-          }}
           state={inputStates.recipientFirstname.state}
           stateRelatedMessage={inputStates.recipientFirstname.errorMsg}
           disabled={isFormDisabled}
+          nativeInputProps={{
+            name: 'recipientFirstname',
+            placeholder: 'ex: Marie',
+            required: true,
+            onChange: (e: ChangeEvent<HTMLInputElement>) =>
+              setFieldState('recipientFirstname', e.target.value),
+            'aria-label': "Saisir le prénom de l'allocataire",
+          }}
           hintText={
             <>
-              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur les papiers
-              de la <MSA />.
+              Format attendu : Prénom de l&apos;allocataire tel qu&apos;il est écrit sur vos
+              documents de la <MSA />.
             </>
           }
         />
@@ -223,18 +150,20 @@ const YoungMsaForm = ({
               Date de naissance de l’allocataire <span className="text--required">*</span>
             </>
           }
-          hintText="Exemple : 31/12/2025."
-          nativeInputProps={{
-            name: 'recipientBirthDate',
-            type: 'date',
-            min: '1950-01-01',
-            max: '2099-12-31',
-            'aria-label': "Saisir la date de naissance de l'allocataire",
-            required: true,
-          }}
+          hintText="Exemple : 31/12/1980."
           state={inputStates.recipientBirthDate.state}
           stateRelatedMessage={inputStates.recipientBirthDate.errorMsg}
           disabled={isFormDisabled}
+          nativeInputProps={{
+            name: 'recipientBirthDate',
+            type: 'date',
+            min: '1900-01-01',
+            max: '2099-12-31',
+            required: true,
+            onChange: (e: ChangeEvent<HTMLInputElement>) =>
+              setFieldState('recipientBirthDate', e.target.value),
+            'aria-label': "Saisir la date de naissance de l'allocataire",
+          }}
         />
 
         <CommonInputs
@@ -242,18 +171,28 @@ const YoungMsaForm = ({
           birthPlaceInputName="recipientBirthPlace"
           inputStates={inputStates}
           areInputsDisabled={isFormDisabled}
-          isBirthInputRequired={isBirthPlaceRequired()}
-          onCountryChanged={onCountrySelectedHandler}
-          onBirthPlaceChanged={onBirthPlaceChanged}
+          isBirthInputRequired={isBirthPlaceRequired}
+          onCountryChanged={onCountryChanged}
+          onBirthPlaceChanged={(text) => setFieldState('recipientBirthPlace', text)}
           shouldAutoFocus={false}
         />
-        <div className="fr-mt-3w">
-          <FormButton isDisabled={isFormDisabled} />
-        </div>
+
+        <RecipientEmailInput
+          inputState={email.inputState}
+          isDisabled={isFormDisabled}
+          onChange={email.onChange}
+          onBlur={email.onBlur}
+        />
+
+        <FormButton isDisabled={isFormDisabled} />
       </form>
 
-      {error && <ErrorAlert title={error} />}
-    </>
+      {error && (
+        <div className="fr-mt-4w">
+          <Actions />
+        </div>
+      )}
+    </div>
   );
 };
 

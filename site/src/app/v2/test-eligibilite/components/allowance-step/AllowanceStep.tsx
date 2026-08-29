@@ -1,29 +1,29 @@
 'use client';
 
-import { FormEvent, useCallback, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
+import CrousEligibilityTestForms from '../crous-eligibility-test-forms/CrousEligibilityTestForms';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
-import CustomRadioButtons from '@/app/v2/test-eligibilite-base/components/customRadioButtons/CustomRadioButtons';
+import CustomRadioButtons from '@/app/v2/test-eligibilite/components/custom-radio-buttons/CustomRadioButtons';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
-import CrousEligibilityTestForms from '@/app/v2/test-eligibilite/components/crous-eligibility-test-forms/CrousEligibilityTestForms';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
 import cn from 'classnames';
 import styles from './styles.module.scss';
-import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
-import { ConfirmResponseBody, SearchResponseBody } from '@/types/EligibilityTest';
+import NotEligiblePanel from '@/app/v2/test-eligibilite/components/panels/not-eligible/NotEligiblePanel';
+import { StepOneFields } from '@/types/EligibilityTest';
 import Input from '@codegouvfr/react-dsfr/Input';
 import {
-  AEEH_CODE_OBTENTION_TYPE,
+  ALLOCATION_MAPPING_TO_ALLOWANCE,
+  ALLOCATIONS_WITH_CAISSE,
   ALLOWANCE_MAPPING_TO_ALLOCATION,
-  getAeehCodeObtentionType,
+  CAISSE,
   isEligible,
 } from '@/utils/eligibility-test';
+import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
-import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import { CODES_OBTAINABLE, CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
-import ContactAeehSection from '@/app/v2/jeunes-et-parents/components/ContactAeehSection';
-import { push } from '@socialgouv/matomo-next';
+import BoursierAlert from '@/app/v2/test-eligibilite/components/boursier-alert/BoursierAlert';
+import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { InputState } from '@/types/form';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
@@ -32,24 +32,29 @@ let CustomButtonsGroupKey = 0;
 type AllowanceFormInputsState = {
   dob: InputState;
   allowance: InputState;
+  caisse: InputState;
 };
 
 const errorMapper: Record<keyof AllowanceFormInputsState, string> = {
   dob: 'La date de naissance est invalide',
-  allowance: "Le choix de l'allocation est requise",
+  allowance: 'Le choix de la situation est requise',
+  caisse: 'Le choix de la caisse est requis',
 };
 
 const initialInputsState: AllowanceFormInputsState = {
   dob: { state: 'default' },
   allowance: { state: 'default' },
+  caisse: { state: 'default' },
 };
 
 const AllowanceStep = () => {
-  const portalRef = useRef<HTMLDivElement>(null);
-  const [eligibilityData, setEligibilityData] = useState<SearchResponseBody | null>(null);
-  const [pspCodeData, setPspCodeData] = useState<ConfirmResponseBody | null>(null);
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+  const [verdictNode, setVerdictNode] = useState<HTMLElement | null>(null);
+  const [stepOneFields, setStepOneFields] = useState<StepOneFields | null>(null);
+  const [isStepOneValidated, setIsStepOneValidated] = useState<boolean>(false);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
-  const [, setOriginalAllowance] = useState<ALLOWANCE | null>(null);
+  const [caisse, setCaisse] = useState<CAISSE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AllowanceFormInputsState>(initialInputsState);
 
@@ -57,27 +62,86 @@ const AllowanceStep = () => {
   const [isValidated, setIsValidated] = useState<boolean | null>(null);
   const dobId = 'dob-id';
   const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
-  const [dob, setDob] = useState<string | undefined>(undefined);
+  const [dob, setDob] = useState<string>('');
   const fieldsetId = 'allowanceStep-fieldset';
-
-  const onAeehFormClick = useCallback(() => {
-    push(['trackEvent', 'Eligibility Test', 'Clicked', 'Button to open AEEH form']);
-  }, []);
+  const caisseFieldsetId = 'caisseStep-fieldset';
+  const { stored, save, clear } = useEligibilityTestStorage();
+  const isBoursier =
+    allowance === ALLOWANCE.CROUS || allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX;
+  const isCaisseNeeded =
+    allowance !== null &&
+    ALLOCATIONS_WITH_CAISSE.includes(ALLOWANCE_MAPPING_TO_ALLOCATION[allowance]);
 
   useRemoveAttributeById(fieldsetId, 'aria-labelledby');
   useAskConsentForSupport();
 
+  // Prefill from whatever the simplified test on the landing pages already collected
+  useEffect(() => {
+    if (!stored) return;
+
+    if (stored.dob) {
+      setDob(stored.dob);
+    }
+
+    if (stored.situation) {
+      setAllowance(ALLOCATION_MAPPING_TO_ALLOWANCE[stored.situation]);
+    }
+
+    if (stored.caisse) {
+      setCaisse(stored.caisse);
+    }
+  }, [stored]);
+
+  useEffect(() => {
+    // Skip the mount pass and the restart reset, otherwise a previously stored entry gets wiped
+    if (!dob && allowance === null) {
+      return;
+    }
+
+    save({
+      dob: dob || null,
+      situation: allowance === null ? null : ALLOWANCE_MAPPING_TO_ALLOCATION[allowance],
+      caisse: isCaisseNeeded ? caisse : null,
+    });
+  }, [dob, allowance, caisse, isCaisseNeeded, save]);
+
+  useEffect(() => {
+    formRef.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
+  }, []);
+
+  // "Refaire le test": full wipe, storage included, so a later visit doesn't prefill the old answers
   const restartTest = () => {
     CustomButtonsGroupKey = Math.round(Math.random() * 1000);
     setAllowance(null);
+    setCaisse(null);
     setIsValidated(null);
-    setEligibilityData(null);
-    setPspCodeData(null);
-    setDob(undefined);
+    setStepOneFields(null);
+    setIsStepOneValidated(false);
+    setSubmittedEmail(null);
+    setDob('');
+    clear();
+  };
+
+  const selectAllowance = (value: ALLOWANCE) => {
+    setIsValidated(false);
+    setAllowance(value);
+
+    if (!ALLOCATIONS_WITH_CAISSE.includes(ALLOWANCE_MAPPING_TO_ALLOCATION[value])) {
+      setCaisse(null);
+    }
+  };
+
+  // "Modifier": reopen the form on the answers already given instead of starting over
+  const editTest = () => {
+    setIsValidated(null);
+    setIsStepOneValidated(false);
+    setSubmittedEmail(null);
   };
 
   const onSubmitHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const isCaisseMissing = isCaisseNeeded && !caisse;
 
     setInputStates({
       ...inputStates,
@@ -89,17 +153,23 @@ const AllowanceStep = () => {
         state: !allowance ? 'error' : 'default',
         errorMsg: errorMapper['allowance'],
       },
+      caisse: {
+        state: isCaisseMissing ? 'error' : 'default',
+        errorMsg: errorMapper['caisse'],
+      },
     });
 
-    if (dob && allowance) {
+    if (dob && allowance && !isCaisseMissing) {
       setIsValidated(true);
     } else {
       setIsValidated(false);
 
       if (!dob) {
         formRef?.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
-      } else {
+      } else if (!allowance) {
         formRef?.current?.querySelector<HTMLInputElement>(`#${fieldsetId}`)?.focus();
+      } else {
+        formRef?.current?.querySelector<HTMLInputElement>(`#${caisseFieldsetId}`)?.focus();
       }
     }
 
@@ -120,7 +190,7 @@ const AllowanceStep = () => {
     switch (allowance) {
       case ALLOWANCE.AAH:
       case ALLOWANCE.AEEH:
-      case ALLOWANCE.ARS:
+      case ALLOWANCE.QF:
       case ALLOWANCE.CROUS:
       case ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX:
         return 'Vos informations d’éligibilité';
@@ -133,18 +203,29 @@ const AllowanceStep = () => {
     <EligibilityTestContext.Provider
       value={{
         allowance,
-        benefIsEligible,
+        caisse,
         dob,
-        eligibilityData,
-        pspCodeData,
+        stepOneFields,
+        submittedEmail,
         performNewTest: restartTest,
-        portalRef,
+        portalNode,
+        setPortalNode,
+        verdictNode,
+        setVerdictNode,
         setAllowance,
-        setBenefIsEligible,
-        setEligibilityData,
-        setPspCodeData,
+        setStepOneFields,
+        isStepOneValidated,
+        setIsStepOneValidated,
+        setSubmittedEmail,
       }}
     >
+      <div className="fr-container" ref={setVerdictNode} />
+
+      {isValidated &&
+        benefIsEligible &&
+        (allowance === ALLOWANCE.CROUS || allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
+        !CODES_OBTAINABLE_FOR_CROUS && <BoursierAlert allowance={allowance} />}
+
       <div className={cn(styles.background)}>
         <div className={styles.wrapper}>
           <h2 className="fr-text--bold fr-mb-2w fr-text--xl">Quelle est votre situation ?</h2>
@@ -161,12 +242,12 @@ const AllowanceStep = () => {
           )}
 
           {isValidated && allowance === ALLOWANCE.NONE && (
-            <StepChecker title={`Vous ne bénéficiez d'aucune aide`} onClick={restartTest} />
+            <StepChecker title={`Vous ne bénéficiez d'aucune aide`} onClick={editTest} />
           )}
 
           {(isValidated && benefIsEligible) || (ALLOWANCE.NONE && isValidated) ? (
             getStepCheckerName() ? (
-              <StepChecker title={getStepCheckerName()} onClick={restartTest} />
+              <StepChecker title={getStepCheckerName()} onClick={editTest} />
             ) : null
           ) : (
             <form ref={formRef} onSubmit={onSubmitHandler}>
@@ -177,15 +258,17 @@ const AllowanceStep = () => {
                   </>
                 }
                 nativeInputProps={{
+                  autoFocus: true,
                   id: dobId,
                   type: 'date',
                   min: '1950-01-01',
                   max: '2099-12-31',
                   required: true,
                   value: dob,
-                  autoFocus: true,
                   onBlur: (e) => {
-                    const inputIsValid = !!e.target?.checkValidity();
+                    if (!e.target.value) return;
+
+                    const inputIsValid = e.target?.checkValidity();
 
                     setInputStates({
                       ...inputStates,
@@ -196,10 +279,10 @@ const AllowanceStep = () => {
                     });
                   },
                   onChange: (e) => {
-                    setDob(e.target.value ?? undefined);
+                    setDob(e.target.value ?? '');
                   },
                 }}
-                hintText="Exemple : 31/12/2025, Personne à qui le pass Sport est destiné."
+                hintText="Exemple : 31/12/2026, Personne à qui le pass Sport est destiné."
                 state={inputStates.dob.state}
                 stateRelatedMessage={inputStates.dob.errorMsg}
               />
@@ -210,12 +293,25 @@ const AllowanceStep = () => {
                 name="radio"
                 legend={
                   <>
-                    Le bénéficiaire est-il concerné par l’une de ces allocations ?{' '}
+                    Le bénéficiaire est-il concerné par l’une de ces situations ?{' '}
                     <span className="text--required">*</span>
                   </>
                 }
                 key={CustomButtonsGroupKey}
                 options={[
+                  {
+                    label: (
+                      <p className="fr-text--bold">
+                        Quotient familial du foyer allocataire inférieur ou égal à 699 €
+                        <br />
+                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0"></span>
+                      </p>
+                    ),
+                    nativeInputProps: {
+                      checked: allowance === ALLOWANCE.QF,
+                      onChange: () => selectAllowance(ALLOWANCE.QF),
+                    },
+                  },
                   {
                     label: (
                       <p className="fr-text--bold">
@@ -227,11 +323,8 @@ const AllowanceStep = () => {
                       </p>
                     ),
                     nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.AAH);
-                        setOriginalAllowance(ALLOWANCE.AAH);
-                      },
+                      checked: allowance === ALLOWANCE.AAH,
+                      onChange: () => selectAllowance(ALLOWANCE.AAH),
                     },
                   },
                   {
@@ -245,29 +338,8 @@ const AllowanceStep = () => {
                       </p>
                     ),
                     nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.AEEH);
-                        setOriginalAllowance(ALLOWANCE.AEEH);
-                      },
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        ARS
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Allocation de Rentrée Scolaire
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.ARS);
-                        setOriginalAllowance(ALLOWANCE.ARS);
-                      },
+                      checked: allowance === ALLOWANCE.AEEH,
+                      onChange: () => selectAllowance(ALLOWANCE.AEEH),
                     },
                   },
                   {
@@ -281,11 +353,8 @@ const AllowanceStep = () => {
                       </p>
                     ),
                     nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.CROUS);
-                        setOriginalAllowance(ALLOWANCE.CROUS);
-                      },
+                      checked: allowance === ALLOWANCE.CROUS,
+                      onChange: () => selectAllowance(ALLOWANCE.CROUS),
                     },
                   },
                   {
@@ -299,11 +368,8 @@ const AllowanceStep = () => {
                       </p>
                     ),
                     nativeInputProps: {
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
-                        setOriginalAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX);
-                      },
+                      checked: allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX,
+                      onChange: () => selectAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX),
                     },
                   },
                   {
@@ -317,8 +383,9 @@ const AllowanceStep = () => {
                       </p>
                     ),
                     nativeInputProps: {
+                      checked: allowance === ALLOWANCE.NONE,
                       onBlur: (e) => {
-                        const inputIsValid = !!e.target?.checkValidity();
+                        const inputIsValid = e.target?.checkValidity();
 
                         setInputStates({
                           ...inputStates,
@@ -328,119 +395,80 @@ const AllowanceStep = () => {
                           },
                         });
                       },
-                      onChange: () => {
-                        setIsValidated(false);
-                        setAllowance(ALLOWANCE.NONE);
-                        setOriginalAllowance(ALLOWANCE.NONE);
-                      },
+                      onChange: () => selectAllowance(ALLOWANCE.NONE),
                     },
                   },
                 ]}
-              />
+              >
+                {isCaisseNeeded && (
+                  <CustomRadioButtons
+                    id={caisseFieldsetId}
+                    className="fr-mt-3w"
+                    name="caisse"
+                    hideSubmitButton
+                    state={inputStates.caisse.state}
+                    stateRelatedMessage={inputStates.caisse.errorMsg}
+                    legend={
+                      <>
+                        À quelle caisse l’allocataire est-il affilié ?{' '}
+                        <span className="text--required">*</span>
+                      </>
+                    }
+                    options={[
+                      {
+                        label: (
+                          <p className="fr-text--bold">
+                            CAF
+                            <br />
+                            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                              Caisse d’Allocations Familiales
+                            </span>
+                          </p>
+                        ),
+                        nativeInputProps: {
+                          checked: caisse === CAISSE.CAF,
+                          onChange: () => {
+                            setIsValidated(false);
+                            setCaisse(CAISSE.CAF);
+                          },
+                        },
+                      },
+                      {
+                        label: (
+                          <p className="fr-text--bold">
+                            MSA
+                            <br />
+                            <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
+                              Mutualité Sociale Agricole
+                            </span>
+                          </p>
+                        ),
+                        nativeInputProps: {
+                          checked: caisse === CAISSE.MSA,
+                          onChange: () => {
+                            setIsValidated(false);
+                            setCaisse(CAISSE.MSA);
+                          },
+                        },
+                      },
+                    ]}
+                  />
+                )}
+              </CustomRadioButtons>
             </form>
           )}
 
-          {isValidated && benefIsEligible && (
-            <>
-              {allowance && [ALLOWANCE.ARS, ALLOWANCE.AAH].includes(allowance) && (
-                <EligibilityTestForms />
-              )}
-
-              {allowance === ALLOWANCE.AEEH &&
-                dob &&
-                getAeehCodeObtentionType(dob).displayType === AEEH_CODE_OBTENTION_TYPE.FORM && (
-                  <EligibilityTestForms />
-                )}
-
-              {(allowance === ALLOWANCE.CROUS ||
-                allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
-                CODES_OBTAINABLE_FOR_CROUS && <CrousEligibilityTestForms />}
-            </>
-          )}
+          {isValidated &&
+            benefIsEligible &&
+            allowance !== null &&
+            allowance !== ALLOWANCE.NONE &&
+            (isBoursier ? CODES_OBTAINABLE_FOR_CROUS : true) &&
+            (isBoursier ? <CrousEligibilityTestForms /> : <EligibilityTestForms />)}
         </div>
       </div>
 
-      <div ref={portalRef}>
-        {isValidated &&
-          benefIsEligible &&
-          (allowance === ALLOWANCE.CROUS ||
-            allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
-          !CODES_OBTAINABLE_FOR_CROUS && (
-            <div
-              style={{
-                maxWidth: 792,
-                margin: '0 auto 24px auto',
-              }}
-            >
-              {allowance === ALLOWANCE.CROUS ? (
-                <Alert
-                  severity="info"
-                  title="Les étudiants boursiers de l'enseignement supérieur recevront leur code par courriel entre le 9 octobre et le 15 novembre."
-                  description={
-                    <p>
-                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
-                      pourrez venir le récupérer sur le site du pass Sport.
-                    </p>
-                  }
-                />
-              ) : (
-                <Alert
-                  severity="info"
-                  title="Les étudiants boursiers des formations sanitaires et sociales recevront leur code par courriel entre le 9 octobre et le 15 novembre."
-                  description={
-                    <p>
-                      Si vous n&apos;avez pas reçu votre code d&apos;ici le 15 novembre, vous
-                      pourrez venir le récupérer sur le site du pass Sport.
-                    </p>
-                  }
-                />
-              )}
-            </div>
-          )}
-
-        {isValidated &&
-          benefIsEligible &&
-          allowance === ALLOWANCE.AEEH &&
-          dob &&
-          getAeehCodeObtentionType(dob).displayType === AEEH_CODE_OBTENTION_TYPE.LINK && (
-            <section style={{ maxWidth: 792, margin: '0 auto 72px auto' }}>
-              <Alert
-                severity="info"
-                title="Bonne nouvelle, d'après les informations que vous avez fournies, vous êtes éligible au pass Sport"
-                aria-live="polite"
-                description="Remplissez le formulaire de demande du pass Sport pour obtenir votre code, à l’aide du lien ci-dessous."
-              />
-
-              {CODES_OBTAINABLE && (
-                <>
-                  <div className="fr-my-3w">
-                    <ContactAeehSection onOpenBtnClick={onAeehFormClick} />
-                  </div>
-
-                  <p>
-                    Dans l&apos;attente du code, vous pouvez proposer cette solution à votre club :
-                  </p>
-
-                  <ul className="fr-ml-2w">
-                    <li>Régler l&apos;inscription avec la déduction immédiate de 70 € ;</li>
-                    <li>
-                      Fournir un chèque de 70 € (non encaissé), restitué dès réception du code pass
-                      Sport.
-                    </li>
-                  </ul>
-
-                  <p>
-                    Si vous n’êtes finalement pas éligible, le club pourra encaisser le chèque.
-                    Chaque club reste libre d’accepter ou non cette solution.
-                  </p>
-                </>
-              )}
-            </section>
-          )}
-
-        {isValidated && allowance && dob && !benefIsEligible && (
-          <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
-        )}
+      <div ref={setPortalNode}>
+        {isValidated && allowance && dob && !benefIsEligible && <NotEligiblePanel />}
       </div>
     </EligibilityTestContext.Provider>
   );

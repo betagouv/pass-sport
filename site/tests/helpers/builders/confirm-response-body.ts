@@ -4,7 +4,7 @@ import {
   ConfirmResponseBodyItem,
   SearchPayload,
   SearchResponseBody,
-} from 'types/EligibilityTest';
+} from '@/types/EligibilityTest';
 
 export const buildSearchResponseBody = (): SearchResponseBody => {
   return [

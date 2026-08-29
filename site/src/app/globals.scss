@@ -1,6 +1,6 @@
-@import './sassVariables.module.scss';
-@import './utilities.module';
-@import './tac-dsfr';
+@use 'variables';
+@use './utilities.module';
+@use './tac-dsfr';
 
 :root {
   --color-white: #ffffff;
@@ -32,7 +32,26 @@ p {
 // It adds a right margin to the icon, there is no initial spacing and is not configurable either through the
 // react component ...
 .fr-modal {
-  h1 > span[aria-hidden="true"] {
+  h1 > span[aria-hidden='true'] {
     margin-right: 8px;
+  }
+}
+
+.fr-input,
+.fr-select {
+  &:-webkit-autofill,
+  &:-webkit-autofill:hover,
+  &:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-default-grey);
+    box-shadow:
+      inset 0 0 0 100px var(--background-contrast-grey),
+      inset 0 -2px 0 0 var(--border-plain-grey);
+  }
+
+  &:disabled:-webkit-autofill {
+    -webkit-text-fill-color: var(--text-disabled-grey);
+    box-shadow:
+      inset 0 0 0 100px var(--background-contrast-grey),
+      inset 0 -2px 0 0 var(--border-disabled-grey);
   }
 }

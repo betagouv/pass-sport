@@ -1,10 +1,10 @@
-import { ClubsOnMap, ExportedClub } from 'types/Club';
-import { useContext, useMemo } from 'react';
+import { ClubsOnMap, ExportedClub } from '@/types/Club';
+import { useContext } from 'react';
 import dynamic from 'next/dynamic';
 import { GeolocationContext } from '@/store/geolocationContext';
 import { useSearchParams } from 'next/navigation';
 import { SEARCH_QUERY_PARAMS } from '@/app/constants/search-query-params';
-import { MAP_DEFAULT_DISTANCE, MAP_LIMIT } from 'utils/club-finder';
+import { MAP_DEFAULT_DISTANCE, MAP_LIMIT } from '@/utils/club-finder';
 import { LatLngLiteral } from 'leaflet';
 import { getCenter } from 'geolib';
 import styles from './styles.module.scss';
@@ -38,6 +38,11 @@ const TooManyClubsMessage = () => (
 
 const ZOOM_LEVEL = { COUNTRY: 5, CITY: 7 };
 
+const ClubsMap = dynamic(() => import('../clubs-map/ClubsMap'), {
+  ssr: false,
+  loading: () => <Loading />,
+});
+
 const ClubMapView: React.FC<Props> = ({
   clubsProvider,
   isGeolocationCircleVisible,
@@ -45,15 +50,6 @@ const ClubMapView: React.FC<Props> = ({
 }) => {
   const isFetching = clubsProvider.isFetchingClubsOnMap;
   const areThereTooManyClubs = clubsProvider.total_count === MAP_LIMIT;
-
-  const ClubsMap = useMemo(
-    () =>
-      dynamic(() => import('../clubs-map/ClubsMap'), {
-        ssr: false,
-        loading: () => <Loading />,
-      }),
-    [],
-  );
 
   const searchParams = useSearchParams();
 

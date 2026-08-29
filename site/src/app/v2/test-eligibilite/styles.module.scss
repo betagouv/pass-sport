@@ -1,84 +1,34 @@
-@import '../../sassVariables.module.scss';
-
-.main {
-  background-color: white;
-
-  form {
-    width: 100%;
-  }
-
-  //fieldset {
-  //  padding: 16px;
-  //  margin-bottom: 0;
-  //}
+.section {
+  margin-top: 2rem;
 }
 
-.title {
+// DSFR has no text-alignment utility, so this is the only rule the stacked choices need:
+// buttons are inline-flex, so they centre along with the copy.
+.choices {
   text-align: center;
 }
 
-.background {
-  background-color: var(--pink-tuile-950-100);
-  border-radius: 8px;
-  margin: 48px auto;
-  padding: 40px;
-  max-width: 792px;
-}
-
-.wrapper {
-  background-color: white;
-  padding: 40px;
-  margin: 0 auto;
-  border-radius: 8px;
-}
-
-.paragraph {
-  color: var(--border-plain-grey);
-  font-style: italic;
-}
-
-.top-section-tile {
+.separator {
   display: flex;
-  flex-direction: row;
-  background-color: white;
-  position: relative;
-  top: -100px;
-  margin-bottom: -80px;
   align-items: center;
+  gap: 1rem;
+  color: var(--text-mention-grey);
 
-  &__image {
-    max-width: 384px;
-    align-self: baseline;
-  }
-
-  &__description {
-    padding: 24px;
-  }
-
-  &__description p {
-    line-height: 38px;
-    margin-bottom: 0;
-    white-space: break-spaces;
-  }
-
-  @media screen and (max-width: $lg) {
-    flex-direction: column;
-    top: -60px;
-
-    &__image {
-      max-width: 100%;
-    }
-
-    &__description p, &__description ul {
-      margin: 0;
-    }
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-default-grey);
   }
 }
 
-.top-section-content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  max-width: 792px;
-  margin: 24px auto 0 auto;
+.payload {
+  background-color: var(--background-alt-grey);
+  padding: 1rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
 }

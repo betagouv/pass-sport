@@ -9,6 +9,11 @@
 # testing
 /coverage
 
+# playwright (component tests, see playwright-ct.config.ts)
+/playwright/.cache/
+/test-results/
+/playwright-report/
+
 # next.js
 /.next/
 /out/
@@ -35,4 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-site/.pnpm-store
+.pnpm-store/

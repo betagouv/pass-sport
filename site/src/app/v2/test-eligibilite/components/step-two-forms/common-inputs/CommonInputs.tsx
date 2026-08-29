@@ -1,23 +1,29 @@
 import Select from '@codegouvfr/react-dsfr/Select';
-import { ChangeEvent } from 'react';
-import { AahMsaInputsState, CrousInputsState } from 'types/EligibilityTest';
+import { ChangeEvent, FocusEvent, ReactNode } from 'react';
+import { BirthInputsState } from '@/types/EligibilityTest';
 import { countries } from '../../../helpers/countries';
 import CityFinder from '../../city-finder/CityFinder';
 
 interface Props {
   onCountryChanged: (e: ChangeEvent<HTMLSelectElement>) => void;
+  onCountryBlur?: (e: FocusEvent<HTMLSelectElement>) => void;
   onBirthPlaceChanged: (text: string | null) => void;
   birthCountryInputName: string;
   birthPlaceInputName: string;
-  inputStates: AahMsaInputsState | CrousInputsState;
+  inputStates: Partial<BirthInputsState>;
   areInputsDisabled: boolean;
   isBirthInputRequired: boolean;
   isDirectBeneficiary?: boolean;
   shouldAutoFocus: boolean;
+  /* Off in the merged form: a required field the resolved caisse doesn't need would block submit */
+  isCountryRequired?: boolean;
+  countryLabel?: ReactNode;
+  birthPlaceLabel?: ReactNode;
 }
 
 const CommonInputs = ({
   onCountryChanged,
+  onCountryBlur,
   onBirthPlaceChanged,
   birthCountryInputName,
   birthPlaceInputName,
@@ -26,6 +32,9 @@ const CommonInputs = ({
   isBirthInputRequired,
   isDirectBeneficiary = false,
   shouldAutoFocus,
+  isCountryRequired = true,
+  countryLabel,
+  birthPlaceLabel,
 }: Props) => {
   const getCountryOptions = () =>
     countries
@@ -48,7 +57,8 @@ const CommonInputs = ({
     <>
       <Select
         label={
-          isDirectBeneficiary ? (
+          countryLabel ??
+          (isDirectBeneficiary ? (
             <>
               Pays de naissance <span className="text--required">*</span>
             </>
@@ -56,13 +66,15 @@ const CommonInputs = ({
             <>
               Pays de naissance de l&apos;allocataire <span className="text--required">*</span>
             </>
-          )
+          ))
         }
         hint="Si le nom du pays contient plusieurs mots, vérifiez s'il y a des tirets (ex : Royaume-Uni ou Côte-d'Ivoire)."
         nativeSelectProps={{
           name: birthCountryInputName,
           onChange: onCountryChanged,
-          required: true,
+          onBlur: onCountryBlur,
+          defaultValue: '',
+          required: isCountryRequired,
           'aria-label': isDirectBeneficiary
             ? `Saisir votre pays de naissance`
             : `Saisir le pays de naissance de l'allocataire`,
@@ -73,7 +85,7 @@ const CommonInputs = ({
         disabled={areInputsDisabled}
       >
         <>
-          <option disabled hidden selected value="">
+          <option disabled hidden value="">
             Selectionnez une option
           </option>
           {getCountryOptions()}
@@ -86,7 +98,8 @@ const CommonInputs = ({
             inputName={birthPlaceInputName}
             inputState={inputStates['recipientBirthPlace']!}
             legend={
-              isDirectBeneficiary ? (
+              birthPlaceLabel ??
+              (isDirectBeneficiary ? (
                 <>
                   Commune de naissance <span className="text--required">*</span>
                 </>
@@ -95,7 +108,7 @@ const CommonInputs = ({
                   Commune de naissance de l&apos;allocataire{' '}
                   <span className="text--required">*</span>
                 </>
-              )
+              ))
             }
             isDisabled={areInputsDisabled}
             onBlur={onBirthPlaceChanged}

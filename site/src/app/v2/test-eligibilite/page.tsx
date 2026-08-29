@@ -1,90 +1,213 @@
 import { Metadata } from 'next';
-import styles from './styles.module.scss';
-import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
-import PageTitle from '@/components/PageTitle/PageTitle';
-import Image from 'next/image';
-import breakdance from '@/images/eligibility-test/break-dance.webp';
-import cn from 'classnames';
-import { AEEH } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import Link from 'next/link';
+import Notice from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import Card from '@codegouvfr/react-dsfr/Card';
+import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import FranceConnectSection from './components/FranceConnectSection';
+import NoFranceConnectSection from './components/NoFranceConnectSection';
+import PostLoginFlow from './components/PostLoginFlow';
+import BeneficiaryRecap, { StatusBadge, PENDING_CODE_MESSAGE } from './components/BeneficiaryRecap';
+import { loadPocResult } from '@/app/api/france-connect/session';
+import { findJobForSub } from '@/app/services/queue';
+import { findResultsForSub } from '@/app/services/applications';
+import { IS_LOCAL_ENV } from '@/app/constants/env';
+import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
-  title: "Test d'éligibilité - pass Sport",
+  title: 'Récupération du code | pass Sport',
+  description: 'Démonstrateur : connexion FranceConnect puis appel API Particulier côté serveur.',
 };
 
-const EligibilityTest = () => {
+// Internal error keys, then the OpenID Connect errors FranceConnect can hand back on
+// the redirect_uri (qualification criterion 24) — every one of them needs a sentence
+// the user can act on rather than the raw code.
+const ERROR_MESSAGES: Record<string, string> = {
+  login: 'Impossible de démarrer la connexion FranceConnect.',
+  state: 'Échec de la vérification de sécurité (state). Veuillez réessayer.',
+  callback: "Erreur lors de l'échange avec FranceConnect ou API Particulier.",
+  identity: "FranceConnect n'a pas transmis les informations d'identité attendues.",
+  logout_state: 'Vous avez été déconnecté (vérification de sécurité incomplète).',
+  access_denied: 'Vous avez refusé la connexion FranceConnect.',
+  invalid_request: 'La demande de connexion était incomplète. Veuillez réessayer.',
+  invalid_scope: 'La demande de connexion portait sur des données non autorisées.',
+  invalid_client: "Le service n'est pas correctement déclaré auprès de FranceConnect.",
+  unauthorized_client: "Le service n'est pas autorisé à utiliser cette connexion.",
+  unsupported_response_type: 'Ce type de connexion FranceConnect n’est pas pris en charge.',
+  server_error: 'FranceConnect a rencontré une erreur. Veuillez réessayer dans un instant.',
+  temporarily_unavailable:
+    'FranceConnect est momentanément indisponible. Veuillez réessayer plus tard.',
+  login_required: 'Votre connexion FranceConnect a expiré. Veuillez vous reconnecter.',
+  consent_required: 'Vous devez accepter le partage de vos données pour continuer.',
+  interaction_required: 'FranceConnect a besoin d’une action de votre part pour continuer.',
+};
+
+// Rendered on the server, where the container clock is UTC — so pin the timezone
+// explicitly, otherwise the displayed hour is off for the user. fr-FR `short` gives
+// DD/MM/YYYY, `medium` gives HH:MM:SS.
+const formatJobDate = (ms: number | undefined): { iso: string; label: string } | null => {
+  if (ms === undefined || Number.isNaN(ms)) {
+    return null;
+  }
+  const date = new Date(ms);
+  return {
+    iso: date.toISOString(),
+    label: new Intl.DateTimeFormat('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'medium',
+      timeZone: 'Europe/Paris',
+    }).format(date),
+  };
+};
+
+interface Props {
+  searchParams: Promise<{ error?: string; status?: string }>;
+}
+
+export default async function PocFcApiParticulier({ searchParams }: Props) {
+  const { error, status } = await searchParams;
+  const result = await loadPocResult();
+  // A returning FranceConnect user keeps the same `sub`, which is the job id — so a
+  // request submitted in an earlier session is still findable after reconnecting.
+  const existingJob = result ? await findJobForSub(result.sub) : null;
+  // Empty while the job is still queued — the generic status block below covers that.
+  const results = result ? await findResultsForSub(result.sub) : [];
+
+  // Raw FranceConnect identity + API Particulier response dumps (including their
+  // errors) are debug-only and restricted to the local environment.
+  const debuggingEnabled = IS_LOCAL_ENV && process.env.API_PARTICULIER_DEBUGGING_ENABLED === 'true';
+  const existingJobDate = formatJobDate(existingJob?.createdAt);
+
+  // The two sources carry different instants: the BullMQ record holds the enqueue
+  // time, while Postgres holds the moment the rows were committed. Word the line to
+  // match rather than calling both "enregistrée".
+  const existingJobDateLabel =
+    existingJob?.state === 'processed' ? 'Demande prise en compte le' : 'Demande soumise le';
+  const existingJobInfo = existingJobDate ? (
+    <>
+      {existingJobDateLabel} <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+    </>
+  ) : null;
+
   return (
-    <main className={styles.main} tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <PageTitle
-        title="Récupérer mon pass Sport"
-        classes={{
-          container: styles['page-header'],
-        }}
-      />
+    <main
+      className="fr-container fr-py-6w"
+      tabIndex={-1}
+      id={SKIP_LINKS_ID.mainContent}
+      role="main"
+    >
+      <h1>Récupération du code pass Sport</h1>
 
-      <section className="fr-container">
-        <div className={styles['top-section-tile']}>
-          <Image
-            src={breakdance}
-            className={cn(['fr-responsive-img', styles['top-section-tile__image']])}
-            alt=""
-          />
-          <div className={styles['top-section-tile__description']}>
-            <p className="fr-text--xl fr-mb-1w">
-              Si vous êtes éligible, vous recevrez un courriel ou un SMS avec votre pass Sport :
-            </p>
-            <ul className="fr-text--xl fr-ml-2w">
-              <li>
-                26-28 août : pour les bénéficiaires de l&apos;ARS, de l&apos;AEEH et de l&apos;AAH ;
-              </li>
-              <li>Entre fin octobre et fin novembre : pour les étudiants boursiers.</li>
-            </ul>
-            <p className="fr-text--xl">
-              Exception pour les bénéficiaires de l’
-              <AEEH /> entre 6 et 13 ans : demandez votre pass Sport directement sur notre site à
-              partir du 1er septembre.
-            </p>
-          </div>
+      {error && (
+        <div className="fr-alert fr-alert--error fr-my-3w">
+          <p>{ERROR_MESSAGES[error] ?? `Une erreur est survenue (${error}).`}</p>
         </div>
-      </section>
+      )}
 
-      <section className="fr-container fr-my-4w">
-        <p className="fr-mb-2w text-align--center fr-text--xl">
-          Pour récupérer votre code, veuillez{' '}
-          <Link
-            href={`/v2/une-question?${CONTACT_PAGE_QUERYPARAMS.modalOpened}=1`}
-            title="Naviguer vers la page de formulaire de contact du support"
-          >
-            contacter le support
-          </Link>
-        </p>
-        {/*<div className={styles['top-section-content']}>*/}
-        {/*  <KnowMore*/}
-        {/*    variant="purple"*/}
-        {/*    knowMore={{*/}
-        {/*      title: 'A savoir',*/}
-        {/*      description:*/}
-        {/*        'Si vous avez plusieurs enfants, vous devez récupérer un pass pour chaque enfant.',*/}
-        {/*    }}*/}
-        {/*  />*/}
-        {/*</div>*/}
-      </section>
+      {status === 'loggedout' && (
+        <Notice severity="info" className="fr-my-3w" isClosable title="Vous avez été déconnecté." />
+      )}
 
-      {/*{CODES_OBTAINABLE ? (*/}
-      {/*  <AllowanceStep />*/}
-      {/*) : (*/}
-      {/*  <div className={styles.background}>*/}
-      {/*    <div className={styles.wrapper}>*/}
-      {/*      <p className="fr-text--xl fr-text--bold">*/}
-      {/*        Vous pourrez demander le pass Sport à partir du 1er septembre*/}
-      {/*      </p>*/}
-      {/*      <p>Revenez sur cette page le 1er septembre pour obtenir votre pass.</p>*/}
-      {/*    </div>*/}
-      {/*  </div>*/}
-      {/*)}*/}
+      {!result ? (
+        <section className={styles.section}>
+          <Notice
+            severity="info"
+            className="fr-mb-3w"
+            title="Connectez-vous avec FranceConnect"
+            description="Nous vous demanderons ensuite vos aides et votre commune, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
+          />
+
+          <div className="fr-grid-row fr-grid-row--center fr-my-4w">
+            <div className={`fr-col-12 fr-col-md-8 ${styles.choices}`}>
+              <h2 className="fr-h4">S&apos;authentifier avec FranceConnect</h2>
+              <p className="fr-mb-1w">
+                Nous vérifions vos droits directement auprès des administrations : aucun
+                justificatif à fournir.
+              </p>
+              {/* Wording imposed by the FranceConnect FS qualification (criterion 1):
+                  it must appear verbatim, directly above the button. */}
+              <p className="fr-mb-3w">
+                FranceConnect est la solution proposée par l’État pour sécuriser et simplifier la
+                connexion à vos services en ligne.
+              </p>
+
+              <FranceConnectSection />
+
+              <p className={`fr-my-6w ${styles.separator}`}>OU</p>
+
+              <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
+              <p className="fr-mb-3w">
+                Renseignez vous-même vos informations pour vérifier votre éligibilité.
+              </p>
+
+              <NoFranceConnectSection />
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className={styles.section}>
+          <Alert
+            severity="success"
+            small={false}
+            closable
+            title="Connexion FranceConnect réussie"
+            className="fr-mb-3w"
+          />
+
+          {debuggingEnabled && (
+            <>
+              <h2 className="fr-h4">Identité FranceConnect</h2>
+              <pre className={styles.payload}>{JSON.stringify(result.identity, null, 2)}</pre>
+            </>
+          )}
+
+          {existingJob ? (
+            <>
+              {/* Rows exist only once the worker committed, so this is the verdict itself
+                  rather than a status. Same component the polling panel renders, so a
+                  returning user and a just-submitted one read exactly the same thing. */}
+              {results.length > 0 ? (
+                <BeneficiaryRecap
+                  beneficiaries={results}
+                  allocataireIdentity={result.identity}
+                  jobInfo={existingJobInfo}
+                />
+              ) : (
+                <>
+                  <Card
+                    className="fr-mb-3w"
+                    border
+                    nativeDivProps={{ role: 'status' }}
+                    title="Demande enregistrée"
+                    titleAs="h2"
+                    start={<StatusBadge verdict="not_assessed" />}
+                    desc={
+                      <>
+                        {PENDING_CODE_MESSAGE} Si votre demande dépasse le délai de 72h, merci de
+                        consulter la{' '}
+                        <Link href="/v2/une-question" className="fr-link">
+                          FAQ
+                        </Link>
+                        .
+                      </>
+                    }
+                  />
+                  {existingJobDate && (
+                    <p>
+                      {existingJobDateLabel}{' '}
+                      <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
+                    </p>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <PostLoginFlow allocataireIdentity={result.identity} />
+          )}
+          {/* Logout moved to the header quick-access item ("Se déconnecter"),
+              shown while the POC session is live (see the root layout). */}
+        </section>
+      )}
     </main>
   );
-};
-
-export default EligibilityTest;
+}

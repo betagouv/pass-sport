@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMap } from 'react-leaflet';
 
 const MapZoomHandler = () => {
@@ -6,7 +6,7 @@ const MapZoomHandler = () => {
 
   const [msg, setMsg] = useState<string | null>(null);
 
-  map.on('zoomend', (e) => {
+  map.on('zoomend', () => {
     setMsg(`le zoom de la carte est maintenant au niveau ${map.getZoom()}`);
   });
 

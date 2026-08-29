@@ -1,0 +1,30 @@
+@use '../../../../variables';
+
+.fieldset__element {
+  @media (min-width: variables.$xl) {
+    flex: 0 0 auto;
+  }
+}
+
+.radio-group {
+  background-color: var(--color-white);
+  padding: 20px 12px;
+  max-width: none;
+}
+
+.selected-radio {
+  border: 2px solid var(--background-active-blue-france);
+}
+
+.deselected-radio {
+  border: 1px solid var(--background-action-low-blue-france-hover);
+}
+
+.transparent-border {
+  border: 1px solid transparent;
+}
+
+.legend {
+  color: var(--border-plain-grey);
+  font-style: italic;
+}

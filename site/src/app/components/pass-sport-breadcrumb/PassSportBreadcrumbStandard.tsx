@@ -15,14 +15,10 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/mentions-legales': 'Mentions légales',
   '/v2/plan-du-site': 'Plan du site',
   '/v2/accessibilite': 'Accessibilité',
-  // todo: enable later
-  // '/v2/budget': 'Budget',
-  '/v2/test-eligibilite-base': 'Puis-je bénéficier du pass Sport ?',
-  '/v2/jeunes-et-parents': 'Jeune et parents',
+  '/v2/jeunes-et-parents': 'Jeunes et parents',
   '/v2/structures': 'Structures sportives',
-  '/v2/test-eligibilite': 'Formulaire de demande',
-  '/v2/test-ou-code': 'Je fais le test',
-  '/v2/partenaires': 'Partenaires',
+  '/v2/test-eligibilite': 'Demande du code pass Sport',
+  '/v2/test-eligibilite/hors-france-connect': 'Demander mon pass Sport',
 };
 
 export default function PassSportBreadcrumbStandard() {

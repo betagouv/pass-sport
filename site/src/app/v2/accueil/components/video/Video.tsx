@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import styles from './styles.module.scss';
 import cn from 'classnames';
 import { useUpdateTitleIframe } from '@/app/hooks/accessibility/use-update-title-iframe';
@@ -96,13 +95,13 @@ const Video = ({ videoFullUrl }: Props) => {
                         <div>
                           <p>Lucie : Bonne nouvelle, la campagne pass Sport est lancée. </p>
                           <p>
-                            Simon : Cette année, c&apos;est 70€ pour aider les jeunes à pratiquer un
-                            sport, sous conditions d&apos;éligibilité.
+                            Simon : Cette année, c&apos;est 50 € pour aider les jeunes à pratiquer
+                            un sport, sous conditions d&apos;éligibilité.
                           </p>
                           <p>Lucie : C&apos;est super simple à utiliser.</p>
                           <p>
                             Simon : T&apos;as rien à faire. Si tu es éligible, tu recevras un code
-                            directement par mail ou par SMS.
+                            directement par mail.
                           </p>
                           <p>
                             Lucie : Ensuite, Il suffit de le montrer à ton club ou à ta salle de

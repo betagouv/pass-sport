@@ -17,7 +17,7 @@ const HeroPanel = () => {
       <div className={styles.container}>
         <h1 className={cn(styles.title, 'fr-h2')}>
           Le pass Sport évolue pour <br /> la campagne <br />
-          2025-2026
+          2026-2027
         </h1>
       </div>
       {!isPasSportClosed() ? (

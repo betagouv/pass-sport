@@ -4,9 +4,6 @@ export const SUPPORT_COOKIE_READ_MORE_URL =
   'https://www.pass.sports.gouv.fr/v2/politique-de-confidentialite';
 export const SUPPORT_COOKIE_KEY = 'pass-sport_eligibility-form-support-data';
 
-// State of a service, if "waiting", it means the user has not selected anything in the consent modal
-export const WAITING_STATE = 'waiting';
-
 // State of a service, it is internal to tac, when it is 'wait', the cookie modal is prompted
 export const WAIT_STATE = 'wait';
 

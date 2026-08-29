@@ -1,6 +1,6 @@
 'use client';
 
-import { ContactRequestBody } from 'pages/api/contact';
+import type { ContactRequestBody } from '@/app/api/contact/schema';
 
 export const postContact = async (request: FormData, isProRequest: boolean): Promise<Response> => {
   // type casting because at this point no value are null

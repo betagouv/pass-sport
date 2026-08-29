@@ -1,4 +1,4 @@
-@import '../../sassVariables.module.scss';
+@use '../../variables';
 
 .eligibility-test {
   display: flex;
@@ -8,8 +8,10 @@
   padding: 40px;
   flex-direction: column;
   border-radius: 8px;
+  max-width: 100%;
+  margin-inline: auto;
 
-  &--has-background{
+  &--has-background {
     background-color: var(--background-alt-pink-tuile);
   }
 
@@ -21,54 +23,46 @@
     width: 100%;
   }
 
-  @media screen and (max-width: $lg) {
-    padding: 24px;
-  }
-
   h2 {
     white-space: break-spaces;
   }
 
   &__fields {
-    display: flex;
-    gap: 4px;
-    margin-top: 24px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+    margin-top: 2rem;
+    width: 100%;
+  }
+
+  &__confirm-button {
+    margin-top: 0px;
     width: 100%;
 
-    &--row {
-      flex-direction: row;
-      align-items: flex-end;
-
-      @media screen and (max-width: $lg) {
-        align-items: initial;
-      }
-    }
-
-    &--column {
-      flex-direction: column;
-    }
-
-
-    &-date {
-      max-width: 200px;
-
-      @media screen and (max-width: $lg) {
-        max-width: 100%;
-      }
-    }
-
-    @media screen and (max-width: $lg) {
-      flex-direction: column;
+    button {
+      width: 100%;
+      justify-content: center;
     }
   }
 
-  .button-margin--error {
-    margin-top: 1rem;
-    margin-bottom: 3.5rem;
+  &__field {
+    height: auto;
+    width: 100%;
+  }
 
-    @media screen and (max-width: $lg) {
+  .button-margin--error {
+    @media screen and (max-width: variables.$lg) {
       margin: 0 !important;
     }
+  }
+
+  @media screen and (min-width: variables.$lg) {
+    padding: 24px;
+    width: 850px;
+  }
+
+  @media screen and (max-width: variables.$lg) {
+    padding: 24px;
   }
 }
 

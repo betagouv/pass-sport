@@ -21,7 +21,7 @@ interface Props {
 
 const ContactSection: React.FC<Props> = ({ isProVersion }) => {
   const searchParams = useSearchParams();
-  const [modalIsClosed, setModalIsClosed] = useState(true);
+  const [, setModalIsClosed] = useState(true);
 
   // Open contact modal if query parameter is present
   useEffect(() => {

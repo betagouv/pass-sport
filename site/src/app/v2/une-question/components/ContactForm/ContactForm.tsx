@@ -14,13 +14,24 @@ import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import { useSearchParams } from 'next/navigation';
 
 export const visitorReasons = {
-  'benef-incident-securite-18-decembre': `J'ai une question sur la sécurité de mes données personnelles suite à l'incident du 18 décembre`,
-  other: 'Autre',
+  'benef-aije-droit': `Ai-je droit au pass Sport cette année ?`,
+  'benef-quand': `Quand vais-je recevoir mon pass Sport ?`,
+  'benef-pas-recu': `Je n'ai pas reçu mon code`,
+  'benef-paiement-phase1': `Ma structure sportive me demande de payer mon inscription alors que je n'ai pas reçu mon code. Que faire ?`,
+  'benef-non-eligible': `Pourquoi n'ai-je plus droit au pass Sport ?`,
+  // 'benef-ars-non-eligible': `J'ai perçu l'allocation de rentrée scolaire et je n'ai pas reçu mon pass Sport, pourquoi ?`,
+  'benef-boursier': `Je suis boursier, j'ai une question`,
+  // todo : remettre plus tard
+  // 'benef-parcours-utilisateur': `Je suis éligible, mais je n’arrive pas à récupérer mon code pass Sport sur le site`,
+  'benef-other': `Autre`,
 };
 
 const proReasons = {
-  'club-incident-securite-18-decembre': `J'ai une question sur la sécurité des données de mon club sur mon Compte Asso suite à l'incident du 18 décembre`,
-  other: 'Autre',
+  'club-aije-droit': `Quel public est éligible au pass Sport cette année ?`,
+  'club-eligible': `Ma structure peut-elle accepter le pass Sport ?`,
+  'club-paiement-phase1': `Un jeune n’a pas encore reçu son code pass Sport : comment procéder ?`,
+  'club-lca': `Je rencontre des difficultés sur le Compte Asso`,
+  'club-other': `Autre`,
 };
 
 const initialInputsState: InputsState = {
@@ -172,7 +183,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
         setIsOk(true);
         formRef.current?.reset();
       }
-    } catch (e) {
+    } catch {
       setApiError(true);
       setIsError(true);
       setIsOk(false);
@@ -223,7 +234,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   nativeInputProps={{
                     name: 'firstname',
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
 
                       setInputStates({
                         ...inputStates,
@@ -253,7 +264,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   nativeInputProps={{
                     name: 'lastname',
                     onBlur: (e) => {
-                      const inputIsValid = !!e.target?.checkValidity();
+                      const inputIsValid = e.target?.checkValidity();
 
                       setInputStates({
                         ...inputStates,
@@ -319,7 +330,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                     nativeInputProps={{
                       name: 'rna',
                       onBlur: (e) => {
-                        const inputIsValid = !!e.target?.checkValidity();
+                        const inputIsValid = e.target?.checkValidity();
 
                         setInputStates({
                           ...inputStates,
@@ -350,7 +361,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                   name: 'email',
                   type: 'email',
                   onBlur: (e) => {
-                    const inputIsValid = !!e.target?.checkValidity();
+                    const inputIsValid = e.target?.checkValidity();
 
                     const errorMessage =
                       e.target.value === ''
@@ -388,7 +399,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 nativeSelectProps={{
                   name: 'reason',
                   onBlur: (e) => {
-                    const inputIsValid = !!e.target?.checkValidity();
+                    const inputIsValid = e.target?.checkValidity();
 
                     setInputStates({
                       ...inputStates,
@@ -432,7 +443,7 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
                 placeholder: 'Message*',
                 name: 'message',
                 onBlur: (e) => {
-                  const inputIsValid = !!e.target?.checkValidity();
+                  const inputIsValid = e.target?.checkValidity();
 
                   setInputStates({
                     ...inputStates,

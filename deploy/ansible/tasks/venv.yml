@@ -1,0 +1,32 @@
+---
+# Virtualenv data/.venv.
+#
+# python3.14 et non python3.12 (que CLAUDE.md imposait jusqu'ici) : Ubuntu 26.04 ne fournit
+# tout simplement pas python3.12 dans ses dépôts officiels, seulement 3.14. data/requirements.txt
+# a été révisé en conséquence (pandas/pyarrow/matplotlib/playwright bumpés aux premières
+# versions publiant une wheel cp314, sans quoi pip tenterait une compilation depuis les
+# sources — la machine ne porte aucun compilateur C/C++), et testé de bout en bout : les 143
+# tests de data/2026/partners/ passent sous 3.14 avec ces pins.
+- name: Virtualenv data/.venv
+  ansible.builtin.pip:
+    requirements: "{{ pass_sport_repo }}/data/requirements.txt"
+    virtualenv: "{{ pass_sport_repo }}/data/.venv"
+    virtualenv_command: python3.14 -m venv
+  become: true
+  become_user: "{{ pass_sport_user }}"
+
+# Sans ce kernelspec, `nbconvert --execute` échoue sur « No such kernel named python3 » :
+# les 13 notebooks déclarent ce nom, et pip seul n'enregistre rien.
+#
+# `--sys-prefix` et non `--user` : le kernel est posé DANS le virtualenv
+# (data/.venv/share/jupyter/kernels/), donc visible de quiconque lance
+# data/.venv/bin/jupyter. Avec `--user` il aurait atterri dans le ~/.local du seul compte
+# de service, et les opérateurs auraient buté sur « No such kernel » malgré le venv partagé.
+- name: Kernel Jupyter du virtualenv
+  become: true
+  become_user: "{{ pass_sport_user }}"
+  ansible.builtin.command:
+    cmd: >
+      {{ pass_sport_repo }}/data/.venv/bin/python -m ipykernel install --sys-prefix
+      --name python3 --display-name '.venv (3.14)'
+    creates: "{{ pass_sport_repo }}/data/.venv/share/jupyter/kernels/python3/kernel.json"

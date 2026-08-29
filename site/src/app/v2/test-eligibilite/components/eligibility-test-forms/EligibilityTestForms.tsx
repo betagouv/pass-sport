@@ -1,156 +1,93 @@
-import { useCallback, useContext } from 'react';
+import { useContext } from 'react';
+import { createPortal } from 'react-dom';
 import StepOneForm from '../step-one-form/StepOneForm';
 import YoungCafForm from '../step-two-forms/YoungCafForm';
-import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
 import YoungMsaForm from '../step-two-forms/YoungMsaForm';
 import AahCafForm from '../step-two-forms/AahCafForm';
 import AahMsaForm from '../step-two-forms/AahMsaForm';
-import { push } from '@socialgouv/matomo-next';
-import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
-import { createPortal } from 'react-dom';
+import EmailSentPanel from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentPanel';
+import EmailSentAlert from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentAlert';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
-import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
+import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
+import { CAISSE } from '@/utils/eligibility-test';
+import { StepOneFields } from '@/types/EligibilityTest';
 
+/**
+ * Which step-two form to draw is decided from the situation and the caisse the usager
+ * declared in step 1 — LCA is no longer asked in between, so it cannot answer that question
+ * any more. QF and AEEH are both the "jeune" situation; AAH is its own.
+ */
 const EligibilityTestForms = () => {
   const {
     allowance,
-    portalRef,
-    eligibilityData,
-    setEligibilityData,
-    pspCodeData,
-    setPspCodeData,
-    benefIsEligible,
+    caisse,
+    portalNode,
+    stepOneFields,
+    setStepOneFields,
+    isStepOneValidated,
+    setIsStepOneValidated,
+    submittedEmail,
+    setSubmittedEmail,
   } = useContext(EligibilityTestContext);
 
-  const onEligibilitySuccess = useCallback(() => {
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Eligibility test completed',
-      'Eligibility test successful',
-    ]);
-  }, []);
+  const isAah = allowance === ALLOWANCE.AAH;
+  const isCaf = caisse === CAISSE.CAF;
 
-  const onEligibilityFailure = useCallback((name = 'final step') => {
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Eligibility test completed',
-      `Eligibility test unsuccessful - ${name}`,
-    ]);
-  }, []);
+  const validateStepOne = (fields: StepOneFields) => {
+    setStepOneFields(fields);
+    setIsStepOneValidated(true);
+  };
 
-  const getStepCheckerName = useCallback(() => {
-    if (!eligibilityData || eligibilityData?.length <= 0) return '';
-
-    switch (eligibilityData[0].organisme) {
-      case 'cnous':
-      case 'CAF':
-      case 'MSA':
-        return 'Votre caisse d’allocation';
-      default:
-        return '';
-    }
-  }, [eligibilityData]);
+  // The fields stay in the context: the form reopens on them rather than empty
+  const editStepOne = () => {
+    setIsStepOneValidated(false);
+    setSubmittedEmail(null);
+  };
 
   return (
     <>
-      {eligibilityData && eligibilityData.length > 0 && (
-        <StepChecker
-          title={getStepCheckerName()}
-          onClick={() => {
-            setEligibilityData(null);
-            setPspCodeData(null);
-          }}
-          className="fr-mt-2w"
-        />
-      )}
+      {submittedEmail && <EmailSentAlert />}
 
-      {eligibilityData && eligibilityData.length > 0 && allowance !== ALLOWANCE.AEEH && (
-        <p className="fr-ml-n1w fr-mb-2w">
-          Ces informations nous aideront à faire valoir vos droits.
-        </p>
-      )}
-
-      {!eligibilityData && (
-        <p className="fr-mb-2w fr-ml-n1w">
-          Ces informations nous aideront à connaître votre caisse d&apos;affiliation.
-        </p>
-      )}
-
-      {!eligibilityData && (
-        <div id="second-step-form" className="fr-fieldset" role="presentation">
-          <StepOneForm
-            onDataReceived={(data: SearchResponseBody) => {
-              setEligibilityData(data);
-              setPspCodeData(null);
-            }}
-            onEligibilityFailure={() => onEligibilityFailure('first step')}
+      {isStepOneValidated ? (
+        <>
+          <StepChecker
+            title="Les informations du bénéficiaire"
+            onClick={editStepOne}
+            className="fr-mt-2w"
           />
+          <p className="fr-ml-n1w fr-mb-2w">
+            Ces informations nous aideront à faire valoir vos droits.
+          </p>
+        </>
+      ) : (
+        <p className="fr-mb-2w fr-ml-n1w">
+          Ces informations nous aideront à identifier le bénéficiaire.
+        </p>
+      )}
+
+      {!isStepOneValidated && (
+        <div id="second-step-form" className="fr-fieldset" role="presentation">
+          <StepOneForm onValidated={validateStepOne} initialFields={stepOneFields} />
         </div>
       )}
 
-      {eligibilityData && eligibilityData.length > 0 && (
+      {isStepOneValidated && (
         <div id="third-step-form" className="fr-fieldset" role="presentation">
-          {eligibilityData[0].situation.toLowerCase() === 'jeune' &&
-            eligibilityData[0].organisme === 'CAF' && (
-              <YoungCafForm
-                eligibilityDataItem={eligibilityData[0]}
-                onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
-                onEligibilitySuccess={onEligibilitySuccess}
-                onEligibilityFailure={onEligibilityFailure}
-              />
-            )}
-
-          {eligibilityData[0].situation.toLowerCase() === 'jeune' &&
-            eligibilityData[0].organisme === 'MSA' && (
-              <YoungMsaForm
-                eligibilityDataItem={eligibilityData[0]}
-                onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
-                onEligibilitySuccess={onEligibilitySuccess}
-                onEligibilityFailure={onEligibilityFailure}
-              />
-            )}
-
-          {eligibilityData[0].situation === 'AAH' && eligibilityData[0].organisme === 'CAF' && (
-            <AahCafForm
-              eligibilityDataItem={eligibilityData[0]}
-              onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
-              onEligibilitySuccess={onEligibilitySuccess}
-              onEligibilityFailure={onEligibilityFailure}
-            />
-          )}
-
-          {eligibilityData[0].situation === 'AAH' && eligibilityData[0].organisme === 'MSA' && (
-            <AahMsaForm
-              eligibilityDataItem={eligibilityData[0]}
-              onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
-              onEligibilitySuccess={onEligibilitySuccess}
-              onEligibilityFailure={onEligibilityFailure}
-            />
-          )}
+          {!isAah && isCaf && <YoungCafForm />}
+          {!isAah && !isCaf && <YoungMsaForm />}
+          {isAah && isCaf && <AahCafForm />}
+          {isAah && !isCaf && <AahMsaForm />}
         </div>
       )}
 
-      {((eligibilityData && eligibilityData.length === 0) ||
-        (pspCodeData && pspCodeData.length === 0)) &&
-        portalRef?.current &&
+      {submittedEmail &&
+        portalNode &&
         createPortal(
           <div className="fr-mt-6w">
-            <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
+            <EmailSentPanel />
           </div>,
-          portalRef.current,
-        )}
-
-      {pspCodeData &&
-        pspCodeData.length > 0 &&
-        portalRef?.current &&
-        createPortal(
-          <div className="fr-mt-6w">
-            <VerdictPanel isSuccess isEligible={benefIsEligible} />
-          </div>,
-          portalRef.current,
+          portalNode,
         )}
     </>
   );

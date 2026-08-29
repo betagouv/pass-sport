@@ -1,0 +1,32 @@
+---
+# Joue le VRAI lamp-setup.yml — pas une copie, pas un import : la copie faite par
+# prepare.yml (/srv/pass-sport) est exactement ce que `git pull` mettrait sur la vraie machine.
+#
+# Invoqué en `command`, EXACTEMENT comme documenté pour la vraie machine
+# (deploy/ansible/README.md : "cd /srv/pass-sport && ansible-playbook -i localhost, -c local
+# ..."), et non via `import_playbook` : lamp-setup.yml cible délibérément
+# `hosts: localhost, connection: local` à cause du bastion — importé tel quel dans CE play,
+# il s'exécuterait sur la machine qui pilote Molecule (le poste de dev), pas dans le
+# conteneur. Cette invocation imbriquée est ce qui le fait tourner DANS le conteneur, comme
+# en production.
+- name: Converge
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Jouer lamp-setup.yml en local, dans le conteneur
+      ansible.builtin.command: >
+        ansible-playbook -i localhost, -c local
+        /srv/pass-sport/deploy/ansible/lamp-setup.yml
+        --extra-vars @/srv/pass-sport/deploy/ansible/molecule/default/test-secrets.yml
+        --extra-vars fc_prod_drop_dir=/tmp/fc-drop
+      args:
+        chdir: /srv/pass-sport
+      register: lamp_setup_result
+      changed_when: true
+      # En cas d'échec, Ansible affiche déjà stdout/stderr de cette commande dans le message
+      # d'erreur de la tâche — inutile de les répéter ici.
+
+    - name: Résumé du passage (dernières lignes)
+      ansible.builtin.debug:
+        msg: "{{ lamp_setup_result.stdout_lines[-15:] }}"

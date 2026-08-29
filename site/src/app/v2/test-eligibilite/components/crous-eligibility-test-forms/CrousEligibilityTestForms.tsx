@@ -1,99 +1,67 @@
-import { useCallback, useContext } from 'react';
-import StepOneForm from '../step-one-form/StepOneForm';
-import { EnhancedConfirmResponseBody, SearchResponseBody } from 'types/EligibilityTest';
-import { push } from '@socialgouv/matomo-next';
-import CrousForm from '@/app/v2/test-eligibilite/components/step-two-forms/CrousForm';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { useContext } from 'react';
 import { createPortal } from 'react-dom';
+import StepOneForm from '../step-one-form/StepOneForm';
+import CrousForm from '../step-two-forms/CrousForm';
 import { StepChecker } from '@/app/v2/test-eligibilite/components/step-checker/StepChecker';
-import VerdictPanel from '@/app/v2/test-eligibilite/components/verdict-panel/VerdictPanel';
+import EmailSentPanel from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentPanel';
+import EmailSentAlert from '@/app/v2/test-eligibilite/components/panels/email-sent/EmailSentAlert';
+import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { StepOneFields } from '@/types/EligibilityTest';
 
+// Boursiers are their own beneficiary and their organisme is always the CNOUS, so there is
+// only ever one step-two form on this branch.
 const CrousEligibilityTestForms = () => {
   const {
-    portalRef,
-    eligibilityData,
-    setEligibilityData,
-    benefIsEligible,
-    pspCodeData,
-    setPspCodeData,
+    portalNode,
+    stepOneFields,
+    setStepOneFields,
+    isStepOneValidated,
+    setIsStepOneValidated,
+    submittedEmail,
+    setSubmittedEmail,
   } = useContext(EligibilityTestContext);
 
-  const onEligibilitySuccess = useCallback(() => {
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Eligibility test completed',
-      'Eligibility test successful',
-    ]);
-  }, []);
+  const validateStepOne = (fields: StepOneFields) => {
+    setStepOneFields(fields);
+    setIsStepOneValidated(true);
+  };
 
-  const onEligibilityFailure = useCallback((name = 'final step') => {
-    push([
-      'trackEvent',
-      'Eligibility Test',
-      'Eligibility test completed',
-      `Eligibility test unsuccessful - ${name}`,
-    ]);
-  }, []);
+  const editStepOne = () => {
+    setIsStepOneValidated(false);
+    setSubmittedEmail(null);
+  };
 
   return (
     <>
-      {eligibilityData && eligibilityData.length > 0 && (
-        <StepChecker
-          title="Vous êtes affilié à une bourse"
-          onClick={() => {
-            setEligibilityData(null);
-            setPspCodeData(null);
-          }}
-          className="fr-mt-2w"
-        />
+      {submittedEmail && <EmailSentAlert />}
+
+      {isStepOneValidated && (
+        <StepChecker title="Vos informations" onClick={editStepOne} className="fr-mt-2w" />
       )}
 
-      {!eligibilityData && (
+      {!isStepOneValidated && (
         <div id="second-step-form" className="fr-fieldset" role="presentation">
           <StepOneForm
-            onDataReceived={(data: SearchResponseBody) => {
-              setEligibilityData(data);
-              setPspCodeData(null);
-            }}
-            onEligibilityFailure={() => onEligibilityFailure('first step')}
+            onValidated={validateStepOne}
+            initialFields={stepOneFields}
             isDirectBeneficiary
           />
         </div>
       )}
 
-      {eligibilityData && eligibilityData.length > 0 && (
+      {isStepOneValidated && (
         <div id="third-step-form" className="fr-fieldset" role="presentation">
-          {eligibilityData[0].situation.toLowerCase() === 'boursier' &&
-            eligibilityData[0].organisme === 'cnous' && (
-              <CrousForm
-                eligibilityDataItem={eligibilityData[0]}
-                onDataReceived={(data: EnhancedConfirmResponseBody) => setPspCodeData(data)}
-                onEligibilitySuccess={onEligibilitySuccess}
-                onEligibilityFailure={onEligibilityFailure}
-              />
-            )}
+          <CrousForm />
         </div>
       )}
 
-      {((eligibilityData && eligibilityData.length === 0) ||
-        (pspCodeData && pspCodeData.length === 0)) &&
-        portalRef?.current &&
+      {submittedEmail &&
+        portalNode &&
         createPortal(
           <div className="fr-mt-6w">
-            <VerdictPanel isSuccess={false} isEligible={benefIsEligible} />
+            <EmailSentPanel />
           </div>,
-          portalRef.current,
-        )}
-
-      {pspCodeData &&
-        pspCodeData.length > 0 &&
-        portalRef?.current &&
-        createPortal(
-          <div className="fr-mt-6w">
-            <VerdictPanel isSuccess isEligible={benefIsEligible} />
-          </div>,
-          portalRef?.current,
+          portalNode,
         )}
     </>
   );
