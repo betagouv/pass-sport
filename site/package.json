@@ -28,7 +28,7 @@
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.33.0",
     "@react-pdf/renderer": "^4.9.0",
-    "@sentry/nextjs": "^8.55.2",
+    "@sentry/nextjs": "^10.71.0",
     "@socialgouv/matomo-next": "1.9.2",
     "@uidotdev/usehooks": "^2.4.1",
     "bullmq": "^5.81.4",
@@ -75,7 +75,8 @@
     "jest-environment-jsdom": "^29.7.0",
     "prettier": "^3.9.6",
     "sass": "^1.103.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "webpack": "^5.110.1"
   },
   "packageManager": "pnpm@11.4.0"
 }

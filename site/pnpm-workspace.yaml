@@ -5,3 +5,7 @@ allowBuilds:
   msgpackr-extract: false
   sharp: false
   unrs-resolver: false
+overrides:
+  # crisp-api > socket.io-client > engine.io-client pins ws ~8.17.1: GHSA-96hv-2xvq-fx4p
+  # (memory-exhaustion DoS) and GHSA-58qx-3vcg-4xpx (uninitialized memory disclosure).
+  ws: ^8.21.0
