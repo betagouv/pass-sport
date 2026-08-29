@@ -112,9 +112,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 }
 
 function hasGivenConsentForSupportCookie(cookies: NextRequest['cookies']) {
-  return Boolean(
-    cookies.get(AUTHORIZED_VENDORS_KEY)?.value.includes(`${SUPPORT_COOKIE_KEY}=true`),
-  );
+  return Boolean(cookies.get(AUTHORIZED_VENDORS_KEY)?.value.includes(`${SUPPORT_COOKIE_KEY}=true`));
 }
 
 function formatNote(attempts: object[]) {
