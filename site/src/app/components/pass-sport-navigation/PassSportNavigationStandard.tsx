@@ -92,17 +92,9 @@ export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props
         quickAccessItems={
           pocUserName
             ? [
-              {
-                  iconId: 'fr-icon-article-fill',
-                  linkProps: {
-                    href: '/v2/test-eligibilite?status=ok',
-                  },
-                  text: 'Accéder à ma demande',
-                },
                 // Plain node rather than a quick-access link: there is no account space
                 // to navigate to, so the identity must read as a status, not a control.
                 <p key="poc-identity" className={styles['poc-identity']}>
-                  
                   <span>
                     <span className="fr-icon-account-line" aria-hidden="true" /> {pocUserName}
                     {pocUserEmail && (
@@ -122,9 +114,16 @@ export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props
                     },
                   },
                 },
-                  
               ]
-            : []
+            : [
+                {
+                  iconId: 'fr-icon-article-fill',
+                  linkProps: {
+                    href: '/v2/test-eligibilite',
+                  },
+                  text: 'Accéder à ma demande',
+                },
+              ]
         }
         navigation={navigationItems.map((item) => ({
           isActive: isActive(item.link),
