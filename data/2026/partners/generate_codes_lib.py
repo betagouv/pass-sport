@@ -36,7 +36,12 @@ CAMPAIGN_TIMEZONE = 'Europe/Paris'
 # notebook, the CLI and the cron all name their inputs the same way.
 SOURCE_INPUT_ENV_VAR = {
     'CNAF': 'DB_CNAF_EXPORT_2026',
+    # AAH/AEEH beneficiaries, split out so they can be coded and sent without waiting on
+    # qf-batch — see cnaf/clean_cnaf_2a_aah_aeeh.ipynb. The QF-route CNAF source above never
+    # recomputes them, so each beneficiary still goes through this step exactly once.
+    'CNAF_AAH_AEEH': 'DB_CNAF_EXPORT_2026_AAH_AEEH',
     'MSA': 'DB_MSA_EXPORT_2026',
+    'MSA_AAH_AEEH': 'DB_MSA_EXPORT_2026_AAH_AEEH',
     'CNOUS': 'DB_CNOUS_EXPORT_2026',
     # Not a partner file: the beneficiaries the site itself judged eligible without LCA
     # being able to serve them a code. Unlike the others, that source needs a write-back

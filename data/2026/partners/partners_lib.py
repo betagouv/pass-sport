@@ -475,8 +475,16 @@ def qf_eligible_index(
     The window already trimmed the qf-batch input earlier; re-applied here per beneficiary
     because an eligible household can also hold out-of-window children. A NaN qf_value (no
     verdict from qf-batch: 404, error, non-ARS row) compares False.
+
+    qf_value is attached per allocataire, not per beneficiary: a household can hold an
+    AAH/AEEH child alongside the ARS one qf-batch was actually called for, and that sibling
+    would otherwise pass the qf_value/window check too. The situation=='jeune' check, mirrored
+    from aah_eligible_index/aeeh_eligible_index below, keeps the three routes mutually
+    exclusive so the same beneficiary is never sent out through two of them.
     """
-    return df.index[(df['qf_value'] < qf_max) & _birthdate_within(df, dob_min, dob_max)]
+    return df.index[
+        (df['situation'] == 'jeune') & (df['qf_value'] < qf_max) & _birthdate_within(df, dob_min, dob_max)
+    ]
 
 
 def aah_eligible_index(

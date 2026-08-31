@@ -46,7 +46,7 @@ the read of a several-hundred-thousand-row export. For a report to `scp` back, `
 the already-executed notebook (so without `--execute`).
 
 Three prerequisites, all handled by [deploy/ansible/](../../deploy/ansible/): the `data/.venv`
-virtualenv, its Jupyter kernel registered under the name `python3` — the name all 13 notebooks
+virtualenv, its Jupyter kernel registered under the name `python3` — the name all 15 notebooks
 declare, without which `nbconvert` fails on `No such kernel named python3` — and the `nb`
 function itself, dropped at `/etc/profile.d/pass-sport-nb.sh` and scoped to the operator group
 (see [deploy/ansible/README.md](../../deploy/ansible/README.md)). Being a `/etc/profile.d`
@@ -78,16 +78,22 @@ flowchart TB
 
     subgraph CNAF_NB2["①b cnaf/clean_cnaf_2_after_qf_batch.ipynb"]
         c4b["Join qf-batch verdict back onto every child\nof its allocataire (by matricule + code_organisme)"]
-        c5{"Split\nby route"}
+        c5["Select QF route\n6-17 ans + quotient < 700"]
         c4b-->c5
+    end
+
+    subgraph CNAF_NB2A["①b-bis cnaf/clean_cnaf_2a_aah_aeeh.ipynb  ·  no qf-batch, runs right after ①a"]
+        c5a["Select AAH (16-30) + AEEH (6-19)\nsituation already flagged by CNAF, no quotient_familial call"]
     end
 
     CNAF_RAW --> c1
     c2b -->|"CSV"| QF_BATCH[("qf-batch.ts\ndetached process, up to a week")]:::rawFile
     QF_BATCH -->|"CSV: qf_value/qf_status/qf_error"| c4b
     c4 -->|"CNAF_INTERMEDIATE_PATHFILE_2026\nParquet: cleaned benef rows waiting for the verdict"| c4b
+    c4 -->|"CNAF_INTERMEDIATE_PATHFILE_2026"| c5a
 
-    c5 -->|"QF 6-17 + AAH 16-30 + AEEH 6-19"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
+    c5 -->|"QF 6-17 + quotient < 700"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
+    c5a --> DB_CNAF_AAH_AEEH[("DB_CNAF_EXPORT_2026_AAH_AEEH\nCSV")]:::cleanedFile
 
     subgraph MSA_NB1["②a msa/clean_msa_1_before_qf_batch.ipynb"]
         m1["Load CSV · strip whitespace\nmap 29 columns → PSP schema · organisme='MSA'\ngenre 1/2→M/F · dates %Y%m%d · pad INSEE & postal codes\nsituation = MSA's own prestation (ARS→jeune, AEH→AEEH)"]
@@ -99,16 +105,22 @@ flowchart TB
 
     subgraph MSA_NB2["②b msa/clean_msa_2_after_qf_batch.ipynb"]
         m4b["Join qf-batch verdict back onto every child\nof its allocataire (by matricule + code_organisme)"]
-        m5{"Split\nby route"}
+        m5["Select QF route\n6-17 ans + quotient < 700"]
         m4b-->m5
+    end
+
+    subgraph MSA_NB2A["②b-bis msa/clean_msa_2a_aah_aeeh.ipynb  ·  no qf-batch, runs right after ②a"]
+        m5a["Select AAH (16-30) + AEEH (6-19)\nsituation already flagged by MSA, no quotient_familial call"]
     end
 
     MSA_RAW --> m1
     m2b -->|"CSV"| QF_BATCH
     QF_BATCH -->|"CSV: qf_value/qf_status/qf_error"| m4b
     m4 -->|"MSA_INTERMEDIATE_PATHFILE_2026\nParquet: cleaned benef rows waiting for the verdict"| m4b
+    m4 -->|"MSA_INTERMEDIATE_PATHFILE_2026"| m5a
 
-    m5 -->|"QF 6-17 + AAH 16-30 + AEEH 6-19"| DB_MSA[("DB_MSA_EXPORT_2026\nCSV")]:::cleanedFile
+    m5 -->|"QF 6-17 + quotient < 700"| DB_MSA[("DB_MSA_EXPORT_2026\nCSV")]:::cleanedFile
+    m5a --> DB_MSA_AAH_AEEH[("DB_MSA_EXPORT_2026_AAH_AEEH\nCSV")]:::cleanedFile
 
     subgraph FC_NB["⑩ franceconnect/  ·  pas un fichier partenaire : une requête sur la prod"]
         fc0["export_eligible_pending.sql (tunnel Scalingo)\nverdict='eligible_pending' · dernier run par sub\nexclut ceux déjà servis (eligible_pending_lca)"]
@@ -129,14 +141,16 @@ flowchart TB
     end
 
     subgraph MERGE_NB["③ generate_new_codes.ipynb  ·  run once per cleaned file"]
-        mg1["Load ONE cleaned file (SOURCE = CNAF | MSA | CNOUS | FC)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
+        mg1["Load ONE cleaned file (SOURCE = CNAF | CNAF_AAH_AEEH |\nMSA | MSA_AAH_AEEH | CNOUS | FC)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
         mg2["Generate unique id_psp codes\nformat: YY-XXXX-XXXX\nseeded with the existing codes"]
         mg3["Write YYYY-MM-DD-source-with-codes.csv\nrewrite the existing codes file with the new ones"]
         mg1-->mg2-->mg3
     end
 
     DB_CNAF --> mg1
+    DB_CNAF_AAH_AEEH --> mg1
     DB_MSA --> mg1
+    DB_MSA_AAH_AEEH --> mg1
     CNOUS_CLEANED --> mg1
     DB_FC --> mg1
     EXISTING_CODES -.->|"seed"| mg2
