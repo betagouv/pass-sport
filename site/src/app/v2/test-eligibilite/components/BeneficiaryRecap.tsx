@@ -174,22 +174,15 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, j
     );
   }
 
-  // The FranceConnect address, the only one the worker mails outside local and staging.
-  // Absent only when FranceConnect served no email, and then nothing was sent at all — hence
-  // the bare title rather than a promise we did not keep.
-  const title = allocataireIdentity.email
-    ? `Résultat de votre demande envoyé à l’adresse ${allocataireIdentity.email}`
-    : 'Résultat de votre demande';
-
   return (
     <section className="fr-mb-3w">
-      <h2 className="fr-h4 fr-mb-1w">{title}</h2>
+      <h2 className="fr-h4 fr-mb-1w">Résultat de votre demande</h2>
       {jobInfo && <p className="fr-text--sm fr-mb-3w">{jobInfo}</p>}
 
       {beneficiaries.map((b, i) => (
         <Card
           key={`${b.source}-${i}`}
-          className="fr-mb-2w"
+          className="fr-mb-6w"
           border
           title={who(b, allocataireIdentity)}
           titleAs="h3"

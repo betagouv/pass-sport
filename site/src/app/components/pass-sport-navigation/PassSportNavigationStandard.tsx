@@ -18,6 +18,8 @@ interface Props {
   // 18 asks that a connected user can tell at a glance who they are connected as — plus
   // a "Se déconnecter" quick-access item. Undefined means no session.
   pocUserName?: string;
+  // Shown under pocUserName. Absent only when FranceConnect served no email.
+  pocUserEmail?: string;
 }
 
 // Route that destroys the POC session then server-redirects to the FranceConnect
@@ -26,7 +28,7 @@ interface Props {
 // RSC fetch cannot follow the external FranceConnect redirect.
 const POC_LOGOUT_URL = '/api/france-connect/logout';
 
-export default function PassSportNavigation({ pocUserName }: Props) {
+export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props) {
   const paths: string | null = usePathname();
 
   const isActive = (path: string) => {
@@ -77,12 +79,25 @@ export default function PassSportNavigation({ pocUserName }: Props) {
         quickAccessItems={
           pocUserName
             ? [
+              {
+                  iconId: 'fr-icon-article-fill',
+                  linkProps: {
+                    href: '/v2/test-eligibilite?status=ok',
+                  },
+                  text: 'Accéder à ma demande',
+                },
                 // Plain node rather than a quick-access link: there is no account space
                 // to navigate to, so the identity must read as a status, not a control.
                 <p key="poc-identity" className={styles['poc-identity']}>
-                  <span className="fr-icon-account-line" aria-hidden="true" />
+                  
                   <span>
-                    Connecté en tant que <strong>{pocUserName}</strong>
+                    <span className="fr-icon-account-line" aria-hidden="true" /> {pocUserName}
+                    {pocUserEmail && (
+                      <>
+                        <br />
+                        {pocUserEmail}
+                      </>
+                    )}
                   </span>
                 </p>,
                 {
@@ -94,6 +109,7 @@ export default function PassSportNavigation({ pocUserName }: Props) {
                     },
                   },
                 },
+                  
               ]
             : []
         }

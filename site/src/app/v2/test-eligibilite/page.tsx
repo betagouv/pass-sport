@@ -175,7 +175,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
               ) : (
                 <>
                   <Card
-                    className="fr-mb-3w"
+                    className="fr-mb-6w"
                     border
                     nativeDivProps={{ role: 'status' }}
                     title="Demande enregistrée"
