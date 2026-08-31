@@ -14,7 +14,7 @@ const BIRTHDATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
 const formatBirthdate = (birthdate: string): string =>
   format(parse(birthdate, BIRTHDATE_INPUT_FORMAT, new Date()), BIRTHDATE_DISPLAY_FORMAT);
 
-// Exported so PostLoginFlow/ResultPanel — which sit between the page and this component in
+// Exported so post-login-flow/ResultPanel — which sit between the page and this component in
 // the just-submitted, still-polling flow — can type the same prop through without redeclaring
 // the subset of PivotIdentity this component actually needs.
 export type AllocataireIdentity = Pick<

@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/react';
-import BeneficiaryRecap from '@/app/v2/test-eligibilite/components/BeneficiaryRecap';
+import BeneficiaryRecap from '@/app/v2/test-eligibilite/components/post-login-flow/BeneficiaryRecap';
 import type { BeneficiaryResult } from '@/app/services/applications';
 
 // Fictional syllable-based identities: pass-sport processes real beneficiary data, so test
