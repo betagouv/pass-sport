@@ -26,7 +26,8 @@ interface Props {
 // session/end endpoint (mode 2). Uses a Button quick-access item + a full-page
 // navigation on purpose: the registered DSFR Link is next/link, whose client-side
 // RSC fetch cannot follow the external FranceConnect redirect.
-const POC_LOGOUT_URL = '/api/france-connect/logout';
+const POC_LOGOUT_PATH = '/api/france-connect/logout';
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN;
 
 export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props) {
   const paths: string | null = usePathname();
@@ -110,7 +111,7 @@ export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props
                   text: 'Se déconnecter',
                   buttonProps: {
                     onClick: () => {
-                      window.location.assign(POC_LOGOUT_URL);
+                      window.location.assign(new URL(POC_LOGOUT_PATH, BASE_DOMAIN));
                     },
                   },
                 },
