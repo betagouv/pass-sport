@@ -2,7 +2,7 @@ import cn from 'classnames';
 import rootStyles from '../../../../utilities.module.scss';
 import styles from './styles.module.scss';
 import AsyncSelect from 'react-select/async';
-import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';
+import { getFranceCitiesByName } from '@/app/services/communes-client';
 import { City } from '@/types/City';
 import { Props as ReactSelectProps, SingleValue } from 'react-select';
 import { InputState } from '@/types/form';

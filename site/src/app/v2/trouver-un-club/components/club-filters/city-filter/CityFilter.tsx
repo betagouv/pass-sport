@@ -3,7 +3,7 @@
 import {
   getFranceCitiesByName,
   getFranceCitiesByPostalCodeAndCityName,
-} from '@/app/v2/trouver-un-club/agent';
+} from '@/app/services/communes-client';
 import { Props as ReactSelectProps } from 'react-select';
 import { CityOption } from '@/app/v2/trouver-un-club/components/club-filters/ClubFilters';
 import { City } from '../../../../../../../types/City';
