@@ -44,15 +44,15 @@ describe('BeneficiaryRecap', () => {
     expect(faqLink).toHaveAttribute('href', '/v2/une-question');
   });
 
-  it('names the mailbox the result was sent to in the section title', () => {
+  it('shows the bare section title regardless of the allocataire’s email', () => {
     renderRecap([beneficiary()]);
 
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
-      'Résultat de votre demande envoyé à l’adresse velmorak.ostrenya@example.test',
-    );
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(heading).toHaveTextContent('Résultat de votre demande');
+    expect(heading).not.toHaveTextContent('envoyé à l’adresse');
   });
 
-  it('keeps the bare title when FranceConnect served no email', () => {
+  it('shows the same bare title when FranceConnect served no email', () => {
     render(
       <BeneficiaryRecap
         beneficiaries={[beneficiary()]}
@@ -60,7 +60,6 @@ describe('BeneficiaryRecap', () => {
       />,
     );
 
-    // Nothing was mailed in that case, so the title must not claim otherwise.
     const heading = screen.getByRole('heading', { level: 2 });
     expect(heading).toHaveTextContent('Résultat de votre demande');
     expect(heading).not.toHaveTextContent('envoyé à l’adresse');
