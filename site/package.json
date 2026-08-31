@@ -37,7 +37,7 @@
     "date-fns": "^4.4.0",
     "geolib": "^3.3.14",
     "got": "^15.1.0",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "jose": "^6.2.10",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
