@@ -19,10 +19,10 @@ importers:
         version: 4.9.0(react@19.2.8)
       '@sentry/nextjs':
         specifier: ^10.71.0
-        version: 10.71.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react@19.2.8)(webpack@5.110.1)
+        version: 10.71.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react@19.2.8)(webpack@5.110.1)
       '@socialgouv/matomo-next':
         specifier: 1.9.2
-        version: 1.9.2(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))
+        version: 1.9.2(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))
       '@uidotdev/usehooks':
         specifier: ^2.4.1
         version: 2.4.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -58,7 +58,7 @@ importers:
         version: 1.5.3(leaflet@1.9.4)
       next:
         specifier: ^16.3.3
-        version: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1)
+        version: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1)
       node-cache:
         specifier: ^5.1.2
         version: 5.1.2
@@ -95,7 +95,7 @@ importers:
         version: 3.3.6
       '@playwright/experimental-ct-react':
         specifier: ^1.62.1
-        version: 1.62.1(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2)(vite@8.2.2(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2))
+        version: 1.62.1(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2)(vite@8.2.2(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2))
       '@testing-library/jest-dom':
         specifier: ^6.10.0
         version: 6.10.0(@testing-library/dom@10.4.1)
@@ -112,8 +112,8 @@ importers:
         specifier: ^1.5.6
         version: 1.5.6
       '@types/node':
-        specifier: ^22.20.1
-        version: 22.20.1
+        specifier: ^26.2.0
+        version: 26.2.0
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
@@ -143,7 +143,7 @@ importers:
         version: 4.4.1(@typescript-eslint/eslint-plugin@8.68.0(@typescript-eslint/parser@8.68.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)
       jest:
         specifier: ^30.5.0
-        version: 30.5.0(@types/node@22.20.1)(babel-plugin-macros@3.1.0)
+        version: 30.5.0(@types/node@26.2.0)(babel-plugin-macros@3.1.0)
       jest-environment-jsdom:
         specifier: ^29.7.0
         version: 29.7.0
@@ -1666,8 +1666,8 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
-  '@types/node@22.20.1':
-    resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
+  '@types/node@26.2.0':
+    resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
 
   '@types/parse-json@4.0.2':
     resolution: {integrity: sha512-dISoDXWWQwUquiKsyZ4Ng+HX2KsPL7LyHKHQwgGFEA3IaKac4Obd+h2a/a6waisAoepJlBcx9paWqjA8/HVjCw==}
@@ -4815,8 +4815,8 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+  undici-types@8.3.0:
+    resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
 
   unicode-properties@1.4.1:
     resolution: {integrity: sha512-CLjCCLQ6UuMxWnbIylkisbRj31qxHPAurvena/0iwSVbQ2G1VY5/HjV0IRabOEbDHlzZlRdCrD4NhB0JtU40Pg==}
@@ -5596,7 +5596,7 @@ snapshots:
   '@jest/console@30.5.0':
     dependencies:
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       chalk: 4.1.2
       jest-message-util: 30.5.0
       jest-util: 30.5.0
@@ -5610,7 +5610,7 @@ snapshots:
       '@jest/test-result': 30.5.0
       '@jest/transform': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       ansi-escapes: 4.3.2
       chalk: 4.1.2
       ci-info: 4.4.0
@@ -5618,7 +5618,7 @@ snapshots:
       fast-json-stable-stringify: 2.1.0
       graceful-fs: 4.2.11
       jest-changed-files: 30.5.0
-      jest-config: 30.5.0(@types/node@22.20.1)(babel-plugin-macros@3.1.0)
+      jest-config: 30.5.0(@types/node@26.2.0)(babel-plugin-macros@3.1.0)
       jest-haste-map: 30.5.0
       jest-message-util: 30.5.0
       jest-regex-util: 30.5.0
@@ -5644,14 +5644,14 @@ snapshots:
     dependencies:
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-mock: 29.7.0
 
   '@jest/environment@30.5.0':
     dependencies:
       '@jest/fake-timers': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-mock: 30.5.0
 
   '@jest/expect-utils@30.5.0':
@@ -5669,7 +5669,7 @@ snapshots:
     dependencies:
       '@jest/types': 29.6.3
       '@sinonjs/fake-timers': 10.3.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-message-util: 29.7.0
       jest-mock: 29.7.0
       jest-util: 29.7.0
@@ -5678,7 +5678,7 @@ snapshots:
     dependencies:
       '@jest/types': 30.5.0
       '@sinonjs/fake-timers': 15.4.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-message-util: 30.5.0
       jest-mock: 30.5.0
       jest-util: 30.5.0
@@ -5696,7 +5696,7 @@ snapshots:
 
   '@jest/pattern@30.5.0':
     dependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-regex-util: 30.5.0
 
   '@jest/reporters@30.5.0':
@@ -5707,7 +5707,7 @@ snapshots:
       '@jest/transform': 30.5.0
       '@jest/types': 30.5.0
       '@jridgewell/trace-mapping': 0.3.31
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       chalk: 4.1.2
       collect-v8-coverage: 1.0.3
       exit-x: 0.2.2
@@ -5787,7 +5787,7 @@ snapshots:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       '@types/yargs': 17.0.35
       chalk: 4.1.2
 
@@ -5797,7 +5797,7 @@ snapshots:
       '@jest/schemas': 30.5.0
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       '@types/yargs': 17.0.35
       chalk: 4.1.2
 
@@ -6012,11 +6012,11 @@ snapshots:
 
   '@pkgr/core@0.3.6': {}
 
-  '@playwright/experimental-ct-core@1.62.1(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2)':
+  '@playwright/experimental-ct-core@1.62.1(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2)':
     dependencies:
       playwright: 1.62.1
       playwright-core: 1.62.1
-      vite: 8.2.2(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2)
+      vite: 8.2.2(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2)
     transitivePeerDependencies:
       - '@types/node'
       - '@vitejs/devtools'
@@ -6031,10 +6031,10 @@ snapshots:
       - tsx
       - yaml
 
-  '@playwright/experimental-ct-react@1.62.1(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2)(vite@8.2.2(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2))':
+  '@playwright/experimental-ct-react@1.62.1(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2)(vite@8.2.2(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2))':
     dependencies:
-      '@playwright/experimental-ct-core': 1.62.1(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2)
-      '@vitejs/plugin-react': 6.1.1(vite@8.2.2(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2))
+      '@playwright/experimental-ct-core': 1.62.1(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2)
+      '@vitejs/plugin-react': 6.1.1(vite@8.2.2(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2))
     transitivePeerDependencies:
       - '@rolldown/plugin-babel'
       - '@types/node'
@@ -6404,7 +6404,7 @@ snapshots:
     dependencies:
       '@sentry/core': 10.71.0
 
-  '@sentry/nextjs@10.71.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react@19.2.8)(webpack@5.110.1)':
+  '@sentry/nextjs@10.71.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))(react@19.2.8)(webpack@5.110.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@rollup/plugin-commonjs': 28.0.1(rollup@4.63.1)
@@ -6418,7 +6418,7 @@ snapshots:
       '@sentry/server-utils': 10.71.0
       '@sentry/vercel-edge': 10.71.0
       '@sentry/webpack-plugin': 5.4.0(rollup@4.63.1)(webpack@5.110.1)
-      next: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1)
+      next: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1)
       rollup: 4.63.1
       stacktrace-parser: 0.1.11
     transitivePeerDependencies:
@@ -6527,9 +6527,9 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@socialgouv/matomo-next@1.9.2(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))':
+  '@socialgouv/matomo-next@1.9.2(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1))':
     dependencies:
-      next: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1)
+      next: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1)
 
   '@socket.io/component-emitter@3.1.2': {}
 
@@ -6606,7 +6606,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.2.0
       '@types/keyv': 3.1.4
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       '@types/responselike': 1.0.3
 
   '@types/debug@4.1.13':
@@ -6644,7 +6644,7 @@ snapshots:
 
   '@types/jsdom@20.0.1':
     dependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       '@types/tough-cookie': 4.0.5
       parse5: 7.3.0
 
@@ -6654,7 +6654,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
 
   '@types/leaflet.markercluster@1.5.6':
     dependencies:
@@ -6670,15 +6670,15 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node@22.20.1':
+  '@types/node@26.2.0':
     dependencies:
-      undici-types: 6.21.0
+      undici-types: 8.3.0
 
   '@types/parse-json@4.0.2': {}
 
   '@types/pg@8.23.1':
     dependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       pg-protocol: 1.16.0
       pg-types: 2.2.0
 
@@ -6699,7 +6699,7 @@ snapshots:
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
 
   '@types/stack-utils@2.0.3': {}
 
@@ -6883,10 +6883,10 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@vitejs/plugin-react@6.1.1(vite@8.2.2(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2))':
+  '@vitejs/plugin-react@6.1.1(vite@8.2.2(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.2.2(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2)
+      vite: 8.2.2(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2)
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:
@@ -8558,7 +8558,7 @@ snapshots:
       '@jest/expect': 30.5.0
       '@jest/test-result': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       chalk: 4.1.2
       co: 4.6.0
       dedent: 1.7.2(babel-plugin-macros@3.1.0)
@@ -8578,7 +8578,7 @@ snapshots:
       - babel-plugin-macros
       - supports-color
 
-  jest-cli@30.5.0(@types/node@22.20.1)(babel-plugin-macros@3.1.0):
+  jest-cli@30.5.0(@types/node@26.2.0)(babel-plugin-macros@3.1.0):
     dependencies:
       '@jest/core': 30.5.0(babel-plugin-macros@3.1.0)
       '@jest/test-result': 30.5.0
@@ -8586,7 +8586,7 @@ snapshots:
       chalk: 4.1.2
       exit-x: 0.2.2
       import-local: 3.2.0
-      jest-config: 30.5.0(@types/node@22.20.1)(babel-plugin-macros@3.1.0)
+      jest-config: 30.5.0(@types/node@26.2.0)(babel-plugin-macros@3.1.0)
       jest-util: 30.5.0
       jest-validate: 30.5.0
       yargs: 17.7.3
@@ -8597,7 +8597,7 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-config@30.5.0(@types/node@22.20.1)(babel-plugin-macros@3.1.0):
+  jest-config@30.5.0(@types/node@26.2.0)(babel-plugin-macros@3.1.0):
     dependencies:
       '@babel/core': 7.29.7
       '@jest/get-type': 30.5.0
@@ -8623,7 +8623,7 @@ snapshots:
       slash: 3.0.0
       strip-json-comments: 3.1.1
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
     transitivePeerDependencies:
       - babel-plugin-macros
       - supports-color
@@ -8653,7 +8653,7 @@ snapshots:
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
       '@types/jsdom': 20.0.1
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-mock: 29.7.0
       jest-util: 29.7.0
       jsdom: 20.0.3
@@ -8667,7 +8667,7 @@ snapshots:
       '@jest/environment': 30.5.0
       '@jest/fake-timers': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-mock: 30.5.0
       jest-util: 30.5.0
       jest-validate: 30.5.0
@@ -8676,7 +8676,7 @@ snapshots:
     dependencies:
       '@jest/types': 30.5.0
       '@parcel/watcher': 2.6.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       anymatch: 3.1.3
       fb-watchman: 2.0.2
       fdir: 6.5.0(picomatch@4.0.7)
@@ -8726,14 +8726,14 @@ snapshots:
   jest-mock@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-util: 29.7.0
 
   jest-mock@30.5.0:
     dependencies:
       '@jest/expect-utils': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       jest-util: 30.5.0
 
   jest-regex-util@30.5.0: {}
@@ -8763,7 +8763,7 @@ snapshots:
       '@jest/test-result': 30.5.0
       '@jest/transform': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       chalk: 4.1.2
       emittery: 0.13.1
       exit-x: 0.2.2
@@ -8791,7 +8791,7 @@ snapshots:
       '@jest/test-result': 30.5.0
       '@jest/transform': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       chalk: 4.1.2
       cjs-module-lexer: 2.2.1
       collect-v8-coverage: 1.0.3
@@ -8839,7 +8839,7 @@ snapshots:
   jest-util@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
@@ -8848,7 +8848,7 @@ snapshots:
   jest-util@30.5.0:
     dependencies:
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       chalk: 4.1.2
       ci-info: 4.4.0
       graceful-fs: 4.2.11
@@ -8867,7 +8867,7 @@ snapshots:
     dependencies:
       '@jest/test-result': 30.5.0
       '@jest/types': 30.5.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       ansi-escapes: 4.3.2
       chalk: 4.1.2
       emittery: 0.13.1
@@ -8876,24 +8876,24 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
   jest-worker@30.5.0:
     dependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       '@ungap/structured-clone': 1.4.0
       jest-util: 30.5.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
-  jest@30.5.0(@types/node@22.20.1)(babel-plugin-macros@3.1.0):
+  jest@30.5.0(@types/node@26.2.0)(babel-plugin-macros@3.1.0):
     dependencies:
       '@jest/core': 30.5.0(babel-plugin-macros@3.1.0)
       '@jest/types': 30.5.0
       import-local: 3.2.0
-      jest-cli: 30.5.0(@types/node@22.20.1)(babel-plugin-macros@3.1.0)
+      jest-cli: 30.5.0(@types/node@26.2.0)(babel-plugin-macros@3.1.0)
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
@@ -9418,7 +9418,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1):
+  next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@26.2.0)(babel-plugin-macros@3.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.103.1):
     dependencies:
       '@next/env': 16.3.3
       '@swc/helpers': 0.5.23
@@ -9439,7 +9439,7 @@ snapshots:
       '@next/swc-win32-x64-msvc': 16.3.3
       '@opentelemetry/api': 1.9.1
       sass: 1.103.1
-      sharp: 0.35.4(@types/node@22.20.1)
+      sharp: 0.35.4(@types/node@26.2.0)
     transitivePeerDependencies:
       - '@babel/core'
       - '@types/node'
@@ -10086,7 +10086,7 @@ snapshots:
       es-errors: 1.3.0
       es-object-atoms: 1.1.2
 
-  sharp@0.35.4(@types/node@22.20.1):
+  sharp@0.35.4(@types/node@26.2.0):
     dependencies:
       '@img/colour': 1.1.0
       detect-libc: 2.1.2
@@ -10117,7 +10117,7 @@ snapshots:
       '@img/sharp-win32-arm64': 0.35.4
       '@img/sharp-win32-ia32': 0.35.4
       '@img/sharp-win32-x64': 0.35.4
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
     optional: true
 
   shebang-command@2.0.0:
@@ -10464,7 +10464,7 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  undici-types@6.21.0: {}
+  undici-types@8.3.0: {}
 
   unicode-properties@1.4.1:
     dependencies:
@@ -10575,7 +10575,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@8.2.2(@types/node@22.20.1)(sass@1.103.1)(terser@5.51.2):
+  vite@8.2.2(@types/node@26.2.0)(sass@1.103.1)(terser@5.51.2):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -10583,7 +10583,7 @@ snapshots:
       rolldown: 1.2.6
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       fsevents: 2.3.3
       sass: 1.103.1
       terser: 5.51.2
