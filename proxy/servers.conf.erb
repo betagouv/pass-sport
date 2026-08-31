@@ -101,7 +101,10 @@ server {
 
   location /v2/ {
     proxy_pass http://app_backend;
-    limit_req zone=next_v2_nav_req_limit burst=30 nodelay;
+    # Next.js prefetches the RSC payload of every visible link on a page as its own
+    # parallel request, so a single page view can burst well past the old burst=30
+    # before the visitor clicks anything. Sized to absorb that fan-out.
+    limit_req zone=next_v2_nav_req_limit burst=150 nodelay;
   }
 
   location = /api/france-connect/result {
