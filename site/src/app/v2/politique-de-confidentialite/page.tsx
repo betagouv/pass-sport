@@ -16,7 +16,7 @@ export default function PolitiqueDeConfidentialite() {
       <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
         <PageTitle
           title="Politique de confidentialité"
-          subtitle="Politique de confidentialité relative au traitement de données personnelles réalisé dans le cadre de la délivrance du pass Sport 2025"
+          subtitle="Politique de confidentialité relative au traitement de données personnelles réalisé dans le cadre de la délivrance du pass Sport 2026"
           classes={{
             container: styles['page-header'],
           }}
@@ -49,6 +49,16 @@ export default function PolitiqueDeConfidentialite() {
               physique ou morale, autorité publique, service ou autre organisme qui, seul ou
               conjointement avec d&apos;autres, détermine les finalités et les moyens du traitement.
             </p>
+            <p className="fr-mb-2w">
+              <span className="fr-text--bold">« Destinataire »</span> : personne physique ou morale,
+              autorité publique, service ou tout autre organisme qui reçoit communication de données
+              à caractère personnel.
+            </p>
+            <p className="fr-mb-2w">
+              <span className="fr-text--bold">« Sous-traitant »</span> : personne physique ou morale,
+              autorité publique, service ou autre organisme qui traite des données à caractère
+              personnel pour le compte du responsable de traitement.
+            </p>
           </section>
 
           <section className="fr-mb-6w">
@@ -59,7 +69,7 @@ export default function PolitiqueDeConfidentialite() {
               <span className="fr-text--bold">« la Direction des sports »</span>) est le responsable
               de traitement de vos données personnelles. Elle collecte et traite vos données dans le
               cadre du traitement de données personnelles opéré pour la délivrance du pass Sport
-              2025.
+              2026.
             </p>
 
             <p className="fr-mb-2w">
@@ -77,7 +87,7 @@ export default function PolitiqueDeConfidentialite() {
 
             <p>
               La Direction des sports s&apos;engage à ce que le traitement de vos données à
-              caractère personnel effectué dans le cadre de l&apos;envoi du pass Sport 2025 respecte
+              caractère personnel effectué dans le cadre de l&apos;envoi du pass Sport 2026 respecte
               la réglementation en vigueur applicable au traitement de données à caractère personnel
               et, en particulier,{' '}
               <a
@@ -106,9 +116,10 @@ export default function PolitiqueDeConfidentialite() {
               Article 3 - Pourquoi traitons-nous des données à caractère personnel ?
             </h2>
             <p>
-              Le présent traitement a pour finalité la délivrance du pass Sport 2025 aux
-              bénéficiaires âgés de 6 à 30 ans, dans le but de réduire le montant de l&apos;adhésion
-              ou de la prise de licence proposée par les structures et associations sportives.
+              Le présent traitement a pour finalité la délivrance du pass Sport 2026 aux
+              bénéficiaires âgés de 6 à 30 ans éligibles sous certaines conditions définies par
+              décret, dans le but de réduire le montant de l&apos;adhésion ou de la prise de licence
+              proposée par les structures et associations sportives.
             </p>
           </section>
 
@@ -116,6 +127,11 @@ export default function PolitiqueDeConfidentialite() {
             <h2 className="fr-mb-2w">
               Article 4 - Qu&apos;est-ce qui nous autorise à traiter vos données ?
             </h2>
+            <p className="fr-mb-2w">
+              Le traitement de vos données répond à une mission d&apos;intérêt public consistant à
+              favoriser l&apos;accès du plus grand nombre à la pratique sportive, dans le cadre de la
+              mise en œuvre des politiques publiques du sport.
+            </p>
             <p>
               Le présent traitement se fonde sur l&apos;article 6. 1. e) du Règlement européen
               2016/679 (règlement général sur la protection des données - RGPD) relatif à
@@ -123,8 +139,8 @@ export default function PolitiqueDeConfidentialite() {
               Direction des sports au sens des articles L. 100-1 et L. 100-2 du code du sport.
               <br />
               <br />
-              Cette mission d&apos;intérêt public se traduit en pratique par le décret n°2025-630 du
-              8 juillet 2025 relatif au « Pass&apos;Sport » 2025.
+              Cette mission d&apos;intérêt public se traduit en pratique par le décret n°2026-830 du
+              28 août 2026.
             </p>
           </section>
 
@@ -134,19 +150,21 @@ export default function PolitiqueDeConfidentialite() {
             <ul className="fr-pl-4w">
               <li>
                 Données relatives à l&apos;identité de l&apos;allocataire (responsable légal du
-                bénéficiaire) : civilité, nom, prénom, lieu de naissance ;
+                bénéficiaire) : civilité, nom, prénom, date de naissance, lieu (pays et commune) de
+                naissance, numéro d&apos;allocataire ;
               </li>
               <li>
                 Données relatives à l&apos;identité du bénéficiaire (responsable légal ou mineur) :
-                nom, prénom, sexe, date de naissance, commune de résidence ;
+                nom, prénom, sexe, date de naissance, commune de résidence ; prestation sociale (ARS
+                / AAH / AEEH) ;
               </li>
-              <li>Coordonnées : adresse postale, courriel, téléphone.</li>
+              <li>Coordonnées : adresse de résidence, courriel, numéro de téléphone.</li>
             </ul>
 
             <p>Pour les exploitants de structures éligibles au dispositif pass Sport</p>
             <ul className="fr-pl-4w">
               <li>Données relatives à l&apos;identité : civilité, nom, prénom ;</li>
-              <li>Coordonnées : courriel, téléphone ;</li>
+              <li>Coordonnées : courriel, numéro de téléphone ;</li>
               <li>Données relatives à la vie professionnelle : fonction dans la structure ;</li>
               <li>
                 Données relatives au formulaire de contact : prénom, nom, adresse e-mail, champs
@@ -163,9 +181,18 @@ export default function PolitiqueDeConfidentialite() {
               sports.
             </p>
 
-            <p>
+            <p className="fr-mb-2w">
               Les données à caractère personnel des exploitants de structures éligibles au
               dispositif pass Sport seront effacées lorsque ces derniers quitteront leurs fonctions.
+            </p>
+
+            <p>
+              Dans le cadre de ses obligations réglementaires, la Direction des Sports s&apos;engage
+              à conserver les données en base production pendant un (1) an à compter de leur
+              transmission. Les données sont ensuite conservées en base intermédiaire pour une durée
+              de cinq (5) ans à compter de la date de leur transmission pour des finalités de
+              contrôle et d&apos;évaluation de l&apos;action et des politiques publiques. Les données
+              seront détruites à l&apos;issue de ce délai.
             </p>
           </section>
 
@@ -174,23 +201,42 @@ export default function PolitiqueDeConfidentialite() {
               Article 7 - Qui est concerné par le traitement des données ?
             </h2>
             <p className="fr-mb-2w">
-              Sont concernées par le traitement mentionné à l&apos;article 3 les bénéficiaires, âgés
-              de 6 à 30 ans, éligibles au dispositif pass Sport et les exploitants de structures
-              éligibles au dispositif pass Sport.
+              Sont concernées par le traitement mentionné à l&apos;article 3 les bénéficiaires de
+              l&apos;allocation de rentrée scolaire (ARS), de l&apos;allocation aux adultes
+              handicapés (AAH), de l&apos;allocation d&apos;éducation de l&apos;enfant handicapé
+              (AEEH) ou d&apos;une bourse d&apos;enseignement supérieur sous conditions de ressources
+              ou dans le cadre des formations sanitaires et sociales, âgés de 6 à 30 ans révolus,
+              ainsi que leurs représentants légaux, le cas échéant.
+            </p>
+            <p>
+              Sont également concernés les exploitants de structures éligibles au dispositif pass
+              Sport, définies par décret.
             </p>
           </section>
 
           <section className="fr-mb-6w">
             <h2 className="fr-mb-2w">Article 8 - Où ont été collectées vos données ?</h2>
-            <p>
+            <p className="fr-mb-2w">
               Vos données sont collectées directement lorsque vous souhaitez obtenir votre pass
-              Sport ou lorsque vous remplissez le formulaire de contact.
+              Sport ou lorsque vous remplissez le formulaire de contact sur le site
+              www.pass.sports.gouv.fr.
+            </p>
+            <p className="fr-mb-2w">
+              Vos données traitées ont également été collectées indirectement. Elles nous ont été
+              communiquées par le Centre National des Œuvres Universitaires et Scolaires (CNOUS),
+              établissement public national, La Caisse nationale des allocations familiales (CNAF)
+              et la Caisse Centrale de la Mutualité Sociale Agricole (CCMSA). Ces échanges sont
+              prévus par des conventions de transfert de données, signées dans le cadre de la
+              mission de service public de la Direction des sports pour permettre aux personnes
+              éligibles de bénéficier d&apos;une réduction immédiate sur l&apos;inscription dans une
+              association, un club de sport ou une salle de sport et ainsi favoriser l&apos;accès à
+              la pratique sportive.
             </p>
             <p>
-              Vos données traitées ont également été collectées indirectement. Elles nous ont été
-              communiquées par le Centre National des Œuvres Universitaires et Scolaires
-              Établissement public national, La Caisse nationale des allocations familiales et la
-              Caisse Centrale de la Mutualité Sociale Agricole.
+              Compte tenu du volume important de données reçues dans ce cadre, nous ne sommes pas en
+              mesure d&apos;informer individuellement chaque personne concernée de cette
+              transmission. Conformément à l&apos;article 14.5 b) du RGPD, la présente politique de
+              confidentialité constitue la source d&apos;information de ce traitement.
             </p>
           </section>
 
@@ -199,7 +245,7 @@ export default function PolitiqueDeConfidentialite() {
               Article 9 - Qui nous aide à traiter vos données à caractère personnel ?
             </h2>
             <p>
-              Certaines données sont envoyées à des “sous-traitants” qui nous aident dans le
+              Certaines données sont envoyées à des « sous-traitants » qui nous aident dans le
               traitement de vos données à caractère personnel. Le responsable de traitement
               s&apos;est assuré que les sous-traitants respectent notamment l&apos;article 28 du
               RGPD.
@@ -277,77 +323,17 @@ export default function PolitiqueDeConfidentialite() {
                 </tbody>
               </table>
             </div>
-            Des cookies et traceurs sont déposés si vous décidez de l&apos;accepter pour consulter
-            les vidéos proposées par Vimeo sur la page d&apos;accueil du site ainsi que la page tout
-            savoir sur le pass Sport..
-          </section>
-
-          <section className="fr-mb-6w">
-            <h2 className="fr-mb-2w">
-              Article 10 - Quelles mesures de sécurité mettons-nous en place ?
-            </h2>
-
             <p className="fr-mb-2w">
-              Nous mettons en place plusieurs mesures pour sécuriser les donneées :
-            </p>
-
-            <ul className="fr-pl-4w">
-              <li className="fr-text--bold">Stockage des données en base de données ;</li>
-              <li className="fr-text--bold">Minimisation des données ;</li>
-              <li className="fr-text--bold">Cloisonnement des donneées ;</li>
-              <li className="fr-text--bold">Mesures de traçabilité ;</li>
-              <li className="fr-text--bold">Chiffrement ;</li>
-              <li className="fr-text--bold">Surveillance ;</li>
-              <li className="fr-text--bold">Protection des réseaux ;</li>
-              <li className="fr-text--bold">Sauvegarde ;</li>
-              <li className="fr-text--bold">
-                Mesures restrictives limitant l&apos;accès physique aux données à caractère
-                personnel.
-              </li>
-            </ul>
-
-            <p className="fr-mb-2w">
-              Conformément à la réglementation applicable, à savoir le RGPD et la loi Informatique
-              et libertés, vous disposez d&apos;un droit d&apos;information, d&apos;accès, de
-              rectification, de limitation et d&apos;opposition des données qui vous concernent.
+              Des cookies et traceurs sont déposés si vous décidez de l&apos;accepter pour consulter
+              les vidéos proposées par Vimeo sur la page d&apos;accueil du site ainsi que la page
+              tout savoir sur le pass Sport.
             </p>
 
             <h3 className="fr-mb-2w">
               Quels sont les cookies et autres traceurs pouvant être utilisés ?
             </h3>
 
-            <h4 className="fr-mb-2w">1. Qu&apos;est-ce qu&apos;un cookie ?</h4>
-
-            <p className="fr-mb-2w">
-              Un cookie est un fichier déposé sur votre terminal lors de la visite d&apos;un site.
-              Il a pour but de collecter des informations relatives à votre navigation et de vous
-              adresser des services adaptés à votre terminal (ordinateur, mobile ou tablette).
-            </p>
-
-            <p className="fr-mw-2w">
-              En application de l&apos;article 5(3) de la directive 2002/58/CE modifiée concernant
-              le traitement des données à caractère personnel et la protection de la vie privée dans
-              le secteur des communications électroniques, transposée à l&apos;article 82 de la loi
-              n°78-17 du 6 janvier 1978 relative à l&apos;informatique, aux fichiers et aux
-              libertés, les traceurs ou cookies suivent deux régimes distincts :
-            </p>
-
-            <ul className="fr-pl-4w">
-              <li>
-                Les cookies strictement nécessaires au service ou ayant pour finalité exclusive de
-                faciliter la communication par voie électronique sont dispensés de consentement
-                préalable au titre de l&apos;article 82 de la LIL ;
-              </li>
-              <li>
-                Les cookies n&apos;étant pas strictement nécessaires au service ou n&apos;ayant pas
-                pour finalité exclusive de faciliter la communication par voie électronique doivent
-                être consenti par l&apos;utilisateur. Ce consentement de la personne concernée pour
-                une ou plusieurs finalités spécifiques constitue une base légale au sens du RGPD et
-                doit être entendu au sens de l&apos;article 6-a du RGPD.
-              </li>
-            </ul>
-
-            <h4 className="fr-mb-2w">2. Les cookies déposés sur le site</h4>
+            <h4 className="fr-mb-2w">1. Les cookies déposés sur le site</h4>
             <p className="fr-mb-2w">
               Sous réserve du choix de l&apos;utilisateur, plusieurs cookies peuvent être utilisés
               sur le site internet pass.sports.gouv.fr. Les différentes finalités de ces cookies
@@ -456,14 +442,107 @@ export default function PolitiqueDeConfidentialite() {
                 </tbody>
               </table>
             </div>
+
+            <h4 className="fr-mb-2w">2. Autres traceurs pouvant être utilisés</h4>
+            <p className="fr-mb-2w">
+              Nous utilisons un pixel de suivi dans les courriels que nous vous transmettons dans le
+              cadre de la campagne pass Sport.
+            </p>
+            <p className="fr-mb-2w">
+              Les pixels de suivi permettent de vérifier que nos communications vous parviennent
+              correctement.
+            </p>
+            <p>
+              En aucun cas, ces pixels ne sont utilisés à des fins publicitaires ou commerciales.
+            </p>
           </section>
 
           <section className="fr-mb-6w">
-            <h2 className="fr-mb-2w">Article 11 - Quels sont vos droits ? Comment les exercer ?</h2>
+            <h2 className="fr-mb-2w">
+              Article 10 - Quelles mesures de sécurité mettons-nous en place ?
+            </h2>
+
+            <p className="fr-mb-2w">
+              Nous mettons en place plusieurs mesures pour sécuriser les donneées :
+            </p>
+
+            <ul className="fr-pl-4w">
+              <li className="fr-text--bold">
+                Stockage des données en base de données : les fichiers sont déposés sur une
+                infrastructure technique opérée par la Direction du Numérique pour l&apos;Education
+                (DNE) pour le compte de la Direction des Sports, ce transfert réseau sécurisé a lieu
+                par protocole SFTP ;
+              </li>
+              <li className="fr-text--bold">
+                Minimisation des données : seules les données utiles sont collectées et traitées par
+                la Direction des sports ;
+              </li>
+              <li className="fr-text--bold">Cloisonnement des donneées ;</li>
+              <li className="fr-text--bold">Mesures de traçabilité ;</li>
+              <li className="fr-text--bold">Chiffrement ;</li>
+              <li className="fr-text--bold">Surveillance ;</li>
+              <li className="fr-text--bold">Protection des réseaux ;</li>
+              <li className="fr-text--bold">Sauvegarde ;</li>
+              <li className="fr-text--bold">
+                Mesures restrictives limitant l&apos;accès physique aux données à caractère
+                personnel.
+              </li>
+            </ul>
+
+            <p>
+              Conformément à la réglementation applicable, à savoir l&apos;article 32 du RGPD et la
+              loi Informatique et libertés dans sa version modifiée, vous disposez d&apos;un droit
+              d&apos;information, d&apos;accès, de rectification, de limitation et d&apos;opposition
+              des données qui vous concernent.
+            </p>
+          </section>
+
+          <section className="fr-mb-6w">
+            <h2 className="fr-mb-2w">Article 11 - Indications en cas de violation de données</h2>
+
+            <p className="fr-mb-2w">
+              La Direction des sports s&apos;engage à mettre en œuvre toutes les mesures techniques
+              et organisationnelles appropriées grâce à des moyens de sécurisation physiques et
+              logistiques permettant de garantir un niveau de sécurité adapté au regard des risques
+              d&apos;accès accidentels, non autorisés ou illégaux, de divulgation,
+              d&apos;altération, de perte ou encore de destruction des données personnelles vous
+              concernant, au sens de l&apos;article 121 de la Loi informatiques et Libertés de 1978
+              modifiée.
+            </p>
+
+            <p className="fr-mb-2w">
+              Dans l&apos;éventualité où la Direction des sports prendrait connaissance d&apos;un
+              accès illégal aux données personnelles vous concernant, stockées sur nos serveurs ou
+              ceux de nos prestataires, ou d&apos;un accès non autorisé ayant pour conséquence la
+              réalisation des risques identifiés ci-dessus, elle s&apos;engage à :
+            </p>
+
+            <ul className="fr-pl-4w">
+              <li>
+                Vous notifier l&apos;incident et en informer la CNIL dans les plus brefs délais, si
+                cela est susceptible d&apos;engendrer un risque élevé pour vos droits et libertés ;
+              </li>
+              <li>Examiner les causes de l&apos;incident ;</li>
+              <li>
+                Prendre les mesures nécessaires dans la limite du raisonnable afin d&apos;amoindrir
+                les effets négatifs et préjudices pouvant résulter dudit incident.
+              </li>
+            </ul>
+
+            <p>
+              En aucun cas les engagements définis au point ci-dessus ne peuvent être assimilés à
+              une quelconque reconnaissance de faute ou de responsabilité quant à la survenance de
+              l&apos;incident en question.
+            </p>
+          </section>
+
+          <section className="fr-mb-6w">
+            <h2 className="fr-mb-2w">Article 12 - Quels sont vos droits ? Comment les exercer ?</h2>
             <p className="fr-mb-2w">
               Conformément à la réglementation applicable, à savoir le RGPD et la loi Informatique
               et libertés, vous disposez d&apos;un droit d&apos;information, d&apos;accès, de
-              rectification,, de limitation et d&apos;opposition des données qui vous concernent.
+              rectification, de limitation, d&apos;un droit à l&apos;effacement, d&apos;un droit à
+              la portabilité et d&apos;un droit d&apos;opposition des données qui vous concernent.
             </p>
 
             <ul className="fr-pl-4w">
@@ -505,45 +584,6 @@ export default function PolitiqueDeConfidentialite() {
               >
                 Voir le site de la CNIL pour plus d&apos;informations sur vos droits.
               </Link>
-            </p>
-          </section>
-
-          <section className="fr-mb-6w">
-            <h2 className="fr-mb-2w">Article 12 - Indications en cas de violation de données</h2>
-
-            <p className="fr-mb-2w">
-              La Direction des sports s&apos;engage à mettre en œuvre toutes les mesures techniques
-              et organisationnelles appropriées grâce à des moyens de sécurisation physiques et
-              logistiques permettant de garantir un niveau de sécurité adapté au regard des risques
-              d&apos;accès accidentels, non autorisés ou illégaux, de divulgation,
-              d&apos;altération, de perte ou encore de destruction des données personnelles vous
-              concernant, au sens de l&apos;article 121 de la Loi informatiques et Libertés de 1978
-              modifiée.
-            </p>
-
-            <p className="fr-mb-2w">
-              Dans l&apos;éventualité où la Direction des sports prendrait connaissance d&apos;un
-              accès illégal aux données personnelles vous concernant, stockées sur nos serveurs ou
-              ceux de nos prestataires, ou d&apos;un accès non autorisé ayant pour conséquence la
-              réalisation des risques identifiés ci-dessus, elle s&apos;engage à :
-            </p>
-
-            <ul className="fr-pl-4w">
-              <li>
-                Vous notifier l&apos;incident et en informer la CNIL dans les plus brefs délais, si
-                cela est susceptible d&apos;engendrer un risque élevé pour vos droits et libertés ;
-              </li>
-              <li>Examiner les causes de l&apos;incident ;</li>
-              <li>
-                Prendre les mesures nécessaires dans la limite du raisonnable afin d&apos;amoindrir
-                les effets négatifs et préjudices pouvant résulter dudit incident.
-              </li>
-            </ul>
-
-            <p>
-              En aucun cas les engagements définis au point ci-dessus ne peuvent être assimilés à
-              une quelconque reconnaissance de faute ou de responsabilité quant à la survenance de
-              l&apos;incident en question.
             </p>
           </section>
         </div>
