@@ -8,4 +8,8 @@ if (!!process.env.SENTRY_DSN) {
     // FranceConnect identities transit this app; never let Sentry attach them.
     sendDefaultPii: false,
   });
+
+  console.info('[pass-sport-app] Sentry initialized for ' + process.env.ENV);
 }
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

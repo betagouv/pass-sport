@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { RatePacer, isParisNightAt, parisHourAt } from "../../src/scripts/rate-pacer";
+import {
+  AdaptiveRatePacer,
+  RatePacer,
+  isParisNightAt,
+  parisHourAt,
+} from "../../src/scripts/rate-pacer";
 
 const ms = (iso: string): number => new Date(iso).getTime();
 
@@ -161,5 +166,153 @@ describe("RatePacer", () => {
 
     expect(isParisNightAt(clock.now())).toBe(false);
     expect(clock.now() - ms(beforeDawn)).toBe(60_000);
+  });
+});
+
+describe("AdaptiveRatePacer", () => {
+  const noon = "2026-01-15T11:00:00Z";
+
+  const makePacer = (clock: ReturnType<typeof fakeClock>, overrides = {}) =>
+    new AdaptiveRatePacer({
+      dayRatePerMinute: 200,
+      nightRatePerMinute: 500,
+      ...clock,
+      ...overrides,
+    });
+
+  it("rejects a decrease factor outside (0, 1)", () => {
+    const clock = fakeClock(noon);
+
+    expect(() => makePacer(clock, { decreaseFactor: 0 })).toThrow(/decreaseFactor/);
+    expect(() => makePacer(clock, { decreaseFactor: 1 })).toThrow(/decreaseFactor/);
+    expect(() => makePacer(clock, { decreaseFactor: 0.5 })).not.toThrow();
+  });
+
+  it("starts at the initial rate, not the ceiling", async () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock);
+
+    await acquireMany(pacer, 100);
+    expect(clock.now() - ms(noon)).toBe(0);
+
+    await pacer.acquire();
+    expect(clock.now() - ms(noon)).toBe(60_000);
+  });
+
+  it("halves the rate on an error", () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock);
+
+    expect(pacer.onError()).toBe(true);
+
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(50);
+  });
+
+  it("absorbs a burst of errors into a single decrease", async () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock);
+
+    expect(pacer.onError()).toBe(true);
+    expect(pacer.onError()).toBe(false);
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(50);
+
+    // Past the hold window, a fresh error decreases again.
+    await clock.sleep(61_000);
+    expect(pacer.onError()).toBe(true);
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(25);
+  });
+
+  it("never decreases below the floor", async () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock, { initialRatePerMinute: 8, minRatePerMinute: 5 });
+
+    pacer.onError();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(5);
+
+    await clock.sleep(61_000);
+    pacer.onError();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(5);
+  });
+
+  it("increases additively after enough consecutive successes", () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock, { successesBeforeIncrease: 30, increaseStep: 5 });
+
+    for (let i = 0; i < 29; i++) pacer.onSuccess();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(100);
+
+    pacer.onSuccess();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(105);
+  });
+
+  it("resets the success streak on an error, even inside the hold window", async () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock, { successesBeforeIncrease: 30, increaseStep: 5 });
+
+    for (let i = 0; i < 29; i++) pacer.onSuccess();
+    pacer.onError();
+    pacer.onError();
+
+    // The second error was absorbed by the hold, but the streak restarted from zero:
+    // 30 more successes (past the 2 × hold recovery delay) are needed to climb again.
+    await clock.sleep(121_000);
+    for (let i = 0; i < 29; i++) pacer.onSuccess();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(50);
+
+    pacer.onSuccess();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(55);
+  });
+
+  it("holds increases for twice the hold window after a decrease", async () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock, { successesBeforeIncrease: 30, increaseStep: 5 });
+
+    pacer.onError();
+
+    await clock.sleep(90_000);
+    for (let i = 0; i < 30; i++) pacer.onSuccess();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(50);
+
+    await clock.sleep(31_000);
+    for (let i = 0; i < 30; i++) pacer.onSuccess();
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(55);
+  });
+
+  it("lets the adaptive rate exceed the day ceiling only at night", async () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock, {
+      initialRatePerMinute: 250,
+      dayRatePerMinute: 200,
+      nightRatePerMinute: 500,
+    });
+
+    expect(pacer.ratePerMinuteAt(ms(noon))).toBe(200);
+    expect(pacer.ratePerMinuteAt(ms("2026-01-15T22:00:00Z"))).toBe(250);
+  });
+
+  it("caps additive increases at the highest ceiling", () => {
+    const clock = fakeClock(noon);
+    const pacer = makePacer(clock, {
+      initialRatePerMinute: 498,
+      successesBeforeIncrease: 1,
+      increaseStep: 5,
+    });
+
+    pacer.onSuccess();
+    expect(pacer.ratePerMinuteAt(ms("2026-01-15T22:00:00Z"))).toBe(500);
+  });
+
+  it("reports adaptive rate changes through onRateChange", async () => {
+    const clock = fakeClock(noon);
+    const transitions: number[] = [];
+    const pacer = makePacer(clock, {
+      onRateChange: (ratePerMinute: number) => transitions.push(ratePerMinute),
+    });
+
+    await pacer.acquire();
+    pacer.onError();
+    await pacer.acquire();
+
+    expect(transitions).toEqual([100, 50]);
   });
 });
