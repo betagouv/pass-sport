@@ -3,7 +3,7 @@
 import { FOOTER_BRAND_TOP } from '@/app/constants/footer-brand-top';
 import Header from '@codegouvfr/react-dsfr/Header';
 import { usePathname } from 'next/navigation';
-import { navigationItemStandard } from './navigation';
+import { navigationItemStandard, NavigationItem } from './navigation';
 import styles from './styles.module.scss';
 import { useUpdateList } from '@/app/hooks/accessibility/use-update-list';
 import React, { useRef } from 'react';
@@ -34,6 +34,19 @@ export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props
   const isActive = (path: string) => {
     return !!(paths && paths.includes(path));
   };
+
+  // Only reachable while a POC session is live, so the entry only makes sense in the
+  // navigation bar for a connected user — unlike the rest of navigationItemStandard,
+  // which is the same for everyone.
+  const navigationItems: NavigationItem[] = pocUserName
+    ? [
+        ...navigationItemStandard,
+        {
+          link: '/v2/test-eligibilite?status=ok',
+          text: 'Ma demande',
+        },
+      ]
+    : navigationItemStandard;
 
   const headerRef = useRef<HTMLDivElement | null>(null);
   const headerContainerRef = useRef<HTMLDivElement | null>(null);
@@ -113,7 +126,7 @@ export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props
               ]
             : []
         }
-        navigation={navigationItemStandard.map((item) => ({
+        navigation={navigationItems.map((item) => ({
           isActive: isActive(item.link),
           linkProps: {
             href: item.link,
