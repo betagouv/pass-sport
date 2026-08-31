@@ -13,6 +13,15 @@ server {
   listen <%= ENV['PORT'] %>;
   charset utf-8;
 
+  # Scalingo containers aren't directly reachable from the internet: every request
+  # here arrives via Scalingo's own routing layer, which already resolved the real
+  # visitor IP into X-Real-IP. Trust that single hop and recover it into $remote_addr,
+  # otherwise every visitor looks like the router's IP - the rate limit zones below key
+  # off $remote_addr, so without this every visitor shares one rate-limit bucket.
+  real_ip_header    X-Real-IP;
+  set_real_ip_from  0.0.0.0/0;
+  set_real_ip_from  ::/0;
+
   # Common proxy headers/settings, inherited by every location below
   proxy_intercept_errors  on;
   proxy_set_header        Host                 <%= ENV['PUBLIC_FQDN'] %>;
