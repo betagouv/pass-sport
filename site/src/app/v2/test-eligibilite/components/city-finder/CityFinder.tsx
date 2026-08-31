@@ -1,8 +1,7 @@
 import cn from 'classnames';
 import rootStyles from '../../../../utilities.module.scss';
 import styles from './styles.module.scss';
-import AsyncSelect from 'react-select/async';
-import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';
+import Select from 'react-select';
 import { City } from '@/types/City';
 import { Props as ReactSelectProps, SingleValue } from 'react-select';
 import { InputState } from '@/types/form';
@@ -16,8 +15,9 @@ import {
   onFocus,
   selectStyles,
 } from '@/app/v2/trouver-un-club/components/club-filters/custom-select/CustomSelect';
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
 import { sortCities } from '@/utils/city';
+import { useCitySearch } from '@/app/hooks/use-city-search';
 
 export interface CityOption {
   label: string;
@@ -54,11 +54,16 @@ const CityFinder = ({
   defaultOption,
 }: Props) => {
   const [inputValue, setInputValue] = useState(defaultOption?.label ?? '');
+  const [searchTerm, setSearchTerm] = useState('');
   const [value, setValue] = useState<CityOption>(defaultOption ?? { label: '', value: '' });
+
+  const { cities, isSearching } = useCitySearch(searchTerm, true);
+  const options = useMemo(() => parseCities(sortCities(cities, searchTerm)), [cities, searchTerm]);
 
   const onInputChange: ReactSelectProps['onInputChange'] = (inputValue, { action }) => {
     if (action === 'input-change') {
       setInputValue(inputValue);
+      setSearchTerm(inputValue);
     }
   };
 
@@ -66,6 +71,7 @@ const CityFinder = ({
     onChanged(newValue as string | null);
     onOptionChanged?.(newValue);
     setInputValue(newValue?.label || '');
+    setSearchTerm('');
     setValue({
       value: newValue?.value || '',
       label: newValue?.label || '',
@@ -89,20 +95,21 @@ const CityFinder = ({
       </label>
 
       <div className={cn('fr-grid-row', styles['city-finder__container'])}>
-        <AsyncSelect<CityOption, false>
+        <Select<CityOption, false>
           aria-labelledby="city-select-id"
           instanceId="city-select-id"
           inputId={inputName}
           name={inputName}
           loadingMessage={() => <p>Chargement des communes...</p>}
           noOptionsMessage={() => <p>Aucune commune trouvée</p>}
-          cacheOptions
           isDisabled={isDisabled}
           ariaLiveMessages={{ guidance, onChange, onFilter, onFocus }}
           screenReaderStatus={customScreenReaderStatus}
           value={value}
           inputValue={inputValue}
-          loadOptions={fetchCityOptions}
+          options={options}
+          isLoading={isSearching}
+          filterOption={null}
           onChange={birthPlaceChangedHandler}
           onInputChange={onInputChange}
           onBlur={(e) => {
@@ -153,12 +160,6 @@ const CityFinder = ({
     </div>
   );
 };
-
-function fetchCityOptions(inputValue: string) {
-  return getFranceCitiesByName(inputValue, true).then((cities) =>
-    parseCities(sortCities(cities, inputValue)),
-  );
-}
 
 function parseCities(cities: City[]): CityOption[] {
   return cities.map((city) => {

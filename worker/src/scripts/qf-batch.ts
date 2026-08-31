@@ -6,7 +6,7 @@ import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
 import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
-import { RatePacer } from "./rate-pacer";
+import { AdaptiveRatePacer } from "./rate-pacer";
 
 // Matches the 'allocataire-*' column convention already used across the data/
 // partner notebooks (CNAF/MSA/CNOUS), rather than the FranceConnect-flavored
@@ -39,8 +39,18 @@ const MAX_ATTEMPTS = 3;
 // revoked/exhausted quota instead of looking busy.
 const MAX_RATE_LIMIT_PAUSES = 20;
 
-// Self-imposed ceiling, kept below the API's own: the 429 path stays the backstop if it
-// turns out to be set too high.
+// 5xx means the API is in maintenance: retry the same call every 10 minutes until it
+// answers something else. Bounded (~24h) so a permanently broken deployment fails
+// loudly instead of pausing for days.
+const MAINTENANCE_RETRY_MS = 10 * 60_000;
+const MAX_MAINTENANCE_PAUSES = 144;
+
+// Cooldown after a 404 "Erreur inattendue" (API instability, not a real not-found)
+// before retrying the same row.
+const INSTABILITY_COOLDOWN_MS = 10_000; // 15 seconds
+
+// Ceilings for the adaptive pacer, kept below the API's own: AIMD probes up to them,
+// and the 429 path stays the backstop if they turn out to be set too high.
 const DEFAULT_RATE_PER_MINUTE = 200;
 const DEFAULT_NIGHT_RATE_PER_MINUTE = 500;
 
@@ -68,6 +78,11 @@ const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
 const waitMsFor = (result: ResourceResult): number =>
   result.rateLimitResetMs ?? Math.max(1, Number(result.retryAfter ?? 1)) * 1000;
 
+// A 404 normally settles the row, but the API also answers 404 "Erreur inattendue" for
+// its own transient failures — that one is instability, not an answer about the person.
+const isUnexpected404 = (result: ResourceResult): boolean =>
+  result.httpStatus === 404 && (result.error ?? "").toLowerCase().includes("erreur inattendue");
+
 // `notFound` is a real, permanent answer (absent from the CAF/MSA base), not a missing
 // one: it settles the row as ineligible so resume never re-calls the API for it.
 type Verdict = {
@@ -82,9 +97,10 @@ type Verdict = {
 async function screenRow(
   client: RealClient,
   identity: PivotIdentity,
-  pacer: RatePacer,
+  pacer: AdaptiveRatePacer,
 ): Promise<Verdict> {
   let rateLimitPauses = 0;
+  let maintenancePauses = 0;
 
   // Dernière URL remontée par le SDK, quel que soit l'essai — lue au moment du return,
   // donc toujours celle de la tentative qui a produit le verdict.
@@ -108,22 +124,50 @@ async function screenRow(
 
     requestUrl = result.requestUrl ?? requestUrl;
 
-    // 429: pause for the whole window and try this row again. Not an attempt — a
-    // throttled call did no work, so counting it would drop rows for being unlucky.
+    // 5xx: API maintenance, not a per-row failure. Retry the same call every 10
+    // minutes without consuming an attempt, and without touching the adaptive rate —
+    // maintenance is not a load signal.
+    if (result.httpStatus != null && result.httpStatus >= 500) {
+      maintenancePauses += 1;
+
+      if (maintenancePauses > MAX_MAINTENANCE_PAUSES) {
+        return verdict({
+          value: null,
+          error: `API en maintenance depuis ${maintenancePauses * 10} minutes, abandon`,
+        });
+      }
+
+      console.log(`API en maintenance (${result.httpStatus}), retry dans 10 min`);
+
+      await sleep(MAINTENANCE_RETRY_MS);
+      attempt -= 1;
+      continue;
+    }
+
+    // 429: back the cadence off, pause for the whole window and try this row again.
+    // Not an attempt — a throttled call did no work, so counting it would drop rows
+    // for being unlucky.
     if (result.rateLimited) {
+      pacer.onError();
       rateLimitPauses += 1;
+
       if (rateLimitPauses > MAX_RATE_LIMIT_PAUSES) {
         return verdict({ value: null, error: `throttlé ${rateLimitPauses} fois d'affilée, abandon` });
       }
+
       const waitMs = waitMsFor(result);
       console.log(`  rate limited, pausing ${Math.round(waitMs / 1000)}s`);
+
       await sleep(waitMs);
       attempt -= 1;
       continue;
     }
 
     if (result.success && result.data) {
+      pacer.onSuccess();
+
       const value = (result.data as QuotientFamilialData).quotient_familial?.valeur;
+
       if (typeof value !== "number") {
         return verdict({ value: null, error: "réponse sans quotient_familial.valeur" });
       }
@@ -131,15 +175,31 @@ async function screenRow(
       // Proactive: the window is spent, so pause before the next row rather than
       // eating a wasted 429 on it.
       if (result.rateLimitRemaining === 0 && result.rateLimitResetMs != null) {
-        console.log(`  window exhausted, pausing ${Math.round(result.rateLimitResetMs / 1000)}s`);
+        console.log(`window exhausted, pausing ${Math.round(result.rateLimitResetMs / 1000)}s`);
         await sleep(result.rateLimitResetMs);
       }
       return verdict({ value, error: null });
     }
 
-    // 404 is a real answer — this person is not in the CAF/MSA base. Settled as
-    // ineligible, so it is neither retried in-run nor re-called on the next run.
+    // 404 "Erreur inattendue" is API instability, not an answer about the person:
+    // back the cadence off, cool down, and burn an attempt. If it persists, the row is
+    // left unsettled so the next run re-tries it — never recorded as non_trouve.
+    if (isUnexpected404(result)) {
+      pacer.onError();
+
+      if (attempt === MAX_ATTEMPTS) {
+        return verdict({ value: null, error: result.error ?? "Erreur inattendue (404)" });
+      }
+
+      console.log(`404 "Erreur inattendue", cooldown ${INSTABILITY_COOLDOWN_MS / 1000}s`);
+      await sleep(INSTABILITY_COOLDOWN_MS);
+      continue;
+    }
+
+    // Any other 404 is a real answer — this person is not in the CAF/MSA base. Settled
+    // as ineligible, so it is neither retried in-run nor re-called on the next run.
     if (result.httpStatus === 404) {
+      pacer.onSuccess();
       return verdict({ value: null, error: "non trouvé (404)", notFound: true });
     }
 
@@ -281,7 +341,7 @@ async function main(): Promise<void> {
   }
 
   const client = new RealClient();
-  const pacer = new RatePacer({
+  const pacer = new AdaptiveRatePacer({
     dayRatePerMinute: ratePerMinute,
     nightRatePerMinute: nightRatePerMinute,
     onRateChange: (rate, isNight) =>
@@ -303,12 +363,14 @@ async function main(): Promise<void> {
 
     const columns = verdictColumns(verdict);
     settled += 1;
+
     if (settled % logEvery === 0) {
       console.log(
         `${label}: ${verdict.value ?? "aucun verdict"}` +
           (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`),
       );
     }
+
     return columns;
   };
 
