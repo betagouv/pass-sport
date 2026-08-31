@@ -1,7 +1,7 @@
 name: Site tests
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 defaults:
   run:
     working-directory: ./site
