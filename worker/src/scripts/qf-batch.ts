@@ -6,7 +6,7 @@ import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
 import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
-import { AdaptiveRatePacer } from "./rate-pacer";
+import { AdaptiveRatePacer, type RateChange, type RateChangeReason } from "./rate-pacer";
 
 // Matches the 'allocataire-*' column convention already used across the data/
 // partner notebooks (CNAF/MSA/CNOUS), rather than the FranceConnect-flavored
@@ -55,6 +55,42 @@ const DEFAULT_RATE_PER_MINUTE = 200;
 const DEFAULT_NIGHT_RATE_PER_MINUTE = 500;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Cadence changes are the main thing to follow on a multi-day run, so each one is
+// timestamped in Paris time rather than left to be located by its position in the log.
+const parisTimestampFormatter = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: "Europe/Paris",
+  dateStyle: "short",
+  timeStyle: "medium",
+});
+
+const RATE_CHANGE_CAUSES: Record<RateChangeReason, string> = {
+  start: "démarrage",
+  "day-night": "bascule jour/nuit",
+  increase: "hausse après succès",
+  decrease: "baisse après erreur",
+};
+
+const formatRateChange = ({
+  ratePerMinute,
+  previousRatePerMinute,
+  ceilingPerMinute,
+  isNight,
+  reason,
+  timestampMs,
+}: RateChange): string => {
+  const at = parisTimestampFormatter.format(new Date(timestampMs));
+  const window = `plafond ${ceilingPerMinute}/min ${isNight ? "nuit" : "jour"}`;
+
+  if (reason === "start") {
+    return `[${at}] cadence initiale ${ratePerMinute}/min (${window})`;
+  }
+
+  return (
+    `[${at}] cadence ${previousRatePerMinute} -> ${ratePerMinute}/min ` +
+    `(${RATE_CHANGE_CAUSES[reason]}, ${window})`
+  );
+};
 
 const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
   const familyName = row["allocataire-nom_naissance"]?.trim();
@@ -344,8 +380,7 @@ async function main(): Promise<void> {
   const pacer = new AdaptiveRatePacer({
     dayRatePerMinute: ratePerMinute,
     nightRatePerMinute: nightRatePerMinute,
-    onRateChange: (rate, isNight) =>
-      console.log(`  cadence ${rate}/min (${isNight ? "nuit" : "jour"}, Europe/Paris)`),
+    onRateChange: (change) => console.log(`  ${formatRateChange(change)}`),
   });
   const outColumns = [...header, ...ADDED_COLUMNS];
 

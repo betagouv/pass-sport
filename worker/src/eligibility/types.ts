@@ -43,6 +43,9 @@ export const AEEH_BIRTHDATE_MAX = "2009-12-31";
 // Strictly below: 700 itself is NOT eligible.
 export const QF_ELIGIBILITY_THRESHOLD = 700;
 
+export const QF_REFERENCE_YEAR = "2026";
+export const QF_REFERENCE_MONTH = "8";
+
 // Safe as a string compare: birthdates are normalized to zero-padded YYYY-MM-DD, whose
 // lexicographic order is its chronological order.
 export const isWithinBirthdateWindow = (

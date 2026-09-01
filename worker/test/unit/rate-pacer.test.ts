@@ -4,6 +4,7 @@ import {
   RatePacer,
   isParisNightAt,
   parisHourAt,
+  type RateChange,
 } from "../../src/scripts/rate-pacer";
 
 const ms = (iso: string): number => new Date(iso).getTime();
@@ -139,19 +140,27 @@ describe("RatePacer", () => {
     expect(clock.now() - ms(nightStart)).toBe(0);
   });
 
-  it("reports each rate transition once", async () => {
+  it("reports each rate transition once, with its cause", async () => {
     const clock = fakeClock("2026-01-15T19:58:00Z");
-    const transitions: number[] = [];
+    const transitions: RateChange[] = [];
     const pacer = new RatePacer({
       dayRatePerMinute: 200,
       nightRatePerMinute: 500,
       ...clock,
-      onRateChange: (ratePerMinute) => transitions.push(ratePerMinute),
+      onRateChange: (change) => transitions.push(change),
     });
 
     await acquireMany(pacer, 1000);
 
-    expect(transitions).toEqual([200, 500]);
+    expect(transitions.map(({ previousRatePerMinute, ratePerMinute, reason, isNight }) => [
+      previousRatePerMinute,
+      ratePerMinute,
+      reason,
+      isNight,
+    ])).toEqual([
+      [0, 200, "start", false],
+      [200, 500, "day-night", true],
+    ]);
   });
 
   it("throttles back down when the night window ends", async () => {
@@ -304,15 +313,81 @@ describe("AdaptiveRatePacer", () => {
 
   it("reports adaptive rate changes through onRateChange", async () => {
     const clock = fakeClock(noon);
-    const transitions: number[] = [];
+    const transitions: RateChange[] = [];
     const pacer = makePacer(clock, {
-      onRateChange: (ratePerMinute: number) => transitions.push(ratePerMinute),
+      onRateChange: (change: RateChange) => transitions.push(change),
     });
 
     await pacer.acquire();
     pacer.onError();
     await pacer.acquire();
 
-    expect(transitions).toEqual([100, 50]);
+    expect(transitions.map(({ ratePerMinute, reason }) => [ratePerMinute, reason])).toEqual([
+      [100, "start"],
+      [50, "decrease"],
+    ]);
+  });
+
+  it("reports a decrease as it happens, not at the next acquire", () => {
+    const clock = fakeClock(noon);
+    const transitions: RateChange[] = [];
+    const pacer = makePacer(clock, {
+      onRateChange: (change: RateChange) => transitions.push(change),
+    });
+
+    pacer.onError();
+
+    expect(transitions).toHaveLength(2);
+    expect(transitions[0]).toMatchObject({ ratePerMinute: 100, reason: "start" });
+    expect(transitions[1]).toMatchObject({
+      previousRatePerMinute: 100,
+      ratePerMinute: 50,
+      ceilingPerMinute: 200,
+      isNight: false,
+      reason: "decrease",
+      timestampMs: ms(noon),
+    });
+  });
+
+  it("reports an increase, and stays silent for the errors absorbed by the hold", async () => {
+    const clock = fakeClock(noon);
+    const transitions: RateChange[] = [];
+    const pacer = makePacer(clock, {
+      successesBeforeIncrease: 2,
+      increaseStep: 5,
+      onRateChange: (change: RateChange) => transitions.push(change),
+    });
+
+    pacer.onError();
+    pacer.onError();
+
+    await clock.sleep(121_000);
+    pacer.onSuccess();
+    pacer.onSuccess();
+
+    expect(transitions.map(({ ratePerMinute, reason }) => [ratePerMinute, reason])).toEqual([
+      [100, "start"],
+      [50, "decrease"],
+      [55, "increase"],
+    ]);
+  });
+
+  // The applied cadence is min(adaptive, ceiling): an adaptive move that stays above the
+  // ceiling changes nothing in effect, so reporting it would be noise.
+  it("stays silent while the adaptive rate is clamped by the ceiling", () => {
+    const clock = fakeClock(noon);
+    const transitions: RateChange[] = [];
+    const pacer = makePacer(clock, {
+      initialRatePerMinute: 500,
+      successesBeforeIncrease: 1,
+      onRateChange: (change: RateChange) => transitions.push(change),
+    });
+
+    pacer.onError();
+
+    expect(pacer.ratePerMinuteAt(clock.now())).toBe(200);
+    expect(transitions.map(({ ratePerMinute, reason }) => [ratePerMinute, reason])).toEqual([
+      [200, "start"],
+    ]);
   });
 });
