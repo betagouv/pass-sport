@@ -5,7 +5,7 @@ import {
   type Response as ApiResponse,
 } from "@api-gouv-dinum/api-particulier";
 import type { ApiParticulierClient } from "./client";
-import { CNOUS_IDENTITE_PATH, RESOURCE_META, toCnousParams, toDssParams } from "./client";
+import { CNOUS_IDENTITE_PATH, RESOURCE_META, toCnousParams, toDssParams, toQfParams } from "./client";
 import type { ApiParticulierData, PivotIdentity, ResourceResult } from "./types";
 
 export class RealClient implements ApiParticulierClient {
@@ -80,7 +80,7 @@ export class RealClient implements ApiParticulierClient {
 
   quotientFamilial(identity: PivotIdentity): Promise<ResourceResult> {
     return this.call(RESOURCE_META.qf, () =>
-      this.client.dss.quotient_familial_identite(toDssParams(identity)),
+      this.client.dss.quotient_familial_identite(toQfParams(identity)),
     );
   }
 
@@ -91,9 +91,10 @@ export class RealClient implements ApiParticulierClient {
   }
 
   cnous(identity: PivotIdentity): Promise<ResourceResult> {
-    // v5 is not in the SDK (caps at v4) — generic GET.
+    // Generic GET: the SDK has no v5. It still merges defaultParams (recipient) and maps
+    // errors, so the wrapper above behaves the same as on a resource method.
     return this.call(RESOURCE_META.cnous, () =>
-      this.client.cnous.etudiant_boursier_identite(toCnousParams(identity)),
+      this.client.get(CNOUS_IDENTITE_PATH, { params: toCnousParams(identity) }),
     );
   }
 

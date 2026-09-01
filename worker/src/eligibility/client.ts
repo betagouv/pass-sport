@@ -1,3 +1,4 @@
+import { QF_REFERENCE_MONTH, QF_REFERENCE_YEAR } from "./types";
 import type { PivotIdentity, ResourceResult } from "./types";
 
 export interface ApiParticulierClient {
@@ -45,17 +46,31 @@ export const toDssParams = (identity: PivotIdentity) => {
   };
 };
 
-// CNOUS v5 is not in the SDK (caps at v4) — generic client.get() with camelCase
-// keys (no snake_case mapping). v5 adds the INE to the response (EtudiantBoursierData.ine).
+export const toQfParams = (identity: PivotIdentity) => {
+  return {
+    ...toDssParams(identity),
+    annee: QF_REFERENCE_YEAR,
+    mois: QF_REFERENCE_MONTH,
+  };
+};
+
+// CNOUS v5 is not in the SDK (it caps at v4), so it goes through the generic client.get().
+// v5 over v4 for EtudiantBoursierData.ine, which the v4 response omits.
 export const CNOUS_IDENTITE_PATH = "/v5/cnous/etudiant_boursier/identite";
 
+// client.get() sends param names verbatim, with none of the snake_case -> camelCase mapping
+// the SDK resource methods apply — so these are already the query param names.
 export const toCnousParams = (identity: PivotIdentity) => {
+  const [year, month, day] = (identity.birthdate ?? "").split("-");
+
   return {
-    nom_naissance: identity.family_name,
+    nomNaissance: identity.family_name,
     prenoms: splitPrenoms(identity.given_name),
-    sexe_etat_civil: mapGender(identity.gender),
-    code_cog_insee_commune_naissance: identity.birthplace || undefined,
-    ...splitBirthdate(identity.birthdate)
+    sexeEtatCivil: mapGender(identity.gender),
+    codeCogInseeCommuneNaissance: identity.birthplace || undefined,
+    anneeDateNaissance: year || undefined,
+    moisDateNaissance: month || undefined,
+    jourDateNaissance: day || undefined,
   };
 };
 

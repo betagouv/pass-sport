@@ -26,12 +26,25 @@ export const isParisNightAt = (timestampMs: number): boolean => {
 const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+// What moved the cadence. "start" is the first rate ever reported; "day-night" a change of
+// ceiling at the Paris night boundary; "increase"/"decrease" an AIMD adjustment.
+export type RateChangeReason = "start" | "day-night" | "increase" | "decrease";
+
+export type RateChange = {
+  ratePerMinute: number;
+  previousRatePerMinute: number;
+  ceilingPerMinute: number;
+  isNight: boolean;
+  reason: RateChangeReason;
+  timestampMs: number;
+};
+
 export type RatePacerOptions = {
   dayRatePerMinute: number;
   nightRatePerMinute: number;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
-  onRateChange?: (ratePerMinute: number, isNight: boolean) => void;
+  onRateChange?: (change: RateChange) => void;
 };
 
 // Fixed window aligned on wall-clock minutes: each minute grants a whole new quota. The
@@ -42,7 +55,7 @@ export class RatePacer {
   private readonly nightRatePerMinute: number;
   private readonly now: () => number;
   private readonly sleep: (ms: number) => Promise<void>;
-  private readonly onRateChange: (ratePerMinute: number, isNight: boolean) => void;
+  private readonly onRateChange: (change: RateChange) => void;
   private lastReportedRatePerMinute = 0;
   private windowStartMs = -1;
   private callsInWindow = 0;
@@ -64,14 +77,20 @@ export class RatePacer {
     this.onRateChange = options.onRateChange ?? (() => {});
   }
 
-  ratePerMinuteAt(timestampMs: number): number {
+  ceilingPerMinuteAt(timestampMs: number): number {
     return isParisNightAt(timestampMs) ? this.nightRatePerMinute : this.dayRatePerMinute;
+  }
+
+  ratePerMinuteAt(timestampMs: number): number {
+    return this.ceilingPerMinuteAt(timestampMs);
   }
 
   async acquire(): Promise<void> {
     while (true) {
       const nowMs = this.now();
-      const ratePerMinute = this.reportRateChange(nowMs);
+      // Any AIMD move is reported as it happens, so a change noticed here can only come
+      // from the ceiling switching at the Paris night boundary.
+      const ratePerMinute = this.reportRateChange(nowMs, "day-night");
       const windowStartMs = Math.floor(nowMs / WINDOW_MS) * WINDOW_MS;
 
       if (windowStartMs !== this.windowStartMs) {
@@ -88,12 +107,20 @@ export class RatePacer {
     }
   }
 
-  private reportRateChange(nowMs: number): number {
+  protected reportRateChange(nowMs: number, reason: RateChangeReason): number {
     const ratePerMinute = this.ratePerMinuteAt(nowMs);
 
     if (ratePerMinute !== this.lastReportedRatePerMinute) {
+      const previousRatePerMinute = this.lastReportedRatePerMinute;
       this.lastReportedRatePerMinute = ratePerMinute;
-      this.onRateChange(ratePerMinute, isParisNightAt(nowMs));
+      this.onRateChange({
+        ratePerMinute,
+        previousRatePerMinute,
+        ceilingPerMinute: this.ceilingPerMinuteAt(nowMs),
+        isNight: isParisNightAt(nowMs),
+        reason: previousRatePerMinute === 0 ? "start" : reason,
+        timestampMs: nowMs,
+      });
     }
 
     return ratePerMinute;
@@ -171,6 +198,11 @@ export class AdaptiveRatePacer extends RatePacer {
         this.maxRatePerMinute,
       ),
     );
+
+    // Reported up front so the log opens on the cadence in effect. Otherwise the first
+    // adjustment would be the first line printed, and a decrease would read as the
+    // starting cadence rather than as a drop.
+    this.reportRateChange(this.nowMs(), "start");
   }
 
   override ratePerMinuteAt(timestampMs: number): number {
@@ -187,6 +219,10 @@ export class AdaptiveRatePacer extends RatePacer {
     if (this.consecutiveSuccesses >= this.successesBeforeIncrease && clearOfLastDecrease) {
       this.adaptiveRate = Math.min(this.maxRatePerMinute, this.adaptiveRate + this.increaseStep);
       this.consecutiveSuccesses = 0;
+      // Reported here rather than at the next acquire() so the log timestamps the change
+      // itself. Silent while the adaptive rate stays above the ceiling in effect: the
+      // cadence actually applied has not moved.
+      this.reportRateChange(this.nowMs(), "increase");
     }
   }
 
@@ -204,6 +240,7 @@ export class AdaptiveRatePacer extends RatePacer {
       Math.floor(this.adaptiveRate * this.decreaseFactor),
     );
     this.lastDecreaseMs = this.nowMs();
+    this.reportRateChange(this.lastDecreaseMs, "decrease");
     return true;
   }
 }
