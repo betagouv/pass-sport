@@ -26,10 +26,20 @@ const IDENTITY_COLUMNS = [
 // API returned, and the threshold comparison is left to whoever consumes the output.
 // `qf_status` is what marks a row as settled, since an absent value is a legitimate
 // outcome for a 404.
+// `qf_http_status` garde le dernier code HTTP vu pour la ligne (200 sur une réussite, 404,
+// 429, 5xx…) — sans lui un 5xx et une identité simplement absente de la base sont
+// indiscernables une fois dans le CSV, alors que c'est justement ce qui distingue une panne
+// de l'API d'une réponse normale.
 // `qf_request_url` est une colonne de debug : elle rejoue l'appel tel qu'il est parti
 // (URL + query params). Le SDK ne l'expose que sur ses erreurs, donc elle reste vide
 // sur les lignes trouvées. Elle contient l'identité pivot en clair — à ne pas diffuser.
-const ADDED_COLUMNS = ["qf_value", "qf_status", "qf_error", "qf_request_url"] as const;
+const ADDED_COLUMNS = [
+  "qf_value",
+  "qf_status",
+  "qf_http_status",
+  "qf_error",
+  "qf_request_url",
+] as const;
 const STATUS_FOUND = "trouve";
 const STATUS_NOT_FOUND = "non_trouve";
 const MAX_ATTEMPTS = 3;
@@ -39,9 +49,9 @@ const MAX_ATTEMPTS = 3;
 // revoked/exhausted quota instead of looking busy.
 const MAX_RATE_LIMIT_PAUSES = 20;
 
-// 5xx means the API is in maintenance: retry the same call every 10 minutes until it
-// answers something else. Bounded (~24h) so a permanently broken deployment fails
-// loudly instead of pausing for days.
+// A 5xx that isn't PROVIDER_DATA_ERROR_CODE (see below) means the API is in maintenance:
+// retry the same call every 10 minutes until it answers something else. Bounded (~24h) so a
+// permanently broken deployment fails loudly instead of pausing for days.
 const MAINTENANCE_RETRY_MS = 10 * 60_000;
 const MAX_MAINTENANCE_PAUSES = 144;
 
@@ -51,8 +61,8 @@ const INSTABILITY_COOLDOWN_MS = 10_000; // 15 seconds
 
 // Ceilings for the adaptive pacer, kept below the API's own: AIMD probes up to them,
 // and the 429 path stays the backstop if they turn out to be set too high.
-const DEFAULT_RATE_PER_MINUTE = 200;
-const DEFAULT_NIGHT_RATE_PER_MINUTE = 500;
+const DEFAULT_RATE_PER_MINUTE = 400;
+const DEFAULT_NIGHT_RATE_PER_MINUTE = 600;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -119,13 +129,26 @@ const waitMsFor = (result: ResourceResult): number =>
 const isUnexpected404 = (result: ResourceResult): boolean =>
   result.httpStatus === 404 && (result.error ?? "").toLowerCase().includes("erreur inattendue");
 
+// JSON:API error code seen on a 5xx that is actually the data provider (CNAF/MSA) choking on
+// this one row's data, not the API Particulier platform being down — e.g.
+// {"errors":[{"code":"35000","title":"Erreur interne du fournisseur de données", ...}]}.
+// Settled as an ordinary row failure, never fed into the maintenance streak below.
+const PROVIDER_DATA_ERROR_CODE = "35000";
+
 // `notFound` is a real, permanent answer (absent from the CAF/MSA base), not a missing
 // one: it settles the row as ineligible so resume never re-calls the API for it.
 type Verdict = {
   value: number | null;
   error: string | null;
   notFound?: boolean;
+  httpStatus?: number | null;
+  // JSON:API error code, kept only to tell a provider-data 5xx (PROVIDER_DATA_ERROR_CODE)
+  // apart from a genuine API outage — not written to the output CSV.
+  errorCode?: string;
   requestUrl?: string | null;
+  // Round-trip of the call that produced this verdict — logged only, not written to the
+  // output CSV. Slow responses are an early tell for API trouble, ahead of an outright 5xx.
+  responseTimeMs?: number | null;
 };
 
 // One row through quotient_familial, pausing (without consuming an attempt) whenever
@@ -138,10 +161,22 @@ async function screenRow(
   let rateLimitPauses = 0;
   let maintenancePauses = 0;
 
-  // Dernière URL remontée par le SDK, quel que soit l'essai — lue au moment du return,
-  // donc toujours celle de la tentative qui a produit le verdict.
+  // Dernière URL, code HTTP/erreur et temps de réponse remontés par le SDK, quel que soit
+  // l'essai — lus au moment du return, donc toujours ceux de la tentative qui a produit le
+  // verdict.
   let requestUrl: string | null = null;
-  const verdict = (v: Omit<Verdict, "requestUrl">): Verdict => ({ ...v, requestUrl });
+  let httpStatus: number | null = null;
+  let errorCode: string | undefined;
+  let responseTimeMs: number | null = null;
+  const verdict = (
+    v: Omit<Verdict, "requestUrl" | "httpStatus" | "errorCode" | "responseTimeMs">,
+  ): Verdict => ({
+    ...v,
+    requestUrl,
+    httpStatus,
+    errorCode,
+    responseTimeMs,
+  });
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let result: ResourceResult;
@@ -150,20 +185,32 @@ async function screenRow(
     // after a 429, and pacing per row would quietly overshoot the quota.
     await pacer.acquire();
 
+    const callStartedMs = Date.now();
+
     try {
       result = await client.quotientFamilial(identity);
     } catch (error) {
+      responseTimeMs = Date.now() - callStartedMs;
       // RealClient.call rethrows anything that is not an ApiGouvError/RateLimitError.
       if (attempt === MAX_ATTEMPTS) return verdict({ value: null, error: (error as Error).message });
       continue;
     }
 
+    responseTimeMs = Date.now() - callStartedMs;
     requestUrl = result.requestUrl ?? requestUrl;
+    httpStatus = result.httpStatus ?? httpStatus;
+    errorCode = result.errorCode ?? errorCode;
 
-    // 5xx: API maintenance, not a per-row failure. Retry the same call every 10
-    // minutes without consuming an attempt, and without touching the adaptive rate —
-    // maintenance is not a load signal.
+    // 5xx: settled right away when the SDK surfaced PROVIDER_DATA_ERROR_CODE — that one is the
+    // data provider (CNAF/MSA) choking on this one row's data, not the platform being down.
+    // Any other 5xx is taken as API maintenance: retry the same call every 10 minutes without
+    // consuming an attempt, and without touching the adaptive rate — maintenance is not a load
+    // signal.
     if (result.httpStatus != null && result.httpStatus >= 500) {
+      if (errorCode === PROVIDER_DATA_ERROR_CODE) {
+        return verdict({ value: null, error: result.error ?? `erreur serveur (${result.httpStatus})` });
+      }
+
       maintenancePauses += 1;
 
       if (maintenancePauses > MAX_MAINTENANCE_PAUSES) {
@@ -173,7 +220,7 @@ async function screenRow(
         });
       }
 
-      console.log(`API en maintenance (${result.httpStatus}), retry dans 10 min`);
+      console.log(`API en maintenance (${result.httpStatus}, ${responseTimeMs}ms), retry dans 10 min`);
 
       await sleep(MAINTENANCE_RETRY_MS);
       attempt -= 1;
@@ -192,7 +239,7 @@ async function screenRow(
       }
 
       const waitMs = waitMsFor(result);
-      console.log(`  rate limited, pausing ${Math.round(waitMs / 1000)}s`);
+      console.log(`  rate limited (${responseTimeMs}ms), pausing ${Math.round(waitMs / 1000)}s`);
 
       await sleep(waitMs);
       attempt -= 1;
@@ -207,6 +254,8 @@ async function screenRow(
       if (typeof value !== "number") {
         return verdict({ value: null, error: "réponse sans quotient_familial.valeur" });
       }
+
+      console.log(`  succès (${responseTimeMs}ms)`);
 
       // Proactive: the window is spent, so pause before the next row rather than
       // eating a wasted 429 on it.
@@ -227,7 +276,7 @@ async function screenRow(
         return verdict({ value: null, error: result.error ?? "Erreur inattendue (404)" });
       }
 
-      console.log(`404 "Erreur inattendue", cooldown ${INSTABILITY_COOLDOWN_MS / 1000}s`);
+      console.log(`404 "Erreur inattendue" (${responseTimeMs}ms), cooldown ${INSTABILITY_COOLDOWN_MS / 1000}s`);
       await sleep(INSTABILITY_COOLDOWN_MS);
       continue;
     }
@@ -303,6 +352,7 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
   return {
     qf_value: verdict.value === null ? "" : String(verdict.value),
     qf_status: status,
+    qf_http_status: verdict.httpStatus == null ? "" : String(verdict.httpStatus),
     qf_error: verdict.error ?? "",
     qf_request_url: verdict.requestUrl ?? "",
   };
@@ -402,7 +452,8 @@ async function main(): Promise<void> {
     if (settled % logEvery === 0) {
       console.log(
         `${label}: ${verdict.value ?? "aucun verdict"}` +
-          (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`),
+          (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`) +
+          (verdict.responseTimeMs != null ? ` [${verdict.responseTimeMs}ms]` : ""),
       );
     }
 

@@ -135,6 +135,10 @@ export type ResourceResult = {
   success: boolean;
   data: ApiParticulierData | null;
   error?: string;
+  // JSON:API `errors[0].code` (e.g. "35000"), when the SDK surfaced one. Lets a caller tell
+  // a data provider's own internal error — bound to this one call's data — apart from the
+  // API being down, which `error`/`httpStatus` alone cannot (both look like a 5xx).
+  errorCode?: string;
   childIndex?: number; // index into QuotientFamilialData.enfants
   rateLimited?: boolean;
   retryAfter?: number | null;

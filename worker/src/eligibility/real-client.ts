@@ -70,6 +70,7 @@ export class RealClient implements ApiParticulierClient {
           success: false,
           data: null,
           error: e.firstErrorDetail ?? e.firstErrorTitle ?? e.message,
+          errorCode: e.firstErrorCode,
           requestUrl: e.url,
           childIndex,
         };
