@@ -64,7 +64,7 @@ const MAX_RATE_LIMIT_PAUSES = 20;
 // A 5xx that isn't PROVIDER_DATA_ERROR_CODE (see below) means the API is in maintenance:
 // retry the same call every 10 minutes until it answers something else. Bounded (~24h) so a
 // permanently broken deployment fails loudly instead of pausing for days.
-const MAINTENANCE_RETRY_MS = 10 * 60_000;
+const MAINTENANCE_RETRY_MS = 7_000;
 const MAX_MAINTENANCE_PAUSES = 144;
 
 // Cooldown after a 404 "Erreur inattendue" (API instability, not a real not-found)
