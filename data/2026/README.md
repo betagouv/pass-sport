@@ -208,21 +208,17 @@ flowchart TB
     EXISTING_CODES -.->|"seed"| f3
     f3 --> DB_FSS[("DB_FSS_EXPORT_2026\nCSV + id_psp")]:::finalFile
 
-    subgraph PARQUET_NB["⑧ csv_to_parquet.ipynb"]
-        p1["Read CSV · define PyArrow schema\n(all columns as string)\nWrite Parquet"]
-    end
-
-    FINAL_DB --> p1
-    p1 --> BENEF_PARQUET[("BENEF_2026\nParquet")]:::finalFile
-
-    subgraph EMAIL_NB["⑨ linkmobility/1_email_campaign.ipynb"]
-        e1["Load Parquet · unwrap allocataire JSON\nfilter: keep rows with email only"]
-        e2["Map + rename columns\nformat names & birth date text\ngenerate AES-CBC encrypted QR code URL per row"]
+    subgraph EMAIL_NB["⑨ linkmobility/1_email_campaign.ipynb  ·  run once per source, like ③"]
+        e1["Load ONE *-with-codes.csv (CAMPAIGN_INPUT_PATHFILE_2026)\nunwrap allocataire JSON · filter: keep rows with email only"]
+        e2["Map + rename columns (id_psp → code)\nformat names & birth date text"]
         e3{"Split by\nallocataire vs benef"}
         e1-->e2-->e3
     end
 
-    BENEF_PARQUET --> e1
+    %% Reads generate_new_codes.ipynb's own dated output (FINAL_DB), one source per run: the
+    %% campaign needs id_psp (kept as `code`), but no production DB id and no QR code (see
+    %% 1_email_campaign.ipynb summary).
+    FINAL_DB -->|"CNAF/CNAF_AAH_AEEH/\nMSA/MSA_AAH_AEEH"| e1
     e3 -->|"allocataire = benef"| CAMP_B[("Campaign CSV B\ndirect beneficiaries")]:::campaignFile
     e3 -->|"allocataire ≠ benef"| CAMP_BA[("Campaign CSV B+A\nindirect beneficiaries")]:::campaignFile
 
