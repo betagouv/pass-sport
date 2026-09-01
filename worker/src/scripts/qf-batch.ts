@@ -11,7 +11,14 @@ import { AdaptiveRatePacer, type RateChange, type RateChangeReason } from "./rat
 // Matches the 'allocataire-*' column convention already used across the data/
 // partner notebooks (CNAF/MSA/CNOUS), rather than the FranceConnect-flavored
 // vocabulary of PivotIdentity, so a notebook export needs no extra rename step.
-const REQUIRED_COLUMNS = ["allocataire-nom_naissance", "allocataire-date_naissance"] as const;
+// allocataire-code_pays_naissance (-> code_cog_insee_pays_naissance) is required too: without
+// it the QF call is missing a mandatory état civil param, so a row with an empty value is
+// skipped just like a missing nom_naissance/date_naissance (see rowToIdentity).
+const REQUIRED_COLUMNS = [
+  "allocataire-nom_naissance",
+  "allocataire-date_naissance",
+  "allocataire-code_pays_naissance",
+] as const;
 const IDENTITY_COLUMNS = [
   "allocataire-nom_naissance",
   "allocataire-nom_usage",
@@ -105,7 +112,8 @@ const formatRateChange = ({
 const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
   const familyName = row["allocataire-nom_naissance"]?.trim();
   const birthdate = row["allocataire-date_naissance"]?.trim();
-  if (!familyName || !birthdate) return null;
+  const birthcountry = row["allocataire-code_pays_naissance"]?.trim();
+  if (!familyName || !birthdate || !birthcountry) return null;
 
   const gender = row["allocataire-genre"]?.trim().toLowerCase();
   return {
@@ -115,7 +123,7 @@ const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
     birthdate,
     gender: gender === "male" || gender === "female" ? gender : undefined,
     birthplace: row["allocataire-code_insee_naissance"]?.trim() || undefined,
-    birthcountry: row["allocataire-code_pays_naissance"]?.trim() || undefined,
+    birthcountry,
   };
 };
 
@@ -443,7 +451,9 @@ async function main(): Promise<void> {
       ? await screenRow(client, identity, pacer)
       : {
           value: null,
-          error: "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance)",
+          error:
+            "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance/" +
+            "allocataire-code_pays_naissance)",
         };
 
     const columns = verdictColumns(verdict);
