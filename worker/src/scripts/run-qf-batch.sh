@@ -38,7 +38,11 @@ OUTPUT="$WORKDIR/${PARTNER}_2026_qf_batch_output.csv"
 cd "$WORKER_DIR"     # load-env.ts cherche .env.local dans le cwd (jeton API Particulier)
 # Cadencement auto-imposé, sous le quota de l'API Particulier. Monter d'un palier = relancer
 # avec un QF_RATE plus haut (200, puis 250, puis 300…) ; la reprise fait le reste.
+# QF_CONCURRENCY : nombre d'appels API en vol en parallèle (voir DEFAULT_CONCURRENCY dans
+# qf-batch.ts) — c'est ce qui permet d'atteindre QF_RATE/QF_NIGHT_RATE malgré des réponses de
+# l'ordre de la seconde ; un run strictement séquentiel ne pourrait pas suivre la cadence visée.
 exec pnpm qf:batch "$INPUT" "$OUTPUT" \
   --log-every "${QF_LOG_EVERY:-1}" \
   --rate "${QF_RATE:-200}" \
-  --night-rate "${QF_NIGHT_RATE:-500}"
+  --night-rate "${QF_NIGHT_RATE:-500}" \
+  --concurrency "${QF_CONCURRENCY:-40}"

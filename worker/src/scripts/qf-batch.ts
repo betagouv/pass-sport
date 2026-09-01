@@ -49,6 +49,11 @@ const ADDED_COLUMNS = [
 ] as const;
 const STATUS_FOUND = "trouve";
 const STATUS_NOT_FOUND = "non_trouve";
+// Code 35560 : la base a assez d'éléments pour répondre, mais pas assez pour trancher sur
+// cette identité (ex. homonymes) — une réponse définitive elle aussi, distincte du 404
+// "vraiment absent de la base" (STATUS_NOT_FOUND) pour ne pas la confondre en aval.
+const STATUS_NOT_FOUND_INSUFFICIENT_INFO = "non_trouve_pas_assez_info";
+const INSUFFICIENT_INFO_ERROR_CODE = "35560";
 const MAX_ATTEMPTS = 3;
 
 // A rate-limit pause does not consume an attempt, so a permanently throttled token
@@ -145,10 +150,13 @@ const PROVIDER_DATA_ERROR_CODE = "35000";
 
 // `notFound` is a real, permanent answer (absent from the CAF/MSA base), not a missing
 // one: it settles the row as ineligible so resume never re-calls the API for it.
+// `insufficientInfo` (code 35560) is the same kind of permanent, definitive answer — the base
+// just cannot disambiguate this identity — so it settles the row exactly like `notFound` does.
 type Verdict = {
   value: number | null;
   error: string | null;
   notFound?: boolean;
+  insufficientInfo?: boolean;
   httpStatus?: number | null;
   // JSON:API error code, kept only to tell a provider-data 5xx (PROVIDER_DATA_ERROR_CODE)
   // apart from a genuine API outage — not written to the output CSV.
@@ -208,6 +216,18 @@ async function screenRow(
     requestUrl = result.requestUrl ?? requestUrl;
     httpStatus = result.httpStatus ?? httpStatus;
     errorCode = result.errorCode ?? errorCode;
+
+    // Code 35560, whatever the httpStatus it rides on: the base cannot disambiguate this
+    // identity (not enough info, e.g. homonyms), a definitive answer settled right away —
+    // never retried, in this run or the next (see hasVerdict/STATUS_NOT_FOUND_INSUFFICIENT_INFO).
+    if (errorCode === INSUFFICIENT_INFO_ERROR_CODE) {
+      pacer.onSuccess(); // a well-formed answer, not a sign of API trouble
+      return verdict({
+        value: null,
+        error: result.error ?? "informations insuffisantes pour identifier la personne",
+        insufficientInfo: true,
+      });
+    }
 
     // 5xx: settled right away when the SDK surfaced PROVIDER_DATA_ERROR_CODE — that one is the
     // data provider (CNAF/MSA) choking on this one row's data, not the platform being down.
@@ -324,7 +344,9 @@ async function readFirstLine(path: string): Promise<string> {
 // A row is settled once it carries a real verdict. Anything else — an API error, a
 // 404, an incomplete pivot, an interrupted write — is retried on the next run.
 const hasVerdict = (row: Record<string, string>): boolean =>
-  row.qf_status === STATUS_FOUND || row.qf_status === STATUS_NOT_FOUND;
+  row.qf_status === STATUS_FOUND ||
+  row.qf_status === STATUS_NOT_FOUND ||
+  row.qf_status === STATUS_NOT_FOUND_INSUFFICIENT_INFO;
 
 const readOutputRows = (path: string): AsyncIterable<Record<string, string>> =>
   createReadStream(path).pipe(
@@ -353,10 +375,17 @@ async function closeStream(
 }
 
 const verdictColumns = (verdict: Verdict): Record<string, string> => {
-  // A QF value settles the row; failing that, a 404 settles it as absent from the base;
-  // anything else leaves the status blank and is picked up again on the next run.
+  // A QF value settles the row; failing that, a 404 settles it as absent from the base, and
+  // code 35560 as findable-but-undecidable; anything else leaves the status blank and is
+  // picked up again on the next run.
   const status =
-    verdict.value !== null ? STATUS_FOUND : verdict.notFound ? STATUS_NOT_FOUND : "";
+    verdict.value !== null
+      ? STATUS_FOUND
+      : verdict.notFound
+        ? STATUS_NOT_FOUND
+        : verdict.insufficientInfo
+          ? STATUS_NOT_FOUND_INSUFFICIENT_INFO
+          : "";
   return {
     qf_value: verdict.value === null ? "" : String(verdict.value),
     qf_status: status,
@@ -366,7 +395,7 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
   };
 };
 
-const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate"];
+const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate", "--concurrency"];
 
 const numberOption = (args: string[], name: string, fallback: number): number => {
   const index = args.indexOf(name);
@@ -387,6 +416,78 @@ const positionalArgs = (args: string[]): string[] => {
   return positional;
 };
 
+// A single call regularly takes over a second (see screenRow's own retries/pauses), so
+// awaiting one row fully before starting the next would cap the real throughput at
+// ~1/latency — far under the rate the pacer is asked to sustain. Rows are instead fanned
+// out to up to CONCURRENCY in-flight settleRow() calls; pacer.acquire() (shared across all
+// of them) is what actually enforces the target cadence, this just keeps enough calls
+// in flight for that cadence to be reachable despite the per-call latency.
+const DEFAULT_CONCURRENCY = 40;
+
+// Runs `settle` over `items` with up to `concurrency` calls in flight, then commits each
+// result through `write` in the original item order — the output CSV stays one row per
+// input row in input order, which resume (hasVerdict/`done`) depends on, even though rows
+// can settle out of order.
+//
+// Admission of new items is gated on the write backlog too, not just on in-flight settles:
+// a settle's task resolves (freeing its concurrency slot) as soon as its result is handed
+// off into `pending`, whether or not it was actually its turn to write — otherwise a single very
+// slow row (a maintenance retry pauses up to 24h, see MAX_MAINTENANCE_PAUSES) would let
+// unlimited later rows finish and pile up unwritten behind it, growing memory without bound
+// on a multi-day run. Capping the backlog at a small multiple of `concurrency` keeps that
+// bounded while still absorbing the ordinary latency spread between rows.
+async function processInOrder<T, R>(
+  items: AsyncIterable<T>,
+  concurrency: number,
+  settle: (item: T, sequence: number) => Promise<R>,
+  write: (result: R) => Promise<void>,
+): Promise<void> {
+  const pending = new Map<number, R>();
+  const inFlight = new Set<Promise<void>>();
+  const backlogCap = concurrency * 4;
+  let nextToWrite = 0;
+  let nextToAdmit = 0;
+
+  for await (const item of items) {
+    const sequence = nextToAdmit++;
+
+    const task = (async () => {
+      const result = await settle(item, sequence);
+      pending.set(sequence, result);
+
+      while (pending.has(nextToWrite)) {
+        const result = pending.get(nextToWrite)!;
+        pending.delete(nextToWrite);
+        await write(result);
+        nextToWrite += 1;
+      }
+    })();
+
+    const tracked = task.finally(() => inFlight.delete(tracked));
+    inFlight.add(tracked);
+
+    while (inFlight.size >= concurrency || pending.size >= backlogCap) {
+      await Promise.race(inFlight);
+    }
+  }
+
+  await Promise.all(inFlight);
+}
+
+// Mirrors `for await (const item of iterable) { if (++seen > count) yield item; }`, but also
+// reports the total number of items seen (including the skipped ones) once the source is
+// exhausted — the caller needs that count for its own end-of-run summary.
+async function* skipFirst<T>(
+  iterable: AsyncIterable<T>,
+  count: number,
+  seenCounter: { total: number },
+): AsyncGenerator<T> {
+  for await (const item of iterable) {
+    seenCounter.total += 1;
+    if (seenCounter.total > count) yield item;
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const [inputPath, outputPath] = positionalArgs(args);
@@ -396,15 +497,17 @@ async function main(): Promise<void> {
   const logEvery = numberOption(args, "--log-every", 1);
   const ratePerMinute = numberOption(args, "--rate", DEFAULT_RATE_PER_MINUTE);
   const nightRatePerMinute = numberOption(args, "--night-rate", DEFAULT_NIGHT_RATE_PER_MINUTE);
+  const concurrency = numberOption(args, "--concurrency", DEFAULT_CONCURRENCY);
 
-  const invalidOption = [logEvery, ratePerMinute, nightRatePerMinute].some(
+  const invalidOption = [logEvery, ratePerMinute, nightRatePerMinute, concurrency].some(
     (value) => Number.isNaN(value) || value < 1,
   );
 
   if (!inputPath || !outputPath || invalidOption) {
     console.error(
       "usage: qf-batch <input.csv> <output.csv> [--log-every 1] " +
-        `[--rate ${DEFAULT_RATE_PER_MINUTE}] [--night-rate ${DEFAULT_NIGHT_RATE_PER_MINUTE}]`,
+        `[--rate ${DEFAULT_RATE_PER_MINUTE}] [--night-rate ${DEFAULT_NIGHT_RATE_PER_MINUTE}] ` +
+        `[--concurrency ${DEFAULT_CONCURRENCY}]`,
     );
     process.exitCode = 1;
     return;
@@ -490,17 +593,24 @@ async function main(): Promise<void> {
     await writeRow(stringifier, { ...row, ...columns });
   };
 
-  // Rows already written: keep the settled ones, redo the rest.
+  // Rows already written: keep the settled ones, redo the rest. Re-settling is fanned out
+  // (see processInOrder above) so a slow/retrying row does not stall the ones after it — the
+  // write still lands rows on `stringifier` in their original order.
   if (existsSync(outputPath)) {
-    for await (const row of readOutputRows(outputPath)) {
-      done += 1;
-      if (hasVerdict(row)) {
-        await record(row, row);
-        continue;
-      }
-      called += 1;
-      await record(row, await settle(row, `reprise ligne ${done}`));
-    }
+    await processInOrder(
+      readOutputRows(outputPath),
+      concurrency,
+      async (row, sequence) => {
+        done += 1;
+        if (hasVerdict(row)) return { row, columns: row };
+
+        called += 1;
+        const columns = await settle(row, `reprise ligne ${sequence + 1}`);
+        return { row, columns };
+      },
+      ({ row, columns }) => record(row, columns),
+    );
+
     console.log(`reprise: ${done} ligne(s) relue(s), ${called} sans verdict réessayée(s)\n`);
   }
 
@@ -517,18 +627,27 @@ async function main(): Promise<void> {
   // the original was still intact, which is what makes the re-read above safe.
   await rename(tmpPath, outputPath);
 
-  // Input rows never reached.
+  // Input rows never reached. Same fan-out as the resume pass above, restarted fresh (a
+  // 0-based sequence, since skipFirst re-numbers what it yields) so it resumes appending
+  // right where the resume pass left off in `stringifier`.
   const parser = createReadStream(inputPath).pipe(
     parse({ columns: true, bom: true, skip_empty_lines: true, trim: true }),
   ) as AsyncIterable<Record<string, string>>;
 
-  let index = 0;
-  for await (const row of parser) {
-    index += 1;
-    if (index <= done) continue;
-    called += 1;
-    await record(row, await settle(row, `ligne ${index}`));
-  }
+  const seenCounter = { total: 0 };
+
+  await processInOrder(
+    skipFirst(parser, done, seenCounter),
+    concurrency,
+    async (row, sequence) => {
+      called += 1;
+      const columns = await settle(row, `ligne ${done + sequence + 1}`);
+      return { row, columns };
+    },
+    ({ row, columns }) => record(row, columns),
+  );
+
+  const index = seenCounter.total;
 
   await closeStream(stringifier, tmpStream);
 
