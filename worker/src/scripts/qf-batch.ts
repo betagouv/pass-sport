@@ -5,7 +5,7 @@ import { createInterface } from "node:readline";
 import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
-import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
+import type { ApiJsonError, QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
 import { AdaptiveRatePacer, type RateChange, type RateChangeReason } from "./rate-pacer";
 
 // Matches the 'allocataire-*' column convention already used across the data/
@@ -40,11 +40,16 @@ const IDENTITY_COLUMNS = [
 // `qf_request_url` est une colonne de debug : elle rejoue l'appel tel qu'il est parti
 // (URL + query params). Le SDK ne l'expose que sur ses erreurs, donc elle reste vide
 // sur les lignes trouvées. Elle contient l'identité pivot en clair — à ne pas diffuser.
+// `qf_error_details` porte l'objet JSON:API brut ({code, title, detail, meta}) de la dernière
+// erreur API Particulier vue pour la ligne — qf_error n'en garde que le message lisible, ce qui
+// suffit à l'oeil mais pas à retrouver après coup le code exact (ex. 35008) ou le fournisseur
+// en cause (meta.provider) sans reparser une ligne de log.
 const ADDED_COLUMNS = [
   "qf_value",
   "qf_status",
   "qf_http_status",
   "qf_error",
+  "qf_error_details",
   "qf_request_url",
 ] as const;
 const STATUS_FOUND = "trouve";
@@ -161,6 +166,9 @@ type Verdict = {
   // JSON:API error code, kept only to tell a provider-data 5xx (PROVIDER_DATA_ERROR_CODE)
   // apart from a genuine API outage — not written to the output CSV.
   errorCode?: string;
+  // Raw JSON:API error object behind `error`/`errorCode` above — written verbatim to
+  // qf_error_details.
+  apiError?: ApiJsonError;
   requestUrl?: string | null;
   // Round-trip of the call that produced this verdict — logged only, not written to the
   // output CSV. Slow responses are an early tell for API trouble, ahead of an outright 5xx.
@@ -183,14 +191,16 @@ async function screenRow(
   let requestUrl: string | null = null;
   let httpStatus: number | null = null;
   let errorCode: string | undefined;
+  let apiError: ApiJsonError | undefined;
   let responseTimeMs: number | null = null;
   const verdict = (
-    v: Omit<Verdict, "requestUrl" | "httpStatus" | "errorCode" | "responseTimeMs">,
+    v: Omit<Verdict, "requestUrl" | "httpStatus" | "errorCode" | "apiError" | "responseTimeMs">,
   ): Verdict => ({
     ...v,
     requestUrl,
     httpStatus,
     errorCode,
+    apiError,
     responseTimeMs,
   });
 
@@ -216,6 +226,7 @@ async function screenRow(
     requestUrl = result.requestUrl ?? requestUrl;
     httpStatus = result.httpStatus ?? httpStatus;
     errorCode = result.errorCode ?? errorCode;
+    apiError = result.apiError ?? apiError;
 
     // Code 35560, whatever the httpStatus it rides on: the base cannot disambiguate this
     // identity (not enough info, e.g. homonyms), a definitive answer settled right away —
@@ -391,6 +402,7 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
     qf_status: status,
     qf_http_status: verdict.httpStatus == null ? "" : String(verdict.httpStatus),
     qf_error: verdict.error ?? "",
+    qf_error_details: verdict.apiError ? JSON.stringify(verdict.apiError) : "",
     qf_request_url: verdict.requestUrl ?? "",
   };
 };

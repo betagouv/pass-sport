@@ -127,6 +127,16 @@ export type ApiParticulierData =
   | AllocationEnfantHandicapeData
   | EtudiantBoursierData;
 
+// Raw JSON:API error object (ApiGouvError.firstError), kept verbatim alongside the flattened
+// `error`/`errorCode` fields below so a caller can persist the provider's exact code/title/
+// detail/meta without reconstructing it from those.
+export type ApiJsonError = {
+  code?: string;
+  title?: string;
+  detail?: string;
+  meta?: Record<string, unknown>;
+};
+
 // One normalized result row, produced identically by the real and mock clients.
 export type ResourceResult = {
   resource: string;
@@ -139,6 +149,9 @@ export type ResourceResult = {
   // a data provider's own internal error — bound to this one call's data — apart from the
   // API being down, which `error`/`httpStatus` alone cannot (both look like a 5xx).
   errorCode?: string;
+  // See ApiJsonError. Undefined when the SDK raised without a JSON:API errors[] body (e.g. a
+  // transport failure).
+  apiError?: ApiJsonError;
   childIndex?: number; // index into QuotientFamilialData.enfants
   rateLimited?: boolean;
   retryAfter?: number | null;
