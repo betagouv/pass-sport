@@ -45,4 +45,4 @@ exec pnpm qf:batch "$INPUT" "$OUTPUT" \
   --log-every "${QF_LOG_EVERY:-1}" \
   --rate "${QF_RATE:-200}" \
   --night-rate "${QF_NIGHT_RATE:-500}" \
-  --concurrency "${QF_CONCURRENCY:-10}"
+  --concurrency "${QF_CONCURRENCY:-5}"

@@ -143,8 +143,8 @@ const AIMD_DEFAULTS: Required<AimdOptions> = {
   initialRatePerMinute: 100,
   minRatePerMinute: 5,
   increaseStep: 5,
-  decreaseFactor: 0.5,
-  successesBeforeIncrease: 8,
+  decreaseFactor: 0.30,
+  successesBeforeIncrease: 10,
   decreaseHoldMs: 60_000,
 };
 
