@@ -5,7 +5,7 @@ import { createInterface } from "node:readline";
 import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
-import type { ApiJsonError, QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
+import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
 import { AdaptiveRatePacer, type RateChange, type RateChangeReason } from "./rate-pacer";
 
 // Matches the 'allocataire-*' column convention already used across the data/
@@ -40,16 +40,11 @@ const IDENTITY_COLUMNS = [
 // `qf_request_url` est une colonne de debug : elle rejoue l'appel tel qu'il est parti
 // (URL + query params). Le SDK ne l'expose que sur ses erreurs, donc elle reste vide
 // sur les lignes trouvées. Elle contient l'identité pivot en clair — à ne pas diffuser.
-// `qf_error_details` porte l'objet JSON:API brut ({code, title, detail, meta}) de la dernière
-// erreur API Particulier vue pour la ligne — qf_error n'en garde que le message lisible, ce qui
-// suffit à l'oeil mais pas à retrouver après coup le code exact (ex. 35008) ou le fournisseur
-// en cause (meta.provider) sans reparser une ligne de log.
 const ADDED_COLUMNS = [
   "qf_value",
   "qf_status",
   "qf_http_status",
   "qf_error",
-  "qf_error_details",
   "qf_request_url",
 ] as const;
 const STATUS_FOUND = "trouve";
@@ -67,11 +62,8 @@ const MAX_ATTEMPTS = 3;
 const MAX_RATE_LIMIT_PAUSES = 20;
 
 // A 5xx that isn't PROVIDER_DATA_ERROR_CODE (see below) means the API is in maintenance:
-// retry the same call every MAINTENANCE_RETRY_MS until it answers something else, without
-// touching the adaptive rate. Bounded by MAX_MAINTENANCE_PAUSES (~17 min total at the current
-// 7s interval — lowered in 2b2e3704 without re-tuning this bound, which was sized for the
-// previous 10-minute interval to cover ~24h) so a permanently broken deployment fails loudly
-// instead of pausing for days.
+// retry the same call every 10 minutes until it answers something else. Bounded (~24h) so a
+// permanently broken deployment fails loudly instead of pausing for days.
 const MAINTENANCE_RETRY_MS = 7_000;
 const MAX_MAINTENANCE_PAUSES = 144;
 
@@ -156,14 +148,6 @@ const isUnexpected404 = (result: ResourceResult): boolean =>
 // Settled as an ordinary row failure, never fed into the maintenance streak below.
 const PROVIDER_DATA_ERROR_CODE = "35000";
 
-// Code 35008 : le fournisseur de donnée (CNAF/MSA) lui-même est saturé de requêtes — un vrai
-// signal de rate limit, mais porté par un 502 (voir errorClassForStatus du SDK, qui classe par
-// httpStatus et non par ce code), donc indiscernable d'une panne de maintenance sans ce check.
-// La réponse ne contient ni retry_in ni Retry-After, d'où une pause fixe plutôt qu'une valeur
-// lue sur la réponse.
-const PROVIDER_RATE_LIMIT_ERROR_CODE = "35008";
-const PROVIDER_RATE_LIMIT_COOLDOWN_MS = 6000;
-
 // `notFound` is a real, permanent answer (absent from the CAF/MSA base), not a missing
 // one: it settles the row as ineligible so resume never re-calls the API for it.
 // `insufficientInfo` (code 35560) is the same kind of permanent, definitive answer — the base
@@ -177,9 +161,6 @@ type Verdict = {
   // JSON:API error code, kept only to tell a provider-data 5xx (PROVIDER_DATA_ERROR_CODE)
   // apart from a genuine API outage — not written to the output CSV.
   errorCode?: string;
-  // Raw JSON:API error object behind `error`/`errorCode` above — written verbatim to
-  // qf_error_details.
-  apiError?: ApiJsonError;
   requestUrl?: string | null;
   // Round-trip of the call that produced this verdict — logged only, not written to the
   // output CSV. Slow responses are an early tell for API trouble, ahead of an outright 5xx.
@@ -202,16 +183,14 @@ async function screenRow(
   let requestUrl: string | null = null;
   let httpStatus: number | null = null;
   let errorCode: string | undefined;
-  let apiError: ApiJsonError | undefined;
   let responseTimeMs: number | null = null;
   const verdict = (
-    v: Omit<Verdict, "requestUrl" | "httpStatus" | "errorCode" | "apiError" | "responseTimeMs">,
+    v: Omit<Verdict, "requestUrl" | "httpStatus" | "errorCode" | "responseTimeMs">,
   ): Verdict => ({
     ...v,
     requestUrl,
     httpStatus,
     errorCode,
-    apiError,
     responseTimeMs,
   });
 
@@ -237,7 +216,6 @@ async function screenRow(
     requestUrl = result.requestUrl ?? requestUrl;
     httpStatus = result.httpStatus ?? httpStatus;
     errorCode = result.errorCode ?? errorCode;
-    apiError = result.apiError ?? apiError;
 
     // Code 35560, whatever the httpStatus it rides on: the base cannot disambiguate this
     // identity (not enough info, e.g. homonyms), a definitive answer settled right away —
@@ -249,26 +227,6 @@ async function screenRow(
         error: result.error ?? "informations insuffisantes pour identifier la personne",
         insufficientInfo: true,
       });
-    }
-
-    // Code 35008, whatever the httpStatus it rides on: the data provider itself is being hit
-    // too hard, a rate-limit signal — not a platform outage, so it must not fall into the 5xx
-    // maintenance branch below. Retried unconditionally, without ever settling a "throttlé"
-    // verdict: unlike a stuck token (MAX_RATE_LIMIT_PAUSES) or a genuine outage
-    // (MAX_MAINTENANCE_PAUSES), this is inherently transient — the pacer.onError() backoff
-    // below is what brings the aggregate rate back under the provider's own limit, so the
-    // condition necessarily clears rather than needing a give-up ceiling.
-    if (errorCode === PROVIDER_RATE_LIMIT_ERROR_CODE) {
-      pacer.onError();
-
-      console.log(
-        `  fournisseur (CNAF/MSA) saturé (${responseTimeMs}ms), ` +
-          `pausing ${PROVIDER_RATE_LIMIT_COOLDOWN_MS / 1000}s`,
-      );
-
-      await sleep(PROVIDER_RATE_LIMIT_COOLDOWN_MS);
-      attempt -= 1;
-      continue;
     }
 
     // 5xx: settled right away when the SDK surfaced PROVIDER_DATA_ERROR_CODE — that one is the
@@ -290,10 +248,7 @@ async function screenRow(
         });
       }
 
-      console.log(
-        `API en maintenance (${result.httpStatus}, ${responseTimeMs}ms), ` +
-          `retry dans ${MAINTENANCE_RETRY_MS / 1000}s`,
-      );
+      console.log(`API en maintenance (${result.httpStatus}, ${responseTimeMs}ms), retry dans 10 min`);
 
       await sleep(MAINTENANCE_RETRY_MS);
       attempt -= 1;
@@ -436,7 +391,6 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
     qf_status: status,
     qf_http_status: verdict.httpStatus == null ? "" : String(verdict.httpStatus),
     qf_error: verdict.error ?? "",
-    qf_error_details: verdict.apiError ? JSON.stringify(verdict.apiError) : "",
     qf_request_url: verdict.requestUrl ?? "",
   };
 };

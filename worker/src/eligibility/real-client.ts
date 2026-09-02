@@ -6,13 +6,7 @@ import {
 } from "@api-gouv-dinum/api-particulier";
 import type { ApiParticulierClient } from "./client";
 import { CNOUS_IDENTITE_PATH, RESOURCE_META, toCnousParams, toDssParams, toQfParams } from "./client";
-import type { ApiJsonError, ApiParticulierData, PivotIdentity, ResourceResult } from "./types";
-
-// ApiGouvError.firstError returns {} rather than undefined when errors[] is empty (e.g. a
-// transport failure with no JSON:API body) — undefined here is what tells that case apart
-// from a genuine, empty-on-purpose error object once persisted downstream.
-const firstApiError = (e: ApiGouvError): ApiJsonError | undefined =>
-  e.errors.length > 0 ? e.firstError : undefined;
+import type { ApiParticulierData, PivotIdentity, ResourceResult } from "./types";
 
 export class RealClient implements ApiParticulierClient {
   private client: Client;
@@ -66,7 +60,6 @@ export class RealClient implements ApiParticulierClient {
           rateLimitRemaining: 0,
           rateLimitResetMs: (retryAfter ?? 1) * 1000,
           requestUrl: e.url,
-          apiError: firstApiError(e),
           childIndex,
         };
       }
@@ -78,7 +71,6 @@ export class RealClient implements ApiParticulierClient {
           data: null,
           error: e.firstErrorDetail ?? e.firstErrorTitle ?? e.message,
           errorCode: e.firstErrorCode,
-          apiError: firstApiError(e),
           requestUrl: e.url,
           childIndex,
         };
