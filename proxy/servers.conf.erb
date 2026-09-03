@@ -141,11 +141,20 @@ limit_req_status    429;
 
 # Trusted upstream ranges exempted from rate limiting: an empty $limit_req_key makes
 # nginx skip limiting entirely for the matching request (documented limit_req_zone behavior).
-geo $limit_req_key {
-  default              $http_x_real_ip;
-  185.24.186.224/28    "";
-  82.210.16.160/28     "";
-  145.242.17.29/32     "";
+# `geo` stores its values as literal strings and never expands a variable, so it can only
+# produce the exemption flag; `map` is what turns that flag into the per-visitor key.
+# $remote_addr is already the real visitor IP: the Scalingo nginx buildpack sets
+# `set_real_ip_from 0.0.0.0/0` + `real_ip_header X-Forwarded-For` in its http block.
+geo $rate_limit_exempt {
+  default              0;
+  185.24.186.224/28    1;
+  82.210.16.160/28     1;
+  145.242.17.29/32     1;
+}
+
+map $rate_limit_exempt $limit_req_key {
+  0  $binary_remote_addr;
+  1  "";
 }
 
 # 10m holds ~160k client states at 64 bytes each, well beyond this traffic.
