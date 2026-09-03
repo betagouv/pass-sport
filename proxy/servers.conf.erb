@@ -13,15 +13,6 @@ server {
   listen <%= ENV['PORT'] %>;
   charset utf-8;
 
-  # Scalingo containers aren't directly reachable from the internet: every request
-  # here arrives via Scalingo's own routing layer, which already resolved the real
-  # visitor IP into X-Real-IP. Trust that single hop and recover it into $remote_addr,
-  # otherwise every visitor looks like the router's IP - the rate limit zones below key
-  # off $remote_addr, so without this every visitor shares one rate-limit bucket.
-  real_ip_header    X-Real-IP;
-  set_real_ip_from  0.0.0.0/0;
-  set_real_ip_from  ::/0;
-
   # Common proxy headers/settings, inherited by every location below
   proxy_intercept_errors  on;
   proxy_set_header        Host                 <%= ENV['PUBLIC_FQDN'] %>;
@@ -151,7 +142,7 @@ limit_req_status    429;
 # Trusted upstream ranges exempted from rate limiting: an empty $limit_req_key makes
 # nginx skip limiting entirely for the matching request (documented limit_req_zone behavior).
 geo $limit_req_key {
-  default              $binary_remote_addr;
+  default              $http_x_real_ip;
   185.24.186.224/28    "";
   82.210.16.160/28     "";
   145.242.17.29/32     "";
