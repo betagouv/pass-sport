@@ -5,13 +5,20 @@ import { createInterface } from "node:readline";
 import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
-import type { QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
-import { RatePacer } from "./rate-pacer";
+import type { ApiJsonError, QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
+import { AdaptiveRatePacer, type RateChange, type RateChangeReason } from "./rate-pacer";
 
 // Matches the 'allocataire-*' column convention already used across the data/
 // partner notebooks (CNAF/MSA/CNOUS), rather than the FranceConnect-flavored
 // vocabulary of PivotIdentity, so a notebook export needs no extra rename step.
-const REQUIRED_COLUMNS = ["allocataire-nom_naissance", "allocataire-date_naissance"] as const;
+// allocataire-code_pays_naissance (-> code_cog_insee_pays_naissance) is required too: without
+// it the QF call is missing a mandatory état civil param, so a row with an empty value is
+// skipped just like a missing nom_naissance/date_naissance (see rowToIdentity).
+const REQUIRED_COLUMNS = [
+  "allocataire-nom_naissance",
+  "allocataire-date_naissance",
+  "allocataire-code_pays_naissance",
+] as const;
 const IDENTITY_COLUMNS = [
   "allocataire-nom_naissance",
   "allocataire-nom_usage",
@@ -26,12 +33,32 @@ const IDENTITY_COLUMNS = [
 // API returned, and the threshold comparison is left to whoever consumes the output.
 // `qf_status` is what marks a row as settled, since an absent value is a legitimate
 // outcome for a 404.
+// `qf_http_status` garde le dernier code HTTP vu pour la ligne (200 sur une réussite, 404,
+// 429, 5xx…) — sans lui un 5xx et une identité simplement absente de la base sont
+// indiscernables une fois dans le CSV, alors que c'est justement ce qui distingue une panne
+// de l'API d'une réponse normale.
 // `qf_request_url` est une colonne de debug : elle rejoue l'appel tel qu'il est parti
 // (URL + query params). Le SDK ne l'expose que sur ses erreurs, donc elle reste vide
 // sur les lignes trouvées. Elle contient l'identité pivot en clair — à ne pas diffuser.
-const ADDED_COLUMNS = ["qf_value", "qf_status", "qf_error", "qf_request_url"] as const;
+// `qf_error_details` porte l'objet JSON:API brut ({code, title, detail, meta}) de la dernière
+// erreur API Particulier vue pour la ligne — qf_error n'en garde que le message lisible, ce qui
+// suffit à l'oeil mais pas à retrouver après coup le code exact (ex. 35008) ou le fournisseur
+// en cause (meta.provider) sans reparser une ligne de log.
+const ADDED_COLUMNS = [
+  "qf_value",
+  "qf_status",
+  "qf_http_status",
+  "qf_error",
+  "qf_error_details",
+  "qf_request_url",
+] as const;
 const STATUS_FOUND = "trouve";
 const STATUS_NOT_FOUND = "non_trouve";
+// Code 35560 : la base a assez d'éléments pour répondre, mais pas assez pour trancher sur
+// cette identité (ex. homonymes) — une réponse définitive elle aussi, distincte du 404
+// "vraiment absent de la base" (STATUS_NOT_FOUND) pour ne pas la confondre en aval.
+const STATUS_NOT_FOUND_INSUFFICIENT_INFO = "non_trouve_pas_assez_info";
+const INSUFFICIENT_INFO_ERROR_CODE = "35560";
 const MAX_ATTEMPTS = 3;
 
 // A rate-limit pause does not consume an attempt, so a permanently throttled token
@@ -39,17 +66,64 @@ const MAX_ATTEMPTS = 3;
 // revoked/exhausted quota instead of looking busy.
 const MAX_RATE_LIMIT_PAUSES = 20;
 
-// Self-imposed ceiling, kept below the API's own: the 429 path stays the backstop if it
-// turns out to be set too high.
-const DEFAULT_RATE_PER_MINUTE = 200;
-const DEFAULT_NIGHT_RATE_PER_MINUTE = 500;
+// A 5xx that isn't PROVIDER_DATA_ERROR_CODE (see below) means the API is in maintenance:
+// retry the same call every 10 minutes until it answers something else. Bounded (~24h) so a
+// permanently broken deployment fails loudly instead of pausing for days.
+const MAINTENANCE_RETRY_MS = 7_000;
+const MAX_MAINTENANCE_PAUSES = 144;
+
+// Cooldown after a 404 "Erreur inattendue" (API instability, not a real not-found)
+// before retrying the same row.
+const INSTABILITY_COOLDOWN_MS = 10_000; // 15 seconds
+
+// Ceilings for the adaptive pacer, kept below the API's own: AIMD probes up to them,
+// and the 429 path stays the backstop if they turn out to be set too high.
+const DEFAULT_RATE_PER_MINUTE = 400;
+const DEFAULT_NIGHT_RATE_PER_MINUTE = 600;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Cadence changes are the main thing to follow on a multi-day run, so each one is
+// timestamped in Paris time rather than left to be located by its position in the log.
+const parisTimestampFormatter = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: "Europe/Paris",
+  dateStyle: "short",
+  timeStyle: "medium",
+});
+
+const RATE_CHANGE_CAUSES: Record<RateChangeReason, string> = {
+  start: "démarrage",
+  "day-night": "bascule jour/nuit",
+  increase: "hausse après succès",
+  decrease: "baisse après erreur",
+};
+
+const formatRateChange = ({
+  ratePerMinute,
+  previousRatePerMinute,
+  ceilingPerMinute,
+  isNight,
+  reason,
+  timestampMs,
+}: RateChange): string => {
+  const at = parisTimestampFormatter.format(new Date(timestampMs));
+  const window = `plafond ${ceilingPerMinute}/min ${isNight ? "nuit" : "jour"}`;
+
+  if (reason === "start") {
+    return `[${at}] cadence initiale ${ratePerMinute}/min (${window})`;
+  }
+
+  return (
+    `[${at}] cadence ${previousRatePerMinute} -> ${ratePerMinute}/min ` +
+    `(${RATE_CHANGE_CAUSES[reason]}, ${window})`
+  );
+};
 
 const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
   const familyName = row["allocataire-nom_naissance"]?.trim();
   const birthdate = row["allocataire-date_naissance"]?.trim();
-  if (!familyName || !birthdate) return null;
+  const birthcountry = row["allocataire-code_pays_naissance"]?.trim();
+  if (!familyName || !birthdate || !birthcountry) return null;
 
   const gender = row["allocataire-genre"]?.trim().toLowerCase();
   return {
@@ -59,7 +133,7 @@ const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
     birthdate,
     gender: gender === "male" || gender === "female" ? gender : undefined,
     birthplace: row["allocataire-code_insee_naissance"]?.trim() || undefined,
-    birthcountry: row["allocataire-code_pays_naissance"]?.trim() || undefined,
+    birthcountry,
   };
 };
 
@@ -68,13 +142,37 @@ const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
 const waitMsFor = (result: ResourceResult): number =>
   result.rateLimitResetMs ?? Math.max(1, Number(result.retryAfter ?? 1)) * 1000;
 
+// A 404 normally settles the row, but the API also answers 404 "Erreur inattendue" for
+// its own transient failures — that one is instability, not an answer about the person.
+const isUnexpected404 = (result: ResourceResult): boolean =>
+  result.httpStatus === 404 && (result.error ?? "").toLowerCase().includes("erreur inattendue");
+
+// JSON:API error code seen on a 5xx that is actually the data provider (CNAF/MSA) choking on
+// this one row's data, not the API Particulier platform being down — e.g.
+// {"errors":[{"code":"35000","title":"Erreur interne du fournisseur de données", ...}]}.
+// Settled as an ordinary row failure, never fed into the maintenance streak below.
+const PROVIDER_DATA_ERROR_CODE = "35000";
+
 // `notFound` is a real, permanent answer (absent from the CAF/MSA base), not a missing
 // one: it settles the row as ineligible so resume never re-calls the API for it.
+// `insufficientInfo` (code 35560) is the same kind of permanent, definitive answer — the base
+// just cannot disambiguate this identity — so it settles the row exactly like `notFound` does.
 type Verdict = {
   value: number | null;
   error: string | null;
   notFound?: boolean;
+  insufficientInfo?: boolean;
+  httpStatus?: number | null;
+  // JSON:API error code, kept only to tell a provider-data 5xx (PROVIDER_DATA_ERROR_CODE)
+  // apart from a genuine API outage — not written to the output CSV.
+  errorCode?: string;
+  // Raw JSON:API error object behind `error`/`errorCode` above — written verbatim to
+  // qf_error_details.
+  apiError?: ApiJsonError;
   requestUrl?: string | null;
+  // Round-trip of the call that produced this verdict — logged only, not written to the
+  // output CSV. Slow responses are an early tell for API trouble, ahead of an outright 5xx.
+  responseTimeMs?: number | null;
 };
 
 // One row through quotient_familial, pausing (without consuming an attempt) whenever
@@ -82,14 +180,29 @@ type Verdict = {
 async function screenRow(
   client: RealClient,
   identity: PivotIdentity,
-  pacer: RatePacer,
+  pacer: AdaptiveRatePacer,
 ): Promise<Verdict> {
   let rateLimitPauses = 0;
+  let maintenancePauses = 0;
 
-  // Dernière URL remontée par le SDK, quel que soit l'essai — lue au moment du return,
-  // donc toujours celle de la tentative qui a produit le verdict.
+  // Dernière URL, code HTTP/erreur et temps de réponse remontés par le SDK, quel que soit
+  // l'essai — lus au moment du return, donc toujours ceux de la tentative qui a produit le
+  // verdict.
   let requestUrl: string | null = null;
-  const verdict = (v: Omit<Verdict, "requestUrl">): Verdict => ({ ...v, requestUrl });
+  let httpStatus: number | null = null;
+  let errorCode: string | undefined;
+  let apiError: ApiJsonError | undefined;
+  let responseTimeMs: number | null = null;
+  const verdict = (
+    v: Omit<Verdict, "requestUrl" | "httpStatus" | "errorCode" | "apiError" | "responseTimeMs">,
+  ): Verdict => ({
+    ...v,
+    requestUrl,
+    httpStatus,
+    errorCode,
+    apiError,
+    responseTimeMs,
+  });
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let result: ResourceResult;
@@ -98,48 +211,119 @@ async function screenRow(
     // after a 429, and pacing per row would quietly overshoot the quota.
     await pacer.acquire();
 
+    const callStartedMs = Date.now();
+
     try {
       result = await client.quotientFamilial(identity);
     } catch (error) {
+      responseTimeMs = Date.now() - callStartedMs;
       // RealClient.call rethrows anything that is not an ApiGouvError/RateLimitError.
       if (attempt === MAX_ATTEMPTS) return verdict({ value: null, error: (error as Error).message });
       continue;
     }
 
+    responseTimeMs = Date.now() - callStartedMs;
     requestUrl = result.requestUrl ?? requestUrl;
+    httpStatus = result.httpStatus ?? httpStatus;
+    errorCode = result.errorCode ?? errorCode;
+    apiError = result.apiError ?? apiError;
 
-    // 429: pause for the whole window and try this row again. Not an attempt — a
-    // throttled call did no work, so counting it would drop rows for being unlucky.
+    // Code 35560, whatever the httpStatus it rides on: the base cannot disambiguate this
+    // identity (not enough info, e.g. homonyms), a definitive answer settled right away —
+    // never retried, in this run or the next (see hasVerdict/STATUS_NOT_FOUND_INSUFFICIENT_INFO).
+    if (errorCode === INSUFFICIENT_INFO_ERROR_CODE) {
+      pacer.onSuccess(); // a well-formed answer, not a sign of API trouble
+      return verdict({
+        value: null,
+        error: result.error ?? "informations insuffisantes pour identifier la personne",
+        insufficientInfo: true,
+      });
+    }
+
+    // 5xx: settled right away when the SDK surfaced PROVIDER_DATA_ERROR_CODE — that one is the
+    // data provider (CNAF/MSA) choking on this one row's data, not the platform being down.
+    // Any other 5xx is taken as API maintenance: retry the same call every 10 minutes without
+    // consuming an attempt, and without touching the adaptive rate — maintenance is not a load
+    // signal.
+    if (result.httpStatus != null && result.httpStatus >= 500) {
+      if (errorCode === PROVIDER_DATA_ERROR_CODE) {
+        return verdict({ value: null, error: result.error ?? `erreur serveur (${result.httpStatus})` });
+      }
+
+      maintenancePauses += 1;
+
+      if (maintenancePauses > MAX_MAINTENANCE_PAUSES) {
+        return verdict({
+          value: null,
+          error: `API en maintenance depuis ${maintenancePauses * 10} minutes, abandon`,
+        });
+      }
+
+      console.log(`API en maintenance (${result.httpStatus}, ${responseTimeMs}ms), retry dans 10 min`);
+
+      await sleep(MAINTENANCE_RETRY_MS);
+      attempt -= 1;
+      continue;
+    }
+
+    // 429: back the cadence off, pause for the whole window and try this row again.
+    // Not an attempt — a throttled call did no work, so counting it would drop rows
+    // for being unlucky.
     if (result.rateLimited) {
+      pacer.onError();
       rateLimitPauses += 1;
+
       if (rateLimitPauses > MAX_RATE_LIMIT_PAUSES) {
         return verdict({ value: null, error: `throttlé ${rateLimitPauses} fois d'affilée, abandon` });
       }
+
       const waitMs = waitMsFor(result);
-      console.log(`  rate limited, pausing ${Math.round(waitMs / 1000)}s`);
+      console.log(`  rate limited (${responseTimeMs}ms), pausing ${Math.round(waitMs / 1000)}s`);
+
       await sleep(waitMs);
       attempt -= 1;
       continue;
     }
 
     if (result.success && result.data) {
+      pacer.onSuccess();
+
       const value = (result.data as QuotientFamilialData).quotient_familial?.valeur;
+
       if (typeof value !== "number") {
         return verdict({ value: null, error: "réponse sans quotient_familial.valeur" });
       }
 
+      console.log(`  succès (${responseTimeMs}ms)`);
+
       // Proactive: the window is spent, so pause before the next row rather than
       // eating a wasted 429 on it.
       if (result.rateLimitRemaining === 0 && result.rateLimitResetMs != null) {
-        console.log(`  window exhausted, pausing ${Math.round(result.rateLimitResetMs / 1000)}s`);
+        console.log(`window exhausted, pausing ${Math.round(result.rateLimitResetMs / 1000)}s`);
         await sleep(result.rateLimitResetMs);
       }
       return verdict({ value, error: null });
     }
 
-    // 404 is a real answer — this person is not in the CAF/MSA base. Settled as
-    // ineligible, so it is neither retried in-run nor re-called on the next run.
+    // 404 "Erreur inattendue" is API instability, not an answer about the person:
+    // back the cadence off, cool down, and burn an attempt. If it persists, the row is
+    // left unsettled so the next run re-tries it — never recorded as non_trouve.
+    if (isUnexpected404(result)) {
+      pacer.onError();
+
+      if (attempt === MAX_ATTEMPTS) {
+        return verdict({ value: null, error: result.error ?? "Erreur inattendue (404)" });
+      }
+
+      console.log(`404 "Erreur inattendue" (${responseTimeMs}ms), cooldown ${INSTABILITY_COOLDOWN_MS / 1000}s`);
+      await sleep(INSTABILITY_COOLDOWN_MS);
+      continue;
+    }
+
+    // Any other 404 is a real answer — this person is not in the CAF/MSA base. Settled
+    // as ineligible, so it is neither retried in-run nor re-called on the next run.
     if (result.httpStatus === 404) {
+      pacer.onSuccess();
       return verdict({ value: null, error: "non trouvé (404)", notFound: true });
     }
 
@@ -171,7 +355,9 @@ async function readFirstLine(path: string): Promise<string> {
 // A row is settled once it carries a real verdict. Anything else — an API error, a
 // 404, an incomplete pivot, an interrupted write — is retried on the next run.
 const hasVerdict = (row: Record<string, string>): boolean =>
-  row.qf_status === STATUS_FOUND || row.qf_status === STATUS_NOT_FOUND;
+  row.qf_status === STATUS_FOUND ||
+  row.qf_status === STATUS_NOT_FOUND ||
+  row.qf_status === STATUS_NOT_FOUND_INSUFFICIENT_INFO;
 
 const readOutputRows = (path: string): AsyncIterable<Record<string, string>> =>
   createReadStream(path).pipe(
@@ -200,19 +386,28 @@ async function closeStream(
 }
 
 const verdictColumns = (verdict: Verdict): Record<string, string> => {
-  // A QF value settles the row; failing that, a 404 settles it as absent from the base;
-  // anything else leaves the status blank and is picked up again on the next run.
+  // A QF value settles the row; failing that, a 404 settles it as absent from the base, and
+  // code 35560 as findable-but-undecidable; anything else leaves the status blank and is
+  // picked up again on the next run.
   const status =
-    verdict.value !== null ? STATUS_FOUND : verdict.notFound ? STATUS_NOT_FOUND : "";
+    verdict.value !== null
+      ? STATUS_FOUND
+      : verdict.notFound
+        ? STATUS_NOT_FOUND
+        : verdict.insufficientInfo
+          ? STATUS_NOT_FOUND_INSUFFICIENT_INFO
+          : "";
   return {
     qf_value: verdict.value === null ? "" : String(verdict.value),
     qf_status: status,
+    qf_http_status: verdict.httpStatus == null ? "" : String(verdict.httpStatus),
     qf_error: verdict.error ?? "",
+    qf_error_details: verdict.apiError ? JSON.stringify(verdict.apiError) : "",
     qf_request_url: verdict.requestUrl ?? "",
   };
 };
 
-const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate"];
+const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate", "--concurrency"];
 
 const numberOption = (args: string[], name: string, fallback: number): number => {
   const index = args.indexOf(name);
@@ -233,6 +428,78 @@ const positionalArgs = (args: string[]): string[] => {
   return positional;
 };
 
+// A single call regularly takes over a second (see screenRow's own retries/pauses), so
+// awaiting one row fully before starting the next would cap the real throughput at
+// ~1/latency — far under the rate the pacer is asked to sustain. Rows are instead fanned
+// out to up to CONCURRENCY in-flight settleRow() calls; pacer.acquire() (shared across all
+// of them) is what actually enforces the target cadence, this just keeps enough calls
+// in flight for that cadence to be reachable despite the per-call latency.
+const DEFAULT_CONCURRENCY = 40;
+
+// Runs `settle` over `items` with up to `concurrency` calls in flight, then commits each
+// result through `write` in the original item order — the output CSV stays one row per
+// input row in input order, which resume (hasVerdict/`done`) depends on, even though rows
+// can settle out of order.
+//
+// Admission of new items is gated on the write backlog too, not just on in-flight settles:
+// a settle's task resolves (freeing its concurrency slot) as soon as its result is handed
+// off into `pending`, whether or not it was actually its turn to write — otherwise a single very
+// slow row (a maintenance retry pauses up to 24h, see MAX_MAINTENANCE_PAUSES) would let
+// unlimited later rows finish and pile up unwritten behind it, growing memory without bound
+// on a multi-day run. Capping the backlog at a small multiple of `concurrency` keeps that
+// bounded while still absorbing the ordinary latency spread between rows.
+async function processInOrder<T, R>(
+  items: AsyncIterable<T>,
+  concurrency: number,
+  settle: (item: T, sequence: number) => Promise<R>,
+  write: (result: R) => Promise<void>,
+): Promise<void> {
+  const pending = new Map<number, R>();
+  const inFlight = new Set<Promise<void>>();
+  const backlogCap = concurrency * 4;
+  let nextToWrite = 0;
+  let nextToAdmit = 0;
+
+  for await (const item of items) {
+    const sequence = nextToAdmit++;
+
+    const task = (async () => {
+      const result = await settle(item, sequence);
+      pending.set(sequence, result);
+
+      while (pending.has(nextToWrite)) {
+        const result = pending.get(nextToWrite)!;
+        pending.delete(nextToWrite);
+        await write(result);
+        nextToWrite += 1;
+      }
+    })();
+
+    const tracked = task.finally(() => inFlight.delete(tracked));
+    inFlight.add(tracked);
+
+    while (inFlight.size >= concurrency || pending.size >= backlogCap) {
+      await Promise.race(inFlight);
+    }
+  }
+
+  await Promise.all(inFlight);
+}
+
+// Mirrors `for await (const item of iterable) { if (++seen > count) yield item; }`, but also
+// reports the total number of items seen (including the skipped ones) once the source is
+// exhausted — the caller needs that count for its own end-of-run summary.
+async function* skipFirst<T>(
+  iterable: AsyncIterable<T>,
+  count: number,
+  seenCounter: { total: number },
+): AsyncGenerator<T> {
+  for await (const item of iterable) {
+    seenCounter.total += 1;
+    if (seenCounter.total > count) yield item;
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const [inputPath, outputPath] = positionalArgs(args);
@@ -242,15 +509,17 @@ async function main(): Promise<void> {
   const logEvery = numberOption(args, "--log-every", 1);
   const ratePerMinute = numberOption(args, "--rate", DEFAULT_RATE_PER_MINUTE);
   const nightRatePerMinute = numberOption(args, "--night-rate", DEFAULT_NIGHT_RATE_PER_MINUTE);
+  const concurrency = numberOption(args, "--concurrency", DEFAULT_CONCURRENCY);
 
-  const invalidOption = [logEvery, ratePerMinute, nightRatePerMinute].some(
+  const invalidOption = [logEvery, ratePerMinute, nightRatePerMinute, concurrency].some(
     (value) => Number.isNaN(value) || value < 1,
   );
 
   if (!inputPath || !outputPath || invalidOption) {
     console.error(
       "usage: qf-batch <input.csv> <output.csv> [--log-every 1] " +
-        `[--rate ${DEFAULT_RATE_PER_MINUTE}] [--night-rate ${DEFAULT_NIGHT_RATE_PER_MINUTE}]`,
+        `[--rate ${DEFAULT_RATE_PER_MINUTE}] [--night-rate ${DEFAULT_NIGHT_RATE_PER_MINUTE}] ` +
+        `[--concurrency ${DEFAULT_CONCURRENCY}]`,
     );
     process.exitCode = 1;
     return;
@@ -281,11 +550,10 @@ async function main(): Promise<void> {
   }
 
   const client = new RealClient();
-  const pacer = new RatePacer({
+  const pacer = new AdaptiveRatePacer({
     dayRatePerMinute: ratePerMinute,
     nightRatePerMinute: nightRatePerMinute,
-    onRateChange: (rate, isNight) =>
-      console.log(`  cadence ${rate}/min (${isNight ? "nuit" : "jour"}, Europe/Paris)`),
+    onRateChange: (change) => console.log(`  ${formatRateChange(change)}`),
   });
   const outColumns = [...header, ...ADDED_COLUMNS];
 
@@ -298,17 +566,22 @@ async function main(): Promise<void> {
       ? await screenRow(client, identity, pacer)
       : {
           value: null,
-          error: "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance)",
+          error:
+            "identité pivot incomplète (allocataire-nom_naissance/allocataire-date_naissance/" +
+            "allocataire-code_pays_naissance)",
         };
 
     const columns = verdictColumns(verdict);
     settled += 1;
+
     if (settled % logEvery === 0) {
       console.log(
         `${label}: ${verdict.value ?? "aucun verdict"}` +
-          (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`),
+          (columns.qf_status === "" ? ` (${verdict.error})` : ` -> qf_status=${columns.qf_status}`) +
+          (verdict.responseTimeMs != null ? ` [${verdict.responseTimeMs}ms]` : ""),
       );
     }
+
     return columns;
   };
 
@@ -332,17 +605,24 @@ async function main(): Promise<void> {
     await writeRow(stringifier, { ...row, ...columns });
   };
 
-  // Rows already written: keep the settled ones, redo the rest.
+  // Rows already written: keep the settled ones, redo the rest. Re-settling is fanned out
+  // (see processInOrder above) so a slow/retrying row does not stall the ones after it — the
+  // write still lands rows on `stringifier` in their original order.
   if (existsSync(outputPath)) {
-    for await (const row of readOutputRows(outputPath)) {
-      done += 1;
-      if (hasVerdict(row)) {
-        await record(row, row);
-        continue;
-      }
-      called += 1;
-      await record(row, await settle(row, `reprise ligne ${done}`));
-    }
+    await processInOrder(
+      readOutputRows(outputPath),
+      concurrency,
+      async (row, sequence) => {
+        done += 1;
+        if (hasVerdict(row)) return { row, columns: row };
+
+        called += 1;
+        const columns = await settle(row, `reprise ligne ${sequence + 1}`);
+        return { row, columns };
+      },
+      ({ row, columns }) => record(row, columns),
+    );
+
     console.log(`reprise: ${done} ligne(s) relue(s), ${called} sans verdict réessayée(s)\n`);
   }
 
@@ -359,18 +639,27 @@ async function main(): Promise<void> {
   // the original was still intact, which is what makes the re-read above safe.
   await rename(tmpPath, outputPath);
 
-  // Input rows never reached.
+  // Input rows never reached. Same fan-out as the resume pass above, restarted fresh (a
+  // 0-based sequence, since skipFirst re-numbers what it yields) so it resumes appending
+  // right where the resume pass left off in `stringifier`.
   const parser = createReadStream(inputPath).pipe(
     parse({ columns: true, bom: true, skip_empty_lines: true, trim: true }),
   ) as AsyncIterable<Record<string, string>>;
 
-  let index = 0;
-  for await (const row of parser) {
-    index += 1;
-    if (index <= done) continue;
-    called += 1;
-    await record(row, await settle(row, `ligne ${index}`));
-  }
+  const seenCounter = { total: 0 };
+
+  await processInOrder(
+    skipFirst(parser, done, seenCounter),
+    concurrency,
+    async (row, sequence) => {
+      called += 1;
+      const columns = await settle(row, `ligne ${done + sequence + 1}`);
+      return { row, columns };
+    },
+    ({ row, columns }) => record(row, columns),
+  );
+
+  const index = seenCounter.total;
 
   await closeStream(stringifier, tmpStream);
 

@@ -14,6 +14,11 @@
 #
 # Ce script est le seul point d'entrée, à la main comme sous l'unité systemd
 # pass-sport-qf-batch@ : passer à la main et passer automatiquement ne peuvent pas diverger.
+#
+# Pas de journalisation propre au script : lancé uniquement sous systemd (Type=simple), tout
+# le stdout/stderr part déjà dans le journal (StandardOutput/Error=journal par défaut) —
+# journalctl -u pass-sport-qf-batch@<partenaire>. Voir deploy/ansible/tasks/comptes.yml pour
+# l'accès (groupe systemd-journal) et pass-sport-qf-batch-alert.sh.j2 pour l'alerte associée.
 
 set -euo pipefail
 
@@ -23,6 +28,7 @@ WORKDIR="$(cd "$WORKER_DIR/../data/2026/partners/qf-batch-workdir" && pwd)"
 
 INPUT="$WORKDIR/${PARTNER}_2026_qf_batch_input.csv"
 OUTPUT="$WORKDIR/${PARTNER}_2026_qf_batch_output.csv"
+
 [[ -f "$INPUT" ]] || { echo "entrée introuvable : $INPUT" >&2; exit 1; }
 
 # Node vient d'un paquet apt/NodeSource (voir deploy/ansible/lamp-setup.yml), pas de nvm : il
@@ -32,7 +38,11 @@ OUTPUT="$WORKDIR/${PARTNER}_2026_qf_batch_output.csv"
 cd "$WORKER_DIR"     # load-env.ts cherche .env.local dans le cwd (jeton API Particulier)
 # Cadencement auto-imposé, sous le quota de l'API Particulier. Monter d'un palier = relancer
 # avec un QF_RATE plus haut (200, puis 250, puis 300…) ; la reprise fait le reste.
+# QF_CONCURRENCY : nombre d'appels API en vol en parallèle (voir DEFAULT_CONCURRENCY dans
+# qf-batch.ts) — c'est ce qui permet d'atteindre QF_RATE/QF_NIGHT_RATE malgré des réponses de
+# l'ordre de la seconde ; un run strictement séquentiel ne pourrait pas suivre la cadence visée.
 exec pnpm qf:batch "$INPUT" "$OUTPUT" \
-  --log-every "${QF_LOG_EVERY:-50}" \
+  --log-every "${QF_LOG_EVERY:-1}" \
   --rate "${QF_RATE:-200}" \
-  --night-rate "${QF_NIGHT_RATE:-500}"
+  --night-rate "${QF_NIGHT_RATE:-500}" \
+  --concurrency "${QF_CONCURRENCY:-10}"

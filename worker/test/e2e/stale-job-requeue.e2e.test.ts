@@ -6,13 +6,14 @@ import { FRANCE_CONNECT_QUEUE_NAME, LCA_QUEUE_NAME } from "../../src/queues";
 
 // Pins the BullMQ semantics every producer depends on now that there are no dead-letter
 // queues: a job that exhausted its attempts stays in `failed` on its own queue for
-// removeOnFail (24h) and keeps holding its id — and add() for an existing id is a silent
+// removeOnFail (120 jours) and keeps holding its id — and add() for an existing id is a silent
 // no-op that DISCARDS the new payload.
 //
 // With no DLQ, resubmitting is the ONLY way back. Both queues are keyed on a stable id (the
 // FranceConnect `sub`, or the beneficiary identity hash), so without the producer clearing
-// that corpse first (site/src/app/services/queue.ts) every resubmission inside the 24h window
-// would be swallowed — losing the trace and the email even though the usager saw their code.
+// that corpse first (site/src/app/services/queue.ts) every resubmission inside the retention
+// window would be swallowed — losing the trace and the email even though the usager saw their
+// code.
 
 let container: StartedRedisContainer;
 const connections: Redis[] = [];
@@ -34,7 +35,7 @@ const conn = (): Redis => {
 };
 
 // Same options the site producer uses (attempts trimmed so the test does not wait on backoff).
-const OPTS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 86_400 } };
+const OPTS = { attempts: 1, removeOnComplete: true, removeOnFail: { age: 120 * 86_400 } };
 
 // The producer's guard, mirrored: only a `failed` job is cleared.
 const clearIfDead = async (queue: Queue, jobId: string): Promise<void> => {

@@ -4,8 +4,11 @@ import { FormEvent, useState } from 'react';
 import Checkbox from '@codegouvfr/react-dsfr/Checkbox';
 import Button from '@codegouvfr/react-dsfr/Button';
 import CityFinder from '@/app/v2/test-eligibilite/components/city-finder/CityFinder';
+import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
 import { InputState } from '@/types/form';
 import type { Allowance } from '@/app/services/queue';
+
+const AIDES_FIELDSET_ID = 'post-login-aides';
 
 const AIDE_OPTIONS: { label: string; hint?: string; allowances: Allowance[] }[] = [
   {
@@ -45,6 +48,10 @@ export default function PostLoginInfoForm({
   const [cityInputState, setCityInputState] = useState<InputState>({ state: 'default' });
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // DSFR points the fieldset's aria-labelledby at both the legend and the messages group,
+  // which overrides the native <legend> and folds the error text into the group name.
+  useRemoveAttributeById(AIDES_FIELDSET_ID, 'aria-labelledby');
 
   const toggle = (label: string, checked: boolean) => {
     setError(undefined);
@@ -108,22 +115,33 @@ export default function PostLoginInfoForm({
   };
 
   return (
-    <form onSubmit={onConfirm}>
+    <form onSubmit={onConfirm} className="fr-mt-2w">
       <Checkbox
-        legend="Quelle est votre situation ?"
+        id={AIDES_FIELDSET_ID}
+        legend={
+          <>
+            Votre situation <span className="text--required">*</span>
+          </>
+        }
         state={error ? 'error' : 'default'}
         stateRelatedMessage={error}
         options={AIDE_OPTIONS.map((opt) => ({
           label: opt.label,
           hintText: opt.hint,
           nativeInputProps: {
+            name: 'aides',
+            value: opt.allowances.join('-'),
             checked: selectedLabels.includes(opt.label),
             onChange: (e) => toggle(opt.label, e.target.checked),
           },
         }))}
       />
       <CityFinder
-        legend="Commune où vous habitez"
+        legend={
+          <>
+            Commune de résidence de l’allocataire <span className="text--required">*</span>
+          </>
+        }
         inputName="residenceInsee"
         inputState={cityInputState}
         isDisabled={isLoading}

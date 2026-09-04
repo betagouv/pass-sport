@@ -60,6 +60,12 @@
     pass_sport_qf_partners:
       - cnaf
       - msa
+    # Self-imposed ceilings for the qf-batch rate pacer (worker/src/scripts/rate-pacer.ts),
+    # kept below API Particulier's own quota — see the defaults in
+    # templates/pass-sport-qf-batch@.service.j2. Raise one step at a time and redeploy;
+    # the run resumes from where it left off (qf-batch.ts re-reads the settled rows).
+    pass_sport_qf_rate: 400
+    pass_sport_qf_night_rate: 600
     # Les deux comptes humains. Vides par défaut : les noms d'opérateurs viennent du fichier
     # hors dépôt (~/pass-sport-secrets.yml), comme les secrets — ce dépôt est public.
     pass_sport_operators: []
