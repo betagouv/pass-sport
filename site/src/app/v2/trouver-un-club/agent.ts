@@ -1,4 +1,3 @@
-import { City } from '@/types/City';
 import {
   ActivityResponse,
   SportGouvJSONExportsResponse,
@@ -131,91 +130,6 @@ export const getClubsWithoutLimit = async (
       results: [],
       total_count: 0,
     };
-  }
-};
-
-export const getFranceCitiesByPostalCodeAndCityName = async (
-  postalCode: string,
-  cityName: string,
-  includeDistricts: boolean,
-): Promise<City[]> => {
-  try {
-    const baseUrl = 'https://geo.api.gouv.fr/communes';
-
-    const params = new URLSearchParams();
-    params.append('limit', '20');
-    params.append('boost', 'population');
-    params.append('codePostal', postalCode);
-    params.append('nom', cityName);
-    params.append(
-      'type',
-      includeDistricts ? 'arrondissement-municipal,commune-actuelle' : 'commune-actuelle',
-    );
-
-    const url = new URL(baseUrl);
-    url.search = params.toString();
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      Sentry.withScope((scope) => {
-        scope.setLevel('warning');
-        scope.setExtra('responseBody', response.body);
-        scope.setExtra('responseStatus', response.status);
-        scope.captureMessage('Unexpected response from geo.api.gouv.fr for cities');
-      });
-      return [];
-    }
-
-    return response.json();
-  } catch {
-    Sentry.withScope((scope) => {
-      scope.setLevel('warning');
-      scope.captureMessage('geo.api.gouv.fr API is down');
-    });
-
-    return [];
-  }
-};
-
-export const getFranceCitiesByName = async (
-  cityName: string,
-  includeDistricts: boolean,
-): Promise<City[]> => {
-  try {
-    const baseUrl = 'https://geo.api.gouv.fr/communes';
-
-    const params = new URLSearchParams();
-    params.append('limit', '30');
-    params.append('boost', 'population');
-    params.append('nom', cityName);
-    params.append(
-      'type',
-      includeDistricts ? 'arrondissement-municipal,commune-actuelle' : 'commune-actuelle',
-    );
-
-    const url = new URL(baseUrl);
-    url.search = params.toString();
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      Sentry.withScope((scope) => {
-        scope.setLevel('warning');
-        scope.setExtra('responseBody', response.body);
-        scope.setExtra('responseStatus', response.status);
-        scope.captureMessage('Unexpected response from geo.api.gouv.fr for cities');
-      });
-
-      return [];
-    }
-
-    return response.json();
-  } catch {
-    Sentry.withScope((scope) => {
-      scope.setLevel('warning');
-      scope.captureMessage('geo.api.gouv.fr API is down');
-    });
-
-    return [];
   }
 };
 

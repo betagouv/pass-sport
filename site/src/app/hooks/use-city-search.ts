@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDebounce } from '@uidotdev/usehooks';
 import { City } from '@/types/City';
-import { getFranceCitiesByName } from '@/app/v2/trouver-un-club/agent';
+import { getFranceCitiesByName } from '@/app/services/communes-client';
 
 const CITY_SEARCH_DEBOUNCE_MS = 400;
 
