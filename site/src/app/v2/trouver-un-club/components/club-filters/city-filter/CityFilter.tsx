@@ -1,17 +1,14 @@
 'use client';
 
-import {
-  getFranceCitiesByName,
-  getFranceCitiesByPostalCodeAndCityName,
-} from '@/app/services/communes-client';
+import { getFranceCitiesByPostalCodeAndCityName } from '@/app/services/communes-client';
 import { Props as ReactSelectProps } from 'react-select';
 import { CityOption } from '@/app/v2/trouver-un-club/components/club-filters/ClubFilters';
-import { City } from '../../../../../../../types/City';
-import React, { useEffect, useState } from 'react';
+import { City } from '@/types/City';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SEARCH_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { useSearchParams } from 'next/navigation';
 import styles from '../styles.module.scss';
-import AsyncSelect from 'react-select/async';
+import Select from 'react-select';
 import { unescapeSingleQuotes } from '@/utils/string';
 import {
   createCustomInput,
@@ -26,6 +23,7 @@ import {
 import localStyles from './styles.module.scss';
 import cn from 'classnames';
 import Button from '@codegouvfr/react-dsfr/Button';
+import { useCitySearch } from '@/app/hooks/use-city-search';
 
 interface Props {
   isDisabled: boolean;
@@ -42,19 +40,29 @@ const allCitiesOption: CityOption = {
 const CityFilter = ({ isDisabled, onCityChanged }: Props) => {
   const searchParams = useSearchParams();
   const [inputValue, setInputValue] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const city = searchParams && searchParams.get(SEARCH_QUERY_PARAMS.city);
   const postalCode = searchParams && searchParams.get(SEARCH_QUERY_PARAMS.postalCode);
 
   const [value, setValue] = useState<CityOption>(allCitiesOption);
 
+  const { cities, isSearching } = useCitySearch(searchTerm, false);
+  const options = useMemo(
+    () => (searchTerm ? parseCities(cities) : [allCitiesOption]),
+    [cities, searchTerm],
+  );
+
   const onInputChange: ReactSelectProps['onInputChange'] = (inputValue, { action }) => {
     if (action === 'input-change') {
       setInputValue(inputValue);
+      setSearchTerm(inputValue);
     }
   };
 
   const cityChangeHandler: ReactSelectProps<CityOption, false>['onChange'] = (newValue) => {
+    setSearchTerm('');
+
     if (!newValue) {
       setInputValue('');
       onCityChanged({});
@@ -111,15 +119,15 @@ const CityFilter = ({ isDisabled, onCityChanged }: Props) => {
         Ville
       </label>
       <div className={cn({ [`${localStyles['disabled-cursor']}`]: isDisabled })}>
-        <AsyncSelect<CityOption, false>
+        <Select<CityOption, false>
           isDisabled={isDisabled}
           instanceId="city-select-id"
           key="city-select-with-search-param"
           loadingMessage={() => <p>Chargement des villes</p>}
           noOptionsMessage={() => <p>Aucune ville trouvée</p>}
-          cacheOptions
-          defaultOptions={[allCitiesOption]}
-          loadOptions={fetchCityOptions}
+          options={options}
+          isLoading={isSearching}
+          filterOption={null}
           onChange={cityChangeHandler}
           onInputChange={onInputChange}
           styles={selectStyles}
@@ -148,6 +156,7 @@ const CityFilter = ({ isDisabled, onCityChanged }: Props) => {
         priority="tertiary no outline"
         onClick={() => {
           setInputValue('');
+          setSearchTerm('');
           setValue(allCitiesOption);
           onCityChanged({});
         }}
@@ -174,10 +183,6 @@ function parseCities(cities: City[]): CityOption[] {
   });
 
   return citiesWithPostalCode;
-}
-
-function fetchCityOptions(inputValue: string) {
-  return getFranceCitiesByName(inputValue, false).then((cities) => parseCities(cities));
 }
 
 export default CityFilter;

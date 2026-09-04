@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
 import { InputState } from '@/types/form';
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
+import { useSimplifiedEligibilityTestUsage } from '@/app/hooks/use-simplified-eligibility-test-usage';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 
 type SimplifiedEligibilityTestProps = {
@@ -99,6 +100,7 @@ export default function SimplifiedEligibilityTest({
 
   const [inputStates, setInputStates] = useState<FormInputsState>(initialInputsState);
   const { save } = useEligibilityTestStorage();
+  const { markAsUsed } = useSimplifiedEligibilityTestUsage();
 
   useEffect(() => {
     // Skip the mount pass, otherwise a previously stored entry gets wiped before any user input
@@ -127,8 +129,9 @@ export default function SimplifiedEligibilityTest({
           [styles['eligibility-test--has-border']]: hasBorder,
         })}
       >
-        <p className="fr-h5 fr-mb-0">
-          <>Vérifiez votre éligibilité ou celle de l&apos;un de vos enfants</>
+        <p className="fr-h5 fr-mb-0 text-align--center">
+          Vérifiez votre éligibilité ou celle de l&apos;un de vos enfants <br />
+          en quelques secondes
         </p>
 
         <form
@@ -187,6 +190,7 @@ export default function SimplifiedEligibilityTest({
                 }
 
                 eligibilityTestOnClick();
+                markAsUsed();
                 setSuccess(isBenefEligible);
                 onCompletion?.(isBenefEligible);
               }

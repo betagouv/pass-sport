@@ -55,9 +55,9 @@ export default function PolitiqueDeConfidentialite() {
               à caractère personnel.
             </p>
             <p className="fr-mb-2w">
-              <span className="fr-text--bold">« Sous-traitant »</span> : personne physique ou morale,
-              autorité publique, service ou autre organisme qui traite des données à caractère
-              personnel pour le compte du responsable de traitement.
+              <span className="fr-text--bold">« Sous-traitant »</span> : personne physique ou
+              morale, autorité publique, service ou autre organisme qui traite des données à
+              caractère personnel pour le compte du responsable de traitement.
             </p>
           </section>
 
@@ -129,8 +129,8 @@ export default function PolitiqueDeConfidentialite() {
             </h2>
             <p className="fr-mb-2w">
               Le traitement de vos données répond à une mission d&apos;intérêt public consistant à
-              favoriser l&apos;accès du plus grand nombre à la pratique sportive, dans le cadre de la
-              mise en œuvre des politiques publiques du sport.
+              favoriser l&apos;accès du plus grand nombre à la pratique sportive, dans le cadre de
+              la mise en œuvre des politiques publiques du sport.
             </p>
             <p>
               Le présent traitement se fonde sur l&apos;article 6. 1. e) du Règlement européen
@@ -191,8 +191,8 @@ export default function PolitiqueDeConfidentialite() {
               à conserver les données en base production pendant un (1) an à compter de leur
               transmission. Les données sont ensuite conservées en base intermédiaire pour une durée
               de cinq (5) ans à compter de la date de leur transmission pour des finalités de
-              contrôle et d&apos;évaluation de l&apos;action et des politiques publiques. Les données
-              seront détruites à l&apos;issue de ce délai.
+              contrôle et d&apos;évaluation de l&apos;action et des politiques publiques. Les
+              données seront détruites à l&apos;issue de ce délai.
             </p>
           </section>
 
@@ -204,9 +204,9 @@ export default function PolitiqueDeConfidentialite() {
               Sont concernées par le traitement mentionné à l&apos;article 3 les bénéficiaires de
               l&apos;allocation de rentrée scolaire (ARS), de l&apos;allocation aux adultes
               handicapés (AAH), de l&apos;allocation d&apos;éducation de l&apos;enfant handicapé
-              (AEEH) ou d&apos;une bourse d&apos;enseignement supérieur sous conditions de ressources
-              ou dans le cadre des formations sanitaires et sociales, âgés de 6 à 30 ans révolus,
-              ainsi que leurs représentants légaux, le cas échéant.
+              (AEEH) ou d&apos;une bourse d&apos;enseignement supérieur sous conditions de
+              ressources ou dans le cadre des formations sanitaires et sociales, âgés de 6 à 30 ans
+              révolus, ainsi que leurs représentants légaux, le cas échéant.
             </p>
             <p>
               Sont également concernés les exploitants de structures éligibles au dispositif pass

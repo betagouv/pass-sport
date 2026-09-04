@@ -604,9 +604,9 @@ def _route_frame(rows):
 
 def test_qf_eligible_index_applies_the_threshold_strictly():
     df = _route_frame([
-        {'date_naissance': '2010-06-01', 'qf_value': 699.0},
-        {'date_naissance': '2010-06-01', 'qf_value': 700.0},
-        {'date_naissance': '2010-06-01', 'qf_value': 701.0},
+        {'date_naissance': '2010-06-01', 'qf_value': 699.0, 'situation': 'jeune'},
+        {'date_naissance': '2010-06-01', 'qf_value': 700.0, 'situation': 'jeune'},
+        {'date_naissance': '2010-06-01', 'qf_value': 701.0, 'situation': 'jeune'},
     ])
 
     assert lib.qf_eligible_index(df).tolist() == [0]
@@ -614,8 +614,8 @@ def test_qf_eligible_index_applies_the_threshold_strictly():
 
 def test_qf_eligible_index_excludes_rows_without_a_verdict():
     df = _route_frame([
-        {'date_naissance': '2010-06-01', 'qf_value': np.nan},
-        {'date_naissance': '2010-06-01', 'qf_value': 650.0},
+        {'date_naissance': '2010-06-01', 'qf_value': np.nan, 'situation': 'jeune'},
+        {'date_naissance': '2010-06-01', 'qf_value': 650.0, 'situation': 'jeune'},
     ])
 
     assert lib.qf_eligible_index(df).tolist() == [1]
@@ -623,13 +623,26 @@ def test_qf_eligible_index_excludes_rows_without_a_verdict():
 
 def test_qf_eligible_index_includes_the_window_boundaries():
     df = _route_frame([
-        {'date_naissance': '2008-12-31', 'qf_value': 650.0},
-        {'date_naissance': '2009-01-01', 'qf_value': 650.0},
-        {'date_naissance': '2020-12-31', 'qf_value': 650.0},
-        {'date_naissance': '2021-01-01', 'qf_value': 650.0},
+        {'date_naissance': '2008-12-31', 'qf_value': 650.0, 'situation': 'jeune'},
+        {'date_naissance': '2009-01-01', 'qf_value': 650.0, 'situation': 'jeune'},
+        {'date_naissance': '2020-12-31', 'qf_value': 650.0, 'situation': 'jeune'},
+        {'date_naissance': '2021-01-01', 'qf_value': 650.0, 'situation': 'jeune'},
     ])
 
     assert lib.qf_eligible_index(df).tolist() == [1, 2]
+
+
+def test_qf_eligible_index_excludes_an_aeeh_sibling_under_the_same_household_quotient():
+    # qf_value is attached per allocataire (see attach_qf_value): a household's AEEH child
+    # gets the same qf_value as their ARS sibling qf-batch was actually called for, and would
+    # otherwise also pass the threshold/window check here - double-sending them through both
+    # the QF and the AEEH route.
+    df = _route_frame([
+        {'date_naissance': '2010-06-01', 'qf_value': 650.0, 'situation': 'jeune'},
+        {'date_naissance': '2010-06-01', 'qf_value': 650.0, 'situation': 'AEEH'},
+    ])
+
+    assert lib.qf_eligible_index(df).tolist() == [0]
 
 
 def test_aah_eligible_index():
@@ -682,15 +695,15 @@ def test_route_selection_matches_the_boolean_mask_it_replaces():
     which relied on pandas silently reindexing an oversized boolean mask.
     """
     df_source = _route_frame([
-        {'date_naissance': '2010-06-01', 'qf_value': 650.0},   # eligible, kept in df_final
-        {'date_naissance': '2010-06-01', 'qf_value': 650.0},   # eligible, dropped from df_final
-        {'date_naissance': '2010-06-01', 'qf_value': 900.0},   # not eligible
-        {'date_naissance': '2005-06-01', 'qf_value': 650.0},   # out of window
+        {'date_naissance': '2010-06-01', 'qf_value': 650.0, 'situation': 'jeune'},   # eligible, kept in df_final
+        {'date_naissance': '2010-06-01', 'qf_value': 650.0, 'situation': 'jeune'},   # eligible, dropped from df_final
+        {'date_naissance': '2010-06-01', 'qf_value': 900.0, 'situation': 'jeune'},   # not eligible
+        {'date_naissance': '2005-06-01', 'qf_value': 650.0, 'situation': 'jeune'},   # out of window
     ])
     df_final = df_source.drop(index=[1]).drop(columns=['qf_value'])
 
-    mask = (df_source['qf_value'] < lib.QF_MAX) & (df_source['date_naissance'] >= lib.QF_DOB_MIN) \
-        & (df_source['date_naissance'] <= lib.QF_DOB_MAX)
+    mask = (df_source['situation'] == 'jeune') & (df_source['qf_value'] < lib.QF_MAX) \
+        & (df_source['date_naissance'] >= lib.QF_DOB_MIN) & (df_source['date_naissance'] <= lib.QF_DOB_MAX)
     with pytest.warns(UserWarning, match='reindexed'):
         expected = df_final[mask]
 

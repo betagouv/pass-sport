@@ -25,7 +25,10 @@ const JOB_OPTS = {
   // The delays live there; nothing on this side would be read.
   backoff: { type: 'escalating' as const },
   removeOnComplete: true,
-  removeOnFail: { age: 86_400 },
+  // 120 jours. A failed job is the only trace left of a request that produced nothing, so it
+  // is kept long enough to be investigated; it carries pivot identity, email and client IP,
+  // which is why the retention is bounded rather than infinite.
+  removeOnFail: { age: 120 * 86_400 },
 };
 
 // Memoized on globalThis so Next hot reload doesn't leak a new Queue (and its
@@ -73,8 +76,8 @@ export type ExistingJob = {
 
 // A job that exhausted its attempts is NOT an existing request: it produced nothing, nobody
 // was told anything, and there is no dead-letter queue for an operator to replay it from. It
-// nonetheless sits in `failed` for removeOnFail (24h), and counting it would lock the usager
-// out for that whole day with "traitement en cours" — for a request that is already dead.
+// nonetheless sits in `failed` for removeOnFail (120 jours), and counting it would lock the
+// usager out for that whole window with "traitement en cours" — for a request already dead.
 //
 // The callers below clear it before re-enqueuing, which they must: BullMQ silently ignores an
 // add() for an id already present, so leaving it would drop the resubmission.

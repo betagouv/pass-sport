@@ -35,7 +35,7 @@ const initialInputsState: StepOneFormInputsState = {
  * commune. It now only unlocks step 2; the single LCA round-trip happens once the
  * allocataire's identifiers have been given too.
  */
-const StepOneForm = ({ onValidated, initialFields, isDirectBeneficiary = false }: Props) => {
+const StepOneForm = ({ onValidated, initialFields }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
   const { allowance } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);

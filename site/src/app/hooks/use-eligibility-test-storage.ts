@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import {
   clearEligibilityTest,
   readEligibilityTest,
@@ -6,21 +6,50 @@ import {
   writeEligibilityTest,
 } from '@/utils/eligibility-test-storage';
 
-export function useEligibilityTestStorage() {
-  const [stored, setStored] = useState<StoredEligibilityTest | null>(null);
+const listeners = new Set<() => void>();
 
-  // Read after mount so the server render and the first client render stay identical
-  useEffect(() => {
-    setStored(readEligibilityTest());
-  }, []);
+let snapshot: StoredEligibilityTest | null = null;
+let isSnapshotStale = true;
+
+// Snapshots are compared by reference, so the parsed entry is cached until a write invalidates it
+function getSnapshot(): StoredEligibilityTest | null {
+  if (isSnapshotStale) {
+    snapshot = readEligibilityTest();
+    isSnapshotStale = false;
+  }
+
+  return snapshot;
+}
+
+// Nothing is stored on the server, which keeps the server render and the hydration render identical
+function getServerSnapshot(): StoredEligibilityTest | null {
+  return null;
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function publish(next: StoredEligibilityTest | null): void {
+  snapshot = next;
+  isSnapshotStale = false;
+  listeners.forEach((listener) => listener());
+}
+
+export function useEligibilityTestStorage() {
+  const stored = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const save = useCallback((patch: Partial<StoredEligibilityTest>) => {
-    setStored(writeEligibilityTest(patch));
+    publish(writeEligibilityTest(patch));
   }, []);
 
   const clear = useCallback(() => {
     clearEligibilityTest();
-    setStored(null);
+    publish(null);
   }, []);
 
   return { stored, save, clear };
