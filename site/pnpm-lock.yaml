@@ -124,7 +124,7 @@ importers:
         specifier: ^18.3.7
         version: 18.3.7(@types/react@18.3.31)
       csv-parse:
-        specifier: ^7.0.1
+        specifier: ^7.0.2
         version: 7.0.2
       eslint:
         specifier: ^9.39.5

@@ -16,8 +16,11 @@ import {
   onFocus,
   selectStyles,
 } from '@/app/v2/trouver-un-club/components/club-filters/custom-select/CustomSelect';
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
 import { sortCities } from '@/utils/city';
+import { debounce } from '@/utils/debounce';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export interface CityOption {
   label: string;
@@ -55,6 +58,16 @@ const CityFinder = ({
 }: Props) => {
   const [inputValue, setInputValue] = useState(defaultOption?.label ?? '');
   const [value, setValue] = useState<CityOption>(defaultOption ?? { label: '', value: '' });
+
+  // AsyncSelect calls loadOptions on every keystroke; debouncing it avoids firing a
+  // request per character while the user is still typing.
+  const debouncedLoadOptions = useMemo(
+    () =>
+      debounce((inputValue: string, callback: (options: CityOption[]) => void) => {
+        fetchCityOptions(inputValue).then(callback);
+      }, SEARCH_DEBOUNCE_MS),
+    [],
+  );
 
   const onInputChange: ReactSelectProps['onInputChange'] = (inputValue, { action }) => {
     if (action === 'input-change') {
@@ -102,7 +115,7 @@ const CityFinder = ({
           screenReaderStatus={customScreenReaderStatus}
           value={value}
           inputValue={inputValue}
-          loadOptions={fetchCityOptions}
+          loadOptions={debouncedLoadOptions}
           onChange={birthPlaceChangedHandler}
           onInputChange={onInputChange}
           onBlur={(e) => {
