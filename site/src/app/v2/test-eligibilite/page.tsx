@@ -99,7 +99,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
       id={SKIP_LINKS_ID.mainContent}
       role="main"
     >
-      <h1>Récupération du code pass Sport</h1>
+      <h1>Demande du code pass Sport</h1>
 
       {error && (
         <div className="fr-alert fr-alert--error fr-my-3w">
