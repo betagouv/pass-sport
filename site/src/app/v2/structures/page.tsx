@@ -6,12 +6,14 @@ import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 import cn from 'classnames';
 import Link from 'next/link';
 import Image from 'next/image';
+import athletism from '@/images/structures/athletism.webp';
 import simonRunning from '@/images/structures/simon-running.webp';
 import { STRUCTURE_PAGE_ANCHORS } from '@/app/v2/structures/constants/anchors';
 import { AccordionsFaq } from '@/app/v2/structures/components/AccordionsFaq';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
 import { DownloadLink } from '@/app/components/download-link/DownloadLink';
+import { AccordionsKitCommunication } from '@/app/v2/structures/components/AccordionsKitCommunication';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -27,10 +29,16 @@ export default function Page() {
       <div className={cn(['fr-container', styles.container])}>
         <section className={styles['guiding-block__container']}>
           <GuidingBlock
-            description="Vous êtes un club, une association sportive ou un loisir sportif marchand ? Adhérez au pass Sport et contribuez à faciliter l’accès à la pratique sportive des jeunes"
+            description="Vous êtes un club, une association sportive ou une structure de loisir sportif marchand ? Adhérez au pass Sport et contribuez à faciliter l’accès à la pratique sportive des jeunes"
             variant="yellow"
             fullWidth
             points={[
+              {
+                title: 'Kit de communication',
+                linkProps: {
+                  href: `#${STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}`,
+                },
+              },
               {
                 title: "Conditions d'éligibilité des structures sportives",
                 linkProps: {
@@ -64,7 +72,31 @@ export default function Page() {
         </section>
 
         <section
-          id={STRUCTURE_PAGE_ANCHORS.LE_COMPTE_ASSO_ACCOUNT}
+          id={STRUCTURE_PAGE_ANCHORS.COMMUNICATION_KIT}
+          className={styles['communication-kit-section']}
+        >
+          <Image
+            src={athletism}
+            className={cn('fr-responsive-img', styles['communication-kit-section__image'])}
+            alt=""
+          />
+
+          <div className={styles['communication-kit-section__description']}>
+            <h2>Kit de communication</h2>
+            <p>
+              Téléchargez les supports de communication du pass Sport pour informer vos adhérents et
+              leurs familles : visuels pour les réseaux sociaux, vidéos, affiches, texte prêt à
+              l&apos;emploi. Tous les contenus sont prêts à être utilisés ou adaptés à vos besoins.
+            </p>
+          </div>
+        </section>
+
+        <section className={cn(styles['communication-kit-section__accordions'], 'fr-mb-4w')}>
+          <AccordionsKitCommunication />
+        </section>
+
+        <section
+          id={STRUCTURE_PAGE_ANCHORS.ELIGIBILITY_CONDITIONS}
           className={styles['eligibility-conditions-section']}
           style={{
             marginTop: '-24px',
@@ -240,18 +272,17 @@ export default function Page() {
             </Link>
           </p>
         </section>
-        {/* todo: enable later when we will have the signed decret */}
-        {/*<section className={styles['decret-section']}>*/}
-        {/*  <h2 className="fr-h4">Texte de référence</h2>*/}
-        {/*  <Link*/}
-        {/*    href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"*/}
-        {/*    target="_blank"*/}
-        {/*    className="align-self--baseline fr-link"*/}
-        {/*    aria-label="Ouvrir une nouvelle fenêtre vers le Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass'Sport » 2025"*/}
-        {/*  >*/}
-        {/*    Décret n° 2025-630 du 8 juillet 2025 relatif au « Pass&apos;Sport » 2025*/}
-        {/*  </Link>*/}
-        {/*</section>*/}
+        <section className={styles['decret-section']}>
+          <h2 className="fr-h4">Texte de référence</h2>
+          <Link
+            href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000054761806"
+            target="_blank"
+            className="align-self--baseline fr-link"
+            title="Décret n° 2026-830 du 28 août 2026 relatif au « Pass'Sport » 2026 - nouvelle fenêtre"
+          >
+            Décret n° 2026-830 du 28 août 2026 relatif au « Pass&apos;Sport » 2026
+          </Link>
+        </section>
       </div>
     </main>
   );

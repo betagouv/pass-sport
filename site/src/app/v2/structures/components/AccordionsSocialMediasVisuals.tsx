@@ -6,126 +6,99 @@ import { DownloadLink } from '@/app/components/download-link/DownloadLink';
 export default function AccordionsSocialMediasVisuals() {
   return (
     <>
-      <Accordion label="Pour les réseaux sociaux" onExpandedChange={() => {}} titleAs="h3">
+      <Accordion label="Réseaux sociaux" onExpandedChange={() => {}} titleAs="h3">
         <p className="fr-text--lg">
           Téléchargez les visuels et vidéos pour les ajouter sur vos réseaux.
         </p>
 
-        <p className="fr-text--bold fr-text--lg fr-mb-0">Visuels (format publication) :</p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">Visuels :</p>
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              label="Télécharger le visuel à destination des jeunes"
-              details="jpg ~ 258 KB"
+              href="/assets/partenaires/reseaux-sociaux/visuel-club-1.jpg"
+              label="Télécharger le visuel club - 1"
+              details="jpg ~ 258.0 kB"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_parents.jpg"
-              label="Télécharger le visuel à destination des parents"
-              details="jpg ~ 265 KB"
+              href="/assets/partenaires/reseaux-sociaux/visuel-club-2.jpg"
+              label="Télécharger le visuel club - 2"
+              details="jpg ~ 226.0 kB"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_etudiants_boursiers.jpg"
-              label="Télécharger le visuel à destination des étudiants boursiers"
-              details="jpg ~ 226 KB"
+              href="/assets/partenaires/reseaux-sociaux/visuel-club-2.jpg"
+              label="Télécharger le visuel club - 3"
+              details="jpg ~ 230.0 kB"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_communiquer_aupres_des_jeunes.jpg"
-              label="Télécharger le visuel à destination des 14-17 ans bénéficiaires de l'ARS"
-              details="jpg ~ 260 KB"
+              href="/assets/partenaires/reseaux-sociaux/visuel-6-17-ans.jpg"
+              label="Télécharger le visuel à la destination des jeunes de 6-17 ans"
+              details="jpg ~ 230.0 kB"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_beneficiaires_aah.jpg"
-              label="Télécharger le visuel à destination des 16-30 ans en situation de handicap"
-              details="jpg ~ 249 KB"
+              href="/assets/partenaires/reseaux-sociaux/visuel-aeeh.jpg"
+              label="Télécharger le visuel à la destination des 6-19 ans bénéficiaires de l'AEEH"
+              details="jpg ~ 264.0 kB"
             />
           </li>
           <li>
             <DownloadLink
-              href="/assets/partenaires/reseaux-sociaux/visuel_pour_les_parents_de_beneficiaires_aeeh.jpg"
-              label="Télécharger le visuel à destination des 6-19 ans en situation de handicap"
-              details="jpg ~ 264 KB"
+              href="/assets/partenaires/reseaux-sociaux/visuel-aah.jpg"
+              label="Télécharger le visuel à la destination des 16-30 ans bénéficiaires de l'AAH"
+              details="jpg ~ 255.69 kB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel-boursiers.jpg"
+              label="Télécharger le visuel à la destination des étudiants boursiers"
+              details="jpg ~ 231.93 kB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel-generique.jpg"
+              label="Télécharger le visuel générique"
+              details="jpg ~ 210.34 kB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel-pass-sport-reconduit.jpg"
+              label="Télécharger le visuel pass Sport reconduit"
+              details="jpg ~ 360.41 kB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/visuel-pass-sport-reconduit-story-banniere.jpg"
+              label="Télécharger le visuel pass Sport reconduit - story"
+              details="jpg ~ 214.51 kB"
+            />
+          </li>
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/reseaux-sociaux/pass-sport-video-generique.mp4"
+              label="Télécharger la vidéo générique"
+              details="mp4 ~ 1.28 MB"
             />
           </li>
         </ul>
 
-        <p className="fr-text--bold fr-text--lg fr-mb-0">
-          Vidéos de présentation du pass Sport avec athlètes (format story ou reel) :{' '}
-        </p>
+        <p className="fr-text--bold fr-text--lg fr-mb-0">Whatsapp :</p>
         <ul className="fr-pl-4w">
           <li>
             <DownloadLink
-              label="Télécharger la vidéo de présentation 50 secondes"
-              details="MP4 ~ 99.1 MB"
-              href="/assets/partenaires/videos/video-presentation-50-secondes.mp4"
-            />
-          </li>
-          <li>
-            <DownloadLink
-              label="Télécharger la vidéo de présentation 30 secondes"
-              details="MP4 ~ 2.5 MB"
-              href="/assets/partenaires/videos/video-presentation-30-secondes.mp4"
-            />
-          </li>
-          <li>
-            <DownloadLink
-              label="Télécharger la vidéo à destination des salles de sport"
-              details="MP4 ~ 30.5 MB"
-              href="/assets/partenaires/videos/video-salles-de-sport.mp4"
-            />
-          </li>
-          <li>
-            <DownloadLink
-              label="Télécharger la vidéo à destination des étudiants boursiers"
-              details="MP4 ~ 2.7 MB"
-              href="/assets/partenaires/videos/video-etudiants-boursiers.mp4"
-            />
-          </li>
-          <li>
-            <DownloadLink
-              label="Télécharger la vidéo à destination des 14-17 ans bénéficiaires de l’ARS"
-              details="MP4 ~ 29.7 MB"
-              href="/assets/partenaires/videos/video-14-17-ans-ars.mp4"
-            />
-          </li>
-          <li>
-            <DownloadLink
-              label="Télécharger la vidéo à destination des 6-30 ans en situation de handicap"
-              details="MP4 ~ 38.1 MB"
-              href="/assets/partenaires/videos/video-aah.mp4"
-            />
-          </li>
-        </ul>
-        <p className="fr-text--bold fr-text--lg fr-mb-0">
-          Vidéos de présentation du pass Sport standard (format story ou reel) :
-        </p>
-        <ul className="fr-pl-4w">
-          <li>
-            <DownloadLink
-              label="Télécharger la vidéo de présentation standard"
-              details="MP4 ~ 2.4 MB"
-              href="/assets/partenaires/videos/video-presentation-standard.mp4"
-            />
-          </li>
-        </ul>
-
-        <p className="fr-text--bold fr-text--lg fr-mb-0">
-          Texte prêt à l&apos;emploi pour accompagner les visuels et vidéos :
-        </p>
-        <ul className="fr-pl-4w">
-          <li>
-            <DownloadLink
-              details="PDF ~ 145 KB"
-              label="Télécharger le texte prêt à l'emploi pour les réseaux sociaux"
-              href="/assets/partenaires/publications-pretes-a-l-emploi-pour-accompagner-les-visuels-pass-sport.pdf"
+              href="/assets/partenaires/whatsapp/whatsapp-club.jpg"
+              label="Télécharger la bannière WhatsApp à destination des clubs"
+              details="jpg ~ 258.0 kB"
             />
           </li>
         </ul>
