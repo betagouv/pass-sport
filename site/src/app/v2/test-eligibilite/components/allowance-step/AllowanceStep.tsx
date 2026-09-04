@@ -21,6 +21,7 @@ import {
   isEligible,
 } from '@/utils/eligibility-test';
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
+import { StoredEligibilityTest } from '@/utils/eligibility-test-storage';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
 import BoursierAlert from '@/app/v2/test-eligibilite/components/boursier-alert/BoursierAlert';
 import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
@@ -47,14 +48,32 @@ const initialInputsState: AllowanceFormInputsState = {
   caisse: { state: 'default' },
 };
 
+type Answers = {
+  dob: string;
+  allowance: ALLOWANCE | null;
+  caisse: CAISSE | null;
+};
+
+const emptyAnswers: Answers = { dob: '', allowance: null, caisse: null };
+
+function toAnswers(stored: StoredEligibilityTest | null): Answers {
+  if (!stored) {
+    return emptyAnswers;
+  }
+
+  return {
+    dob: stored.dob ?? '',
+    allowance: stored.situation === null ? null : ALLOCATION_MAPPING_TO_ALLOWANCE[stored.situation],
+    caisse: stored.caisse,
+  };
+}
+
 const AllowanceStep = () => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
   const [verdictNode, setVerdictNode] = useState<HTMLElement | null>(null);
   const [stepOneFields, setStepOneFields] = useState<StepOneFields | null>(null);
   const [isStepOneValidated, setIsStepOneValidated] = useState<boolean>(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
-  const [allowance, setAllowance] = useState<ALLOWANCE | null>(null);
-  const [caisse, setCaisse] = useState<CAISSE | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [inputStates, setInputStates] = useState<AllowanceFormInputsState>(initialInputsState);
 
@@ -62,10 +81,20 @@ const AllowanceStep = () => {
   const [isValidated, setIsValidated] = useState<boolean | null>(null);
   const dobId = 'dob-id';
   const [benefIsEligible, setBenefIsEligible] = useState<boolean>(false);
-  const [dob, setDob] = useState<string>('');
   const fieldsetId = 'allowanceStep-fieldset';
   const caisseFieldsetId = 'caisseStep-fieldset';
   const { stored, save, clear } = useEligibilityTestStorage();
+
+  // Until the user touches a field, the answers are whatever the simplified test on the landing
+  // pages already collected. Deriving them keeps the storage read out of an effect.
+  const [editedAnswers, setEditedAnswers] = useState<Answers | null>(null);
+  const answers = editedAnswers ?? toAnswers(stored);
+  const { dob, allowance, caisse } = answers;
+
+  const updateAnswers = (patch: Partial<Answers>) => {
+    setEditedAnswers({ ...answers, ...patch });
+  };
+
   const isBoursier =
     allowance === ALLOWANCE.CROUS || allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX;
   const isCaisseNeeded =
@@ -75,35 +104,21 @@ const AllowanceStep = () => {
   useRemoveAttributeById(fieldsetId, 'aria-labelledby');
   useAskConsentForSupport();
 
-  // Prefill from whatever the simplified test on the landing pages already collected
   useEffect(() => {
-    if (!stored) return;
-
-    if (stored.dob) {
-      setDob(stored.dob);
-    }
-
-    if (stored.situation) {
-      setAllowance(ALLOCATION_MAPPING_TO_ALLOWANCE[stored.situation]);
-    }
-
-    if (stored.caisse) {
-      setCaisse(stored.caisse);
-    }
-  }, [stored]);
-
-  useEffect(() => {
-    // Skip the mount pass and the restart reset, otherwise a previously stored entry gets wiped
-    if (!dob && allowance === null) {
+    // Only user edits are persisted: the restart reset would otherwise wipe a stored entry
+    if (!editedAnswers || (!editedAnswers.dob && editedAnswers.allowance === null)) {
       return;
     }
 
     save({
-      dob: dob || null,
-      situation: allowance === null ? null : ALLOWANCE_MAPPING_TO_ALLOCATION[allowance],
-      caisse: isCaisseNeeded ? caisse : null,
+      dob: editedAnswers.dob || null,
+      situation:
+        editedAnswers.allowance === null
+          ? null
+          : ALLOWANCE_MAPPING_TO_ALLOCATION[editedAnswers.allowance],
+      caisse: isCaisseNeeded ? editedAnswers.caisse : null,
     });
-  }, [dob, allowance, caisse, isCaisseNeeded, save]);
+  }, [editedAnswers, isCaisseNeeded, save]);
 
   useEffect(() => {
     formRef.current?.querySelector<HTMLInputElement>(`#${dobId}`)?.focus();
@@ -112,23 +127,22 @@ const AllowanceStep = () => {
   // "Refaire le test": full wipe, storage included, so a later visit doesn't prefill the old answers
   const restartTest = () => {
     CustomButtonsGroupKey = Math.round(Math.random() * 1000);
-    setAllowance(null);
-    setCaisse(null);
+    setEditedAnswers(emptyAnswers);
     setIsValidated(null);
     setStepOneFields(null);
     setIsStepOneValidated(false);
     setSubmittedEmail(null);
-    setDob('');
     clear();
   };
 
   const selectAllowance = (value: ALLOWANCE) => {
     setIsValidated(false);
-    setAllowance(value);
-
-    if (!ALLOCATIONS_WITH_CAISSE.includes(ALLOWANCE_MAPPING_TO_ALLOCATION[value])) {
-      setCaisse(null);
-    }
+    updateAnswers({
+      allowance: value,
+      caisse: ALLOCATIONS_WITH_CAISSE.includes(ALLOWANCE_MAPPING_TO_ALLOCATION[value])
+        ? caisse
+        : null,
+    });
   };
 
   // "Modifier": reopen the form on the answers already given instead of starting over
@@ -212,7 +226,7 @@ const AllowanceStep = () => {
         setPortalNode,
         verdictNode,
         setVerdictNode,
-        setAllowance,
+        setAllowance: (value: ALLOWANCE | null) => updateAnswers({ allowance: value }),
         setStepOneFields,
         isStepOneValidated,
         setIsStepOneValidated,
@@ -279,7 +293,7 @@ const AllowanceStep = () => {
                     });
                   },
                   onChange: (e) => {
-                    setDob(e.target.value ?? '');
+                    updateAnswers({ dob: e.target.value ?? '' });
                   },
                 }}
                 hintText="Exemple : 31/12/2026, Personne à qui le pass Sport est destiné."
@@ -429,7 +443,7 @@ const AllowanceStep = () => {
                           checked: caisse === CAISSE.CAF,
                           onChange: () => {
                             setIsValidated(false);
-                            setCaisse(CAISSE.CAF);
+                            updateAnswers({ caisse: CAISSE.CAF });
                           },
                         },
                       },
@@ -447,7 +461,7 @@ const AllowanceStep = () => {
                           checked: caisse === CAISSE.MSA,
                           onChange: () => {
                             setIsValidated(false);
-                            setCaisse(CAISSE.MSA);
+                            updateAnswers({ caisse: CAISSE.MSA });
                           },
                         },
                       },

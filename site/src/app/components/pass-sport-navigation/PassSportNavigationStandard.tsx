@@ -3,7 +3,7 @@
 import { FOOTER_BRAND_TOP } from '@/app/constants/footer-brand-top';
 import Header from '@codegouvfr/react-dsfr/Header';
 import { usePathname } from 'next/navigation';
-import { navigationItemStandard } from './navigation';
+import { navigationItemStandard, NavigationItem } from './navigation';
 import styles from './styles.module.scss';
 import { useUpdateList } from '@/app/hooks/accessibility/use-update-list';
 import React, { useRef } from 'react';
@@ -11,6 +11,8 @@ import { HEADER_CLASSES } from '@/app/constants/dsfr-classes';
 import { useReplaceTitlesByAriaLabels } from '@/app/hooks/accessibility/use-replace-titles-by-aria-labels';
 import { useRemoveHeaderThemeControls } from '@/app/hooks/accessibility/use-remove-header-theme-controls';
 import Notice from '@codegouvfr/react-dsfr/Notice';
+import { CODES_OBTAINABLE } from '@/app/constants/env';
+import { useSimplifiedEligibilityTestUsage } from '@/app/hooks/use-simplified-eligibility-test-usage';
 
 interface Props {
   // POC FranceConnect + API Particulier: while a session is live (read server-side in
@@ -18,20 +20,38 @@ interface Props {
   // 18 asks that a connected user can tell at a glance who they are connected as — plus
   // a "Se déconnecter" quick-access item. Undefined means no session.
   pocUserName?: string;
+  // Shown under pocUserName. Absent only when FranceConnect served no email.
+  pocUserEmail?: string;
 }
 
 // Route that destroys the POC session then server-redirects to the FranceConnect
 // session/end endpoint (mode 2). Uses a Button quick-access item + a full-page
 // navigation on purpose: the registered DSFR Link is next/link, whose client-side
 // RSC fetch cannot follow the external FranceConnect redirect.
-const POC_LOGOUT_URL = '/api/france-connect/logout';
+const POC_LOGOUT_PATH = '/api/france-connect/logout';
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN;
 
-export default function PassSportNavigation({ pocUserName }: Props) {
+export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props) {
   const paths: string | null = usePathname();
+  const { hasAlreadyUsed: hasAlreadyUsedSimplifiedEligibilityTest } =
+    useSimplifiedEligibilityTestUsage();
 
   const isActive = (path: string) => {
     return !!(paths && paths.includes(path));
   };
+
+  // Only reachable while a POC session is live, so the entry only makes sense in the
+  // navigation bar for a connected user — unlike the rest of navigationItemStandard,
+  // which is the same for everyone.
+  const navigationItems: NavigationItem[] = pocUserName
+    ? [
+        ...navigationItemStandard,
+        {
+          link: '/v2/test-eligibilite?status=ok',
+          text: 'Ma demande',
+        },
+      ]
+    : navigationItemStandard;
 
   const headerRef = useRef<HTMLDivElement | null>(null);
   const headerContainerRef = useRef<HTMLDivElement | null>(null);
@@ -80,9 +100,14 @@ export default function PassSportNavigation({ pocUserName }: Props) {
                 // Plain node rather than a quick-access link: there is no account space
                 // to navigate to, so the identity must read as a status, not a control.
                 <p key="poc-identity" className={styles['poc-identity']}>
-                  <span className="fr-icon-account-line" aria-hidden="true" />
                   <span>
-                    Connecté en tant que <strong>{pocUserName}</strong>
+                    <span className="fr-icon-account-line" aria-hidden="true" /> {pocUserName}
+                    {pocUserEmail && (
+                      <>
+                        <br />
+                        {pocUserEmail}
+                      </>
+                    )}
                   </span>
                 </p>,
                 {
@@ -90,14 +115,24 @@ export default function PassSportNavigation({ pocUserName }: Props) {
                   text: 'Se déconnecter',
                   buttonProps: {
                     onClick: () => {
-                      window.location.assign(POC_LOGOUT_URL);
+                      window.location.assign(new URL(POC_LOGOUT_PATH, BASE_DOMAIN));
                     },
                   },
                 },
               ]
-            : []
+            : CODES_OBTAINABLE && hasAlreadyUsedSimplifiedEligibilityTest
+              ? [
+                  {
+                    iconId: 'fr-icon-article-fill',
+                    linkProps: {
+                      href: '/v2/test-eligibilite',
+                    },
+                    text: 'Accéder à ma demande',
+                  },
+                ]
+              : []
         }
-        navigation={navigationItemStandard.map((item) => ({
+        navigation={navigationItems.map((item) => ({
           isActive: isActive(item.link),
           linkProps: {
             href: item.link,

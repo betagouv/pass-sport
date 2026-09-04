@@ -6,8 +6,11 @@ import Card from '@codegouvfr/react-dsfr/Card';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
-import PostLoginFlow from './components/PostLoginFlow';
-import BeneficiaryRecap, { StatusBadge, PENDING_CODE_MESSAGE } from './components/BeneficiaryRecap';
+import PostLoginFlow from './components/post-login-flow/PostLoginFlow';
+import BeneficiaryRecap, {
+  StatusBadge,
+  PENDING_CODE_MESSAGE,
+} from './components/post-login-flow/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
@@ -96,7 +99,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
       id={SKIP_LINKS_ID.mainContent}
       role="main"
     >
-      <h1>Récupération du code pass Sport</h1>
+      <h1>Demande du code pass Sport</h1>
 
       {error && (
         <div className="fr-alert fr-alert--error fr-my-3w">
@@ -135,9 +138,13 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
 
               <p className={`fr-my-6w ${styles.separator}`}>OU</p>
 
-              <h2 className="fr-h4">Je ne peux pas utiliser FranceConnect</h2>
+              <h2 className="fr-h4">
+                Je ne souhaite pas profiter des avantages de la solution sécurisée FranceConnect.
+              </h2>
               <p className="fr-mb-3w">
-                Renseignez vous-même vos informations pour vérifier votre éligibilité.
+                Je renseigne moi-même l&apos;ensemble des informations nécessaires pour vérifier
+                l&apos;éligibilité de chacun de mes enfants. Si mes informations ne sont pas
+                exactes, je n&apos;ai pas la garantie de pouvoir récupérer mon code.
               </p>
 
               <NoFranceConnectSection />
@@ -150,6 +157,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             severity="success"
             small={false}
             closable
+            as="h2"
             title="Connexion FranceConnect réussie"
             className="fr-mb-3w"
           />
@@ -175,7 +183,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
               ) : (
                 <>
                   <Card
-                    className="fr-mb-3w"
+                    className="fr-mb-6w"
                     border
                     nativeDivProps={{ role: 'status' }}
                     title="Demande enregistrée"

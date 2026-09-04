@@ -35,6 +35,7 @@ export default async function RootLayout({
   const pocUserName = pocSession
     ? [pocSession.identity.given_name, pocSession.identity.family_name].filter(Boolean).join(' ')
     : undefined;
+  const pocUserEmail = pocSession?.identity.email;
 
   return (
     <html {...getHtmlAttributes({ lang })}>
@@ -53,7 +54,7 @@ export default async function RootLayout({
       <body>
         <StartDsfrOnHydration />
         <SkipLinksWrapper />
-        <PassSportNavigationStandard pocUserName={pocUserName} />
+        <PassSportNavigationStandard pocUserName={pocUserName} pocUserEmail={pocUserEmail} />
         <PassSportBreadcrumbStandard />
         <DsfrProvider lang={lang}>{children}</DsfrProvider>
         <PassSportFooter />

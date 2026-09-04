@@ -3,7 +3,7 @@ import styles from './styles.module.scss';
 import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
 import { isPasSportClosed, shouldDisplayChatbot } from '@/utils/date';
 
-type NavigationItem = {
+export type NavigationItem = {
   link: string;
   text: string | JSX.Element;
   isExternal?: boolean;
