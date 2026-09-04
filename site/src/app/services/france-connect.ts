@@ -121,6 +121,15 @@ export const exchangeCodeForTokens = async (params: {
   });
 
   if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+
+    console.error('[fc-token] exchange failed', {
+      status: response.status,
+      tokenEndpoint: config.tokenEndpoint,
+      redirectUri,
+      errorBody,
+    });
+
     throw new Error(`FranceConnect token exchange failed. Status: ${response.status}`);
   }
 
@@ -172,6 +181,14 @@ export const fetchUserInfo = async (params: {
   });
 
   if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+
+    console.error('[fc-userinfo] request failed', {
+      status: response.status,
+      userInfoEndpoint: config.userInfoEndpoint,
+      errorBody,
+    });
+
     throw new Error(`FranceConnect userinfo request failed. Status: ${response.status}`);
   }
 
