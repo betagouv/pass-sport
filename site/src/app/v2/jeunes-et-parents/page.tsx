@@ -171,18 +171,17 @@ export default function Page() {
           </p>
         </section>
 
-        {/*todo: enable later*/}
-        {/*<section className={styles['decret-section']}>*/}
-        {/*  <h2 className="fr-h4">Texte de référence</h2>*/}
-        {/*  <Link*/}
-        {/*    href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051872024/"*/}
-        {/*    target="_blank"*/}
-        {/*    className="align-self--baseline fr-link"*/}
-        {/*    title="Décret n° 2026-630 du 8 juillet 2026 relatif au « Pass'Sport » 2026 - nouvelle fenêtre"*/}
-        {/*  >*/}
-        {/*    Décret n° 2026-630 du 8 juillet 2026 relatif au « Pass&apos;Sport » 2026*/}
-        {/*  </Link>*/}
-        {/*</section>*/}
+        <section className={styles['decret-section']}>
+          <h2 className="fr-h4">Texte de référence</h2>
+          <Link
+            href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000054761806"
+            target="_blank"
+            className="align-self--baseline fr-link"
+            title="Décret n° 2026-830 du 28 août 2026 relatif au « Pass'Sport » 2026 - nouvelle fenêtre"
+          >
+            Décret n° 2026-830 du 28 août 2026 relatif au « Pass&apos;Sport » 2026
+          </Link>
+        </section>
       </div>
     </main>
   );
