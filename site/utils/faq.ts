@@ -206,9 +206,7 @@ export function getFormattedArticleWithContent(article: CrispArticle, content: s
 
 function stripCategoryIdentifier(title: string, categoryIdentifier: CATEGORY_IDENTIFIER_TYPE) {
   if (title.toLowerCase().startsWith(categoryIdentifier)) {
-    const regex = new RegExp(categoryIdentifier, 'gi');
-
-    return title.replace(regex, '').trim();
+    return title.slice(categoryIdentifier.length).trim();
   }
 
   return title;

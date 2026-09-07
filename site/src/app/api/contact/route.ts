@@ -9,7 +9,6 @@ import { ContactRequestBody, contactFormSchema } from '@/app/api/contact/schema'
 
 const { crispClient, envVars } = initCrispClient();
 
-const MAX_LENGTH_REASON = 80;
 const BASE_64_KEY_FOR_SUPPORT_COOKIE = process.env.BASE_64_KEY_FOR_SUPPORT_COOKIE as string;
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -26,7 +25,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
 
     if (typeof decryptedSupportCookieValue === 'string') {
-      attempts = JSON.parse(Buffer.from(decryptedSupportCookieValue, 'base64').toString());
+      try {
+        attempts = JSON.parse(Buffer.from(decryptedSupportCookieValue, 'base64').toString());
+      } catch {
+        attempts = null;
+      }
     }
   }
 
@@ -58,6 +61,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     const drajesSegment = 'est-drajes';
     const lsmSegment = 'est-lsm';
 
+    // Keyword-based routing is spoofable by design: anyone typing the magic word gets the
+    // segment. Accepted risk — the segments only drive support triage, no entitlement.
     const isFromDrajes = matchExactDrajes(message);
     const isFromLsm = matchExactLsm(message);
 
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       data: { email, siret: siret || '', rna: rna || '' },
       segments: [
         byWhoSegment,
-        reason.slice(0, MAX_LENGTH_REASON),
+        reason,
         failedAttemptSegment,
         isFromDrajes ? drajesSegment : null,
         isFromLsm ? lsmSegment : null,
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         type: 'note',
         from: 'operator',
         origin: 'urn:pass-sport',
-        content: formatNote(attempts),
+        content: `⚠ Données déclarées par l'usager (cookie support) :\n\n${formatNote(attempts)}`,
       });
       await new Promise((resolve) => setTimeout(resolve, 150));
       await crispClient.website.changeConversationState(

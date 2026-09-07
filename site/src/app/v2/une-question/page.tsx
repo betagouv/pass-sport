@@ -1,5 +1,3 @@
-'use server';
-
 import PageTitle from '@/components/PageTitle/PageTitle';
 import SocialMediaPanel from '../../components/social-media-panel/SocialMediaPanel';
 import styles from './styles.module.scss';

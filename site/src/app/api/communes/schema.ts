@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const communesSearchQuerySchema = z.object({
-  name: z.string(),
+  name: z.string().trim().min(1).max(100),
   postalCode: z
     .string()
     .regex(/^\d{5}$/)

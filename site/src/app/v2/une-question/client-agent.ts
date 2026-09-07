@@ -9,7 +9,7 @@ export const postContact = async (request: FormData, isProRequest: boolean): Pro
     firstname: request.get('firstname') as string,
     lastname: request.get('lastname') as string,
     message: request.get('message') as string,
-    reason: request.get('reason') as string,
+    reason: request.get('reason') as ContactRequestBody['reason'],
     isProRequest,
   };
 
