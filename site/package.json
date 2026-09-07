@@ -32,7 +32,7 @@
     "@sentry/nextjs": "^10.71.0",
     "@socialgouv/matomo-next": "1.9.2",
     "@uidotdev/usehooks": "^2.4.1",
-    "bullmq": "^5.81.4",
+    "bullmq": "^6.3.2",
     "classnames": "^2.5.1",
     "crisp-api": "^10.11.0",
     "date-fns": "^4.4.0",
