@@ -20,6 +20,7 @@ export function proxy(request: NextRequest) {
     script-src 'report-sample' ${scriptSrc} https://client.crisp.chat/ https://stats.beta.gouv.fr/matomo.js https://tarteaucitron.io/ https://cdn.tarteaucitron.io/ https://cdntag.tarteaucitron.io/;
     style-src 'report-sample' 'unsafe-inline' 'self' https://unpkg.com https://client.crisp.chat/ https://cdn.tarteaucitron.io/;
     object-src 'none';
+    frame-ancestors 'none';
     base-uri 'self';
     form-action 'self';
     connect-src 'self' https://client.crisp.chat/ wss://client.relay.crisp.chat/ https://sports-sgsocialgouv.opendatasoft.com https://stats.beta.gouv.fr https://logs.tarteaucitron.io/ blob:;

@@ -1,4 +1,4 @@
-'use server';
+import 'server-only';
 
 import { cookies } from 'next/headers';
 import { getAnHourFromNow } from './date';
@@ -97,4 +97,4 @@ async function removeSupportCookie() {
   return cookieStore.delete(COOKIE_SUPPORT_KEY);
 }
 
-export { handleSupportCookie, getDecryptedSupportCookie };
+export { handleSupportCookie };

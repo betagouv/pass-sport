@@ -25,4 +25,4 @@ compose.yml
 # Miscellaneous
 .DS_Store
 .swc
-*.env
+.env*

@@ -50,14 +50,20 @@ const Clusterizer: React.FC<Props> = ({ clubs }) => {
       if (geoloc_finale) {
         let marker = L.marker(new L.LatLng(geoloc_finale.lat, geoloc_finale.lon), { alt: nom });
 
-        const popup = L.popup().setContent(`
-        <div>
-          <p class='fr-text--lg fr-text--bold'> ${nom} </p>
-          <a class="fr-btn fr-btn--tertiary" href="trouver-un-club/${encodeURIComponent(nom)}">
-            Détails du club
-          </a>
-        </div>
-        `);
+        const popupContent = document.createElement('div');
+
+        const title = document.createElement('p');
+        title.className = 'fr-text--lg fr-text--bold';
+        title.textContent = nom;
+
+        const detailsLink = document.createElement('a');
+        detailsLink.className = 'fr-btn fr-btn--tertiary';
+        detailsLink.href = `trouver-un-club/${encodeURIComponent(nom)}`;
+        detailsLink.textContent = 'Détails du club';
+
+        popupContent.append(title, detailsLink);
+
+        const popup = L.popup().setContent(popupContent);
 
         marker.bindPopup(popup);
         markers.addLayer(marker);

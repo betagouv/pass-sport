@@ -15,6 +15,16 @@ const nextConfig = {
     // navigation, which scrolled the header out of view (see PageTitle #header)
     appNewScrollHandler: true,
   },
+  headers: async () => [
+    {
+      // CSP frame-ancestors (src/proxy.ts) does not cover /api nor legacy browsers
+      source: '/(.*)',
+      headers: [
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+      ],
+    },
+  ],
   images: {
     remotePatterns: [
       {

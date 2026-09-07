@@ -56,7 +56,7 @@ export const mapper: Record<keyof InputsState, string> = {
   rna: '',
 };
 
-const SIRET_REGEX = new RegExp('\\d{14}');
+const SIRET_REGEX = new RegExp('^\\d{14}$');
 const SIRET_FORMAT_ERROR_MSG = 'Le SIRET doit contenir 14 chiffres.';
 
 interface Props {
