@@ -65,7 +65,7 @@ export function AccordionsKitCommunication() {
         </ul>
       </Accordion>
 
-      <Accordion label="Affiches" titleAs="h3">
+      <Accordion label="Affiches et flyer" titleAs="h3">
         <p className="fr-text--bold fr-text--lg fr-mb-0">Affichage et impression :</p>
         <ul className="fr-pl-4w">
           <li>
@@ -94,6 +94,17 @@ export function AccordionsKitCommunication() {
               href="/assets/partenaires/affiches/affiche-boursiers.pdf"
               label="Télécharger l'affiche à destination des boursiers - A3"
               details="PDF ~ 90.0 kB"
+            />
+          </li>
+        </ul>
+
+        <p className="fr-text--bold fr-text--lg fr-mb-0">Flyer :</p>
+        <ul className="fr-pl-4w">
+          <li>
+            <DownloadLink
+              href="/assets/partenaires/flyers/flyer.pdf"
+              label="Télécharger le flyer"
+              details="PDF ~ 121.0 kB"
             />
           </li>
         </ul>
