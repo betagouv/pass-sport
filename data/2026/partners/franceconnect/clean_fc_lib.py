@@ -110,7 +110,6 @@ FINAL_COLUMNS_TO_DROP = [
     'source',
     'created_at',
     'allocataire_fc_sub',
-    'residence_insee',
     'enfant_nom',
     'enfant_prenom',
     'enfant_date_naissance',
@@ -296,10 +295,10 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     JSON distinctes, à plat ici.
 
     Crée aussi les colonnes `allocataire-*` et `adresse_allocataire-*` que les sérialiseurs
-    JSON de partners_lib consomment. La plupart restent NaN : FranceConnect ne donne ni code
-    organisme, ni téléphone, et pas d'adresse postale — seul le code INSEE de la commune de
-    résidence est connu. Les valeurs nulles sont écartées du JSON produit, ces colonnes
-    n'apparaîtront donc pas dans le résultat.
+    JSON de partners_lib consomment. Toutes celles de l'adresse restent nulles : FranceConnect
+    ne donne ni code organisme, ni téléphone, ni adresse postale, et le parcours ne demande plus
+    la commune de résidence depuis que LCA en est débranché. Les valeurs nulles sont écartées du
+    JSON produit, `adresse_allocataire` vaut donc `{}` pour cette source.
     """
     df = df.copy()
 
@@ -331,15 +330,15 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     # None et non np.NaN pour ce que FranceConnect ne fournit pas : les deux sont écartés du
     # JSON par pd.notnull(), mais utils.format_insee_or_postal_code — que le sérialiseur
-    # d'adresse applique au code postal — ne reconnaît comme vide que '' ou None, et
-    # journalise bruyamment un échec de cast sur un NaN. Une ligne de bruit par bénéficiaire
-    # noierait les compteurs du notebook.
+    # d'adresse applique au code postal ET au code INSEE — ne reconnaît comme vide que '' ou
+    # None, et journalise bruyamment un échec de cast sur un NaN. Une ligne de bruit par
+    # bénéficiaire noierait les compteurs du notebook.
     
     df['allocataire-matricule'] = '1234567'
     df['allocataire-code_organisme'] = None
     df['allocataire-telephone'] = None
 
-    df['adresse_allocataire-code_insee'] = df['residence_insee']
+    df['adresse_allocataire-code_insee'] = None
     df['adresse_allocataire-voie'] = None
     df['adresse_allocataire-code_postal'] = None
     df['adresse_allocataire-commune'] = None

@@ -228,6 +228,19 @@ describe('BeneficiaryRecap', () => {
     expect(screen.getByText('Votre enfant')).toBeInTheDocument();
   });
 
+  it('tells a not_assessed beneficiary their eligibility is undetermined, without promising a code', () => {
+    renderRecap([
+      beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'not_assessed' }),
+    ]);
+
+    expect(
+      screen.getByText(
+        'Votre demande est en cours de traitement. À ce stade, nous ne sommes pas en mesure de déterminer si cette personne est éligible au pass Sport.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/code individuel par courrier électronique/)).not.toBeInTheDocument();
+  });
+
   it('shows a Card for a not_assessed child alongside the assessed ones, not just the assessed ones', () => {
     const { container } = renderRecap([
       beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'not_assessed' }),

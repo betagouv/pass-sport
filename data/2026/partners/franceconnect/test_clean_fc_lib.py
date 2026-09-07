@@ -22,7 +22,6 @@ def enfant_row(**overrides):
         'eligibility_result_id': '11111111-1111-1111-1111-111111111111',
         'source': 'enfant',
         'allocataire_fc_sub': 'sub-A',
-        'residence_insee': '75056',
         'allocataire-nom_naissance': 'MARTIN',
         'allocataire-nom_usage': None,
         'allocataire-prenom': 'Claire',
@@ -284,15 +283,16 @@ def test_un_champ_vide_du_csv_vaut_un_champ_absent():
     assert df.loc[0, 'allocataire-nom'] == 'MARTIN'
 
 
-def test_le_code_insee_de_residence_devient_l_adresse_de_l_allocataire():
+def test_l_allocataire_n_a_aucune_adresse():
     df = pd.DataFrame([enfant_row()])
     df, _ = lib.resolve_enfant_genre(df)
     df = lib.build_psp_columns(df)
 
-    assert df.loc[0, 'adresse_allocataire-code_insee'] == '75056'
-    # FranceConnect ne donne aucune adresse postale : ces colonnes existent pour le
+    # Cette source ne porte plus aucune adresse : le parcours FranceConnect ne demande plus la
+    # commune de résidence depuis que LCA en est débranché. Ces colonnes existent pour le
     # sérialiseur JSON, qui les écartera parce qu'elles sont nulles.
-    assert pd.isna(df.loc[0, 'adresse_allocataire-voie'])
+    for field in ('code_insee', 'voie', 'code_postal', 'commune', 'cplt_adresse'):
+        assert pd.isna(df.loc[0, f'adresse_allocataire-{field}'])
     assert df.loc[0, 'allocataire-matricule'] == '1234567'
 
 
@@ -357,7 +357,7 @@ def test_les_colonnes_json_portent_ce_que_franceconnect_donne_et_rien_de_plus():
     # Ni code_organisme, ni téléphone : FranceConnect n'en fournit aucun, et le sérialiseur
     # écarte les valeurs nulles plutôt que de les porter vides. Le matricule, lui, est fixe
     # pour cette source (voir build_psp_columns).
-    assert adresse == {'code_insee': '75056'}
+    assert adresse == {}
 
 
 def test_drop_intermediate_columns_tolere_les_colonnes_deja_absentes():

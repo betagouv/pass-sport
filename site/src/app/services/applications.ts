@@ -8,12 +8,20 @@ export type ExistingApplication = {
   lastApplication: Date;
 };
 
-// Mirror of the worker's Verdict (worker/src/db/schema.ts). 'not_assessed' means the person
-// was never asked about, and is filtered out before display. 'eligible_pending_lca' means a
-// code has been minted for this person but LCA does not serve it yet — BeneficiaryRecap
-// shows the code with its own caveat rather than in the confirmed bucket.
-// 'eligible_confirmed_but_email_not_matching' is written by the no-FranceConnect form only,
-// so it never reaches application_results_by_sub, which is keyed on a FranceConnect sub.
+// Mirror of the worker's Verdict (worker/src/db/schema.ts).
+//
+// On the FranceConnect path only two of these are ever written: 'eligible_pending' when API
+// Particulier lets us affirm the eligibility, 'not_assessed' when nothing does. That path calls
+// no LCA base any more, so it can neither confirm a code nor pronounce a refusal — every row
+// carrying another value comes from the no-FranceConnect form, or from the data/ pipeline
+// ('eligible_pending_lca': a code has been minted for this person but LCA does not serve it yet).
+//
+// 'not_assessed' is shown exactly like 'eligible_pending' (BeneficiaryRecap): nothing was
+// concluded, so the applicant is told their situation is still being looked at rather than
+// handed a verdict nobody pronounced.
+//
+// 'eligible_confirmed_but_email_not_matching' is written by the no-FranceConnect form only, so it
+// never reaches application_results_by_sub, which is keyed on a FranceConnect sub.
 export type Verdict =
   | 'eligible_confirmed'
   | 'eligible_confirmed_but_email_not_matching'

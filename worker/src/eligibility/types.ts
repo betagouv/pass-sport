@@ -178,7 +178,6 @@ export type EligibilityJobPayload = {
   identity: PivotIdentity;
   aides: Allowance[];
   isFranceConnected: boolean;
-  residenceInsee: string; // INSEE code of the commune de résidence (LCA search)
   clientIp?: string | null;
   userAgent?: string | null;
 };

@@ -29,7 +29,6 @@ const input = () => ({
   },
   aides: ["CROUS"] as Allowance[],
   isFranceConnected: true,
-  residenceInsee: "75113",
 });
 
 // The site's only window onto Postgres: the SELECT-only view.

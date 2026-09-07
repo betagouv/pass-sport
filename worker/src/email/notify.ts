@@ -11,12 +11,12 @@ import {
   sendTransactionalEmail,
 } from "./link-mobility";
 
+// 'eligible_soon' and 'not_eligible' are no longer emitted by anyone: they belonged to the
+// FranceConnect end-of-job mails, which went away with the LCA calls that produced them. They
+// stay in the union because email_kind rows already written carry those words, and
+// EMAIL_TEMPLATES is what documents them.
 export type OutcomeEmailKind = "code" | "eligible_soon" | "not_eligible" | "not_eligible_hors_fc";
 export type EmailKind = OutcomeEmailKind | "acknowledgment";
-export type FranceConnectEmailKind = Extract<
-  OutcomeEmailKind,
-  "code" | "eligible_soon" | "not_eligible"
->;
 export type LcaEmailKind = Extract<OutcomeEmailKind, "code" | "not_eligible_hors_fc">;
 
 type EmailTemplate = {
@@ -36,6 +36,9 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
       vars?.prenom ? `Le code pass Sport de ${vars.prenom}` : "Votre code pass Sport",
     historyAction: "email.code",
   },
+  // No longer sent: the FranceConnect path stopped mailing an outcome when LCA was unplugged
+  // from it. Kept because eligibility_results.email_kind and eligibility_history.action still
+  // carry these words on the rows written before that.
   eligible_soon: {
     templateId: 1187053,
     templateEnv: "LINK_MOBILITY_TEMPLATE_ELIGIBLE_SOON",
@@ -44,6 +47,7 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
       vars?.prenom ? `${vars.prenom} est éligible au pass Sport` : "Votre demande pass Sport",
     historyAction: "email.eligible_soon",
   },
+  // No longer sent either — same reason as eligible_soon above.
   not_eligible: {
     templateId: 1187056,
     templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE",
@@ -85,24 +89,6 @@ const templateIdFor = (kind: EmailKind): number => {
   );
   return templateId;
 };
-
-// ─── Parcours FranceConnect ──────────────────────────────────────────────────
-export const franceConnectEmailKind = (
-  hasCode: boolean,
-  isEligible: boolean,
-): FranceConnectEmailKind => (hasCode ? "code" : isEligible ? "eligible_soon" : "not_eligible");
-
-// These run against an LCA whose courriel is a mailbox we control, while their FranceConnect
-// identities are test ones nobody reads — so the priority is reversed there.
-const LCA_FIRST_ENVS = ["local", "staging"];
-
-export const franceConnectRecipient = (
-  lcaEmail: string | undefined,
-  franceConnectEmail: string | undefined,
-): string | undefined =>
-  LCA_FIRST_ENVS.includes(process.env.ENV ?? "")
-    ? (lcaEmail ?? franceConnectEmail)
-    : franceConnectEmail;
 
 // ─── Parcours hors FranceConnect ─────────────────────────────────────────────
 export const lcaEmailKind = (

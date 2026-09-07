@@ -30,7 +30,6 @@ const job = () => ({
   },
   aides: ["CROUS"] as Allowance[],
   isFranceConnected: true,
-  residenceInsee: "75113",
 });
 
 describe("rate-limit pause + retry-from-header", () => {
@@ -52,7 +51,7 @@ describe("rate-limit pause + retry-from-header", () => {
     // And it eventually succeeded end-to-end.
     const rows = (await stack.pool.query("select * from eligibility_results")).rows;
     expect(rows).toHaveLength(1);
-    expect(rows[0].lca_status).toBe("confirmed");
+    expect(rows[0].verdict).toBe("eligible_pending");
   });
 
   it("leaves both the 429 and the resumed attempt in the history", async () => {

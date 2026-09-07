@@ -8,7 +8,7 @@ import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
 import PostLoginFlow from './components/post-login-flow/PostLoginFlow';
 import BeneficiaryRecap, {
-  StatusBadge,
+  ProcessingBadge,
   PENDING_CODE_MESSAGE,
 } from './components/post-login-flow/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
@@ -117,7 +117,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             severity="info"
             className="fr-mb-3w"
             title="Connectez-vous avec FranceConnect"
-            description="Nous vous demanderons ensuite vos aides et votre commune, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
+            description="Nous vous demanderons ensuite les aides dont vous bénéficiez, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
           />
 
           <div className="fr-grid-row fr-grid-row--center fr-my-4w">
@@ -188,7 +188,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                     nativeDivProps={{ role: 'status' }}
                     title="Demande enregistrée"
                     titleAs="h2"
-                    start={<StatusBadge verdict="not_assessed" />}
+                    start={<ProcessingBadge />}
                     desc={
                       <>
                         {PENDING_CODE_MESSAGE} Si votre demande dépasse le délai de 72h, merci de

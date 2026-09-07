@@ -6,7 +6,6 @@ import * as Sentry from "@sentry/node";
 import { db, pool } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { getClient } from "./eligibility/client";
-import { getLcaClient } from "./lca/client";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
@@ -85,12 +84,11 @@ async function main(): Promise<void> {
   await runMigrations(pool);
 
   const apiClient = await getClient();
-  const lcaClient = await getLcaClient();
 
   const franceConnect = await startFlow<EligibilityJobData>({
     queueName: FRANCE_CONNECT_QUEUE_NAME,
     process: (job, queue) => {
-      const deps: FranceConnectDeps = { apiClient, lcaClient, db, queue };
+      const deps: FranceConnectDeps = { apiClient, db, queue };
       return processEligibilityJob(job, job.data, deps);
     },
   });

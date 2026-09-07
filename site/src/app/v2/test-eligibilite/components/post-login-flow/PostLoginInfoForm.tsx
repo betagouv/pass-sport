@@ -3,9 +3,7 @@
 import { FormEvent, useState } from 'react';
 import Checkbox from '@codegouvfr/react-dsfr/Checkbox';
 import Button from '@codegouvfr/react-dsfr/Button';
-import CityFinder from '@/app/v2/test-eligibilite/components/city-finder/CityFinder';
 import { useRemoveAttributeById } from '@/app/hooks/useRemoveAttributeById';
-import { InputState } from '@/types/form';
 import type { Allowance } from '@/app/services/queue';
 
 const AIDES_FIELDSET_ID = 'post-login-aides';
@@ -29,23 +27,17 @@ const labelsFromAllowances = (aides: Allowance[]): string[] =>
 interface Props {
   // Prefill values (empty on first render; the session is identity-only).
   initialAides?: Allowance[];
-  initialResidenceInsee?: string;
   // Called once the eligibility job has been queued (202).
   onQueued?: () => void;
 }
 
-export default function PostLoginInfoForm({
-  initialAides = [],
-  initialResidenceInsee = '',
-  onQueued,
-}: Props) {
+export default function PostLoginInfoForm({ initialAides = [], onQueued }: Props) {
   const [selectedLabels, setSelectedLabels] = useState<string[]>(
     labelsFromAllowances(initialAides),
   );
   // RGAA: empty selection is allowed to be *attempted*, but Confirmer then surfaces
   // an error on the group rather than silently doing nothing / disabling the button.
   const [error, setError] = useState<string | undefined>(undefined);
-  const [cityInputState, setCityInputState] = useState<InputState>({ state: 'default' });
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -62,22 +54,10 @@ export default function PostLoginInfoForm({
     e.preventDefault();
     setSubmitError(null);
 
-    const insee = (new FormData(e.currentTarget).get('residenceInsee') ?? '')
-      .toString()
-      // CityFinder keeps the previous value when re-editing; fall back to it.
-      .trim();
-    const residenceInsee = insee || initialResidenceInsee;
-
-    let ok = true;
     if (selectedLabels.length === 0) {
       setError('Cochez au moins une case.');
-      ok = false;
+      return;
     }
-    if (!residenceInsee) {
-      setCityInputState({ state: 'error', errorMsg: 'Sélectionnez une commune.' });
-      ok = false;
-    }
-    if (!ok) return;
 
     const aides = AIDE_OPTIONS.filter((o) => selectedLabels.includes(o.label)).flatMap(
       (o) => o.allowances,
@@ -88,7 +68,7 @@ export default function PostLoginInfoForm({
       const res = await fetch('/api/france-connect/collect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aides, residenceInsee }),
+        body: JSON.stringify({ aides }),
       });
 
       // 409: this FranceConnect user already has a request on the queue (the job is
@@ -105,7 +85,7 @@ export default function PostLoginInfoForm({
         return;
       }
 
-      // Job queued (202): the worker will email the code. Show the confirmation.
+      // Job queued (202): the worker records the verdicts. Show the confirmation.
       onQueued?.();
     } catch {
       setSubmitError('Une erreur est apparue. Merci de réessayer ultérieurement.');
@@ -135,19 +115,6 @@ export default function PostLoginInfoForm({
             onChange: (e) => toggle(opt.label, e.target.checked),
           },
         }))}
-      />
-      <CityFinder
-        legend={
-          <>
-            Commune de résidence de l’allocataire <span className="text--required">*</span>
-          </>
-        }
-        inputName="residenceInsee"
-        inputState={cityInputState}
-        isDisabled={isLoading}
-        onChanged={() => setCityInputState({ state: 'default' })}
-        onBlur={() => {}}
-        required
       />
 
       <div className="fr-mt-2w">

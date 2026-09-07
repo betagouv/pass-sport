@@ -17,6 +17,10 @@ import type { PivotIdentity } from "../eligibility/types";
 // value is documented. 'eligible_pending_lca' is never produced by the worker — the code
 // generation under data/ writes it — but it is declared so the type stays the exact set
 // of values the column can hold.
+//
+// The FranceConnect path only ever writes 'eligible_pending' or 'not_assessed': it no longer
+// calls LCA, so it can neither hand out a code nor pronounce a refusal. Every other value
+// belongs to the parcours hors FranceConnect.
 export type Verdict =
   | "eligible_confirmed"
   | "eligible_confirmed_but_email_not_matching"
@@ -33,7 +37,9 @@ export type Verdict =
  * `residence_insee` is NOT part of the pivot: FranceConnect never serves it, the usager
  * declares it in our own form. It is duplicated here from the residence_insee column so the
  * jsonb is the allocataire as declared, readable without joining the flat columns. Snake_case
- * like every other key, which are FranceConnect's own.
+ * like every other key, which are FranceConnect's own. Only the parcours hors FranceConnect
+ * still fills it: the FranceConnect form stopped asking for a commune once LCA was unplugged
+ * from that path, so rows written by it carry neither the key nor the column.
  *
  * Deliberately not widening PivotIdentity itself: that type is handed WHOLE to API
  * Particulier (eligibility/sequence.ts), so anything added to it risks reaching the API.
@@ -63,22 +69,26 @@ export const eligibilityResults = pgTable(
     residenceInsee: text("residence_insee"),
     passSportCode: text("pass_sport_code"),
 
-    // 'confirmed' | 'not_found' | 'error', or 'not_applicable' on the row recorded for
-    // a job that had no beneficiary to send to LCA at all.
+    // 'confirmed' | 'not_found' | 'error' on the parcours hors FranceConnect, which is the
+    // only one still calling LCA. Always 'not_applicable' on the FranceConnect path.
     lcaStatus: text("lca_status").notNull(),
 
     // The verdict as the USAGER should read it, and the only column the site is granted.
     // Deliberately not email_kind: that one describes what was SENT and is null whenever
     // nothing was. Written once here so the site never has to re-derive the rule that lives
     // in jobs/shared.ts.
-    //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email
+    //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email. Parcours
+    //                            hors FranceConnect uniquement.
     //   'eligible_confirmed_but_email_not_matching'
     //                          — LCA a le bénéficiaire et un code lui a été servi, mais
     //                            l'adresse saisie au formulaire n'est pas celle que LCA
     //                            détient pour l'allocataire : le code n'a PAS été envoyé.
     //                            Parcours hors FranceConnect uniquement — le parcours FC
     //                            n'a pas d'adresse saisie à confronter.
-    //   'eligible_pending'     — éligible chez nous, pas encore dans la base LCA
+    //   'eligible_pending'     — API Particulier permet d'affirmer l'éligibilité. Aucun code
+    //                            n'est servi ici : le parcours FranceConnect n'appelle plus
+    //                            LCA, et c'est la génération côté data/ qui en fabriquera un.
+    //                            SEUL verdict positif du parcours FranceConnect.
     //   'eligible_pending_lca' — un code a été fabriqué pour cette personne et part vers
     //                            LCA, qui ne le sert pas encore. JAMAIS écrit par le worker:
     //                            il est posé par la génération de codes côté data/, qui
@@ -86,8 +96,12 @@ export const eligibilityResults = pgTable(
     //                            CSV produit (data/2026/partners/franceconnect/). C'est ce
     //                            qui rend ce ramassage rejouable — sans lui, un second
     //                            passage refabriquerait un code aux mêmes personnes.
-    //   'not_eligible'         — aucune route ouverte et aucun match LCA
-    //   'not_assessed'         — personne non évaluée (rien de demandé pour elle)
+    //   'not_eligible'         — LCA ne connaît pas le bénéficiaire. Parcours hors
+    //                            FranceConnect uniquement : le parcours FC n'interroge plus
+    //                            aucune base et n'est donc plus en position de refuser.
+    //   'not_assessed'         — rien ne permet d'affirmer l'éligibilité : les réponses
+    //                            d'API Particulier n'ouvrent aucune route (parcours FC), ou
+    //                            LCA était injoignable (parcours hors FC).
     verdict: text("verdict").$type<Verdict>().notNull(),
 
     // Which template was sent for this beneficiary, null when none was — the same vocabulary

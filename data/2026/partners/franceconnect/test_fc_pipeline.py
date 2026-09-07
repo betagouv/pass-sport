@@ -33,7 +33,6 @@ def export_row(**overrides) -> dict:
         'source': 'enfant',
         'created_at': '2026-08-01 09:00:00+00',
         'allocataire_fc_sub': 'sub-A',
-        'residence_insee': '75056',
         'allocataire-nom_naissance': 'MARTIN',
         'allocataire-nom_usage': '',
         'allocataire-prenom': 'Claire',

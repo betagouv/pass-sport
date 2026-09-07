@@ -55,7 +55,6 @@ COPY (
     r.source,
     r.created_at,
     r.allocataire_fc_sub,
-    r.residence_insee,
 
     -- allocataire_identite = identité pivot FranceConnect, sub exclu (il a sa colonne).
     r.allocataire_identite ->> 'family_name'        as "allocataire-nom_naissance",

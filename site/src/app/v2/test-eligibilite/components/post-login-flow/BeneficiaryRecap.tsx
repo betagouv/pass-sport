@@ -14,17 +14,11 @@ const BIRTHDATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
 const formatBirthdate = (birthdate: string): string =>
   format(parse(birthdate, BIRTHDATE_INPUT_FORMAT, new Date()), BIRTHDATE_DISPLAY_FORMAT);
 
-// Exported so post-login-flow/ResultPanel — which sit between the page and this component in
-// the just-submitted, still-polling flow — can type the same prop through without redeclaring
-// the subset of PivotIdentity this component actually needs.
 export type AllocataireIdentity = Pick<
   PivotIdentity,
   'given_name' | 'family_name' | 'birthdate' | 'email'
 >;
 
-// Same "FAMILY_NAME given_name, né(e) le dd/mm/yyyy" shape for every card. The allocataire's
-// identity comes from their FranceConnect session; an enfant's comes from
-// application_results_by_sub, which now carries their family_name/birthdate too.
 const formatIdentity = (
   familyName: string | null | undefined,
   givenName: string | null | undefined,
@@ -48,12 +42,6 @@ type StatusDisplay = {
   label: string;
 };
 
-// eligible_pending_lca and eligible_confirmed_but_email_not_matching sit with the pending
-// statuses rather than with eligible_confirmed: each still needs a step to settle (LCA serving
-// the code, or the email mismatch being resolved), so from the applicant's point of view the
-// process is still ongoing rather than settled. eligible_confirmed_but_email_not_matching never
-// actually reaches this component (see the Verdict comment above) but the map stays exhaustive
-// so a future Verdict addition fails to compile here instead of silently vanishing from display.
 const STATUS_DISPLAY_BY_VERDICT: Record<Verdict, StatusDisplay> = {
   eligible_confirmed: { severity: 'success', label: 'Eligible' },
   eligible_confirmed_but_email_not_matching: { severity: 'info', label: 'En cours de traitement' },
@@ -63,17 +51,12 @@ const STATUS_DISPLAY_BY_VERDICT: Record<Verdict, StatusDisplay> = {
   not_eligible: { severity: 'error', label: 'Non-Eligible' },
 };
 
-// Shared verbatim between the eligible_confirmed-without-code and eligible_pending(_lca) cases
-// below, and re-exported for page.tsx's "Demande déjà enregistrée" card, which opens with this
-// exact sentence before adding its own FAQ mention.
 export const PENDING_CODE_MESSAGE =
   'Vous allez recevoir votre code individuel par courrier électronique à l’adresse email FranceConnect dans les prochains jours. Si vous n’avez pas reçu votre code dans les 72 heures, vous pourrez le retrouver dans votre espace en FC.';
 
-// The per-card body, one beneficiary at a time — so, unlike the old per-status grouping, it
-// never needs to pluralize "le/les" or "vous est/sont" over a list of names.
-// eligible_pending_lca never shows the code it may already carry: the badge above already
-// reads "en cours de traitement", and surfacing a code next to that would read as usable when
-// the partner sports structure LCA does not serve it yet.
+const NOT_ASSESSED_MESSAGE =
+  'Votre demande est en cours de traitement. À ce stade, nous ne sommes pas en mesure de déterminer si cette personne est éligible au pass Sport.';
+
 const verdictMessage = (b: BeneficiaryResult): ReactNode => {
   switch (b.verdict) {
     case 'eligible_confirmed':
@@ -89,6 +72,8 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
     case 'eligible_pending_lca':
     case 'eligible_pending':
       return PENDING_CODE_MESSAGE;
+    case 'not_assessed':
+      return NOT_ASSESSED_MESSAGE;
     case 'not_eligible':
       return (
         <>
@@ -101,7 +86,6 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
           .
         </>
       );
-    case 'not_assessed':
     case 'eligible_confirmed_but_email_not_matching':
       return 'Aucun résultat n’est disponible pour le moment pour cette personne.';
   }
@@ -131,21 +115,22 @@ const downloadLink = (b: BeneficiaryResult): ReactNode | undefined => {
   );
 };
 
-// Rendered into the Card's `start` slot: unlike `desc`, that slot is a plain div rather than a
-// <p>, so it can safely sit above block content such as the beneficiary list in `footer`.
-// Exported so the page-level "request already registered, no verdict yet" card (same meaning as
-// the not_assessed verdict) can show the identical badge instead of duplicating the color map.
-export const StatusBadge = ({ verdict }: { verdict: Verdict }) => {
-  const { severity, label } = STATUS_DISPLAY_BY_VERDICT[verdict];
-  return (
-    <p className="fr-mb-0">
-      {/* Badge defaults to rendering as a <p>, which this wrapping <p> can't contain. */}
-      <Badge as="span" severity={severity}>
-        {label}
-      </Badge>
-    </p>
-  );
-};
+const StatusBadgeFor = ({ severity, label }: StatusDisplay) => (
+  <p className="fr-mb-0">
+    {/* Badge defaults to rendering as a <p>, which this wrapping <p> can't contain. */}
+    <Badge as="span" severity={severity}>
+      {label}
+    </Badge>
+  </p>
+);
+
+export const StatusBadge = ({ verdict }: { verdict: Verdict }) => (
+  <StatusBadgeFor {...STATUS_DISPLAY_BY_VERDICT[verdict]} />
+);
+
+export const ProcessingBadge = () => (
+  <StatusBadgeFor severity="info" label="En cours de traitement" />
+);
 
 interface Props {
   beneficiaries: BeneficiaryResult[];
@@ -188,9 +173,6 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, j
           titleAs="h3"
           start={<StatusBadge verdict={b.verdict} />}
           desc={verdictMessage(b)}
-          // fr-card__desc defaults to 0.875rem; fr-text--md (1rem, !important) bumps the
-          // verdict wording back to the base body size so it doesn't read smaller than the
-          // rest of the page.
           classes={{ desc: 'fr-text--md' }}
           footer={downloadLink(b)}
         />

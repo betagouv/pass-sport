@@ -35,7 +35,6 @@ export type EligibilityJobData = {
   identity: PivotIdentity;
   aides: Allowance[];
   isFranceConnected: boolean;
-  residenceInsee: string;
   // Originating client IP (right-most x-forwarded-for hop), recorded by the worker
   // in the audit table. null when the request carried no forwarded-for header.
   clientIp?: string | null;

@@ -15,14 +15,7 @@ import {
   type ResourceResult,
   type StatutBeneficiaireData,
 } from "../eligibility/types";
-import {
-  LCA_SITUATION,
-  ORGANISME,
-  type BeneficiaryCandidate,
-  type ConfirmPayload,
-  type SearchItem,
-  type SearchPayload,
-} from "./types";
+import type { BeneficiaryCandidate } from "./types";
 const AGE_REFERENCE_DATE = "2026-12-31";
 
 // Completed years ("ans révolus") at the reference date.
@@ -170,45 +163,4 @@ export const listBeneficiaryCandidates = (
   });
 
   return candidates;
-};
-
-export const buildSearchPayload = (
-  candidate: BeneficiaryCandidate,
-  residenceInsee: string,
-): SearchPayload => ({
-  beneficiaryLastname: candidate.lastname,
-  beneficiaryFirstname: candidate.firstname,
-  beneficiaryBirthDate: candidate.birthdate,
-  recipientResidencePlace: residenceInsee,
-  allowanceName: candidate.eligibilities[0],
-  isFromCrous: candidate.eligibilities.includes(ALLOWANCE.CROUS),
-});
-
-// FranceConnect birthcountry is a COG INSEE code; LCA expects ISO 3166-1 alpha-2.
-// Only France mapped; foreign countries omitted (field is optional).
-const cogCountryToIso = (cog?: string): string | undefined => (cog === "99100" ? "FR" : undefined);
-
-// Builds the LCA confirm payload for a search result. Allocataire = the connected user,
-// always from the identité pivot rather than the QF allocataires[0], which is not
-// guaranteed to be them. Matricule (server-side only) routes to INE for CROUS, else
-// CAF/MSA number.
-export const buildConfirmPayload = (
-  searchItem: SearchItem,
-  identity: PivotIdentity,
-): ConfirmPayload => {
-  const isCrous = searchItem.situation === LCA_SITUATION.BOURSIER && searchItem.organisme === ORGANISME.CNOUS;
-  const matricule = searchItem.matricule || undefined;
-
-  return {
-    id: String(searchItem.id),
-    situation: searchItem.situation,
-    organisme: searchItem.organisme,
-    recipientLastname: identity.family_name,
-    recipientFirstname: identity.given_name || "",
-    recipientIneNumber: isCrous ? matricule : undefined,
-    recipientCafNumber: isCrous ? undefined : matricule,
-    recipientBirthDate: identity.birthdate,
-    recipientBirthPlace: identity.birthplace || undefined,
-    recipientBirthCountry: cogCountryToIso(identity.birthcountry),
-  };
 };

@@ -3,12 +3,13 @@
 Cette source n'est pas un fichier partenaire : c'est une requête sur la table
 `eligibility_results` du worker, en production.
 
-Le parcours FranceConnect du site range chaque bénéficiaire dans l'un des quatre verdicts
-documentés dans [worker/src/db/schema.ts](../../../../worker/src/db/schema.ts). Trois sont
-terminaux ; `eligible_pending` ne l'est pas. Il désigne quelqu'un que **nos** règles jugent
-éligible mais que la base LCA ne connaît pas : son `pass_sport_code` est NULL et il n'a reçu
-qu'un courriel « éligibilité confirmée, code à venir ». Ce dossier est ce qui transforme cette
-promesse en code.
+Le parcours FranceConnect du site n'écrit plus que deux des verdicts documentés dans
+[worker/src/db/schema.ts](../../../../worker/src/db/schema.ts) : `not_assessed` quand rien ne
+permet d'affirmer l'éligibilité, et `eligible_pending` quand les réponses d'API Particulier le
+permettent. Ce second-là n'est pas terminal : il désigne quelqu'un que **nos** règles jugent
+éligible et à qui aucun code n'a été servi — ce parcours n'interroge plus la base LCA du tout,
+son `pass_sport_code` est donc toujours NULL et il n'a reçu que l'accusé de réception de sa
+demande. Ce dossier est ce qui transforme cette promesse en code.
 
 ## Les 4 étapes, dans cet ordre
 
@@ -153,7 +154,10 @@ select count(*) from eligibility_results where verdict = 'eligible_pending';
   le sexe est retrouvé par appariement dans le tableau `enfants` de la réponse quotient
   familial ;
 - **le schéma PSP** — l'identité arrive au vocabulaire FranceConnect, répartie sur deux
-  colonnes JSON selon `source`.
+  colonnes JSON selon `source`. `adresse_allocataire` y vaut `{}` : le parcours ne demande plus
+  la commune de résidence depuis que LCA en est débranché, et FranceConnect n'a jamais fourni
+  d'adresse postale. Rien ne rend ce champ obligatoire — les colonnes requises sont
+  `nom, prenom, date_naissance, genre` (`partners_lib.NECESSARY_COLUMNS`) plus `situation`.
 
 Ces règles vivent dans `clean_fc_lib.py` ; leur enchaînement, dans `fc_pipeline.clean` :
 

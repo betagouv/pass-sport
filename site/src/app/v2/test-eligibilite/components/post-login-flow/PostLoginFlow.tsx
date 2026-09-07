@@ -28,11 +28,6 @@ export default function PostLoginFlow({ allocataireIdentity }: Props) {
             Tous les champs ci-dessous sont obligatoires <span className="text--required">*</span>
           </p>
 
-          {/*<p className="fr-my-2w">*/}
-          {/*  Indiquez les aides dont vous bénéficiez et votre commune de résidence pour recevoir*/}
-          {/*  votre code pass Sport par email.*/}
-          {/*</p>*/}
-
           <PostLoginInfoForm onQueued={() => setQueued(true)} />
         </div>
       </div>

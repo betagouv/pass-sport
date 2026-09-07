@@ -7,8 +7,6 @@ import { getClientIp } from '@/utils/client-ip';
 
 const schema = z.object({
   aides: z.array(z.enum(['QF', 'AEEH', 'AAH', 'CROUS'])).min(1),
-  // INSEE commune code: 5 chars, digits except Corsica (2A/2B).
-  residenceInsee: z.string().regex(/^\d[\dAB]\d{3}$/),
 });
 
 export async function POST(request: Request): Promise<Response> {
@@ -18,14 +16,13 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: 'Session expirée.' }, { status: 401 });
     }
 
-    const { aides, residenceInsee } = schema.parse(await request.json());
+    const { aides } = schema.parse(await request.json());
 
     const { existing } = await enqueueCodesJob(
       {
         identity: pocResult.identity,
         aides: aides as Allowance[],
         isFranceConnected: true,
-        residenceInsee,
         clientIp: getClientIp(request.headers),
         userAgent: request.headers.get('user-agent'),
       },

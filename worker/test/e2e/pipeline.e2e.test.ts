@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { LCA_COURRIEL, startStack, TEMPLATE_IDS, type Stack } from "./harness";
+import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 
 // End-to-end pipeline tests against real Redis + Postgres (Testcontainers), a real
-// BullMQ Worker, and deterministic fake upstream clients (see harness.ts). Exercises:
-// API Particulier chain -> LCA -> email -> one Postgres row per beneficiary, plus where
-// the pass Sport code is allowed to land (the table and its view, never the job's return
-// value).
+// BullMQ Worker, and a deterministic fake API Particulier (see harness.ts). Exercises:
+// accusé de réception -> API Particulier chain -> one Postgres row per beneficiary. No LCA
+// call and no outcome mail: this path hands out no code, it records who is eligible so the
+// data/ pipeline can mint one later.
 
 let stack: Stack;
 
@@ -21,14 +21,13 @@ beforeEach(async () => {
   await stack.pool.query("TRUNCATE eligibility_results");
   // Above the 700 threshold: the QF route grants nothing unless a test lowers it.
   stack.setQfValeur(1000);
-  // The stack is shared across the file, so routeOnly() would otherwise leak.
   stack.setChildrenLastname("Enfant");
 });
 
 const rows = async () =>
   (await stack.pool.query("select * from eligibility_results order by source, created_at")).rows;
 
-// A CROUS-eligible adult (age 22 at 2026-12-31 reference), matched in LCA.
+// A CROUS-eligible adult (age 22 at the 2026-12-31 reference date).
 const selfCrous = (overrides: Record<string, unknown> = {}) => ({
   identity: {
     family_name: "Martin",
@@ -41,73 +40,92 @@ const selfCrous = (overrides: Record<string, unknown> = {}) => ({
   },
   aides: ["CROUS"] as Array<"AAH" | "CROUS" | "AEEH">,
   isFranceConnected: true,
-  residenceInsee: "75113",
   ...overrides,
 });
 
 describe("worker eligibility pipeline (deterministic fakes)", () => {
-  it("self confirmed -> code email, one row", async () => {
+  it("route ouverte -> une ligne 'eligible_pending', sans code ni mail de résultat", async () => {
+    const before = stack.sentEmails().length;
     await stack.enqueueAndWait(selfCrous());
     const r = await rows();
 
     expect(r).toHaveLength(1);
     expect(r[0].source).toBe("self");
     expect(r[0].is_eligible).toBe(true);
-    expect(r[0].lca_status).toBe("confirmed");
-    expect(r[0].email_kind).toBe("code");
-    expect(r[0].email_sent).toBe(true);
-    expect(r[0].verdict).toBe("eligible_confirmed");
+    expect(r[0].verdict).toBe("eligible_pending");
+    // No LCA base is consulted on this path, so there is nothing to report about one.
+    expect(r[0].lca_status).toBe("not_applicable");
+    expect(r[0].pass_sport_code).toBeNull();
+    // The code is minted later by data/2026/partners/franceconnect, which is also what
+    // mails it — the worker names no template because it sends no outcome mail.
+    expect(r[0].email_kind).toBeNull();
+    expect(r[0].email_sent).toBe(false);
+
+    // The accusé de réception, and strictly nothing else.
+    expect(stack.parsedEmails().slice(before).map((e) => e.templateId)).toEqual([
+      String(TEMPLATE_IDS.acknowledgment),
+    ]);
   });
 
-  // A confirm answering [] means LCA knows the person but has no code for them yet. That
-  // is a verdict, not an incident: failing the job would retry four times over an answer
-  // that will not change, then give up, and the usager would never hear back.
-  it("empty confirm -> not_found, the job completes and still writes a verdict", async () => {
-    stack.setLcaConfirmEmpty(true);
+  it("aucune route ouverte -> 'not_assessed', jamais 'not_eligible'", async () => {
+    // AAH claimed, and the fake answers est_beneficiaire=false. Nothing was consulted that
+    // could pronounce a refusal, so the verdict says the case was not settled rather than
+    // claiming the person is not entitled.
+    await stack.enqueueAndWait(selfCrous({ aides: ["AAH"] }));
+    const r = await rows();
 
-    try {
-      await stack.enqueueAndWait(selfCrous());
-      const r = await rows();
-
-      expect(r).toHaveLength(1);
-      expect(r[0].lca_status).toBe("not_found");
-      // CROUS was claimed and the fake API Particulier says boursier, so our own route
-      // still carries them.
-      expect(r[0].is_eligible).toBe(true);
-      expect(r[0].verdict).toBe("eligible_pending");
-      expect(r[0].email_kind).toBe("eligible_soon");
-      expect(r[0].pass_sport_code).toBeNull();
-    } finally {
-      stack.setLcaConfirmEmpty(false);
-    }
+    expect(r).toHaveLength(1);
+    expect(r[0].source).toBe("self");
+    expect(r[0].is_eligible).toBe(false);
+    expect(r[0].verdict).toBe("not_assessed");
+    expect(r[0].lca_status).toBe("not_applicable");
+    expect(r[0].pass_sport_code).toBeNull();
   });
 
-  it("QF children chain -> enfant rows confirmed with code email", async () => {
+  it("ne demande plus la commune: ni colonne ni clé dans l'identité persistée", async () => {
+    const sub = "fc-sub-identite";
+    await stack.enqueueAndWait({
+      ...selfCrous(),
+      identity: { ...selfCrous().identity, sub },
+    });
+
+    const r = await rows();
+    expect(r[0].allocataire_identite).toEqual({
+      family_name: "Martin",
+      given_name: "Camille",
+      birthdate: "2004-05-15",
+      gender: "female",
+      birthplace: "75056",
+      birthcountry: "99100",
+      email: "camille.martin@example.test",
+    });
+    expect(r[0].residence_insee).toBeNull();
+    // The sub is not duplicated into the jsonb: it has its own indexed column.
+    expect(r[0].allocataire_fc_sub).toBe(sub);
+    // A 'self' row describes the allocataire, so there is no enfant to store.
+    expect(r[0].enfant_identite).toBeNull();
+  });
+
+  it("QF children chain -> une ligne par enfant, une seule enveloppe", async () => {
     const before = stack.sentEmails().length;
 
-    // AEEH pulls QF, whose deterministic children are all sent to LCA.
+    // AEEH pulls QF, whose deterministic children each get their own row.
     await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
     const enfants = (await rows()).filter((x) => x.source === "enfant");
 
     expect(enfants.length).toBeGreaterThanOrEqual(1);
-    expect(enfants.every((x) => x.lca_status === "confirmed")).toBe(true);
-    expect(enfants.every((x) => x.email_kind === "code" && x.email_sent === true)).toBe(true);
-    expect(enfants.every((x) => x.verdict === "eligible_confirmed")).toBe(true);
+    expect(enfants.every((x) => x.lca_status === "not_applicable")).toBe(true);
+    expect(enfants.every((x) => x.pass_sport_code === null)).toBe(true);
+    expect(enfants.every((x) => x.email_kind === null && x.email_sent === false)).toBe(true);
 
-    // One accusé de réception for the job, then one code mail per child.
-    const sent = stack.parsedEmails().slice(before);
-    expect(sent[0].templateId).toBe(String(TEMPLATE_IDS.acknowledgment));
-
-    const codes = sent.slice(1);
-    expect(codes).toHaveLength(enfants.length);
-    expect(codes.every((e) => e.templateId === String(TEMPLATE_IDS.code))).toBe(true);
-    expect(new Set(sent.flatMap((e) => e.recipients)).size).toBe(1);
+    // One accusé de réception for the job, and no per-beneficiary mail behind it.
+    expect(stack.parsedEmails().slice(before).map((e) => e.templateId)).toEqual([
+      String(TEMPLATE_IDS.acknowledgment),
+    ]);
   });
 
   // Nothing was claimed for the adult (AEEH is about the children), so they are not a
-  // beneficiary candidate at all: no LCA call, and no row either. The row used to be
-  // written as 'not_assessed' and filtered back out by the site — the allocataire simply
-  // is not a beneficiary on a child route.
+  // beneficiary candidate at all and get no row.
   it("aide enfants seule: l'adulte n'a aucune ligne", async () => {
     await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
     const all = await rows();
@@ -128,8 +146,6 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
 
       expect(await rows()).toHaveLength(0);
-      // Only the accusé de réception, which is about the demande and not about a
-      // beneficiary — no verdict mail, since there is no verdict.
       expect(stack.parsedEmails().slice(before).map((e) => e.templateId)).toEqual([
         String(TEMPLATE_IDS.acknowledgment),
       ]);
@@ -138,11 +154,10 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     }
   });
 
-  // Regression: this row used to not exist at all. The toProcess filter dropped a self
-  // candidate with no route open, so an adult who declared AAH, was refused, and had
-  // children left NOTHING in the table — which is exactly the refusal the site has to
-  // show them.
-  it("AAH refusée avec des enfants: l'adulte a bien une ligne 'not_eligible'", async () => {
+  // Regression: this row used to not exist at all. An adult who declared AAH, was refused,
+  // and had children left NOTHING in the table — which is exactly the case the site has to
+  // be able to show them.
+  it("AAH sans droit ouvert et des enfants: l'adulte a bien sa ligne", async () => {
     const before = stack.sentEmails().length;
 
     // AAH (the fake answers est_beneficiaire=false) + AEEH to pull QF and its children.
@@ -151,31 +166,18 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
 
     const self = r.filter((x) => x.source === "self");
     expect(self).toHaveLength(1);
-    expect(self[0].verdict).toBe("not_eligible");
-    expect(self[0].lca_status).toBe("not_applicable");
+    expect(self[0].verdict).toBe("not_assessed");
     expect(self[0].is_eligible).toBe(false);
 
-    // The children are unaffected — they still go through LCA on their own merit.
-    const enfants = r.filter((x) => x.source === "enfant");
-    expect(enfants.length).toBeGreaterThan(0);
+    expect(r.filter((x) => x.source === "enfant").length).toBeGreaterThan(0);
 
-    // The adult asked about AAH and was refused, so they are told, like every child was.
-    expect(self[0].email_kind).toBe("not_eligible");
-    expect(self[0].email_sent).toBe(true);
-    // One per child, one for the refused adult, plus the job's accusé de réception.
-    expect(stack.sentEmails().slice(before)).toHaveLength(enfants.length + 2);
+    // Whatever the outcome, the job's only mail is its accusé de réception.
+    expect(stack.sentEmails().slice(before)).toHaveLength(1);
   });
 
   // The fake QF returns three children: 2008 (18 ans, AEEH window only), 2009 (17 ans,
   // both windows) and 2012 (14 ans, QF window only). The household quotient defaults to
   // 1000, i.e. above the 700 threshold.
-  //
-  // The tests below are about OUR routes, so they take LCA out of the picture: a
-  // confirmed LCA match sets is_eligible true on its own (jobs/france-connect.ts — the base is
-  // authoritative), which would make every child look eligible whatever the rule says.
-  // A "Nomatch" last name is the harness convention for "LCA finds nobody".
-  const routeOnly = () => stack.setChildrenLastname("NomatchEnfant");
-
   const eligibleBirthdates = async () =>
     (await rows())
       .filter((x) => x.source === "enfant" && x.is_eligible)
@@ -183,7 +185,6 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       .sort();
 
   it("AEEH seule: seuls les 17-19 ans sont interrogés et peuvent être éligibles", async () => {
-    routeOnly();
     const { apCalls } = (await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }))) as {
       apCalls: number;
     };
@@ -193,11 +194,26 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(await eligibleBirthdates()).toEqual(["2008-01-01", "2009-01-01"]);
   });
 
+  // Every candidate is recorded, eligible or not — the site needs a line for each child it
+  // was asked about, not only for the ones a route carried.
+  it("les enfants sans route ouverte sont enregistrés en 'not_assessed'", async () => {
+    await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
+    const enfants = (await rows()).filter((x) => x.source === "enfant");
+
+    // The 2012 child is outside the AEEH window, so nothing was concluded about them.
+    const cadet = enfants.find((x) => x.enfant_identite?.birthdate === "2012-01-01");
+    expect(cadet).toBeDefined();
+    expect(cadet.verdict).toBe("not_assessed");
+    expect(cadet.is_eligible).toBe(false);
+
+    const aine = enfants.find((x) => x.enfant_identite?.birthdate === "2008-01-01");
+    expect(aine.verdict).toBe("eligible_pending");
+  });
+
   // The site's PDF route needs an enfant's own gender (see site/src/app/api/france-connect/pdf)
   // — this is the QF fake's own sexe ("M" for Aine born 2008, "F" for Milieu born 2009,
   // per harness.ts), carried all the way through to what actually lands in Postgres.
   it("enfant_identite carries the QF-derived gender through to the persisted row", async () => {
-    routeOnly();
     await stack.enqueueAndWait(selfCrous({ aides: ["AEEH"] }));
 
     const genderByBirthdate = Object.fromEntries(
@@ -210,7 +226,6 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   });
 
   it("QF seule au-dessus du seuil: aucun droit ouvert, aucun appel AEEH", async () => {
-    routeOnly();
     const { apCalls } = (await stack.enqueueAndWait(selfCrous({ aides: ["QF"] }))) as {
       apCalls: number;
     };
@@ -222,7 +237,6 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   });
 
   it("QF sous le seuil: les 6-17 ans éligibles sans appel AEEH", async () => {
-    routeOnly();
     stack.setQfValeur(699);
     const { apCalls } = (await stack.enqueueAndWait(selfCrous({ aides: ["QF"] }))) as {
       apCalls: number;
@@ -234,7 +248,6 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   });
 
   it("QF prioritaire sur AEEH pour le millésime 2009 partagé", async () => {
-    routeOnly();
     stack.setQfValeur(699);
     const { apCalls } = (await stack.enqueueAndWait(selfCrous({ aides: ["QF", "AEEH"] }))) as {
       apCalls: number;
@@ -248,7 +261,6 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   });
 
   it("QF au seuil exact (700) n'ouvre pas de droit", async () => {
-    routeOnly();
     stack.setQfValeur(700);
     await stack.enqueueAndWait(selfCrous({ aides: ["QF"] }));
 
@@ -256,67 +268,19 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(await eligibleBirthdates()).toEqual([]);
   });
 
-  it("eligible but not found in LCA -> eligible_soon email", async () => {
-    // family_name starting NOMATCH makes the deterministic mock return no LCA match.
-    await stack.enqueueAndWait(
-      selfCrous({
-        identity: {
-          family_name: "NomatchDupont",
-          given_name: "Alex",
-          birthdate: "2004-05-15",
-          gender: "male",
-          birthplace: "75056",
-          birthcountry: "99100",
-          email: "alex.dupont@example.test",
-        },
-      }),
-    );
-    const r = await rows();
-
-    expect(r).toHaveLength(1);
-    expect(r[0].source).toBe("self");
-    expect(r[0].is_eligible).toBe(true);
-    expect(r[0].lca_status).toBe("not_found");
-    expect(r[0].email_kind).toBe("eligible_soon");
-    expect(r[0].email_sent).toBe(true);
-    expect(r[0].verdict).toBe("eligible_pending");
-  });
-
-  it("stores the pass Sport code on a confirmed row, and nowhere else", async () => {
+  it("ne pose jamais de code pass Sport, ni dans la table ni dans la valeur de retour", async () => {
     const ret = await stack.enqueueAndWait(selfCrous());
 
     const r = await rows();
     expect(r).toHaveLength(1);
-    expect(r[0].lca_status).toBe("confirmed");
-    expect(r[0].pass_sport_code).toBe("PSP-CODE-123");
-
-    // The job return value is a different matter: BullMQ stores it in clear in Redis,
-    // behind neither a grant nor a session, so the code stays out of it.
-    expect(JSON.stringify(ret)).not.toContain("PSP-CODE-123");
-  });
-
-  it("leaves pass_sport_code null when LCA returned no code", async () => {
-    // 'not_found' — eligible on our routes, absent from the LCA base.
-    await stack.enqueueAndWait(
-      selfCrous({
-        identity: { ...selfCrous().identity, family_name: "NomatchDupont" },
-      }),
-    );
-    const notFound = await rows();
-    expect(notFound[0].lca_status).toBe("not_found");
-    expect(notFound[0].pass_sport_code).toBeNull();
-
-    await stack.pool.query("TRUNCATE eligibility_results");
-
-    // 'not_applicable' — AAH refused, no LCA call made at all.
-    await stack.enqueueAndWait(selfCrous({ aides: ["AAH"] }));
-    const notApplicable = await rows();
-    expect(notApplicable[0].lca_status).toBe("not_applicable");
-    expect(notApplicable[0].pass_sport_code).toBeNull();
+    expect(r[0].pass_sport_code).toBeNull();
+    // BullMQ stores the return value in clear in Redis, behind neither a grant nor a
+    // session — nothing that identifies a beneficiary belongs in it either.
+    expect(JSON.stringify(ret)).not.toContain("PSP-");
   });
 
   // The view is what the site actually reads — the table being right is not enough.
-  it("exposes the code through application_results_by_sub", async () => {
+  it("exposes the verdict through application_results_by_sub", async () => {
     const sub = "fc-sub-code-view";
     await stack.enqueueAndWait({
       ...selfCrous(),
@@ -328,44 +292,17 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       [sub],
     );
     expect(view.rows).toHaveLength(1);
-    expect(view.rows[0].verdict).toBe("eligible_confirmed");
-    expect(view.rows[0].pass_sport_code).toBe("PSP-CODE-123");
-  });
-
-  it("persists the allocataire identité pivot, sub excluded", async () => {
-    const sub = "fc-sub-identite";
-    await stack.enqueueAndWait({
-      ...selfCrous(),
-      identity: { ...selfCrous().identity, sub },
-    });
-
-    const r = await rows();
-    expect(r[0].allocataire_identite).toEqual({
-      family_name: "Martin",
-      given_name: "Camille",
-      birthdate: "2004-05-15",
-      gender: "female",
-      birthplace: "75056",
-      birthcountry: "99100",
-      email: "camille.martin@example.test",
-      // Declared in our own form, not served by FranceConnect — hence duplicated here from
-      // the residence_insee column.
-      residence_insee: "75113",
-    });
-    expect(r[0].residence_insee).toBe("75113");
-    // Not duplicated into the jsonb: it has its own indexed column.
-    expect(r[0].allocataire_fc_sub).toBe(sub);
-    // A 'self' row describes the allocataire, so there is no enfant to store.
-    expect(r[0].enfant_identite).toBeNull();
+    expect(view.rows[0].verdict).toBe("eligible_pending");
+    expect(view.rows[0].pass_sport_code).toBeNull();
   });
 
   // The site's dedup falls back to applications_by_sub once the job hash is gone
   // (removeOnComplete), so a completed job that writes no row would let this person
   // resubmit on every visit and re-burn the API Particulier quota.
-  it("records an application even when there is no beneficiary at all", async () => {
+  it("records an application even when no route is open", async () => {
     const sub = "fc-sub-nobody";
     // AAH only -> no quotient_familial call, so no children; and the fake answers
-    // est_beneficiaire=false, so the allocataire is not eligible either.
+    // est_beneficiaire=false, so no route carries the allocataire either.
     await stack.enqueueAndWait({
       ...selfCrous({ aides: ["AAH"] }),
       identity: { ...selfCrous().identity, sub },
@@ -373,13 +310,7 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
 
     const r = await rows();
     expect(r).toHaveLength(1);
-    expect(r[0].lca_status).toBe("not_applicable");
-    expect(r[0].is_eligible).toBe(false);
-    expect(r[0].email_kind).toBe("not_eligible");
-    expect(r[0].email_sent).toBe(true);
-    // They asked about themselves via AAH and the answer is no — a real refusal, not an
-    // absence of question, so the site shows it and the refusal email goes out.
-    expect(r[0].verdict).toBe("not_eligible");
+    expect(r[0].verdict).toBe("not_assessed");
     // The part that makes the dedup fallback work.
     expect(r[0].allocataire_fc_sub).toBe(sub);
   });
@@ -392,7 +323,7 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(audit.rows[0].user_agent).toBe("Mozilla/5.0 probe");
   });
 
-  it("email send failure does not fail the job (persists, email_sent=false)", async () => {
+  it("email send failure does not fail the job (les verdicts sont écrits quand même)", async () => {
     // Force REAL email mode pointed at a dead port so the fetch throws "fetch failed".
     // Env is read at call time, so this affects the in-process worker for this job.
     const prevMode = process.env.LINK_MOBILITY_MODE;
@@ -415,46 +346,17 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       process.env.LINK_MOBILITY_SENDER_NAME = prevName;
     }
 
-    // Job completed (not failed), row persisted, email marked not-sent.
+    // Job completed (not failed) and the row persisted: a dead mailer costs the accusé de
+    // réception, never the verdicts.
     expect(await stack.queue.getFailedCount()).toBe(0);
     const r = await rows();
     expect(r).toHaveLength(1);
-    expect(r[0].lca_status).toBe("confirmed");
-    expect(r[0].email_kind).toBe("code");
-    expect(r[0].email_sent).toBe(false);
+    expect(r[0].verdict).toBe("eligible_pending");
   });
 
-  it("mails the FranceConnect address, and the LCA one in local and staging", async () => {
-    await stack.enqueueAndWait(selfCrous());
-
-    // The address the usager authenticated with minutes ago, not the one the caisse recorded.
-    // slice(-1): the accusé de réception went out first and always to the FranceConnect
-    // address, so only the outcome mail can show which of the two won.
-    const [deployed] = stack.parsedEmails().slice(-1);
-    expect(deployed.recipients).toEqual(["camille.martin@example.test"]);
-    expect((await rows())[0].email).toBe("camille.martin@example.test");
-
-    const prevEnv = process.env.ENV;
-    try {
-      for (const env of ["local", "staging"]) {
-        process.env.ENV = env;
-        await stack.enqueueAndWait({
-          ...selfCrous(),
-          identity: { ...selfCrous().identity, sub: `sub-recipient-${env}` },
-        });
-
-        const [sent] = stack.parsedEmails().slice(-1);
-        expect(sent.recipients).toEqual([LCA_COURRIEL]);
-      }
-    } finally {
-      process.env.ENV = prevEnv;
-    }
-  });
-
-  // The LCA courriel is a mailbox the usager never presented to us, and `email` is optional
-  // at every layer of the FranceConnect identity — so outside local and staging there is no
-  // falling back to it. The code stays in the table for the site to hand over instead.
-  it("mails nobody rather than the LCA address when FranceConnect served no email", async () => {
+  // `email` is optional at every layer of the FranceConnect identity, and it is the only
+  // address this path ever knew — there is nothing to fall back to.
+  it("sans adresse FranceConnect: aucun envoi, les verdicts restent écrits", async () => {
     const sub = "sub-sans-email-fc";
     const before = stack.sentEmails().length;
     const { email: _email, ...identityWithoutEmail } = selfCrous().identity;
@@ -470,8 +372,7 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(r).toHaveLength(1);
     expect(r[0].email).toBeNull();
     expect(r[0].email_sent).toBe(false);
-    // Not a lost verdict: LCA confirmed and the code is there for the site to show.
-    expect(r[0].pass_sport_code).toBe("PSP-CODE-123");
+    expect(r[0].verdict).toBe("eligible_pending");
 
     const skipped = (
       await stack.pool.query(
@@ -481,43 +382,21 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     ).rows;
     expect(skipped.map((e) => [e.action, e.response_payload.reason])).toEqual([
       ["email.acknowledgment", "no_recipient"],
-      ["email.skipped", "no_recipient"],
     ]);
   });
 
-  it("falls back to the built-in template id when no env overrides it", async () => {
-    const prev = process.env.LINK_MOBILITY_TEMPLATE_CODE;
-    delete process.env.LINK_MOBILITY_TEMPLATE_CODE;
-    const sub = "sub-default-template";
-    try {
-      await stack.enqueueAndWait({ ...selfCrous(), identity: { ...selfCrous().identity, sub } });
-    } finally {
-      process.env.LINK_MOBILITY_TEMPLATE_CODE = prev;
-    }
-
-    // Production is expected to run without any LINK_MOBILITY_TEMPLATE_* set at all.
-    const [sent] = stack.parsedEmails().slice(-1);
-    expect(sent.templateId).toBe("1187050");
-
-    const r = (await rows()).filter((x) => x.allocataire_fc_sub === sub);
-    expect(r).toHaveLength(1);
-    expect(r[0].email_sent).toBe(true);
-  });
-
   describe("accusé de réception", () => {
-    it("leaves first, to the FranceConnect address, and does not replace the outcome mail", async () => {
+    it("part le premier, à l'adresse FranceConnect, et reste le seul mail du job", async () => {
       const before = stack.sentEmails().length;
       await stack.enqueueAndWait(selfCrous());
 
       const sent = stack.parsedEmails().slice(before);
 
-      // Order is the whole point: it goes out before the chain that takes minutes.
-      expect(sent.map((e) => e.templateId)).toEqual([
-        String(TEMPLATE_IDS.acknowledgment),
-        String(TEMPLATE_IDS.code),
-      ]);
+      expect(sent.map((e) => e.templateId)).toEqual([String(TEMPLATE_IDS.acknowledgment)]);
       expect(sent[0].campaign).toBe("pass-sport-acknowledgment");
+      // The address the usager authenticated with minutes ago.
       expect(sent[0].recipients).toEqual(["camille.martin@example.test"]);
+      expect((await rows())[0].email).toBe("camille.martin@example.test");
       // The allocataire who just authenticated, and nothing about a beneficiary: none is
       // known this early.
       expect(sent[0].variables["camille.martin@example.test"]).toEqual({
@@ -543,6 +422,8 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       expect(events[0].http_status).toBe(200);
       // Not vacuous: the chain did run after it.
       expect(events.some((e) => e.action.startsWith("cnous."))).toBe(true);
+      // And nothing was ever asked of LCA.
+      expect(events.some((e) => e.action.startsWith("lca."))).toBe(false);
     });
 
     it("records the HTTP status Link Mobility answered, including when it is down", async () => {
@@ -592,8 +473,8 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     for (let i = 0; i < 3; i++) await stack.enqueueAndWait(data);
 
     const r = await rows();
-    // 3 jobs x (1 self + 3 enfants) = 12 rows. Every child is an LCA candidate even
-    // when no route makes them eligible — the LCA base is authoritative.
+    // 3 jobs x (1 self + 3 enfants) = 12 rows. Every child gets a row whether or not a
+    // route carried them: the site was asked about each of them.
     expect(r).toHaveLength(12);
 
     // Each job produced exactly one self row and one row per child.

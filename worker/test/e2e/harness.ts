@@ -22,7 +22,6 @@ import {
 import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
-import type { LcaClient, LcaResponse } from "../../src/lca/client";
 import { runMigrations } from "../../src/db/migrate";
 import type {
   EligibilityJobData,
@@ -31,20 +30,12 @@ import type {
   PivotIdentity,
   ResourceResult,
 } from "../../src/eligibility/types";
-import type {
-  ConfirmItem,
-  ConfirmPayload,
-  OrganismType,
-  SearchItem,
-  SearchPayload,
-  SituationType,
-} from "../../src/lca/types";
 
 // The real mock clients were removed with the real-only port: the worker now only
-// ships real API Particulier / LCA clients. These e2e tests still exercise the REAL
-// orchestration — Testcontainers Redis + Postgres, a real BullMQ Worker running the
-// actual processEligibilityJob — but the upstream APIs are faked at the client
-// interface (the FranceConnectDeps seam) so outcomes are deterministic and no network /
+// ships a real API Particulier client — LCA is not called from the worker at all. These
+// e2e tests still exercise the REAL orchestration — Testcontainers Redis + Postgres, a real
+// BullMQ Worker running the actual processEligibilityJob — but API Particulier is faked at the
+// client interface (the FranceConnectDeps seam) so outcomes are deterministic and no network /
 // credentials are needed. Email goes to a tiny in-process HTTP server that always
 // answers success, so the real Link Mobility client path is still covered.
 
@@ -68,20 +59,40 @@ const okRow = (meta: { resource: string; label: string }, data: unknown): Resour
 // that Retry-After (then never again) to exercise the pause-and-retry path.
 class FakeApiClient implements ApiParticulierClient {
   private fired429 = false;
+  // Counts every resource call, so a test can make the Nth one answer 502.
+  private calls = 0;
   // Household quotient the fake QF reports. Default sits ABOVE the 700 threshold, so
   // the QF route grants nothing unless a test lowers it (setQfValeur on the Stack).
   qfValeur = 1000;
 
-  // Last name of the fake children. "Nomatch…" makes FakeLcaClient return no result, so
-  // is_eligible reflects OUR routes alone — a confirmed LCA match sets it true whatever
-  // the routes concluded (jobs/france-connect.ts), which would otherwise mask the rule under test.
+  // Last name of the fake children. Purely cosmetic now that no LCA base is consulted:
+  // is_eligible reflects OUR routes alone.
   childrenLastname = "Enfant";
 
   // QF answers with no enfant at all: a demande for a child aide that leaves no
   // beneficiary to search, only the demande itself to record.
   qfChildless = false;
 
-  constructor(private readonly first429RetryAfter?: number) {}
+  constructor(
+    private readonly first429RetryAfter?: number,
+    private readonly failOnCall?: number,
+  ) {}
+
+  // The gateway answering 5xx on one call of the chain: the job has no verdict for that
+  // resource, so it fails and retries rather than concluding on a partial answer.
+  private takeFailure(meta: { resource: string; label: string }): ResourceResult | null {
+    this.calls += 1;
+    if (this.calls !== this.failOnCall) return null;
+    return {
+      ...meta,
+      httpStatus: 502,
+      success: false,
+      data: null,
+      error: "API Particulier gateway answered 502",
+      rateLimitRemaining: 100,
+      rateLimitResetMs: null,
+    };
+  }
 
   private take429(meta: { resource: string; label: string }): ResourceResult | null {
     if (!this.first429RetryAfter || this.fired429) return null;
@@ -100,6 +111,7 @@ class FakeApiClient implements ApiParticulierClient {
 
   async quotientFamilial(identity: PivotIdentity): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.qf) ??
       this.take429(RESOURCE_META.qf) ??
       okRow(RESOURCE_META.qf, {
         allocataires: [
@@ -139,6 +151,7 @@ class FakeApiClient implements ApiParticulierClient {
 
   async aah(): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.aah) ??
       this.take429(RESOURCE_META.aah) ??
       okRow(RESOURCE_META.aah, { est_beneficiaire: this.aahBeneficiaire })
     );
@@ -146,6 +159,7 @@ class FakeApiClient implements ApiParticulierClient {
 
   async cnous(): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.cnous) ??
       this.take429(RESOURCE_META.cnous) ??
       okRow(RESOURCE_META.cnous, { statut_boursier: { est_boursier: true } })
     );
@@ -153,6 +167,7 @@ class FakeApiClient implements ApiParticulierClient {
 
   async cnousByIne(): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.cnousIne) ??
       this.take429(RESOURCE_META.cnousIne) ??
       okRow(RESOURCE_META.cnousIne, { statut_boursier: { est_boursier: true } })
     );
@@ -160,7 +175,7 @@ class FakeApiClient implements ApiParticulierClient {
 
   async aeeh(_child: PivotIdentity, childIndex: number): Promise<ResourceResult> {
     return (
-      this.take429(RESOURCE_META.aeeh) ?? {
+      this.takeFailure(RESOURCE_META.aeeh) ?? this.take429(RESOURCE_META.aeeh) ?? {
         ...okRow(RESOURCE_META.aeeh, { status: "allocataire" }),
         childIndex,
       }
@@ -168,95 +183,8 @@ class FakeApiClient implements ApiParticulierClient {
   }
 }
 
-// Deterministic LCA client. A last name starting with "Nomatch" yields no search
-// result (-> not_found); everyone else matches and confirms with a fixed code.
-class FakeLcaClient implements LcaClient {
-  private searchCalls = 0;
-
-  // Null derives the answer from isFromCrous; the combined-form suites pin it, since it is
-  // what declarationMatches compares the usager's step 1 against.
-  answerAs: { situation: SituationType; organisme: OrganismType } | null = null;
-
-  searchHttpStatus: number | null = null;
-
-  readonly confirmPayloads: ConfirmPayload[] = [];
-
-  constructor(private readonly failOnSearchCall?: number) {}
-
-  async search(payload: SearchPayload): Promise<LcaResponse<SearchItem[]>> {
-    this.searchCalls += 1;
-
-    if (this.failOnSearchCall && this.searchCalls === this.failOnSearchCall) {
-      throw new Error("LCA /search failed: 502");
-    }
-
-    if (this.searchHttpStatus) {
-      return {
-        httpStatus: this.searchHttpStatus,
-        body: {
-          message: `LCA /search failed: ${this.searchHttpStatus}`,
-          httpStatus: this.searchHttpStatus,
-        },
-      };
-    }
-
-    if (payload.beneficiaryLastname.toLowerCase().startsWith("nomatch")) {
-      return { httpStatus: 200, body: [] };
-    }
-    const isCrous = !!payload.isFromCrous;
-    const answer = this.answerAs ?? {
-      situation: (isCrous ? "boursier" : "jeune") as SituationType,
-      organisme: (isCrous ? "cnous" : "CAF") as OrganismType,
-    };
-    return {
-      httpStatus: 200,
-      body: [
-        {
-          id: 1,
-          nom: payload.beneficiaryLastname,
-          prenom: payload.beneficiaryFirstname,
-          date_naissance: payload.beneficiaryBirthDate,
-          situation: answer.situation,
-          organisme: answer.organisme,
-          matricule: "SECRET-MATRICULE",
-          hasMatricule: true,
-        },
-      ],
-    };
-  }
-
-  // Make /confirm answer with an empty array: LCA matched the person on /search but has
-  // no code for them.
-  confirmEmpty = false;
-
-  async confirm(payload: ConfirmPayload): Promise<LcaResponse<ConfirmItem[]>> {
-    this.confirmPayloads.push(payload);
-
-    if (this.confirmEmpty) return { httpStatus: 200, body: [] };
-
-    return {
-      httpStatus: 200,
-      body: [
-        {
-          id: 1,
-          id_psp: "PSP-CODE-123",
-          nom: "N",
-          prenom: "P",
-          date_naissance: "2004-05-15",
-          situation: "boursier",
-          organisme: "cnous",
-          // matricule is stripped by process.ts sanitize before storage.
-          allocataire: { matricule: "SECRET-MATRICULE", courriel: LCA_COURRIEL },
-          // Present so the history test can prove it is dropped rather than pass vacuously.
-          pdf_base_64: "JVBERi0xLjQK-FAKE-ATTESTATION",
-        },
-      ],
-    };
-  }
-}
-
-// The address the fake LCA holds for the allocataire, distinct from the FranceConnect one so
-// a test can tell which of the two an email went to.
+// The address LCA holds for the allocataire on the parcours hors FranceConnect, distinct from
+// the FranceConnect one so a test can tell which of the two an email went to.
 export const LCA_COURRIEL = "allocataire-lca@example.test";
 
 // Distinct on purpose: `message=<id>` is the only evidence of which mail went out.
@@ -321,17 +249,11 @@ export type Stack = {
   // restores the success answer.
   setEmailHttpStatus: (status: number | null) => void;
 
-  setLcaAnswer: (answer: { situation: SituationType; organisme: OrganismType } | null) => void;
-  setLcaSearchHttpStatus: (status: number | null) => void;
-  setLcaConfirmEmpty: (value: boolean) => void;
-  lcaConfirmPayloads: () => ConfirmPayload[];
   setAahBeneficiaire: (value: boolean) => void;
   // Household quotient the fake QF reports, so a test can cross the 700 threshold
   // without paying for a second container stack.
   setQfValeur: (valeur: number) => void;
-  // Last name of the fake children. Set it to "Nomatch…" to make LCA find nobody, which
-  // is what a test asserting on OUR eligibility routes needs — an LCA confirm sets
-  // is_eligible true on its own and would hide the rule under test.
+  // Last name of the fake children, so a test can tell one run's beneficiaries from another's.
   setChildrenLastname: (lastname: string) => void;
   // Strips the fake children from the QF answer, leaving a child-aide demande with no
   // beneficiary at all.
@@ -345,7 +267,7 @@ export type Stack = {
 // `first429RetryAfter`: make the first API Particulier call return a 429 with that
 // Retry-After, to exercise the worker's pause-and-retry-from-header behaviour.
 export async function startStack(
-  opts: { first429RetryAfter?: number; lcaFailOnSearchCall?: number } = {},
+  opts: { first429RetryAfter?: number; apiFailOnCall?: number } = {},
 ): Promise<Stack> {
   const redisC: StartedRedisContainer = await new RedisContainer("redis:8-alpine").start();
   const pgC: StartedPostgreSqlContainer = await new PostgreSqlContainer("postgres:16-alpine").start();
@@ -409,9 +331,8 @@ export async function startStack(
   await queue.setGlobalConcurrency(1);
 
   const guardConn = conn();
-  const apiClient = new FakeApiClient(opts.first429RetryAfter);
-  const lcaClient = new FakeLcaClient(opts.lcaFailOnSearchCall);
-  const deps: FranceConnectDeps = { apiClient, lcaClient, db, queue };
+  const apiClient = new FakeApiClient(opts.first429RetryAfter, opts.apiFailOnCall);
+  const deps: FranceConnectDeps = { apiClient, db, queue };
 
   const worker = new Worker<EligibilityJobData>(
     FRANCE_CONNECT_QUEUE_NAME,
@@ -515,16 +436,6 @@ export async function startStack(
     setEmailHttpStatus: (status) => {
       emailHttpStatus = status;
     },
-    setLcaAnswer: (answer) => {
-      lcaClient.answerAs = answer;
-    },
-    setLcaSearchHttpStatus: (status) => {
-      lcaClient.searchHttpStatus = status;
-    },
-    setLcaConfirmEmpty: (value: boolean) => {
-      lcaClient.confirmEmpty = value;
-    },
-    lcaConfirmPayloads: () => lcaClient.confirmPayloads,
     setAahBeneficiaire: (value: boolean) => {
       apiClient.aahBeneficiaire = value;
     },

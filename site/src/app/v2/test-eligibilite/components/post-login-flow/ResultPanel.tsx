@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Card from '@codegouvfr/react-dsfr/Card';
 import type { BeneficiaryResult } from '@/app/services/applications';
-import BeneficiaryRecap, { StatusBadge, type AllocataireIdentity } from './BeneficiaryRecap';
+import BeneficiaryRecap, { ProcessingBadge, type AllocataireIdentity } from './BeneficiaryRecap';
 
 const POLL_INTERVAL_MS = 20_000;
 const MAX_POLLS = 9;
@@ -109,7 +109,7 @@ export default function ResultPanel({ allocataireIdentity }: Props) {
       nativeDivProps={{ role: 'status', 'aria-live': 'polite' }}
       title="Demande enregistrée"
       titleAs="h2"
-      start={<StatusBadge verdict="not_assessed" />}
+      start={<ProcessingBadge />}
       desc={STILL_PROCESSING_MESSAGE}
     />
   );
