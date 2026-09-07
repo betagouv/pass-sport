@@ -16,49 +16,49 @@ export default function AccordionsSocialMediasVisuals() {
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel-club-1.jpg"
-              label="Télécharger le visuel club - 1"
+              label="Télécharger le visuel à destination des structures sportives - 1"
               details="jpg ~ 258.0 kB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel-club-2.jpg"
-              label="Télécharger le visuel club - 2"
+              label="Télécharger le visuel à destination des structures sportives - 2"
               details="jpg ~ 226.0 kB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel-club-2.jpg"
-              label="Télécharger le visuel club - 3"
+              label="Télécharger le visuel à destination des structures sportives - 3"
               details="jpg ~ 230.0 kB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel-6-17-ans.jpg"
-              label="Télécharger le visuel à la destination des jeunes de 6-17 ans"
+              label="Télécharger le visuel à destination des jeunes de 6-17 ans"
               details="jpg ~ 230.0 kB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel-aeeh.jpg"
-              label="Télécharger le visuel à la destination des 6-19 ans bénéficiaires de l'AEEH"
+              label="Télécharger le visuel à destination des 6-19 ans bénéficiaires de l'AEEH"
               details="jpg ~ 264.0 kB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel-aah.jpg"
-              label="Télécharger le visuel à la destination des 16-30 ans bénéficiaires de l'AAH"
+              label="Télécharger le visuel à destination des 16-30 ans bénéficiaires de l'AAH"
               details="jpg ~ 255.69 kB"
             />
           </li>
           <li>
             <DownloadLink
               href="/assets/partenaires/reseaux-sociaux/visuel-boursiers.jpg"
-              label="Télécharger le visuel à la destination des étudiants boursiers"
+              label="Télécharger le visuel à destination des étudiants boursiers"
               details="jpg ~ 231.93 kB"
             />
           </li>

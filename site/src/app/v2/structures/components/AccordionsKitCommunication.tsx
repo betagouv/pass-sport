@@ -9,7 +9,7 @@ export function AccordionsKitCommunication() {
     <>
       <AccordionsSocialMediasVisuals />
 
-      <Accordion label="Vidéos" onExpandedChange={() => {}} titleAs="h3">
+      <Accordion label="Vidéos et audio" onExpandedChange={() => {}} titleAs="h3">
         <p className="fr-text--bold fr-text--lg fr-mb-0">Vidéos de présentation du pass Sport :</p>
         <ul className="fr-pl-4w">
           <li>
@@ -52,6 +52,17 @@ export function AccordionsKitCommunication() {
             />
           </li>
         </ul>
+
+        <p className="fr-text--bold fr-text--lg fr-mb-0">Spot audio :</p>
+        <ul className="fr-pl-4w">
+          <li>
+            <DownloadLink
+              label="Télécharger le fichier audio"
+              details="mp3 ~ 789.00 kB"
+              href="/assets/partenaires/audios/pass-sport-audio.mp3"
+            />
+          </li>
+        </ul>
       </Accordion>
 
       <Accordion label="Affiches" titleAs="h3">
@@ -60,7 +71,7 @@ export function AccordionsKitCommunication() {
           <li>
             <DownloadLink
               href="/assets/partenaires/affiches/affiche-clubs.pdf"
-              label="Télécharger l'affiche à destination des clubs - A3"
+              label="Télécharger l'affiche à destination des structures sportives - A3"
               details="PDF ~ 96.0 kB"
             />
           </li>
