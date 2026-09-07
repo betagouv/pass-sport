@@ -15,6 +15,13 @@ Step ③ works the same way: the campaign's default columns and the code generat
 [partners/generate_codes_lib.py](partners/generate_codes_lib.py), on top of the year-agnostic
 drawing and bookkeeping of [utils/codes_utils.py](../utils/codes_utils.py).
 
+CNOUS is the one source with no ③ after it. A boursier is their own allocataire, so there is
+no household to resolve, no `quotient_familial` call and no qf-batch checkpoint: its single
+notebook ④ runs from the raw export to the injectable file, calling those very same
+default-column and code-drawing functions at the end. It seeds the drawing with
+`EXISTING_CODES_PATHFILE_2026` and rewrites it exactly as ③ does, so codes stay unique across
+the campaign whichever notebook drew them.
+
 Steps ⑩ ③ ⑪ are also driven unattended, by
 [partners/franceconnect/run_fc_pipeline.sh](partners/franceconnect/run_fc_pipeline.sh) — the
 only source whose input is a live table rather than a frozen export, hence a cron rather than
@@ -64,7 +71,7 @@ flowchart TB
 
     CNAF_RAW[("CNAF_PATHFILE_2026\nCSV / ASCII / sep=;")]:::rawFile
     MSA_RAW[("MSA_PATHFILE_2026\nCSV / utf-8-sig / sep=;")]:::rawFile
-    CNOUS_RAWS[("CNOUS raw files\nCSV / UTF-8 / sep=,")]:::rawFile
+    CNOUS_RAW[("CNOUS_PATHFILE_2026\nCSV / UTF-8 / sep=;")]:::rawFile
     FSS_RAW[("FSS_PATHFILE_2026\nCSV / UTF-8 / sep=;")]:::rawFile
 
     subgraph CNAF_NB1["①a cnaf/clean_cnaf_1_before_qf_batch.ipynb"]
@@ -141,7 +148,7 @@ flowchart TB
     end
 
     subgraph MERGE_NB["③ generate_new_codes.ipynb  ·  run once per cleaned file"]
-        mg1["Load ONE cleaned file (SOURCE = CNAF | CNAF_AAH_AEEH |\nMSA | MSA_AAH_AEEH | CNOUS | FC)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
+        mg1["Load ONE cleaned file (SOURCE = CNAF | CNAF_AAH_AEEH |\nMSA | MSA_AAH_AEEH | FC)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
         mg2["Generate unique id_psp codes\nformat: YY-XXXX-XXXX\nseeded with the existing codes"]
         mg3["Write YYYY-MM-DD-source-with-codes.csv\nrewrite the existing codes file with the new ones"]
         mg1-->mg2-->mg3
@@ -151,7 +158,6 @@ flowchart TB
     DB_CNAF_AAH_AEEH --> mg1
     DB_MSA --> mg1
     DB_MSA_AAH_AEEH --> mg1
-    CNOUS_CLEANED --> mg1
     DB_FC --> mg1
     EXISTING_CODES -.->|"seed"| mg2
 
@@ -164,38 +170,21 @@ flowchart TB
     wb2 -.->|"marque les servis"| ELIG_RESULTS
     wb3 -->|"dépôt en dernier, une fois le marquage vérifié"| FC_DROP[("FC_PROD_DROP_DIR\n/nfs/postgresql")]:::finalFile
 
-    subgraph CNOUS_NB["④ cnous/clean_cnous.ipynb  ·  run once per wave"]
-        cn1["Load CSV · dedup on allocataire-matricule (INE)\nclean + uppercase names\norganisme='cnous' · situation='boursier'"]
-        cn2["Parse dates · filter DOB 1997-2026\nremove invalid rows · add 4h to birthdates\nserialize allocataire + adresse_allocataire → JSON\nadd default DB columns · dedup on email"]
-        cn1-->cn2
+    %% Le boursier est son propre allocataire : pas de foyer à résoudre, donc pas d'appel
+    %% quotient_familial, donc pas de point d'arrêt qf-batch. Un seul notebook mène l'export
+    %% brut jusqu'au fichier injectable, codes compris — il n'a pas d'étape ③ après lui.
+    subgraph CNOUS_NB["④ cnous/clean_cnous.ipynb  ·  run once per file"]
+        cn1["Load CSV (20 colonnes pour 19 noms d'en-tête :\nl'échelon de bourse n'en a pas)\nmap → schéma PSP · organisme='cnous' · situation='boursier'"]
+        cn2["Parse dates (bénéf. ISO, alloc. %d/%m/%Y)\npays de naissance depuis le code ISO · pad INSEE & code postal\nfilter DOB 1998-2026 · remove invalid rows · add 4h"]
+        cn3["Dedup INE puis courriel (les lignes sans clé restent)\nserialize allocataire + adresse_allocataire → JSON"]
+        cn4["Colonnes de prod (exercice_id=5, timestamps, flags)\net codes id_psp — mêmes fonctions que ③"]
+        cn1-->cn2-->cn3-->cn4
     end
 
-    CNOUS_RAWS --> cn1
-    cn2 --> CNOUS_CLEANED[("CNOUS cleaned files\nCSV per wave  —  no id_psp")]:::cleanedFile
-
-    subgraph DEDUP_NB["⑤ cnous/deduplication_cnous.ipynb"]
-        dd1["Unwrap allocataire JSON\nexpose matricule / INE field"]
-        dd2["Right join on allocataire-matricule\nkeep wave 2 rows NOT in wave 1"]
-        dd3["Dedup on nom + prenom + date_naissance\nGenerate id_psp codes\nexcluding existing codes"]
-        dd1-->dd2-->dd3
-    end
-
-    CNOUS_CLEANED -->|"wave 1"| dd1
-    CNOUS_CLEANED -->|"wave 2"| dd1
-    EXISTING_CODES -.->|"seed"| dd3
-    dd3 --> CNOUS_OUT[("CNOUS_2_OUTPUT\nCSV + id_psp")]:::finalFile
-
-    subgraph DEDUP_OCC_NB["⑥ cnous/deduplication_cnous_for_occitanie.ipynb"]
-        do1["Unwrap allocataire JSON\nexpose matricule / INE field"]
-        do2["Right join on allocataire-matricule\nkeep Occitanie rows NOT in wave 1"]
-        do3["Dedup on nom + prenom + date_naissance\nGenerate id_psp codes\nexcluding existing codes"]
-        do1-->do2-->do3
-    end
-
-    CNOUS_CLEANED -->|"wave 1 merged"| do1
-    CNOUS_CLEANED -->|"Occitanie"| do1
-    EXISTING_CODES -.->|"seed"| do3
-    do3 --> CNOUS_OCC_OUT[("CNOUS_OCCITANIE_OUTPUT\nCSV + id_psp")]:::finalFile
+    CNOUS_RAW --> cn1
+    EXISTING_CODES -.->|"seed"| cn4
+    cn4 --> DB_CNOUS[("DB_CNOUS_EXPORT_2026\nCSV + id_psp")]:::finalFile
+    cn4 -.->|"track used codes"| EXISTING_CODES
 
     subgraph FSS_NB["⑦ cnous/fss/clean_fss.ipynb"]
         f1["Load CSV · clean + uppercase names\nparse dates · organisme='cnous'\nsituation='boursier'"]

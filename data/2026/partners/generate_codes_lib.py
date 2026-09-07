@@ -1,9 +1,13 @@
 """Code generation for the 2026 campaign, shared by generate_new_codes.ipynb and the cron.
 
-Takes one cleaned file — CNAF, MSA, CNOUS or FC, each already through its own cleaning
-notebook — adds the columns the production table expects, hands every row a brand new
-pass Sport code, and writes the result to a dated file next to its input. The input file is
-never modified in place.
+Takes one cleaned file — CNAF, MSA or FC, each already through its own cleaning notebook —
+adds the columns the production table expects, hands every row a brand new pass Sport code,
+and writes the result to a dated file next to its input. The input file is never modified
+in place.
+
+CNOUS does not come through here: having no qf-batch checkpoint, its single notebook is
+already the last step and calls `add_production_default_columns` and `assign_new_codes`
+itself — see cnous/clean_cnous.ipynb.
 
 The drawing of the codes and the bookkeeping of the campaign's code list are generic and
 live in utils/codes_utils.py. What is dated to 2026, and therefore stays here, is
@@ -42,7 +46,10 @@ SOURCE_INPUT_ENV_VAR = {
     'CNAF_AAH_AEEH': 'DB_CNAF_EXPORT_2026_AAH_AEEH',
     'MSA': 'DB_MSA_EXPORT_2026',
     'MSA_AAH_AEEH': 'DB_MSA_EXPORT_2026_AAH_AEEH',
-    'CNOUS': 'DB_CNOUS_EXPORT_2026',
+    # CNOUS is absent on purpose: being the one partner with no qf-batch checkpoint, its
+    # single notebook is already the last step and draws its own codes off the very same
+    # functions. Routing DB_CNOUS_EXPORT_2026 through here would hand every boursier a
+    # second code — see cnous/clean_cnous.ipynb.
     # Not a partner file: the beneficiaries the site itself judged eligible without LCA
     # being able to serve them a code. Unlike the others, that source needs a write-back
     # step AFTER this one — see franceconnect/README.md.
