@@ -23,7 +23,7 @@ type EligibilityTestContextProps = {
   submittedEmail: string | null;
   setSubmittedEmail: Dispatch<SetStateAction<string | null>>;
   dob?: string;
-  setAllowance: Dispatch<SetStateAction<ALLOWANCE | null>>;
+  setAllowance: (allowance: ALLOWANCE | null) => void;
   allowance: ALLOWANCE | null;
   caisse: CAISSE | null;
 };

@@ -43,6 +43,9 @@ export const AEEH_BIRTHDATE_MAX = "2009-12-31";
 // Strictly below: 700 itself is NOT eligible.
 export const QF_ELIGIBILITY_THRESHOLD = 700;
 
+export const QF_REFERENCE_YEAR = "2026";
+export const QF_REFERENCE_MONTH = "8";
+
 // Safe as a string compare: birthdates are normalized to zero-padded YYYY-MM-DD, whose
 // lexicographic order is its chronological order.
 export const isWithinBirthdateWindow = (
@@ -124,6 +127,16 @@ export type ApiParticulierData =
   | AllocationEnfantHandicapeData
   | EtudiantBoursierData;
 
+// Raw JSON:API error object (ApiGouvError.firstError), kept verbatim alongside the flattened
+// `error`/`errorCode` fields below so a caller can persist the provider's exact code/title/
+// detail/meta without reconstructing it from those.
+export type ApiJsonError = {
+  code?: string;
+  title?: string;
+  detail?: string;
+  meta?: Record<string, unknown>;
+};
+
 // One normalized result row, produced identically by the real and mock clients.
 export type ResourceResult = {
   resource: string;
@@ -132,6 +145,13 @@ export type ResourceResult = {
   success: boolean;
   data: ApiParticulierData | null;
   error?: string;
+  // JSON:API `errors[0].code` (e.g. "35000"), when the SDK surfaced one. Lets a caller tell
+  // a data provider's own internal error — bound to this one call's data — apart from the
+  // API being down, which `error`/`httpStatus` alone cannot (both look like a 5xx).
+  errorCode?: string;
+  // See ApiJsonError. Undefined when the SDK raised without a JSON:API errors[] body (e.g. a
+  // transport failure).
+  apiError?: ApiJsonError;
   childIndex?: number; // index into QuotientFamilialData.enfants
   rateLimited?: boolean;
   retryAfter?: number | null;

@@ -34,7 +34,15 @@ const config = [
     },
   },
   {
-    ignores: ['.next/**', 'node_modules/**', 'public/**', 'coverage/**'],
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      'public/**',
+      'coverage/**',
+      'playwright/.cache/**',
+      'playwright-report/**',
+      'test-results/**',
+    ],
   },
 ];
 

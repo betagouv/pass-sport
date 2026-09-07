@@ -4,6 +4,7 @@ import {
   RESOURCE_META,
   toCnousParams,
   toDssParams,
+  toQfParams,
 } from "./client";
 import { createCheckpointRunner } from "./checkpoint";
 import type { HistoryRecorder } from "../db/history";
@@ -106,7 +107,7 @@ export async function runEligibilitySequence(
   };
 
   const parentParams: Record<ResourceKey, Record<string, unknown>> = {
-    qf: toDssParams(data.identity),
+    qf: toQfParams(data.identity),
     aah: toDssParams(data.identity),
     cnous: toCnousParams(data.identity),
   };

@@ -39,6 +39,9 @@
     dest: '/etc/systemd/system/pass-sport-qf-batch@.service'
     mode: '0644'
   notify: daemon-reload
+  # Tag dédié : redéployer juste ce fichier (ex. après un changement de QF_RATE) avec
+  # `--tags qf-batch-systemd`, sans rejouer tout le reste du provisioning.
+  tags: [qf-batch-systemd]
   # Volontairement pas de `systemctl enable`/`state: started` ici : qf-batch se déclenche
   # à la main, un partenaire à la fois (`systemctl start pass-sport-qf-batch@msa`),
   # jamais tout seul à l'installation ni au démarrage de la machine.
