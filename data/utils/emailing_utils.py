@@ -76,21 +76,27 @@ def format_allocataire_benef_names_in_place(df: pd.DataFrame) -> None:
 
 
 def get_indirect_beneficiaries(df: pd.DataFrame) -> pd.DataFrame:
-    require_columns(['beneficiaire_prenom', 'allocataire_prenom'], df)
+    require_columns(['beneficiaire_prenom', 'allocataire_prenom',
+                     'beneficiaire_nom', 'allocataire_nom'], df)
 
-    mask_alloc_diff_benef = df['beneficiaire_prenom'].str.lower() != df[
+    mask_prenom_diff = df['beneficiaire_prenom'].str.lower() != df[
         'allocataire_prenom'].str.lower()
+    mask_nom_diff = df['beneficiaire_nom'].str.lower() != df[
+        'allocataire_nom'].str.lower()
 
-    return df[mask_alloc_diff_benef]
+    return df[mask_prenom_diff | mask_nom_diff]
 
 
 def get_direct_beneficiaries(df: pd.DataFrame) -> pd.DataFrame:
-    require_columns(['beneficiaire_prenom', 'allocataire_prenom'], df)
+    require_columns(['beneficiaire_prenom', 'allocataire_prenom',
+                     'beneficiaire_nom', 'allocataire_nom'], df)
 
-    mask_alloc_eq_benef = df['beneficiaire_prenom'].str.lower() == df[
+    mask_prenom_eq = df['beneficiaire_prenom'].str.lower() == df[
         'allocataire_prenom'].str.lower()
+    mask_nom_eq = df['beneficiaire_nom'].str.lower() == df[
+        'allocataire_nom'].str.lower()
 
-    return df[mask_alloc_eq_benef]
+    return df[mask_prenom_eq & mask_nom_eq]
 
 
 def require_columns(required_columns: List[str], df: pd.DataFrame) -> None:
