@@ -50,7 +50,6 @@ export const enfantToIdentity = (
 
   return {
     family_name: familyName,
-    preferred_username: enfant.nom_usage || undefined,
     given_name: enfant.prenoms,
     gender: enfant.sexe === "F" ? "female" : enfant.sexe === "M" ? "male" : undefined,
     birthdate,

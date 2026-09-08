@@ -34,7 +34,6 @@ def export_row(**overrides) -> dict:
         'created_at': '2026-08-01 09:00:00+00',
         'allocataire_fc_sub': 'sub-A',
         'allocataire-nom_naissance': 'MARTIN',
-        'allocataire-nom_usage': '',
         'allocataire-prenom': 'Claire',
         'allocataire-date_naissance': '1985-03-02',
         'allocataire-genre': 'female',

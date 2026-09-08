@@ -128,7 +128,6 @@ FINAL_COLUMNS_TO_DROP = [
     'allocataire-prenom',
     'allocataire-courriel',
     'allocataire-nom_naissance',
-    'allocataire-nom_usage',
     'allocataire-date_naissance',
     'allocataire-genre',
     'allocataire-code_insee_naissance',
@@ -247,8 +246,11 @@ def resolve_enfant_genre(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     `enfant_identite` ne stocke que family_name/given_name/birthdate (worker/src/index.ts) :
     le sexe n'y est pas, alors que `genre` est une colonne obligatoire. La réponse brute
     quotient_familial, elle, le porte — d'où l'appariement sur (nom, prénoms, date de
-    naissance), le nom pouvant être le nom de naissance comme le nom d'usage puisque
-    candidates.ts retient l'un ou l'autre.
+    naissance).
+
+    candidates.ts ne retient plus que le nom de naissance, mais l'appariement essaie encore
+    `nom_usage` : les lignes écrites avant ce changement portent un nom d'usage, et les
+    restreindre au nom de naissance les laisserait sans genre, donc écartées.
 
     Renvoie (df, nombre d'enfants non appariés). Ceux-là gardent un genre vide et seront
     écartés plus loin ; un compte non nul mérite un coup d'œil, il signale un décalage
@@ -302,15 +304,6 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
-    # Chaînes vides -> NaN, AVANT toute dérivation. Le notebook lit l'export avec
-    # keep_default_na=False, donc un champ absent arrive en '' et non en NaN : sans cette
-    # normalisation en tête, le repli d'une colonne sur l'autre ci-dessous (nom d'usage ->
-    # nom de naissance) verrait une valeur là où il n'y en a pas. .mask() plutôt que
-    # .replace(), qui redescend le type d'une colonne devenue entièrement nulle et le signale
-    # par une FutureWarning à chaque exécution du notebook.
-    text_columns = df.select_dtypes(include='object').columns
-    df[text_columns] = df[text_columns].mask(df[text_columns] == '')
-
     is_enfant = df['source'] == 'enfant'
 
     df['nom'] = np.where(is_enfant, df['enfant_nom'], df['allocataire-nom_naissance'])
@@ -326,7 +319,7 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     # Le JSON allocataire décrit le PARENT, y compris sur une ligne 'self' où il est aussi le
     # bénéficiaire : c'est ce que fait déjà chaque fichier partenaire.
     df['allocataire-qualite'] = gender.map(QUALITE_BY_GENDER)
-    df['allocataire-nom'] = df['allocataire-nom_usage'].fillna(df['allocataire-nom_naissance'])
+    df['allocataire-nom'] = df['allocataire-nom_naissance']
 
     # None et non np.NaN pour ce que FranceConnect ne fournit pas : les deux sont écartés du
     # JSON par pd.notnull(), mais utils.format_insee_or_postal_code — que le sérialiseur
@@ -344,9 +337,13 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     df['adresse_allocataire-commune'] = None
     df['adresse_allocataire-cplt_adresse'] = None
 
-    # Second passage, sur les colonnes DÉRIVÉES cette fois : `genre` vaut '' quand le genre
-    # de l'enfant n'a pas pu être retrouvé, et une colonne obligatoire manquante doit se
-    # présenter comme nulle à filter_rows_missing_required_fields, pas comme vide.
+    # Chaînes vides -> NaN. Le notebook lit l'export avec keep_default_na=False, donc un champ
+    # absent y arrive en '' et non en NaN ; `genre` vaut '' de son côté quand celui de l'enfant
+    # n'a pas pu être retrouvé. Une colonne obligatoire manquante doit se présenter comme nulle
+    # à filter_rows_missing_required_fields, pas comme vide, et le sérialiseur JSON écarte les
+    # nulles là où il porterait une chaîne vide. .mask() plutôt que .replace(), qui redescend le
+    # type d'une colonne devenue entièrement nulle et le signale par une FutureWarning à chaque
+    # exécution du notebook.
     text_columns = df.select_dtypes(include='object').columns
     df[text_columns] = df[text_columns].mask(df[text_columns] == '')
     return df

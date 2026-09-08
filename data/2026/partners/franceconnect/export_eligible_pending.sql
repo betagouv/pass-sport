@@ -58,7 +58,6 @@ COPY (
 
     -- allocataire_identite = identité pivot FranceConnect, sub exclu (il a sa colonne).
     r.allocataire_identite ->> 'family_name'        as "allocataire-nom_naissance",
-    r.allocataire_identite ->> 'preferred_username' as "allocataire-nom_usage",
     r.allocataire_identite ->> 'given_name'         as "allocataire-prenom",
     r.allocataire_identite ->> 'birthdate'          as "allocataire-date_naissance",
     r.allocataire_identite ->> 'gender'             as "allocataire-genre",

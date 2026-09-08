@@ -23,7 +23,6 @@ def enfant_row(**overrides):
         'source': 'enfant',
         'allocataire_fc_sub': 'sub-A',
         'allocataire-nom_naissance': 'MARTIN',
-        'allocataire-nom_usage': None,
         'allocataire-prenom': 'Claire',
         'allocataire-date_naissance': '1985-03-02',
         'allocataire-genre': 'female',
@@ -193,6 +192,8 @@ def test_genre_retrouve_sur_le_nom_de_naissance_et_une_date_au_format_francais()
 
 
 def test_genre_retrouve_sur_le_nom_d_usage_et_une_date_iso():
+    # candidates.ts ne retient plus que le nom de naissance, mais les lignes écrites avant
+    # ce changement portent un nom d'usage : l'appariement doit continuer de les retrouver.
     df = pd.DataFrame([enfant_row(
         qf_enfants=ENFANTS_QF, enfant_prenom='Hugo', enfant_date_naissance='2008-04-11')])
     df, non_resolus = lib.resolve_enfant_genre(df)
@@ -265,22 +266,23 @@ def test_une_ligne_self_decrit_l_allocataire_lui_meme():
     assert df.loc[0, 'date_naissance'] == pd.Timestamp('2000-05-05')
 
 
-def test_le_nom_d_usage_du_parent_prime_sur_son_nom_de_naissance():
-    df = pd.DataFrame([enfant_row(**{'allocataire-nom_usage': 'DURAND'})])
+def test_le_parent_est_nomme_par_son_nom_de_naissance():
+    # Le nom d'usage n'est plus ni demandé à FranceConnect ni exporté : il ne reste qu'un
+    # seul nom possible pour l'allocataire.
+    df = pd.DataFrame([enfant_row()])
     df, _ = lib.resolve_enfant_genre(df)
     df = lib.build_psp_columns(df)
-    assert df.loc[0, 'allocataire-nom'] == 'DURAND'
+    assert df.loc[0, 'allocataire-nom'] == 'MARTIN'
 
 
 def test_un_champ_vide_du_csv_vaut_un_champ_absent():
     # Le notebook lit l'export avec keep_default_na=False : un champ non renseigné arrive en
-    # chaîne vide, pas en NaN. Sans normalisation en tête de build_psp_columns, le repli du
-    # nom d'usage sur le nom de naissance verrait '' comme une valeur et laisserait le nom de
-    # l'allocataire vide — ce que le sérialiseur JSON fait ensuite exploser.
-    df = pd.DataFrame([enfant_row(**{'allocataire-nom_usage': ''})])
+    # chaîne vide, pas en NaN. Sans la normalisation de build_psp_columns, le sérialiseur JSON
+    # porterait un courriel vide au lieu de l'écarter.
+    df = pd.DataFrame([enfant_row(**{'allocataire-courriel': ''})])
     df, _ = lib.resolve_enfant_genre(df)
     df = lib.build_psp_columns(df)
-    assert df.loc[0, 'allocataire-nom'] == 'MARTIN'
+    assert pd.isna(df.loc[0, 'allocataire-courriel'])
 
 
 def test_l_allocataire_n_a_aucune_adresse():

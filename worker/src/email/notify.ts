@@ -114,11 +114,10 @@ export type EmailVariables =
   // to an address nobody verified.
   | { kind: "not_eligible_hors_fc" };
 
-// `family_name` is the nom de naissance, `preferred_username` the nom d'usage.
+// `family_name` is the nom de naissance. The nom d'usage is never collected.
 export type AllocataireIdentity = {
   given_name?: string;
   family_name?: string;
-  preferred_username?: string;
 };
 
 const fullName = (firstname?: string, lastname?: string): string =>
@@ -128,10 +127,7 @@ export const beneficiaryVariables = (
   beneficiary: { firstname: string; lastname: string },
   allocataire: AllocataireIdentity,
 ): BeneficiaryVariables => {
-  const allocataireName = fullName(
-    allocataire.given_name,
-    allocataire.preferred_username || allocataire.family_name,
-  );
+  const allocataireName = fullName(allocataire.given_name, allocataire.family_name);
   return {
     salutation: allocataireName ? `Bonjour ${allocataireName},` : "Bonjour,",
     prenom: beneficiary.firstname,
@@ -146,7 +142,7 @@ type AcknowledgmentVariables = { prenom: string; nom: string };
 
 const acknowledgmentVariables = (identity: AllocataireIdentity): AcknowledgmentVariables => ({
   prenom: identity.given_name ?? "",
-  nom: identity.preferred_username || identity.family_name || "",
+  nom: identity.family_name ?? "",
 });
 
 export function sendAcknowledgmentEmail(

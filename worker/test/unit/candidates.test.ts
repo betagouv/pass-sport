@@ -68,3 +68,40 @@ describe("listBeneficiaryCandidates — enfant gender", () => {
     expect(candidates[0].gender).toBeUndefined();
   });
 });
+
+describe("listBeneficiaryCandidates — nom", () => {
+  it("names an enfant by their nom de naissance, never their nom d'usage", () => {
+    const candidates = listBeneficiaryCandidates(
+      IDENTITY,
+      [
+        qfResult([
+          {
+            nom_naissance: "ZALQUIN",
+            nom_usage: "BRAVENNE",
+            prenoms: "Fenrys",
+            date_naissance: "2015-06-02",
+            sexe: "F",
+          },
+        ]),
+      ],
+      [],
+    );
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].lastname).toBe("ZALQUIN");
+  });
+
+  it("skips an enfant carrying only a nom d'usage", () => {
+    const candidates = listBeneficiaryCandidates(
+      IDENTITY,
+      [
+        qfResult([
+          { nom_usage: "BRAVENNE", prenoms: "Fenrys", date_naissance: "2015-06-02", sexe: "F" },
+        ]),
+      ],
+      [],
+    );
+
+    expect(candidates).toHaveLength(0);
+  });
+});

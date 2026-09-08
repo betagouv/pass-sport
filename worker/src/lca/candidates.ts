@@ -122,7 +122,10 @@ export const listBeneficiaryCandidates = (
   const enfants = qfData?.enfants ?? [];
 
   enfants.forEach((enfant, childIndex) => {
-    const lastname = enfant.nom_usage || enfant.nom_naissance;
+    // nom de naissance only, like enfantToIdentity in ../eligibility/sequence.ts: the AEEH
+    // call goes out under that name, so recording the nom d'usage here would describe the
+    // child differently from the query that judged them.
+    const lastname = enfant.nom_naissance;
     const firstname = enfant.prenoms;
     const birthdate = toIsoDate(enfant.date_naissance);
     if (!lastname || !firstname || !birthdate) return;
