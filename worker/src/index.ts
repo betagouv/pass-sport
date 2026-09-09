@@ -1,6 +1,6 @@
 import "./load-env";
 import "./instrument";
-import { type Job, Queue, Worker } from "bullmq";
+import { type Job, Queue, Worker, type WorkerOptions } from "bullmq";
 import { Redis } from "ioredis";
 import * as Sentry from "@sentry/node";
 import { db, pool } from "./db/client";
@@ -9,7 +9,14 @@ import { getClient } from "./eligibility/client";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
-import { FRANCE_CONNECT_QUEUE_NAME, LCA_QUEUE_NAME, retryBackoff } from "./queues";
+import { processLcaChecksJob, type LcaChecksJobData } from "./jobs/lca-checks";
+import { getLcaClient } from "./lca/client";
+import {
+  FRANCE_CONNECT_QUEUE_NAME,
+  LCA_CHECKS_QUEUE_NAME,
+  LCA_QUEUE_NAME,
+  retryBackoff,
+} from "./queues";
 
 // Scalingo injects SCALINGO_REDIS_URL for the Redis addon.
 const SCALINGO_REDIS_URL = process.env.SCALINGO_REDIS_URL ?? "redis://localhost:6379";
@@ -22,6 +29,9 @@ function createRedisConnection(): Redis {
 async function startFlow<TData extends object>(opts: {
   queueName: string;
   process: (job: Job<TData>, queue: Queue<TData>) => Promise<unknown>;
+  // lockDuration is the reason this exists: the default 30 s gets a long-running job declared
+  // stalled and re-delivered mid-run.
+  workerOptions?: Partial<WorkerOptions>;
 }): Promise<{ close: () => Promise<void> }> {
   const queue = new Queue<TData>(opts.queueName, { connection: createRedisConnection() });
 
@@ -32,6 +42,7 @@ async function startFlow<TData extends object>(opts: {
   const worker = new Worker<TData>(opts.queueName, async (job) => opts.process(job, queue), {
     connection: createRedisConnection(),
     settings: { backoffStrategy: retryBackoff },
+    ...opts.workerOptions,
   });
 
   worker.on("error", (err) => {
@@ -103,7 +114,16 @@ async function main(): Promise<void> {
     },
   });
 
-  const flows = [franceConnect, lca];
+  // getLcaClient is passed rather than called: RealLcaClient throws when LCA_API_URL/LCA_API_KEY
+  // are missing, and a worker refusing to boot over that would take the two flows that never touch
+  // LCA down with it.
+  const lcaChecks = await startFlow<LcaChecksJobData>({
+    queueName: LCA_CHECKS_QUEUE_NAME,
+    process: (job) => processLcaChecksJob(job, job.data, { db, getLca: getLcaClient }),
+    workerOptions: { lockDuration: 10 * 60_000 },
+  });
+
+  const flows = [franceConnect, lca, lcaChecks];
 
   console.log("[pass-sport-worker] standalone worker started");
 

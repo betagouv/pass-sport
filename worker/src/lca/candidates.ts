@@ -15,7 +15,13 @@ import {
   type ResourceResult,
   type StatutBeneficiaireData,
 } from "../eligibility/types";
-import type { BeneficiaryCandidate } from "./types";
+import {
+  LCA_SITUATION,
+  ORGANISME,
+  type BeneficiaryCandidate,
+  type ConfirmPayload,
+  type SearchItem,
+} from "./types";
 const AGE_REFERENCE_DATE = "2026-12-31";
 
 // Completed years ("ans révolus") at the reference date.
@@ -166,4 +172,43 @@ export const listBeneficiaryCandidates = (
   });
 
   return candidates;
+};
+
+// FranceConnect birthcountry is a COG INSEE code; LCA expects ISO 3166-1 alpha-2.
+// Only France mapped; foreign countries omitted (the field is optional).
+export const cogCountryToIso = (cog?: string): string | undefined =>
+  cog === "99100" ? "FR" : undefined;
+
+// A subset of the identité pivot rather than the pivot itself: allocataire_identite is stored as a
+// Partial, and this builder has to accept it as-is.
+export type AllocataireConfirmIdentity = {
+  family_name?: string;
+  given_name?: string;
+  birthdate?: string;
+  birthplace?: string;
+  birthcountry?: string;
+};
+
+// The allocataire is named from the identité pivot rather than from the QF allocataires[0], which
+// is not guaranteed to be them. The matricule is server-side only and comes back from the search.
+export const buildConfirmPayload = (
+  searchItem: SearchItem,
+  identity: AllocataireConfirmIdentity,
+): ConfirmPayload => {
+  const isCrous =
+    searchItem.situation === LCA_SITUATION.BOURSIER && searchItem.organisme === ORGANISME.CNOUS;
+  const matricule = searchItem.matricule || undefined;
+
+  return {
+    id: String(searchItem.id),
+    situation: searchItem.situation,
+    organisme: searchItem.organisme,
+    recipientLastname: identity.family_name,
+    recipientFirstname: identity.given_name || "",
+    recipientIneNumber: isCrous ? matricule : undefined,
+    recipientCafNumber: isCrous ? undefined : matricule,
+    recipientBirthDate: identity.birthdate,
+    recipientBirthPlace: identity.birthplace || undefined,
+    recipientBirthCountry: cogCountryToIso(identity.birthcountry),
+  };
 };

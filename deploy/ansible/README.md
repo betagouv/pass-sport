@@ -101,7 +101,7 @@ refuse un dépôt appartenant à un autre compte — « detected dubious ownersh
 d'un dépôt partagé) et `core.sharedRepository=group` (pour que git crée ses objets
 group-writable sans dépendre de l'umask de la session).
 
-## Ni qf-batch ni la cron FranceConnect ne démarrent tout seuls
+## Ni qf-batch ni les crons ne démarrent tout seuls
 
 C'est une garantie du playbook, pas un oubli à corriger :
 
@@ -122,7 +122,28 @@ C'est une garantie du playbook, pas un oubli à corriger :
   [README de franceconnect/](../../data/2026/partners/franceconnect/README.md)). Le passage
   dépose son CSV en production et marque `eligibility_results` : le laisser partir seul avant
   d'avoir vérifié tout le reste n'a pas d'utilité et un vrai coût si quelque chose est mal
-  configuré.
+  configuré ;
+- **l'entrée crontab `pass-sport-lca-checks`** est posée **désactivée** selon la même règle, avec
+  `--extra-vars pass_sport_lca_checks_cron_enabled=true`. Elle referme la boucle ouverte par la
+  précédente : elle redemande à LCA si elle sert enfin les codes déposés, et fait passer les
+  bénéficiaires de `eligible_pending_lca` à `eligible_confirmed`, ce qui affiche leur code sur le
+  site. Rien du traitement n'a lieu sur cette machine — le script pose un job BullMQ à travers un
+  tunnel Redis et le worker Scalingo fait le reste (voir le
+  [README du worker](../../worker/README.md)). Mêmes prérequis : empreinte SSH amorcée, et un essai
+  à blanc réussi (`LCA_CHECKS_DRY_RUN=1` posé sur l'app worker, puis
+  `SCALINGO_APP=<app> worker/src/scripts/run-lca-checks.sh --dry-run --limit 5`).
+
+  Sa cadence est une variable du playbook, pas une valeur figée dans le script — le bon rythme
+  dépend du délai réel d'injection chez LCA :
+  ```bash
+  --extra-vars pass_sport_lca_checks_cron_minute='*/10'
+  ```
+  Par défaut `10,40 * * * *` : toutes les 30 minutes, en évitant la minute 30 où `pass-sport-fc`
+  monte son propre tunnel Scalingo quatre fois par jour. Les deux crons se croiseraient sinon, et
+  la seconde échouerait.
+
+  Le tag dédié est `lca-checks-cron` : `--skip-tags lca-checks-cron` saute la tâche entièrement,
+  comme `fc-cron` ci-dessous pour le volet FranceConnect.
 
 ### Reporter tout le volet FC (crontab Scalingo/tunnel)
 
@@ -236,8 +257,9 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
 2. `scalingo --version`, `psql --version`, `data/.venv/bin/jupyter kernelspec list` (doit
    lister `python3`), `systemctl cat pass-sport-qf-batch@`,
    `stat -c '%a %U:%G' /etc/default/pass-sport-fc` → `640 passsport:passsport`.
-3. `crontab -l -u <utilisateur> | grep pass-sport-fc` : la ligne doit apparaître **commentée**
-   tant que `pass_sport_fc_cron_enabled` n'a pas été mis à `true`.
+3. `crontab -l -u <utilisateur> | grep -E 'pass-sport-fc|pass-sport-lca-checks'` : les deux lignes
+   doivent apparaître **commentées** tant que `pass_sport_fc_cron_enabled` et
+   `pass_sport_lca_checks_cron_enabled` n'ont pas été mis à `true`.
 4. `systemctl list-units 'pass-sport-qf-batch@*'` doit être vide : aucune instance active tant
    que personne n'a lancé `systemctl start pass-sport-qf-batch@<partenaire>`.
 5. Aucun secret n'est parti dans le dépôt public :

@@ -4,6 +4,10 @@ export const FRANCE_CONNECT_JOB_NAME = "france-connect-job";
 export const LCA_QUEUE_NAME = "codes-queue-lca";
 export const LCA_JOB_NAME = "lca-job";
 
+export const LCA_CHECKS_QUEUE_NAME = "codes-queue-lca-checks";
+export const LCA_CHECKS_JOB_NAME = "eligible_pending_lca_checks";
+export const LCA_CHECKS_JOB_ID = "eligible_pending_lca_checks";
+
 // 2h, then 4h, then 18h: the three retries of a 4-attempt job span a full day, so an LCA or
 // API Particulier outage lasting a working day is ridden out without the usager resubmitting.
 const RETRY_DELAYS_MS = [2, 4, 18].map((hours) => hours * 3_600_000);

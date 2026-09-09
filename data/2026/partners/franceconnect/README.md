@@ -59,7 +59,7 @@ referme lui-même le tunnel Scalingo, et dépose le CSV final dans `FC_PROD_DROP
 (`/nfs/postgresql` par défaut), d'où il est injecté en base de production.
 
 L'entrée de crontab n'est plus posée à la main : elle l'est par
-[deploy/ansible/traitement.yml](../../../../deploy/ansible/traitement.yml), qui la nomme
+[deploy/ansible/lamp-setup.yml](../../../../deploy/ansible/lamp-setup.yml), qui la nomme
 `pass-sport-fc` — rejouer le playbook ne la duplique donc pas.
 
 ```crontab
@@ -88,6 +88,11 @@ Les fichiers que la cron produit sont horodatés à la seconde
 s'en tiennent au jour : une cron peut passer plusieurs fois par jour, et deux passages
 écraseraient sinon le fichier du précédent — y compris dans `FC_PROD_DROP_DIR`, où il n'a
 peut-être pas encore été injecté.
+
+Une **seconde** entrée de crontab, `pass-sport-lca-checks`, referme la boucle que celle-ci ouvre :
+elle redemande à LCA si elle sert enfin les codes déposés et fait passer les bénéficiaires de
+`eligible_pending_lca` à `eligible_confirmed`. Voir [Comment on en sort](#comment-on-en-sort) plus
+bas. Elle est décalée sur les minutes 10 et 40 pour ne pas croiser le tunnel Scalingo de celle-ci.
 
 Le journal du jour est écrit dans `FC_LOG_DIR` (`logs/` de ce dossier par défaut) ; toute
 sortie non nulle est une anomalie, que cron enverra par courriel. En cas d'échec après
@@ -271,3 +276,27 @@ aucune migration. Elle est en revanche déclarée partout où l'ensemble des ver
   — le composant range les bénéficiaires en trois blocs, et une valeur qu'il ne connaît pas
   disparaîtrait de la page. `eligible_pending_lca` rejoint le bloc « éligibilité confirmée,
   code à venir », qui reste vrai tant que LCA ne sert pas le code.
+
+### Comment on en sort
+
+C'est un état **transitoire**, et sa sortie n'est pas dans ce dossier : le job
+`eligible_pending_lca_checks` ([worker/src/jobs/lca-checks.ts](../../../../worker/src/jobs/lca-checks.ts))
+rejoue `/search` puis `/confirm` sur ces lignes toutes les 30 minutes, et bascule à
+`eligible_confirmed` celles dont le `/confirm` répond le code que la chaîne ci-dessus a fabriqué.
+C'est ce qui fait apparaître le code sur le site, une fois le CSV déposé réellement injecté chez
+LCA — ce dépôt est un geste humain, donc rien ne peut prédire quand.
+
+Le `/search` a besoin d'un `codeInsee` que personne n'a ici : `build_psp_columns` laisse tout
+`adresse_allocataire-*` à `None`, et le parcours FranceConnect ne demande plus de commune de
+résidence. Ce job envoie donc un code INSEE fictif, `99999`
+([worker/src/lca/insee.ts](../../../../worker/src/lca/insee.ts)).
+
+Deux conséquences pour qui réconcilie des compteurs :
+
+- une ligne dont le `/confirm` répond un **autre** code que celui fabriqué n'est pas basculée et
+  son `pass_sport_code` n'est pas réécrit : la clé de recherche est (nom, prénom, date de
+  naissance) plus une commune constante, donc un homonyme est une collision réelle. Ces cas
+  ressortent en `eligibility_history` sous `lca_checks.code_mismatch`, avec une alerte Sentry ;
+- `eligibility_results.lca_check_attempts` compte les essais. Une ligne qui plafonne
+  (`lca_check_attempts >= 200`, soit environ huit jours) n'est plus interrogée — c'est la requête
+  qui répond à « lesquelles ne sont jamais arrivées chez LCA ».

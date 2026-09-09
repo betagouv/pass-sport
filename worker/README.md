@@ -70,18 +70,73 @@ The `pass-sport-qf-batch@` systemd unit is deployed by [deploy/ansible/](../depl
 but never enabled or auto-started — each partner's run is started by hand. See
 [deploy/ansible/README.md](../deploy/ansible/README.md) for provisioning the machine.
 
-### DLQ (`dlq`)
+### LCA pending checks (`lca:checks:enqueue`)
+
+Closes the loop the FranceConnect pipeline opens. That pipeline
+([data/2026/partners/franceconnect/](../data/2026/partners/franceconnect/)) mints a pass Sport code
+for every `eligible_pending` beneficiary, marks them `eligible_pending_lca`, and drops a CSV for
+injection into the LCA base. Until that injection lands, the site shows "en cours de traitement" and
+deliberately hides the code.
+
+The `eligible_pending_lca_checks` job is what notices it landed: for every row still carrying
+`eligible_pending_lca` it replays LCA `/search` then `/confirm`, and when the confirm answers the
+code we stored it flips the verdict to `eligible_confirmed` — which is what lets
+`BeneficiaryRecap` show the code and the PDF route serve the attestation. It sends no email.
+
+This script only enqueues; the pass itself runs in the worker
+([src/jobs/lca-checks.ts](src/jobs/lca-checks.ts)).
 
 ```bash
-pnpm dlq
+pnpm lca:checks:enqueue                      # a nominal pass: every eligible row
+pnpm lca:checks:enqueue --dry-run --limit 5   # essai à blanc, no verdict moved
 ```
 
-Inspect/manage the BullMQ dead-letter queue. See [src/scripts/dlq.ts](src/scripts/dlq.ts).
+The job id is constant, so a second enqueue while a pass is queued or running is ignored rather
+than stacked, and the script exits 0 — that is the nominal case of a frequent cron.
 
-### Redis decode (`redis:decode`)
+Configuration, all optional, on the worker app:
+
+| var | default | role |
+|---|---|---|
+| `LCA_PENDING_CHECK_INSEE_CODE` | `99999` | the fictional commune `/search` is given, no row carrying a real one ([src/lca/insee.ts](src/lca/insee.ts)) |
+| `LCA_CHECKS_COOLDOWN_MIN` | `60` | minimum delay before a row is asked about again — what actually paces the load on LCA |
+| `LCA_CHECKS_MAX_ATTEMPTS` | `200` | rows past this are abandoned (≈ 8 days at the default cooldown) |
+| `LCA_CHECKS_MAX_DURATION_MIN` | `20` | wall-clock stop, to keep under the cron interval |
+| `LCA_CHECKS_MAX_CANDIDATES` | `3` | how many records a multi-result `/search` is confirmed against |
+| `LCA_CHECKS_DRY_RUN` | off | `1` plays both calls and journals them without moving a verdict |
+
+`LCA_API_URL` and `LCA_API_KEY` are required for a real pass. Locally, `LCA_MODE=mock` with
+`LCA_MOCK_CONFIRM_CODE` set to a seeded row's code exercises the happy path with no network.
+
+#### On the processing machine
+
+The cron goes through [src/scripts/run-lca-checks.sh](src/scripts/run-lca-checks.sh), which opens a
+Scalingo Redis tunnel (`scalingo db-tunnel SCALINGO_REDIS_URL`, port 10001) and runs the enqueuer
+against it. It reads `/etc/default/pass-sport-fc` like
+[run_fc_pipeline.sh](../data/2026/partners/franceconnect/run_fc_pipeline.sh), and holds a `flock`
+so a stuck tunnel cannot pile up SSH sessions.
 
 ```bash
-pnpm redis:decode
+SCALINGO_APP=<app> ./src/scripts/run-lca-checks.sh
+SCALINGO_APP=<app> ./src/scripts/run-lca-checks.sh --dry-run --limit 5
 ```
 
-Decode raw Redis/BullMQ payloads for debugging. See [src/scripts/redis-decode.ts](src/scripts/redis-decode.ts).
+The `pass-sport-lca-checks` crontab entry is deployed by [deploy/ansible/](../deploy/ansible/) but
+posted DISABLED, and its schedule is a playbook variable — see
+[deploy/ansible/README.md](../deploy/ansible/README.md).
+
+Reading a pass back, through the tunnel:
+
+```sql
+select action, status, count(*)
+  from eligibility_history
+ where action like 'lca.pending_check.%' or action like 'lca_checks.%'
+ group by 1, 2 order by 1;
+```
+
+Rows LCA never ended up serving:
+
+```sql
+select count(*) from eligibility_results
+ where verdict = 'eligible_pending_lca' and lca_check_attempts >= 200;
+```

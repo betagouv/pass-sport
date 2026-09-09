@@ -13,14 +13,6 @@ import {
 import type { OutcomeEmailKind } from "../email/notify";
 import type { PivotIdentity } from "../eligibility/types";
 
-// The verdict as the USAGER should read it. The verdict column below is where each
-// value is documented. 'eligible_pending_lca' is never produced by the worker — the code
-// generation under data/ writes it — but it is declared so the type stays the exact set
-// of values the column can hold.
-//
-// The FranceConnect path only ever writes 'eligible_pending' or 'not_assessed': it no longer
-// calls LCA, so it can neither hand out a code nor pronounce a refusal. Every other value
-// belongs to the parcours hors FranceConnect.
 export type Verdict =
   | "eligible_confirmed"
   | "eligible_confirmed_but_email_not_matching"
@@ -69,9 +61,17 @@ export const eligibilityResults = pgTable(
     residenceInsee: text("residence_insee"),
     passSportCode: text("pass_sport_code"),
 
-    // 'confirmed' | 'not_found' | 'error' on the parcours hors FranceConnect, which is the
-    // only one still calling LCA. Always 'not_applicable' on the FranceConnect path.
+    // 'confirmed' | 'not_found' | 'error'. Written by the parcours hors FranceConnect, and by the
+    // eligible_pending_lca_checks job (jobs/lca-checks.ts) once it has asked LCA about a code the
+    // data/ pipeline minted. 'not_applicable' is the initial value of a FranceConnect row: that
+    // path itself never calls LCA, so nothing had been asked yet.
     lcaStatus: text("lca_status").notNull(),
+
+    // How many times eligible_pending_lca_checks has asked LCA about this row. Bounds both the
+    // volume of LCA calls and the growth of eligibility_history, which that job is the first thing
+    // here to write to in a LOOP. 0 means never asked, which is what gets a freshly marked row
+    // checked without waiting out the cooldown.
+    lcaCheckAttempts: integer("lca_check_attempts").notNull().default(0),
 
     // The verdict as the USAGER should read it, and the only column the site is granted.
     // Deliberately not email_kind: that one describes what was SENT and is null whenever
@@ -90,12 +90,16 @@ export const eligibilityResults = pgTable(
     //                            LCA, et c'est la génération côté data/ qui en fabriquera un.
     //                            SEUL verdict positif du parcours FranceConnect.
     //   'eligible_pending_lca' — un code a été fabriqué pour cette personne et part vers
-    //                            LCA, qui ne le sert pas encore. JAMAIS écrit par le worker:
+    //                            LCA, qui ne le sert pas encore. Jamais ÉCRIT par le worker :
     //                            il est posé par la génération de codes côté data/, qui
     //                            ramasse les 'eligible_pending' et les marque une fois le
     //                            CSV produit (data/2026/partners/franceconnect/). C'est ce
     //                            qui rend ce ramassage rejouable — sans lui, un second
     //                            passage refabriquerait un code aux mêmes personnes.
+    //                            État transitoire : le job eligible_pending_lca_checks
+    //                            (jobs/lca-checks.ts) rejoue /search puis /confirm sur ces
+    //                            lignes et les fait passer à 'eligible_confirmed' dès que LCA
+    //                            sert le code.
     //   'not_eligible'         — LCA ne connaît pas le bénéficiaire. Parcours hors
     //                            FranceConnect uniquement : le parcours FC n'interroge plus
     //                            aucune base et n'est donc plus en position de refuser.
@@ -125,7 +129,13 @@ export const eligibilityResults = pgTable(
 
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("eligibility_results_allocataire_fc_sub_idx").on(t.allocataireFcSub)],
+  (t) => [
+    index("eligibility_results_allocataire_fc_sub_idx").on(t.allocataireFcSub),
+    // Covers the whole WHERE and ORDER BY of the eligible_pending_lca_checks selection.
+    index("eligibility_results_pending_lca_idx")
+      .on(t.lcaCheckAttempts, t.updatedAt)
+      .where(sql`${t.verdict} = 'eligible_pending_lca'`),
+  ],
 );
 
 export type EligibilityRow = typeof eligibilityResults.$inferInsert;
@@ -301,6 +311,14 @@ export const eligibilityHistory = pgTable(
     //   never purged, so a query over email events still has to match it.
     // | 'results.persisted' | 'results.skipped'
     // | 'psp.code_writeback' — written by data/, like the 'eligible_pending_lca' verdict
+    // The eligible_pending_lca_checks job (jobs/lca-checks.ts), under its own prefixes so a query
+    // can separate it from the LCA calls the site makes:
+    // | 'lca.pending_check.search' | 'lca.pending_check.confirm'
+    // | 'lca_checks.run_started' | 'lca_checks.run_finished'
+    // | 'lca_checks.confirmed' — verdict moved on to 'eligible_confirmed'
+    // | 'lca_checks.still_pending' — LCA does not serve this code yet
+    // | 'lca_checks.code_mismatch' — LCA answered a code other than the one stored
+    // | 'lca_checks.unprocessable' | 'lca_checks.skipped'
     action: text("action").notNull(),
 
     // 'success' | 'not_found' | 'error' | 'rate_limited' | 'skipped'
