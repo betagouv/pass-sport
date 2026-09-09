@@ -73,7 +73,7 @@
     # Les deux comptes humains. Vides par défaut : les noms d'opérateurs viennent du fichier
     # hors dépôt (~/pass-sport-secrets.yml), comme les secrets — ce dépôt est public.
     pass_sport_operators: []
-    fc_prod_drop_dir: /nfs/postgresql
+    fc_prod_drop_dir: /nfs/run
     # Interrupteur de sécurité : par défaut la cron FC est posée mais désactivée. Activer
     # avec `--extra-vars pass_sport_fc_cron_enabled=true` une fois les prérequis validés
     # (empreinte SSH amorcée, essai à blanc réussi).

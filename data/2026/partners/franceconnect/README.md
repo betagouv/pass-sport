@@ -56,7 +56,7 @@ exports figés ; ici la table continue de vivre entre deux passages.
 
 [run_fc_pipeline.sh](run_fc_pipeline.sh) enchaîne les 4 étapes sans interaction : il ouvre et
 referme lui-même le tunnel Scalingo, et dépose le CSV final dans `FC_PROD_DROP_DIR`
-(`/nfs/postgresql` par défaut), d'où il est injecté en base de production.
+(`/nfs/run` par défaut), d'où il est injecté en base de production.
 
 L'entrée de crontab n'est plus posée à la main : elle l'est par
 [deploy/ansible/lamp-setup.yml](../../../../deploy/ansible/lamp-setup.yml), qui la nomme
@@ -255,7 +255,7 @@ ce qui permet un passage d'essai avec un dossier de dépôt détourné —
 ```bash
 SCALINGO_APP="<application hébergeant la base>"   # obligatoire
 SCALINGO_API_TOKEN="<jeton>"                      # pour un scalingo non interactif
-FC_PROD_DROP_DIR="/nfs/postgresql"                # où le CSV final est déposé
+FC_PROD_DROP_DIR="/nfs/run"                       # où le CSV final est déposé
 FC_TUNNEL_PORT="10000"                            # port local du tunnel
 FC_LOG_DIR="./2026/partners/franceconnect/logs"   # journaux, un par jour
 FC_LOCK_FILE="/tmp/pass-sport-fc.lock"            # verrou anti-chevauchement

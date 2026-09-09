@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Passage complet de la source FranceConnect, sans interaction : les 4 étapes décrites par
-# README.md, du tunnel Scalingo jusqu'au dépôt du CSV de production dans /nfs/postgresql.
+# README.md, du tunnel Scalingo jusqu'au dépôt du CSV de production dans /nfs/run.
 #
 #   crontab -e
 #   30 4 * * * /chemin/vers/data/2026/partners/franceconnect/run_fc_pipeline.sh
@@ -20,7 +20,7 @@
 #   FC_EXPORT_PATHFILE_2026       sortie brute de export_eligible_pending.sql  (obligatoire)
 #   DB_FC_EXPORT_2026             CSV nettoyé au schéma PSP                    (obligatoire)
 #   EXISTING_CODES_PATHFILE_2026  liste des codes déjà distribués              (obligatoire)
-#   FC_PROD_DROP_DIR              dossier de dépôt          (défaut /nfs/postgresql)
+#   FC_PROD_DROP_DIR              dossier de dépôt          (défaut /nfs/run)
 #   FC_TUNNEL_PORT                port local du tunnel      (défaut 10000)
 #   FC_LOG_DIR                    journaux                  (défaut <ce dossier>/logs)
 #   FC_LOCK_FILE                  verrou anti-chevauchement (défaut /tmp/pass-sport-fc.lock)
@@ -91,7 +91,7 @@ for var in "${!caller_env[@]}"; do
   export "${var?}"
 done
 
-FC_PROD_DROP_DIR="${FC_PROD_DROP_DIR:-/nfs/postgresql}"
+FC_PROD_DROP_DIR="${FC_PROD_DROP_DIR:-/nfs/run}"
 FC_TUNNEL_PORT="${FC_TUNNEL_PORT:-10000}"
 FC_LOG_DIR="${FC_LOG_DIR:-$FC_DIR/logs}"
 FC_LOCK_FILE="${FC_LOCK_FILE:-/tmp/pass-sport-fc.lock}"

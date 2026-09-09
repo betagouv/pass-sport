@@ -168,7 +168,7 @@ flowchart TB
     %% les mêmes bénéficiaires et leur fabriquerait un second code.
     mg3 -->|"FC uniquement"| wb1
     wb2 -.->|"marque les servis"| ELIG_RESULTS
-    wb3 -->|"dépôt en dernier, une fois le marquage vérifié"| FC_DROP[("FC_PROD_DROP_DIR\n/nfs/postgresql")]:::finalFile
+    wb3 -->|"dépôt en dernier, une fois le marquage vérifié"| FC_DROP[("FC_PROD_DROP_DIR\n/nfs/run")]:::finalFile
 
     %% Le boursier est son propre allocataire : pas de foyer à résoudre, donc pas d'appel
     %% quotient_familial, donc pas de point d'arrêt qf-batch. Un seul notebook mène l'export

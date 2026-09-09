@@ -160,7 +160,7 @@ ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
 Deux tâches portent ce tag : la crontab `pass-sport-fc` et `/etc/default/pass-sport-fc`
 (`SCALINGO_APP`/`SCALINGO_API_TOKEN` n'ont souvent pas de sens tant que la cron elle-même est
 reportée). Le reste du provisioning tourne normalement, CLI Scalingo comprise — y compris la
-vérification que `fc_prod_drop_dir` (`/nfs/postgresql`) est inscriptible, qui n'est **pas**
+vérification que `fc_prod_drop_dir` (`/nfs/run`) est inscriptible, qui n'est **pas**
 taguée : si ce montage n'existe pas encore non plus, le playbook échouera quand même sur cette
 tâche-là. Un passage ultérieur sans `--skip-tags fc-cron` pose les deux fichiers, crontab
 désactivée par défaut comme toujours.
@@ -245,7 +245,7 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
   pour l'arrêter une fois l'empreinte acceptée).
 - **`data/.env` et `worker/.env.local`** — chemins de campagne et jeton API Particulier. Ils
   changent d'une campagne à l'autre, là où le playbook décrit la machine.
-- **le montage `/nfs/postgresql`** — il appartient à l'infra ; le playbook vérifie seulement
+- **le montage `/nfs/run`** — il appartient à l'infra ; le playbook vérifie seulement
   qu'il est inscriptible.
 
 ## Vérification après un provisioning
