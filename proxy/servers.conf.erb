@@ -3,10 +3,35 @@
 resolver 127.0.0.11 valid=5s ipv6=off;
 
 upstream app_backend {
-  server <%= ENV['SCALINGO_PRIVATE_BACKEND_HOSTNAME'] %>:10000 resolve;
+  # max_fails=0 disables passive ejection. The default (max_fails=1 fail_timeout=10s) turned a
+  # single reused-then-closed socket per peer into 10 seconds of blanket 502s: both backend
+  # containers were marked down at once and every request got "no live upstreams" until the
+  # timer expired. Nothing is lost by not ejecting — proxy_next_upstream still retries the
+  # failed request on the other peer, it just no longer blacklists a backend that is alive.
+  server <%= ENV['SCALINGO_PRIVATE_BACKEND_HOSTNAME'] %>:10000 resolve max_fails=0;
   keepalive 16;
+  # Must stay below the backend's own KEEP_ALIVE_TIMEOUT (see site/Procfile) so nginx is always
+  # the side that closes an idle pooled connection. The reverse ordering is what produced the
+  # "upstream prematurely closed connection while reading response header" errors above.
+  keepalive_timeout 30s;
   zone app_backend 64k;
 }
+
+# The default access log records the status but nothing about the upstream, which is what made
+# the 502 bursts unreadable after the fact — the peer, its status and the connect timing all had
+# to be reconstructed from the error log. This is an additional log, declared alongside the
+# default one rather than replacing it, and it only fires on 5xx: normal traffic keeps its usual
+# format and volume. log_format must be declared before the access_log that names it.
+log_format upstream_failure '$remote_addr "$request" $status '
+                            'upstream=$upstream_addr upstream_status=$upstream_status '
+                            'connect=$upstream_connect_time response=$upstream_response_time';
+
+map $status $is_upstream_failure {
+  default 0;
+  ~^5     1;
+}
+
+access_log /dev/stdout upstream_failure if=$is_upstream_failure;
 
 server {
   server_name localhost;
