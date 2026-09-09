@@ -20,7 +20,7 @@
     "@api-gouv-dinum/api-particulier": "^0.1.1",
     "@sentry/node": "^10.68.0",
     "bullmq": "^5.81.2",
-    "csv-parse": "^7.0.1",
+    "csv-parse": "^7.0.2",
     "csv-stringify": "^6.8.1",
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.11.1",
