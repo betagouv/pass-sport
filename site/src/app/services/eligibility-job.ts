@@ -4,6 +4,7 @@ import { CAISSE } from '@/utils/eligibility-test';
 export type PivotIdentity = {
   sub?: string;
   family_name: string;
+  preferred_username?: string;
   given_name?: string;
   birthdate?: string; // ISO "YYYY-MM-DD"
   gender?: 'male' | 'female';

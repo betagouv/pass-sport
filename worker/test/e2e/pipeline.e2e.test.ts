@@ -140,6 +140,18 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(self[0].enfant_identite).toBeNull();
   });
 
+  it("le nom d'usage de l'allocataire est persisté quand FranceConnect en sert un", async () => {
+    const sub = "fc-sub-nom-usage";
+    await stack.enqueueAndWait({
+      ...allocataire(),
+      identity: { ...allocataire().identity, sub, preferred_username: "Vorsalde" },
+    });
+
+    const self = await selfRows();
+    expect(self[0].allocataire_identite.preferred_username).toBe("Vorsalde");
+    expect(self[0].allocataire_identite.family_name).toBe("Martin");
+  });
+
   it("QF children chain -> une ligne par enfant, une seule enveloppe", async () => {
     const before = stack.sentEmails().length;
 
@@ -311,6 +323,19 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       "2009-01-01": "female",
       "2012-01-01": "female",
     });
+  });
+
+  // Stored for the code write-back, which will match on identity. The row still NAMES the child
+  // by their nom de naissance — that is the name the AEEH call went out under.
+  it("enfant_identite carries the nom d'usage without naming the child by it", async () => {
+    await stack.enqueueAndWait(allocataire());
+
+    const cadet = (await enfantRows()).find((x) => x.enfant_identite?.birthdate === "2012-01-01");
+    expect(cadet.enfant_identite.family_name).toBe("Enfant");
+    expect(cadet.enfant_identite.preferred_username).toBe("Bravenne");
+
+    const milieu = (await enfantRows()).find((x) => x.enfant_identite?.birthdate === "2009-01-01");
+    expect(milieu.enfant_identite.preferred_username).toBeUndefined();
   });
 
   it("QF sous le seuil: les 6-17 ans éligibles sans appel AEEH", async () => {

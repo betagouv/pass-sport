@@ -32,8 +32,11 @@ export type Verdict =
  * still fills it: the FranceConnect form stopped asking for a commune once LCA was unplugged
  * from that path, so rows written by it carry neither the key nor the column.
  *
- * Deliberately not widening PivotIdentity itself: that type is handed WHOLE to API
- * Particulier (eligibility/sequence.ts), so anything added to it risks reaching the API.
+ * Deliberately not widening PivotIdentity itself: nothing outside our own code declares
+ * residence_insee, so it has no place in a type that models FranceConnect's claims. The claims
+ * themselves do belong there — `preferred_username` (nom d'usage) rides along that way and lands
+ * here for free; the param builders in eligibility/client.ts pick their fields one by one, so
+ * widening the pivot never widens what reaches API Particulier.
  */
 export type AllocataireIdentite = Partial<Omit<PivotIdentity, "sub">> & {
   residence_insee?: string;

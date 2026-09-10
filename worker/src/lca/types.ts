@@ -80,6 +80,7 @@ export type BeneficiaryCandidate = {
   // candidates.ts). 'self' candidates leave this unset: the PDF route sources the
   // allocataire's gender from their FranceConnect session identity, not from here.
   gender?: "male" | "female";
+  nomUsage?: string;
   eligibilities: Allowance[];
   reasons: string[];
 };

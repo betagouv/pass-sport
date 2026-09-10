@@ -155,6 +155,7 @@ export async function processEligibilityJob(
         const enfantIdentite = isEnfant
           ? {
               family_name: candidate.lastname,
+              preferred_username: candidate.nomUsage,
               given_name: candidate.firstname,
               birthdate: candidate.birthdate,
               gender: candidate.gender,

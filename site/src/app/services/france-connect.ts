@@ -33,6 +33,7 @@ export interface FranceConnectIdentity {
   sub: string;
   given_name?: string;
   family_name?: string;
+  preferred_username?: string;
   birthdate?: string;
   gender?: string;
   birthplace?: string;
@@ -41,7 +42,7 @@ export interface FranceConnectIdentity {
 }
 
 const DEFAULT_BASE_URL = 'https://fcp-low.sbx.dev-franceconnect.fr/api/v2';
-const DEFAULT_SCOPES = 'openid identite_pivot email';
+const DEFAULT_SCOPES = 'openid identite_pivot preferred_username email';
 
 export const getFranceConnectConfig = (): FranceConnectConfig => {
   const clientId = process.env.FRANCE_CONNECT_CLIENT_ID;

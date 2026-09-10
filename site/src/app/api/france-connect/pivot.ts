@@ -13,6 +13,7 @@ export const toPivotIdentity = (identity: FranceConnectIdentity): PivotIdentity 
   return {
     sub: identity.sub,
     family_name: identity.family_name,
+    preferred_username: identity.preferred_username,
     given_name: identity.given_name,
     birthdate: identity.birthdate,
     gender,

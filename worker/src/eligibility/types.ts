@@ -107,6 +107,7 @@ export type PivotIdentity = {
   // only on an état civil modification. Never fed to API Particulier.
   sub?: string;
   family_name: string;
+  preferred_username?: string;
   given_name?: string;
   birthdate?: string;
   gender?: "male" | "female";

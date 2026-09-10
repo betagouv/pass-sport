@@ -172,6 +172,7 @@ class FakeApiClient implements ApiParticulierClient {
           },
           {
             nom_naissance: this.childrenLastname,
+            nom_usage: "Bravenne",
             prenoms: "Cadet",
             sexe: "F",
             date_naissance: "01/01/2012",

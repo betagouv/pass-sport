@@ -163,4 +163,34 @@ describe("listBeneficiaryCandidates — nom", () => {
 
     expect(candidates.filter((c) => c.source === "enfant")).toHaveLength(0);
   });
+
+  // The nom d'usage is carried without ever naming the child: the write-back will match on it,
+  // so dropping it here would leave those rows unmatchable.
+  it("carries the nom d'usage alongside the name it does not use", () => {
+    const candidates = listBeneficiaryCandidates(IDENTITY, [
+      qfResult([
+        {
+          nom_naissance: "ZALQUIN",
+          nom_usage: "BRAVENNE",
+          prenoms: "Fenrys",
+          date_naissance: "2015-06-02",
+          sexe: "F",
+        },
+      ]),
+    ]);
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({ lastname: "ZALQUIN", nomUsage: "BRAVENNE" });
+  });
+
+  it("leaves nomUsage unset when the QF row carries none", () => {
+    const candidates = listBeneficiaryCandidates(IDENTITY, [
+      qfResult([
+        { nom_naissance: "ZALQUIN", prenoms: "Fenrys", date_naissance: "2015-06-02", sexe: "F" },
+      ]),
+    ]);
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].nomUsage).toBeUndefined();
+  });
 });
