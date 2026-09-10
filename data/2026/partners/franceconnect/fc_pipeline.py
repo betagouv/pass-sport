@@ -92,6 +92,12 @@ def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
     df, allocataires_non_resolus = fc.resolve_allocataire_caf(df)
     df = fc.resolve_adresse_qf(df)
 
+    # Nom d'usage du bénéficiaire, seconde variante de la clé de rapprochement : celui que le
+    # worker stocke dans enfant_identite, sinon celui de qf_enfants pour les lignes plus
+    # anciennes ; sur une ligne 'self', celui de l'allocataire — d'où l'ordre, après
+    # resolve_allocataire_caf.
+    df = fc.resolve_beneficiaire_nom_usage(df)
+
     # Projection vers le schéma PSP : le bénéficiaire est l'enfant sur les lignes 'enfant',
     # l'allocataire connecté lui-même sur les lignes 'self'. Crée aussi la charpente
     # allocataire-* / adresse_allocataire-* que les sérialiseurs JSON consomment plus bas.
@@ -167,6 +173,10 @@ def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
         'genre_F': len(df_final[df_final['genre'] == 'F']),
         'par_organisme_situation': df_final[['organisme', 'situation']].value_counts(),
         'avec_ine': int((candidats['ine'] != '').sum()),
+        # La part des gens qui ont un nom d'usage distinct : c'est elle qui dit ce que la
+        # seconde variante de la clé rapporte réellement.
+        'allocataires_avec_nom_usage': int((candidats['allocataire_nom_usage'] != '').sum()),
+        'beneficiaires_avec_nom_usage': int((candidats['beneficiaire_nom_usage'] != '').sum()),
         'sortie': str(output_filepath),
         'candidats_rapprochement': str(match_filepath) if match_filepath else '(non écrit)',
     }

@@ -23,6 +23,7 @@ def enfant_row(**overrides):
         'source': 'enfant',
         'allocataire_fc_sub': 'sub-A',
         'allocataire-nom_naissance': 'MARTIN',
+        'allocataire-nom_usage': None,
         'allocataire-prenom': 'Claire',
         'allocataire-date_naissance': '1985-03-02',
         'allocataire-genre': 'female',
@@ -30,6 +31,7 @@ def enfant_row(**overrides):
         'enfant_nom': 'MARTIN',
         'enfant_prenom': 'Lea',
         'enfant_date_naissance': '2015-06-01',
+        'enfant_nom_usage': None,
         'qf_valeur': '650',
         'qf_fournisseur': 'CNAF',
         'qf_enfants': None,
@@ -468,3 +470,83 @@ def test_les_candidats_au_rapprochement_portent_les_colonnes_attendues():
     assert candidats.loc[0, 'beneficiaire_date_naissance'] == '2015-06-01'
     # Pas de route boursier ici : aucun INE, donc aucune jointure exacte à tenter.
     assert candidats.loc[0, 'ine'] == ''
+
+
+# --- Noms d'usage ------------------------------------------------------------------
+
+# Le foyer tel que la CAF l'écrit pour ses enfants : la même entrée donne le genre et le nom
+# d'usage, retrouvée par nom de naissance, prénoms et date.
+ENFANTS_QF_AVEC_USAGE = json.dumps([
+    {'nom_naissance': 'MARTIN', 'nom_usage': 'ZALQUIN', 'prenoms': 'Lea',
+     'date_naissance': '01/06/2015', 'sexe': 'F'},
+])
+
+
+def noms_d_usage(row):
+    """Enchaîne les résolutions dans l'ordre de fc_pipeline.clean."""
+    df = pd.DataFrame([row])
+    df, _ = lib.resolve_enfant_genre(df)
+    df, _ = lib.resolve_allocataire_caf(df)
+    df = lib.resolve_beneficiaire_nom_usage(df)
+    return df.loc[0, 'match-allocataire_nom_usage'], df.loc[0, 'match-beneficiaire_nom_usage']
+
+
+def test_sans_reponse_qf_le_nom_d_usage_de_l_allocataire_vient_de_franceconnect():
+    # Route AAH : aucun appel quotient_familial, donc aucun tableau `allocataires`. Le
+    # preferred_username FranceConnect est alors le seul nom d'usage disponible — et c'est un
+    # nom d'usage que la CNAF range dans RESPDOS.
+    allocataire, _ = noms_d_usage(self_row(aah_est_beneficiaire='true',
+                                           **{'allocataire-nom_usage': 'Vorsalde'}))
+    assert allocataire == 'Vorsalde'
+
+
+def test_le_nom_d_usage_de_la_caf_prime_sur_celui_de_franceconnect():
+    # La base cherchée porte l'orthographe de la caisse : autant la préférer quand on l'a.
+    allocataire, _ = noms_d_usage(enfant_row(qf_allocataires=ALLOCATAIRES_QF,
+                                             **{'allocataire-nom_usage': 'Vorsalde'}))
+    assert allocataire == 'MARTIN'
+
+
+def test_le_nom_d_usage_de_l_enfant_vient_de_enfant_identite():
+    _, beneficiaire = noms_d_usage(enfant_row(enfant_nom_usage='Bravenne',
+                                              qf_enfants=ENFANTS_QF_AVEC_USAGE))
+    assert beneficiaire == 'Bravenne'
+
+
+def test_sans_nom_d_usage_stocke_celui_de_l_enfant_est_repris_de_qf_enfants():
+    # Lignes écrites avant que le worker ne stocke enfant_identite.preferred_username : la
+    # réponse quotient_familial le porte toujours.
+    _, beneficiaire = noms_d_usage(enfant_row(qf_enfants=ENFANTS_QF_AVEC_USAGE))
+    assert beneficiaire == 'ZALQUIN'
+
+
+def test_sur_une_ligne_self_le_beneficiaire_porte_le_nom_d_usage_de_l_allocataire():
+    # Le bénéficiaire EST l'allocataire : une seule valeur sert les deux moitiés de la clé.
+    allocataire, beneficiaire = noms_d_usage(self_row(**{'allocataire-nom_usage': 'Vorsalde'}))
+    assert beneficiaire == allocataire == 'Vorsalde'
+
+
+def test_sans_aucun_nom_d_usage_la_variante_reste_vide():
+    allocataire, beneficiaire = noms_d_usage(enfant_row())
+    assert (allocataire, beneficiaire) == ('', '')
+
+
+def test_les_candidats_portent_le_genre_la_qualite_et_les_noms_d_usage():
+    import partners_lib as partners
+
+    df = pd.DataFrame([enfant_row(qf_enfants=ENFANTS_QF_AVEC_USAGE,
+                                  **{'allocataire-nom_usage': 'Vorsalde'})])
+    df, _ = lib.resolve_enfant_genre(df)
+    df, _ = lib.resolve_allocataire_caf(df)
+    df = lib.resolve_adresse_qf(df)
+    df = lib.resolve_beneficiaire_nom_usage(df)
+    df = lib.build_psp_columns(df)
+    df = partners.add_allocataire_json_column(df)
+
+    candidats = lib.build_match_candidates(df)
+
+    assert list(candidats.columns) == lib.MATCH_COLUMNS
+    assert candidats.loc[0, 'allocataire_nom_usage'] == 'Vorsalde'
+    assert candidats.loc[0, 'beneficiaire_nom_usage'] == 'ZALQUIN'
+    assert candidats.loc[0, 'beneficiaire_genre'] == 'F'
+    assert candidats.loc[0, 'allocataire_qualite'] == 'Mme'

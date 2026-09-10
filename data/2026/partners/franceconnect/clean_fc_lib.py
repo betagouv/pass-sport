@@ -116,6 +116,10 @@ FINAL_COLUMNS_TO_DROP = [
     'aah_est_beneficiaire',
     'crous_est_boursier',
     'crous_ine',
+    # noms d'usage servis par FranceConnect (preferred_username), déjà repris dans les
+    # colonnes `match-*` par resolve_allocataire_caf et resolve_beneficiaire_nom_usage
+    'allocataire-nom_usage',
+    'enfant_nom_usage',
     # charpente repliée dans la colonne JSON `allocataire`
     'allocataire-qualite',
     'allocataire-matricule',
@@ -237,17 +241,63 @@ def resolve_organisme(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _texte(valeur) -> str:
+    """Une cellule en texte nu : '' pour None, NaN ou une chaîne vide.
+
+    `str(valeur or '')` ne suffit pas : un NaN est vrai en contexte booléen, et deviendrait
+    la chaîne 'nan'.
+    """
+    if valeur is None or (isinstance(valeur, float) and np.isnan(valeur)):
+        return ''
+    return str(valeur).strip()
+
+
+def _entree_qf_de_l_enfant(row):
+    """L'entrée du tableau `enfants` de quotient_familial qui décrit l'enfant de la ligne.
+
+    Appariement sur (nom, prénoms, date de naissance), le nom pouvant être le nom de naissance
+    comme le nom d'usage : candidates.ts ne retient plus que le nom de naissance, mais les
+    lignes écrites avant ce changement portent un nom d'usage. None sur une ligne 'self', sans
+    réponse lisible, ou sans entrée concordante.
+
+    Partagée par resolve_enfant_genre (le sexe) et resolve_beneficiaire_nom_usage (le nom
+    d'usage), pour que les deux lisent la MÊME entrée.
+    """
+    if row['source'] != 'enfant':
+        return None
+
+    try:
+        enfants = json.loads(row['qf_enfants']) if row['qf_enfants'] else []
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(enfants, list):
+        return None
+
+    cible = (
+        unaccent_and_upper(_texte(row['enfant_nom'])),
+        unaccent_and_upper(_texte(row['enfant_prenom'])),
+        _to_iso_birthdate(row['enfant_date_naissance']),
+    )
+
+    for enfant in enfants:
+        if not isinstance(enfant, dict):
+            continue
+        prenoms = unaccent_and_upper(_texte(enfant.get('prenoms')))
+        naissance = _to_iso_birthdate(enfant.get('date_naissance'))
+        for cle_nom in ('nom_naissance', 'nom_usage'):
+            nom = unaccent_and_upper(_texte(enfant.get(cle_nom)))
+            if nom and (nom, prenoms, naissance) == cible:
+                return enfant
+
+    return None
+
+
 def resolve_enfant_genre(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     """Retrouve le genre des enfants dans le tableau `enfants` de quotient_familial.
 
-    `enfant_identite` ne stocke que family_name/given_name/birthdate (worker/src/index.ts) :
-    le sexe n'y est pas, alors que `genre` est une colonne obligatoire. La réponse brute
-    quotient_familial, elle, le porte — d'où l'appariement sur (nom, prénoms, date de
-    naissance).
-
-    candidates.ts ne retient plus que le nom de naissance, mais l'appariement essaie encore
-    `nom_usage` : les lignes écrites avant ce changement portent un nom d'usage, et les
-    restreindre au nom de naissance les laisserait sans genre, donc écartées.
+    `enfant_identite` ne porte ni genre ni sexe, alors que `genre` est une colonne
+    obligatoire. La réponse brute quotient_familial, elle, le porte — d'où l'appariement de
+    l'enfant dans ce tableau (_entree_qf_de_l_enfant).
 
     Renvoie (df, nombre d'enfants non appariés). Ceux-là gardent un genre vide et seront
     écartés plus loin ; un compte non nul mérite un coup d'œil, il signale un décalage
@@ -256,29 +306,10 @@ def resolve_enfant_genre(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     df = df.copy()
 
     def genre_for(row) -> str:
-        if row['source'] != 'enfant':
+        enfant = _entree_qf_de_l_enfant(row)
+        if enfant is None:
             return ''
-
-        try:
-            enfants = json.loads(row['qf_enfants']) if row['qf_enfants'] else []
-        except (TypeError, ValueError):
-            return ''
-
-        cible = (
-            unaccent_and_upper(str(row['enfant_nom'] or '')).strip(),
-            unaccent_and_upper(str(row['enfant_prenom'] or '')).strip(),
-            _to_iso_birthdate(row['enfant_date_naissance']),
-        )
-
-        for enfant in enfants:
-            prenoms = unaccent_and_upper(str(enfant.get('prenoms') or '')).strip()
-            naissance = _to_iso_birthdate(enfant.get('date_naissance'))
-            for cle_nom in ('nom_naissance', 'nom_usage'):
-                nom = unaccent_and_upper(str(enfant.get(cle_nom) or '')).strip()
-                if nom and (nom, prenoms, naissance) == cible:
-                    return GENRE_BY_SEXE.get(str(enfant.get('sexe') or '').strip().upper(), '')
-
-        return ''
+        return GENRE_BY_SEXE.get(_texte(enfant.get('sexe')).upper(), '')
 
     df['enfant_genre'] = '' if df.empty else df.apply(genre_for, axis=1)
 
@@ -291,10 +322,11 @@ def resolve_allocataire_caf(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
 
     Sert au rapprochement avec la base bénéficiaires, et à rien d'autre : les lignes CNAF et
     MSA de cette base portent l'orthographe du fichier partenaire, pas celle de l'état civil.
-    Le pivot FranceConnect donne `family_name`, et plus de nom d'usage depuis le retrait de
-    `preferred_username` ; le tableau `allocataires` de la réponse quotient_familial, lui,
-    porte les deux — c'est la même caisse, le même système d'information que l'export
-    partenaire qu'on cherche à retrouver.
+    Le pivot FranceConnect donne l'état civil (`family_name`) et, quand le fournisseur
+    d'identité en sert un, le nom d'usage (`preferred_username`). Le tableau `allocataires`
+    de la réponse quotient_familial porte les deux, et c'est lui qu'on préfère : c'est la même
+    caisse, le même système d'information que l'export partenaire qu'on cherche à retrouver.
+    Le pivot n'est qu'un repli.
 
     Le tableau peut décrire un couple. L'allocataire connecté est celui dont la date de
     naissance est celle du pivot ; à défaut, un tableau à une seule entrée ne laisse aucun
@@ -347,15 +379,48 @@ def resolve_allocataire_caf(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
         if 'allocataire-nom_naissance' in df.columns else pd.Series('', index=df.index)
     pivot_prenom = df['allocataire-prenom'].fillna('') \
         if 'allocataire-prenom' in df.columns else pd.Series('', index=df.index)
+    pivot_nom_usage = df['allocataire-nom_usage'].fillna('') \
+        if 'allocataire-nom_usage' in df.columns else pd.Series('', index=df.index)
 
     df['match-allocataire_nom_naissance'] = caf_nom.where(caf_nom != '', pivot_nom)
-    # Pas de repli sur le pivot pour le nom d'usage : FranceConnect n'en fournit plus depuis
-    # le retrait de `preferred_username`, et le fabriquer à partir de l'état civil ne
-    # produirait que le nom de naissance — une clé en double, sans rien apporter.
-    df['match-allocataire_nom_usage'] = caf_nom_usage
+    # Nom d'usage : celui de la caisse d'abord, à défaut celui que FranceConnect a servi. Sans
+    # l'un ni l'autre la variante reste vide — la fabriquer depuis l'état civil ne donnerait
+    # que le nom de naissance, une clé en double.
+    df['match-allocataire_nom_usage'] = caf_nom_usage.where(caf_nom_usage != '', pivot_nom_usage)
     df['match-allocataire_prenom'] = caf_prenom.where(caf_prenom != '', pivot_prenom)
 
     return df, non_resolus
+
+
+def resolve_beneficiaire_nom_usage(df: pd.DataFrame) -> pd.DataFrame:
+    """Le nom d'usage du bénéficiaire : la seconde variante de la moitié bénéficiaire de la clé.
+
+    Côté base, la CNAF range dans `nom` le NOMENF de son export, qui ne porte pas le suffixe
+    NAI de ses noms de naissance : un nom d'usage, présumément. Le candidat en essaie donc un
+    aussi, pris :
+
+    - sur une ligne 'enfant', dans `enfant_identite.preferred_username`, que le worker reprend
+      de qf_enfants[].nom_usage et stocke sans jamais nommer l'enfant par lui ; à défaut —
+      lignes écrites avant ce stockage — dans l'entrée de qf_enfants qui décrit l'enfant,
+      retrouvée comme pour le genre (_entree_qf_de_l_enfant) ;
+    - sur une ligne 'self', où le bénéficiaire EST l'allocataire : son nom d'usage à lui, déjà
+      résolu. D'où l'ordre d'appel, APRÈS resolve_allocataire_caf.
+    """
+    df = df.copy()
+
+    def nom_usage_for(row) -> str:
+        if row['source'] != 'enfant':
+            return _texte(row.get('match-allocataire_nom_usage'))
+
+        stocke = _texte(row.get('enfant_nom_usage'))
+        if stocke:
+            return stocke
+
+        enfant = _entree_qf_de_l_enfant(row)
+        return unaccent_and_upper(_texte(enfant.get('nom_usage'))) if enfant else ''
+
+    df['match-beneficiaire_nom_usage'] = '' if df.empty else df.apply(nom_usage_for, axis=1)
+    return df
 
 
 def resolve_adresse_qf(df: pd.DataFrame) -> pd.DataFrame:
@@ -392,8 +457,10 @@ def _champ_du_json_allocataire(valeur, champ: str) -> str:
     return str(allocataire.get(champ) or '') if isinstance(allocataire, dict) else ''
 
 
-# Colonnes du CSV de rapprochement, dans l'ordre où match_beneficiaires.sql les attend. Elles
-# ne vont pas en production : elles vivent le temps d'une requête contre la base bénéficiaires.
+# Colonnes du CSV de rapprochement. Elles ne vont pas en production : elles vivent le temps
+# d'une requête contre la base bénéficiaires. match_beneficiaires.sql les charge avec
+# `header match`, qui exige ces noms dans cet ordre — une colonne ajoutée ici doit l'être
+# aussi à sa table fc_candidats, sinon le chargement échoue au lieu de décaler les données.
 MATCH_COLUMNS = [
     'eligibility_result_id',
     'ine',
@@ -409,9 +476,17 @@ MATCH_COLUMNS = [
     # son JSON, une clé qui l'exigerait rendrait ses lignes introuvables. MSA et CNOUS la
     # portent, elle sert donc à DÉPARTAGER deux homonymes — jamais à apparier seule.
     'allocataire_date_naissance',
+    # Départageur, hors clé pour la même raison : M / Mme, comme les partenaires l'écrivent.
+    'allocataire_qualite',
     'beneficiaire_nom',
+    # Seconde variante du nom du bénéficiaire, pour la même raison que celle de l'allocataire :
+    # la CNAF range dans NOMENF un nom sans le suffixe NAI de ses noms de naissance.
+    'beneficiaire_nom_usage',
     'beneficiaire_prenom',
     'beneficiaire_date_naissance',
+    # Départageur, hors clé : un seul bit d'information, et côté FranceConnect le genre de
+    # l'enfant est dérivé par appariement dans qf_enfants, qui peut échouer.
+    'beneficiaire_genre',
     'code_postal',
 ]
 
@@ -441,12 +516,16 @@ def build_match_candidates(df: pd.DataFrame) -> pd.DataFrame:
         'allocataire_prenom': colonne('match-allocataire_prenom'),
         'allocataire_date_naissance': df['allocataire'].map(
             lambda v: _champ_du_json_allocataire(v, 'date_naissance')),
+        'allocataire_qualite': df['allocataire'].map(
+            lambda v: _champ_du_json_allocataire(v, 'qualite')),
         'beneficiaire_nom': df['nom'],
+        'beneficiaire_nom_usage': colonne('match-beneficiaire_nom_usage'),
         'beneficiaire_prenom': df['prenom'],
         # La date seule : la base stocke ces dates décalées de 4 h
         # (partners.shift_birthdate_by_hours) et la clé de recherche n'en retient que le jour.
         'beneficiaire_date_naissance': pd.to_datetime(
             df['date_naissance'], errors='coerce').dt.strftime('%Y-%m-%d'),
+        'beneficiaire_genre': df['genre'],
         'code_postal': colonne('match-code_postal').fillna(''),
     })
 

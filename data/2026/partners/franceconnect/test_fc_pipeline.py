@@ -34,6 +34,7 @@ def export_row(**overrides) -> dict:
         'created_at': '2026-08-01 09:00:00+00',
         'allocataire_fc_sub': 'sub-A',
         'allocataire-nom_naissance': 'MARTIN',
+        'allocataire-nom_usage': '',
         'allocataire-prenom': 'Claire',
         'allocataire-date_naissance': '1985-03-02',
         'allocataire-genre': 'female',
@@ -43,6 +44,7 @@ def export_row(**overrides) -> dict:
         'enfant_nom': 'MARTIN',
         'enfant_prenom': 'Lea',
         'enfant_date_naissance': '2015-06-01',
+        'enfant_nom_usage': '',
         'qf_valeur': '650',
         'qf_fournisseur': 'CNAF',
         'qf_enfants': json.dumps([{
@@ -233,6 +235,24 @@ def test_les_trois_etapes_enchainees(tmp_path):
     assert df_writeback.loc[0, 'id_psp'] == df_prod.loc[0, 'id_psp']
     assert df_writeback.loc[0, 'eligibility_result_id'] == \
         '11111111-1111-1111-1111-111111111111'
+
+
+def test_clean_ecrit_les_noms_d_usage_dans_les_candidats_au_rapprochement(tmp_path):
+    input_filepath = write_export(tmp_path, [export_row(
+        enfant_nom_usage='Bravenne', **{'allocataire-nom_usage': 'Vorsalde'})])
+    output_filepath = tmp_path / 'FC_2026.csv'
+    match_filepath = tmp_path / 'candidats.csv'
+
+    stats = pipeline.clean(input_filepath, output_filepath, match_filepath)
+
+    candidats = pd.read_csv(match_filepath, sep=';', dtype=str, keep_default_na=False)
+    assert candidats.loc[0, 'allocataire_nom_usage'] == 'Vorsalde'
+    assert candidats.loc[0, 'beneficiaire_nom_usage'] == 'Bravenne'
+    assert stats['allocataires_avec_nom_usage'] == 1
+    assert stats['beneficiaires_avec_nom_usage'] == 1
+    # Les noms d'usage vivent dans le fichier de rapprochement, jamais dans le CSV de
+    # production, qui garde exactement le schéma PSP.
+    assert set(read_psp(output_filepath).columns) == COLONNES_PSP
 
 
 def test_split_matched_ne_garde_que_les_non_apparies(tmp_path):

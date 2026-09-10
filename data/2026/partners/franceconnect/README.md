@@ -59,32 +59,53 @@ flowchart TD
 
 ### Comment le rapprochement identifie quelqu'un
 
-Trois niveaux, du plus sûr au plus lâche, chacun n'examinant que ce que le précédent n'a pas
-tranché :
+Six niveaux, du plus sûr au plus lâche. Chacun n'examine que les candidats que les précédents
+n'ont pas appariés, et ne retient que s'il trouve **exactement un** `id_psp` :
 
-1. **l'INE**, jointure exacte avec `allocataire->>'matricule'` — le CNOUS y range l'INE du
-   boursier, et API Particulier le rend sur cette route. Aucun équivalent n'existe pour la
-   CNAF ni la MSA : la réponse `quotient_familial` ne porte **aucun** numéro d'allocataire ;
-2. **l'identité**, sur la colonne générée `beneficiaires.cle_recherche` — nom et prénom de
-   l'allocataire, date de naissance et nom du bénéficiaire, puis ses prénoms. Recherche sur
-   le 1er prénom ; si plusieurs lignes répondent, nouvelle recherche sur les deux premiers.
-   **Deux clés sont essayées côté allocataire**, son nom de naissance et son nom d'usage,
-   parce que les deux caisses ne rangent pas la même chose dans le `allocataire.nom` qui part
-   en base : la MSA y met le nom de naissance, la CNAF y met `RESPDOS`, qui est un nom
-   d'usage. Une clé unique raterait systématiquement l'une des deux ;
-3. **la date de naissance de l'allocataire**, en dernier recours, pour départager des
-   homonymes stricts dont le bénéficiaire n'a qu'un seul prénom.
+| # | critère | nature |
+|---|---|---|
+| 1 | **INE** = `allocataire->>'matricule'` | exact. Le CNOUS y range l'INE du boursier. Rien d'équivalent pour la CNAF ni la MSA : `quotient_familial` ne porte aucun numéro d'allocataire |
+| 2 | **clé** + 1er prénom du bénéficiaire | préfixe sur `beneficiaires.cle_recherche` |
+| 3 | **clé** + 2 premiers prénoms | pour les ambigus du niveau 2 |
+| 4 | **genre** du bénéficiaire, et `qualite` de l'allocataire | départage |
+| 5 | **naissance de l'allocataire** | départage |
+| 6 | **code postal** du foyer | départage |
 
-Ce qui n'est **pas** dans la clé, et pourquoi : la naissance et le lieu de naissance de
-l'allocataire. La MSA et le CNOUS les déposent bien dans le JSON, mais la CNAF ne les
-sérialise pas — son pipeline mappe les colonnes puis les jette après l'appel qf-batch — et
-les lignes déjà en base n'en portent aucune. Un champ présent d'un côté et absent de l'autre
-rend la ligne **introuvable**, pas seulement moins bien identifiée : l'ajouter à la clé ne
-pourrait que perdre des appariements. D'où sa place comme départageur, où il ne fait que
-rétrécir un ensemble déjà ambigu.
+**La clé** : `alloc_nom | alloc_prenom | date_benef | benef_nom | benef_prénoms`. La base en
+porte une par ligne ; le candidat en essaie jusqu'à **8 variantes**, parce que les caisses ne
+rangent pas la même nature de nom dans ces champs :
 
-Un candidat qui reste ambigu après les trois niveaux n'est **pas** apparié : il reçoit un
-code neuf, ce qui est le comportement le moins risqué des deux.
+- nom de l'allocataire : **naissance** (`qf_allocataires[].nom_naissance`, à défaut
+  `family_name`) et **usage** (`qf_allocataires[].nom_usage`, à défaut le
+  `preferred_username` FranceConnect). La MSA range un nom de naissance, la CNAF un nom
+  d'usage (`RESPDOS`) ;
+- prénom de l'allocataire : **complet** et **premier seul**. Il est comparé à l'égalité
+  stricte, et la CNAF n'en stocke qu'un ;
+- nom du bénéficiaire : **naissance** et **usage**. Pour un enfant, l'usage est celui que le
+  worker stocke dans `enfant_identite`, à défaut `qf_enfants[].nom_usage` pour les lignes
+  plus anciennes. Sur une ligne `self`, c'est celui de l'allocataire.
+
+Chaque niveau compte des `id_psp` **distincts** : plusieurs variantes peuvent atteindre la même
+ligne, qui ne doit compter qu'une fois.
+
+**Les départageurs** (4 à 6) ne font que rétrécir l'ensemble trouvé au niveau 2, et seulement
+parmi les lignes dont le second prénom ne contredit pas celui du candidat. Le genre et la
+naissance de l'allocataire restent **hors de la clé** : dans la clé, un champ présent d'un
+côté et absent de l'autre rend la ligne introuvable — la CNAF ne sérialise pas la naissance de
+l'allocataire — alors qu'en départage il ne coûte rien.
+
+Un candidat encore ambigu après les six niveaux n'est **pas** apparié : il reçoit un code neuf,
+le comportement le moins risqué des deux.
+
+Ce que chaque case peut exploiter — le CNOUS n'a que des boursiers, et aucune autre caisse n'en
+a :
+
+| | CAF | MSA | CNOUS |
+|---|---|---|---|
+| **jeune** | noms d'usage de l'allocataire et de l'enfant ↔ `RESPDOS` / `NOMENF` · genre · code postal · *pas* de naissance de l'allocataire | nom de naissance ↔ nom de naissance · genre · naissance de l'allocataire · code postal | — |
+| **AEEH** | comme `jeune` (même appel QF) | comme `jeune` | — |
+| **AAH** | ligne `self` : le nom d'usage FranceConnect sert les deux moitiés de la clé · genre · pas de code postal | nom de naissance ↔ nom de naissance · genre · naissance de l'allocataire | — |
+| **boursier** | — | — | INE exact · clé à variantes en repli · genre · naissance de l'allocataire |
 
 `fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage ; les
 fichiers horodatés (`AAAA-MM-JJ-fc-with-codes.csv`, `fc_2026_writeback.csv`,
