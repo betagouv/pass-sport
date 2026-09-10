@@ -87,9 +87,9 @@ export class RealClient implements ApiParticulierClient {
     }
   }
 
-  quotientFamilial(identity: PivotIdentity): Promise<ResourceResult> {
+  quotientFamilial(identity: PivotIdentity, mois?: string): Promise<ResourceResult> {
     return this.call(RESOURCE_META.qf, () =>
-      this.client.dss.quotient_familial_identite(toQfParams(identity)),
+      this.client.dss.quotient_familial_identite(toQfParams(identity, mois)),
     );
   }
 

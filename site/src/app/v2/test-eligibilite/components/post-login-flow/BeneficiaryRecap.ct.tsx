@@ -274,13 +274,13 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByText('Votre enfant')).toBeVisible();
   });
 
-  test('shows a Card for a not_assessed child alongside the assessed ones, not just the assessed ones', async ({
+  test('shows a Card for every child, not just the ones already served a code', async ({
     mount,
   }) => {
     const component = await mount(
       <BeneficiaryRecap
         beneficiaries={[
-          beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'not_assessed' }),
+          beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'eligible_pending' }),
           beneficiary({ source: 'enfant', givenName: 'Astravelle', verdict: 'eligible_confirmed' }),
         ]}
         allocataireIdentity={ALLOCATAIRE_IDENTITY}
@@ -290,12 +290,12 @@ test.describe('BeneficiaryRecap', () => {
     const cards = component.locator('.fr-card');
     await expect(cards).toHaveCount(2);
 
-    const notAssessedCard = cards.nth(0);
+    const pendingCard = cards.nth(0);
     const confirmedCard = cards.nth(1);
 
-    await expect(notAssessedCard.getByText('Quorindel')).toBeVisible();
-    const notAssessedBadge = notAssessedCard.getByText('En cours de traitement');
-    await expect(notAssessedBadge).toHaveClass(/fr-badge--info/);
+    await expect(pendingCard.getByText('Quorindel')).toBeVisible();
+    const pendingBadge = pendingCard.getByText('En cours de traitement');
+    await expect(pendingBadge).toHaveClass(/fr-badge--info/);
 
     await expect(confirmedCard.getByText('Astravelle')).toBeVisible();
     const confirmedBadge = confirmedCard.getByText('Eligible');

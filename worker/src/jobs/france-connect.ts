@@ -1,7 +1,8 @@
 import type { Job, Queue } from "bullmq";
 import { type ApiParticulierClient } from "../eligibility/client";
 import { runEligibilitySequence } from "../eligibility/sequence";
-import { ALLOWANCE, type EligibilityJobData, type QuotientFamilialData } from "../eligibility/types";
+import { readQuotientFamilial } from "../eligibility/verdicts";
+import type { EligibilityJobData, QuotientFamilialData } from "../eligibility/types";
 import { listBeneficiaryCandidates } from "../lca/candidates";
 import { recordEmailDelivery, sendAcknowledgmentEmail } from "../email/notify";
 import type { HistoryRecorder } from "../db/history";
@@ -14,6 +15,9 @@ export type FranceConnectDeps = {
   apiClient: ApiParticulierClient;
   db: Database;
   queue: Queue<EligibilityJobData>;
+  // Decides which campaign months the quotient_familial sweep covers. Read per job rather than
+  // captured once: a job requeued by a rate-limit pause can resume in a later month.
+  now?: () => Date;
 };
 
 async function acknowledgeReception(
@@ -70,33 +74,26 @@ export async function processEligibilityJob(
   apCalls: number;
   processedAt: string;
 }> {
-  const { apiClient, db: database, queue } = deps;
+  const { apiClient, db: database, queue, now } = deps;
 
-  console.log(
-    `[pass-sport-worker] job ${job.id}: eligibility chain for aides=[${data.aides.join(",")}]`,
-  );
+  console.log(`[pass-sport-worker] job ${job.id}: eligibility chain`);
 
   const history = await startJob(job, database, data.identity.sub ?? null, data);
 
   // Sent before the asynchronous treatment, and the only mail this path ever sends.
   await acknowledgeReception(job, database, history, data);
 
-  const results = await runEligibilitySequence(job, data, apiClient, queue, history);
+  const results = await runEligibilitySequence(job, data, apiClient, queue, history, now?.());
 
   const { identity, isFranceConnected } = data;
-  const candidates = listBeneficiaryCandidates(identity, results, data.aides);
-  const qfRow = results.find((r) => r.resource.startsWith("dss.quotient_familial") && r.success);
+  const candidates = listBeneficiaryCandidates(identity, results);
+  const qfPayload = readQuotientFamilial(results);
 
-  if (qfRow) {
-    const qfPayload = qfRow.data as QuotientFamilialData | null;
-    const qfValue = qfPayload?.quotient_familial?.valeur;
+  if (qfPayload) {
+    const qfValue = qfPayload.quotient_familial?.valeur;
 
-    logPii(
-      `job ${job.id}: quotient familial=${JSON.stringify(qfValue)} (${typeof qfValue}), route QF ${data.aides.includes(ALLOWANCE.QF) ? "demandée" : "NON demandée"}`,
-    );
-    logPii(
-      `job ${job.id}: bloc quotient_familial=${JSON.stringify(qfPayload?.quotient_familial)}`,
-    );
+    logPii(`job ${job.id}: quotient familial=${JSON.stringify(qfValue)} (${typeof qfValue})`);
+    logPii(`job ${job.id}: bloc quotient_familial=${JSON.stringify(qfPayload.quotient_familial)}`);
     logPii(`job ${job.id}: réponse QF brute=${JSON.stringify(qfPayload)}`);
   }
 
@@ -106,15 +103,16 @@ export async function processEligibilityJob(
     );
   }
 
-  // Two verdicts only: what API Particulier lets us affirm, and everything else. 'not_eligible'
-  // would claim a refusal we are no longer in a position to pronounce — no LCA base is consulted
-  // here anymore, so an absence of proof is not a proof of absence.
+  // Two verdicts only, and the negative one IS a refusal we are in a position to pronounce: both
+  // sources this path consults return a determination rather than a silence — API Particulier
+  // answers 404 / est_beneficiaire:false, and our own campaign windows exclude by age. A genuine
+  // outage never reaches here, assertApiParticulierCallSuceeded fails the job instead.
   const outcomes: BeneficiaryOutcome[] = candidates.map((candidate) => {
     const isEligible = candidate.eligibilities.length > 0;
     return {
       source: candidate.source,
       isEligible,
-      verdict: isEligible ? "eligible_pending" : "not_assessed",
+      verdict: isEligible ? "eligible_pending" : "not_eligible",
     };
   });
 
@@ -128,14 +126,14 @@ export async function processEligibilityJob(
   const to = identity.email ?? null;
 
   if (candidates.length === 0) {
-    // No candidate at all — a QF/AEEH demande whose QF answer carried no exploitable
-    // enfant, or an identité pivot missing a given_name or a birthdate. An
-    // eligibility_results row is a verdict about a beneficiary, and there is neither, so
-    // nothing is written. eligibility_history keeps the trace of the run.
+    // Only reachable on an identité pivot missing a given_name or a birthdate: every other
+    // no-route case now lands on the allocataire row listBeneficiaryCandidates falls back to. A
+    // row here would have to name a beneficiary we cannot name, so nothing is written and
+    // eligibility_history keeps the only trace of the run.
     //
-    // The cost is deliberate: applications_by_sub is derived from this table, so this
-    // usager is not recognised as having applied and a resubmission re-runs the whole
-    // API Particulier chain.
+    // The cost of that, for this residual case alone: applications_by_sub is derived from this
+    // table, so the usager is not recognised as having applied and a reconnection re-runs the
+    // whole API Particulier chain.
     console.log(`[pass-sport-worker] job ${job.id}: no beneficiary, nothing to record`);
     await history.record({
       actor: "worker",

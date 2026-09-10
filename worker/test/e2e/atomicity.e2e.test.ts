@@ -42,7 +42,6 @@ describe("a failed batch leaves no result", () => {
         email: "camille.martin@example.test",
         sub: "sub-atomicity-1",
       },
-      aides: ["CROUS", "AEEH"] as Array<"AAH" | "CROUS" | "AEEH">,
       isFranceConnected: true,
     };
 

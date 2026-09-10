@@ -76,37 +76,39 @@ def test_enfant_couvert_par_le_quotient_est_jeune():
     assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2015-06-01')])[0] == ['jeune']
 
 
-def test_enfant_de_17_ans_sans_quotient_couvrant_passe_par_aeeh():
-    # Né en 2008 : dans la fenêtre AEEH 17-19 ans, hors fenêtre QF qui commence en 2009.
+def test_enfant_de_18_ans_sans_quotient_couvrant_passe_par_aeeh():
+    # Né en 2008 : dans la fenêtre AEEH, hors fenêtre QF qui commence en 2009.
     assert situations([enfant_row(qf_valeur=None, enfant_date_naissance='2008-04-11')])[0] == ['AEEH']
 
 
-def test_le_quotient_est_prioritaire_sur_aeeh_sur_le_millesime_qui_chevauche():
-    # 2009 est le seul millésime couvert par les deux fenêtres. QF gagne, comme dans
-    # candidates.ts — c'est aussi pour cela que le worker n'appelle pas l'AEEH pour eux.
+def test_le_quotient_est_prioritaire_sur_aeeh_sur_les_millesimes_qui_chevauchent():
+    # 2009-2020 est couvert par les deux fenêtres. QF gagne, comme dans candidates.ts —
+    # c'est aussi pour cela que le worker n'appelle pas l'AEEH pour ces enfants.
     assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2009-05-05')])[0] == ['jeune']
+    assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2015-06-01')])[0] == ['jeune']
 
 
 def test_millesime_2009_sans_quotient_couvrant_bascule_sur_aeeh():
     assert situations([enfant_row(qf_valeur='900', enfant_date_naissance='2009-05-05')])[0] == ['AEEH']
 
 
-def test_le_seuil_de_quotient_est_strict():
-    # 700 pile n'ouvre aucun droit, et 2015 est hors de la fenêtre AEEH (17-19 ans).
-    resultats, sans_situation = situations([enfant_row(qf_valeur='700', enfant_date_naissance='2015-06-01')])
-    assert resultats == [None]
-    assert sans_situation == 1
+def test_un_enfant_de_14_ans_hors_couverture_quotient_passe_par_aeeh():
+    # La fenêtre AEEH est désormais celle de partners_lib (6-19 ans) : le worker interroge
+    # l'AEEH pour tout enfant de la tranche que le quotient ne couvre pas.
+    assert situations([enfant_row(qf_valeur='900', enfant_date_naissance='2015-06-01')])[0] == ['AEEH']
+
+
+def test_un_quotient_au_seuil_bascule_l_enfant_sur_aeeh():
+    # 700 pile n'ouvre pas la route QF — le seuil est strict — donc l'enfant est jugé sur
+    # son propre verdict AEEH.
+    assert situations([enfant_row(qf_valeur='700', enfant_date_naissance='2015-06-01')])[0] == ['AEEH']
 
 
 def test_enfant_hors_fenetre_de_naissance_n_a_aucune_situation():
     # Né en 2021 : trop jeune pour QF (borne 2020-12-31) comme pour AEEH.
-    assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2021-01-01')])[0] == [None]
-
-
-def test_la_fenetre_aeeh_est_celle_du_worker_pas_celle_des_fichiers_partenaires():
-    # Un enfant de 2015 que le quotient ne couvre pas ne doit PAS tomber en AEEH : la
-    # fenêtre partenaire (6-19 ans) l'y ferait entrer, celle du worker (17-19) non.
-    assert situations([enfant_row(qf_valeur='900', enfant_date_naissance='2015-06-01')])[0] == [None]
+    resultats, sans_situation = situations([enfant_row(qf_valeur='650', enfant_date_naissance='2021-01-01')])
+    assert resultats == [None]
+    assert sans_situation == 1
 
 
 def test_allocataire_beneficiaire_aah_est_en_situation_aah():
@@ -138,8 +140,11 @@ def test_allocataire_trop_age_pour_aah_n_a_aucune_situation():
 
 
 def test_boursier_de_plus_de_28_ans_n_a_aucune_situation():
-    row = self_row(crous_est_boursier='true', **{'allocataire-date_naissance': '1998-12-31'})
-    assert situations([row])[0] == [None]
+    # 1998 est le dernier millésime retenu (28 ans au 31/12/2026) ; 1997 en a 29.
+    assert situations([self_row(
+        crous_est_boursier='true', **{'allocataire-date_naissance': '1998-12-31'})])[0] == ['boursier']
+    assert situations([self_row(
+        crous_est_boursier='true', **{'allocataire-date_naissance': '1997-12-31'})])[0] == [None]
 
 
 def test_resolve_situation_ne_mute_pas_son_entree():

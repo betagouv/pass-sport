@@ -18,8 +18,7 @@ export type Verdict =
   | "eligible_confirmed_but_email_not_matching"
   | "eligible_pending"
   | "eligible_pending_lca"
-  | "not_eligible"
-  | "not_assessed";
+  | "not_eligible";
 
 /**
  * What allocataire_identite holds. The identité pivot minus `sub`, which lives in
@@ -100,12 +99,18 @@ export const eligibilityResults = pgTable(
     //                            (jobs/lca-checks.ts) rejoue /search puis /confirm sur ces
     //                            lignes et les fait passer à 'eligible_confirmed' dès que LCA
     //                            sert le code.
-    //   'not_eligible'         — LCA ne connaît pas le bénéficiaire. Parcours hors
-    //                            FranceConnect uniquement : le parcours FC n'interroge plus
-    //                            aucune base et n'est donc plus en position de refuser.
-    //   'not_assessed'         — rien ne permet d'affirmer l'éligibilité : les réponses
-    //                            d'API Particulier n'ouvrent aucune route (parcours FC), ou
-    //                            LCA était injoignable (parcours hors FC).
+    //   'not_eligible'         — aucune route n'est ouverte, et c'est un refus prononçable.
+    //                            Deux chemins y mènent : LCA ne connaît pas le bénéficiaire
+    //                            (parcours hors FranceConnect), ou ni les réponses d'API
+    //                            Particulier ni les fenêtres d'âge de la campagne n'ouvrent
+    //                            quoi que ce soit (parcours FC). Dans les deux cas une source
+    //                            a répondu — une panne, elle, fait échouer le job sans rien
+    //                            écrire.
+    //
+    // Quand rien n'a pu être conclu, aucune ligne n'est écrite du tout : c'est le cas de LCA
+    // injoignable (jobs/lca.ts), qui laisse la table vide pour que l'usager puisse revenir.
+    // L'ancien verdict 'not_assessed' couvrait cela et a été retiré — une ligne existe
+    // toujours parce qu'une source a répondu.
     verdict: text("verdict").$type<Verdict>().notNull(),
 
     // Which template was sent for this beneficiary, null when none was — the same vocabulary

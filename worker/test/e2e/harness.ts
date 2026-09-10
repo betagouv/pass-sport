@@ -51,6 +51,12 @@ import type {
 // credentials are needed. Email goes to a tiny in-process HTTP server that always
 // answers success, so the real Link Mobility client path is still covered.
 
+// Frozen clock for the whole stack. The quotient_familial sweep runs from août to the current
+// month, so call counts would otherwise drift with the calendar: pinned mid-septembre, every
+// job sweeps exactly août then septembre.
+export const STACK_NOW = new Date("2026-09-15T12:00:00Z");
+export const SWEPT_MONTHS = 2;
+
 // A parent-level success row for one resource.
 const okRow = (meta: { resource: string; label: string }, data: unknown): ResourceResult => ({
   ...meta,
@@ -62,10 +68,10 @@ const okRow = (meta: { resource: string; label: string }, data: unknown): Resour
 });
 
 // Deterministic API Particulier client.
-// - quotient_familial: the connected user as allocataire + three children spanning the
+// - quotient_familial: the connected user as allocataire + four children spanning the
 //   QF and AEEH campaign windows (see the enfants[] comment below), and a household
 //   quotient that defaults above the eligibility threshold.
-// - étudiant boursier: always boursier (self CROUS-eligible when age < 28).
+// - étudiant boursier: boursier by default (self CROUS-eligible inside the window).
 // - per-child AEEH: status "allocataire".
 // If constructed with first429RetryAfter, the VERY FIRST call returns a 429 with
 // that Retry-After (then never again) to exercise the pause-and-retry path.
@@ -76,6 +82,10 @@ class FakeApiClient implements ApiParticulierClient {
   // Household quotient the fake QF reports. Default sits ABOVE the 700 threshold, so
   // the QF route grants nothing unless a test lowers it (setQfValeur on the Stack).
   qfValeur = 1000;
+
+  // Per-month override, for a household that only crosses the threshold partway through the
+  // campaign. Months absent from it fall back to qfValeur.
+  qfValeurByMois: Record<string, number> = {};
 
   // Last name of the fake children. Purely cosmetic now that no LCA base is consulted:
   // is_eligible reflects OUR routes alone.
@@ -88,6 +98,10 @@ class FakeApiClient implements ApiParticulierClient {
   constructor(
     private readonly first429RetryAfter?: number,
     private readonly failOnCall?: number,
+    // Which call answers the 429. The first one leaves the checkpoint empty — nothing is
+    // committed before handleRateLimit throws — so only a later one exercises a resume that has
+    // rows to replay.
+    private readonly rateLimitOnCall: number = 1,
   ) {}
 
   // The gateway answering 5xx on one call of the chain: the job has no verdict for that
@@ -107,7 +121,9 @@ class FakeApiClient implements ApiParticulierClient {
   }
 
   private take429(meta: { resource: string; label: string }): ResourceResult | null {
-    if (!this.first429RetryAfter || this.fired429) return null;
+    if (!this.first429RetryAfter || this.fired429 || this.calls !== this.rateLimitOnCall) {
+      return null;
+    }
     this.fired429 = true;
     return {
       ...meta,
@@ -121,7 +137,7 @@ class FakeApiClient implements ApiParticulierClient {
     };
   }
 
-  async quotientFamilial(identity: PivotIdentity): Promise<ResourceResult> {
+  async quotientFamilial(identity: PivotIdentity, mois?: string): Promise<ResourceResult> {
     return (
       this.takeFailure(RESOURCE_META.qf) ??
       this.take429(RESOURCE_META.qf) ??
@@ -129,12 +145,19 @@ class FakeApiClient implements ApiParticulierClient {
         allocataires: [
           { nom_naissance: identity.family_name, prenoms: identity.given_name ?? "" },
         ],
-        // Three children, one per zone of the two campaign windows, at the
+        // Four children, one per zone of the two campaign windows, at the
         // 2026-12-31 reference date:
+        //   Adulte born 2005 -> 21 ans: NEITHER window, never queried
         //   Aine   born 2008 -> 18 ans: AEEH window only
         //   Milieu born 2009 -> 17 ans: BOTH windows (QF has priority)
-        //   Cadet  born 2012 -> 14 ans: QF window only
+        //   Cadet  born 2012 -> 14 ans: BOTH windows (QF has priority)
         enfants: this.qfChildless ? [] : [
+          {
+            nom_naissance: this.childrenLastname,
+            prenoms: "Adulte",
+            sexe: "M",
+            date_naissance: "01/01/2005",
+          },
           {
             nom_naissance: this.childrenLastname,
             prenoms: "Aine",
@@ -154,12 +177,13 @@ class FakeApiClient implements ApiParticulierClient {
             date_naissance: "01/01/2012",
           },
         ],
-        quotient_familial: { valeur: this.qfValeur },
+        quotient_familial: { valeur: this.qfValeurByMois[mois ?? ""] ?? this.qfValeur },
       })
     );
   }
 
   aahBeneficiaire = false;
+  crousBoursier = true;
 
   async aah(): Promise<ResourceResult> {
     return (
@@ -173,7 +197,7 @@ class FakeApiClient implements ApiParticulierClient {
     return (
       this.takeFailure(RESOURCE_META.cnous) ??
       this.take429(RESOURCE_META.cnous) ??
-      okRow(RESOURCE_META.cnous, { statut_boursier: { est_boursier: true } })
+      okRow(RESOURCE_META.cnous, { statut_boursier: { est_boursier: this.crousBoursier } })
     );
   }
 
@@ -185,10 +209,16 @@ class FakeApiClient implements ApiParticulierClient {
     );
   }
 
+  // Set false to make AEEH the losing route, which is what leaves the household quotient as the
+  // only thing that can carry a child.
+  aeehBeneficiaire = true;
+
   async aeeh(_child: PivotIdentity, childIndex: number): Promise<ResourceResult> {
     return (
       this.takeFailure(RESOURCE_META.aeeh) ?? this.take429(RESOURCE_META.aeeh) ?? {
-        ...okRow(RESOURCE_META.aeeh, { status: "allocataire" }),
+        ...okRow(RESOURCE_META.aeeh, {
+          status: this.aeehBeneficiaire ? "allocataire" : "non_allocataire",
+        }),
         childIndex,
       }
     );
@@ -375,9 +405,17 @@ export type Stack = {
   setEmailHttpStatus: (status: number | null) => void;
 
   setAahBeneficiaire: (value: boolean) => void;
+  setCrousBoursier: (value: boolean) => void;
+  setAeehBeneficiaire: (value: boolean) => void;
   // Household quotient the fake QF reports, so a test can cross the 700 threshold
   // without paying for a second container stack.
   setQfValeur: (valeur: number) => void;
+  // Quotient per campaign month, for a household that only crosses the threshold partway
+  // through the sweep.
+  setQfValeurByMois: (byMois: Record<string, number>) => void;
+  // Moves the clock the quotient sweep reads, so a test can cover more campaign months than the
+  // two STACK_NOW gives.
+  setNow: (now: Date) => void;
   // Last name of the fake children, so a test can tell one run's beneficiaries from another's.
   setChildrenLastname: (lastname: string) => void;
   // Strips the fake children from the QF answer, leaving a child-aide demande with no
@@ -389,10 +427,15 @@ export type Stack = {
 // Boots Redis + Postgres (Testcontainers) + a fake Link Mobility HTTP server, then
 // wires a real BullMQ Worker running the actual processEligibilityJob with the fake
 // upstream clients. Everything a pipeline test needs, torn down by close().
-// `first429RetryAfter`: make the first API Particulier call return a 429 with that
-// Retry-After, to exercise the worker's pause-and-retry-from-header behaviour.
+// `first429RetryAfter`: make one API Particulier call return a 429 with that Retry-After, to
+// exercise the worker's pause-and-retry-from-header behaviour. `apiRateLimitOnCall` chooses
+// which call that is (1-based, defaults to the first).
 export async function startStack(
-  opts: { first429RetryAfter?: number; apiFailOnCall?: number } = {},
+  opts: {
+    first429RetryAfter?: number;
+    apiFailOnCall?: number;
+    apiRateLimitOnCall?: number;
+  } = {},
 ): Promise<Stack> {
   const redisC: StartedRedisContainer = await new RedisContainer("redis:8-alpine").start();
   const pgC: StartedPostgreSqlContainer = await new PostgreSqlContainer("postgres:16-alpine").start();
@@ -456,8 +499,15 @@ export async function startStack(
   await queue.setGlobalConcurrency(1);
 
   const guardConn = conn();
-  const apiClient = new FakeApiClient(opts.first429RetryAfter, opts.apiFailOnCall);
-  const deps: FranceConnectDeps = { apiClient, db, queue };
+  const apiClient = new FakeApiClient(
+    opts.first429RetryAfter,
+    opts.apiFailOnCall,
+    opts.apiRateLimitOnCall,
+  );
+
+  // Read per job rather than captured, so setNow can move the campaign month a test sweeps over.
+  let stackNow = STACK_NOW;
+  const deps: FranceConnectDeps = { apiClient, db, queue, now: () => stackNow };
 
   const worker = new Worker<EligibilityJobData>(
     FRANCE_CONNECT_QUEUE_NAME,
@@ -655,6 +705,18 @@ export async function startStack(
     parsedEmails: () => sentEmails.map(parseSentEmail),
     setEmailHttpStatus: (status) => {
       emailHttpStatus = status;
+    },
+    setCrousBoursier: (value: boolean) => {
+      apiClient.crousBoursier = value;
+    },
+    setAeehBeneficiaire: (value: boolean) => {
+      apiClient.aeehBeneficiaire = value;
+    },
+    setQfValeurByMois: (byMois: Record<string, number>) => {
+      apiClient.qfValeurByMois = byMois;
+    },
+    setNow: (now: Date) => {
+      stackNow = now;
     },
     setAahBeneficiaire: (value: boolean) => {
       apiClient.aahBeneficiaire = value;

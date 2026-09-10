@@ -4,9 +4,9 @@ Cette source n'est pas un fichier partenaire : c'est une requête sur la table
 `eligibility_results` du worker, en production.
 
 Le parcours FranceConnect du site n'écrit plus que deux des verdicts documentés dans
-[worker/src/db/schema.ts](../../../../worker/src/db/schema.ts) : `not_assessed` quand rien ne
-permet d'affirmer l'éligibilité, et `eligible_pending` quand les réponses d'API Particulier le
-permettent. Ce second-là n'est pas terminal : il désigne quelqu'un que **nos** règles jugent
+[worker/src/db/schema.ts](../../../../worker/src/db/schema.ts) : `not_eligible` quand aucune
+route n'est ouverte, et `eligible_pending` quand les réponses d'API Particulier en ouvrent une.
+Ce second-là n'est pas terminal : il désigne quelqu'un que **nos** règles jugent
 éligible et à qui aucun code n'a été servi — ce parcours n'interroge plus la base LCA du tout,
 son `pass_sport_code` est donc toujours NULL et il n'a reçu que l'accusé de réception de sa
 demande. Ce dossier est ce qui transforme cette promesse en code.
@@ -174,11 +174,10 @@ pytest 2026/partners/franceconnect/test_clean_fc_lib.py 2026/partners/franceconn
 python 2026/partners/franceconnect/fc_pipeline.py clean
 ```
 
-⚠️ La fenêtre AEEH de cette source est celle du worker (17-19 ans), **pas** celle de
-`partners_lib` (6-19 ans). Les deux décrivent deux situations différentes : la CNAF déclare
-elle-même l'AEEH sur toute la tranche, alors qu'ici c'est nous qui accordons l'aide, et
-seulement aux enfants que le quotient familial ne couvre pas déjà. Voir le commentaire de
-`clean_fc_lib.AEEH_DOB_MIN`.
+La fenêtre AEEH de cette source est celle de `partners_lib` (6-19 ans) : le worker interroge
+l'AEEH pour chaque enfant de cette tranche que le quotient familial ne couvre pas déjà. C'est
+ce `& ~jeune` qui reste la seule différence avec le fichier partenaire, où la CNAF déclare
+elle-même l'AEEH sans regarder le quotient.
 
 ## Étape 3 — génération des codes
 

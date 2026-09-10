@@ -46,6 +46,18 @@ describe("buildConfirmPayload", () => {
     });
   });
 
+  // 'AEEH' is what our own pipeline writes into the LCA base, and /search hands it back —
+  // but /confirm only knows the four campaign situations.
+  it("translates an AEEH search answer into 'jeune'", () => {
+    expect(buildConfirmPayload(searchItem({ situation: "AEEH" }), IDENTITY).situation).toBe(
+      "jeune",
+    );
+  });
+
+  it.each(["jeune", "AAH", "boursier"] as const)("leaves situation %s untouched", (situation) => {
+    expect(buildConfirmPayload(searchItem({ situation }), IDENTITY).situation).toBe(situation);
+  });
+
   it("routes the matricule to the CAF number outside CROUS", () => {
     const payload = buildConfirmPayload(searchItem(), IDENTITY);
 

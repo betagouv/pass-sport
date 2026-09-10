@@ -18,13 +18,14 @@ const normalizeEmail = (value: string | null | undefined): string | null =>
   value ? value.trim().toLowerCase() : null;
 
 // No API Particulier on this path: LCA either holds the beneficiary or it does not, and the
-// site already told the usager which. 'not_assessed' covers the gateway being down — nothing
-// was concluded about this person, so nothing is claimed. 'confirmed' is refined below: it
-// only stays 'eligible_confirmed' when the code could actually be mailed.
-const VERDICT_BY_STATUS: Record<LcaJobData["lcaStatus"], Verdict> = {
+// site already told the usager which. 'error' is absent because it yields no verdict at all —
+// see the early return below. 'confirmed' is refined further down: it only stays
+// 'eligible_confirmed' when the code could actually be mailed.
+type AnsweredLcaStatus = Exclude<LcaJobData["lcaStatus"], "error">;
+
+const VERDICT_BY_STATUS: Record<AnsweredLcaStatus, Verdict> = {
   confirmed: "eligible_confirmed",
   not_found: "not_eligible",
-  error: "not_assessed",
 };
 
 /**
@@ -36,7 +37,8 @@ export async function processLcaJob(
   job: Job<LcaJobData>,
   data: LcaJobData,
   deps: LcaDeps,
-): Promise<{ verdict: Verdict; emailed: boolean; skipped: boolean; processedAt: string }> {
+  // `verdict` is null when LCA never answered: no verdict was reached, so none is reported.
+): Promise<{ verdict: Verdict | null; emailed: boolean; skipped: boolean; processedAt: string }> {
   const { db: database } = deps;
 
   console.log(`[pass-sport-worker] job ${job.id}: lca, aide=${data.aide}, ${data.lcaStatus}`);
@@ -58,22 +60,13 @@ export async function processLcaJob(
     });
   }
 
-  // Anyone can type a mailbox into the form. The code is only ever served to the address LCA
-  // already holds for this allocataire; when the two differ, LCA still holds the beneficiary
-  // but nothing was sent, and the verdict has to say so rather than claim a delivered code.
-  const emailsMatch = normalizeEmail(data.contactEmail) === normalizeEmail(data.email);
-  const isConfirmed = data.lcaStatus === "confirmed";
-
-  const verdict: Verdict =
-    isConfirmed && !emailsMatch
-      ? "eligible_confirmed_but_email_not_matching"
-      : VERDICT_BY_STATUS[data.lcaStatus];
-
   // LCA never answered, so nothing was concluded about this person. A row here would be a
   // verdict claiming otherwise; the LCA events replayed above are the whole trace. Leaving
   // the table empty also leaves applications_by_job_id empty, so the usager can come back
   // once the gateway is up instead of being told they already applied.
-  if (verdict === "not_assessed") {
+  const { lcaStatus } = data;
+
+  if (lcaStatus === "error") {
     console.log(`[pass-sport-worker] job ${job.id}: LCA unreachable, nothing to record`);
     await history.record({
       actor: "worker",
@@ -81,11 +74,21 @@ export async function processLcaJob(
       status: "skipped",
       responsePayload: { rows: 0, reason: "lca_unreachable" },
     });
-    return { verdict, emailed: false, skipped: true, processedAt: new Date().toISOString() };
+    return { verdict: null, emailed: false, skipped: true, processedAt: new Date().toISOString() };
   }
 
+  // Anyone can type a mailbox into the form. The code is only ever served to the address LCA
+  // already holds for this allocataire; when the two differ, LCA still holds the beneficiary
+  // but nothing was sent, and the verdict has to say so rather than claim a delivered code.
+  const emailsMatch = normalizeEmail(data.contactEmail) === normalizeEmail(data.email);
+  const isConfirmed = lcaStatus === "confirmed";
+
+  const verdict: Verdict =
+    isConfirmed && !emailsMatch
+      ? "eligible_confirmed_but_email_not_matching"
+      : VERDICT_BY_STATUS[lcaStatus];
+
   // Past the early return only 'confirmed' and 'not_found' remain, so an email always goes out.
-  const lcaStatus = isConfirmed ? "confirmed" : "not_found";
   const emailKind = lcaEmailKind(lcaStatus, emailsMatch);
 
   // BullMQ drops a job once it completes, so a usager who submits the same request twice

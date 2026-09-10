@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import z, { ZodError } from 'zod';
-import { Allowance, enqueueCodesJob } from '@/app/services/queue';
+import { enqueueCodesJob } from '@/app/services/queue';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { getClientIp } from '@/utils/client-ip';
 
-const schema = z.object({
-  aides: z.array(z.enum(['QF', 'AEEH', 'AAH', 'CROUS'])).min(1),
-});
-
+// Bodyless: the journey collects nothing from the usager, and the callback already enqueues.
+// This is the relaunch endpoint for the one case where that enqueue failed — the only way back
+// without redoing the whole OIDC round trip.
 export async function POST(request: Request): Promise<Response> {
   try {
     const pocResult = await loadPocResult();
@@ -16,12 +14,9 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: 'Session expirée.' }, { status: 401 });
     }
 
-    const { aides } = schema.parse(await request.json());
-
     const { existing } = await enqueueCodesJob(
       {
         identity: pocResult.identity,
-        aides: aides as Allowance[],
         isFranceConnected: true,
         clientIp: getClientIp(request.headers),
         userAgent: request.headers.get('user-agent'),
@@ -38,10 +33,6 @@ export async function POST(request: Request): Promise<Response> {
 
     return NextResponse.json({ queued: true }, { status: 202 });
   } catch (e) {
-    if (e instanceof ZodError || e instanceof SyntaxError) {
-      return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
-    }
-
     Sentry.withScope((scope) => {
       scope.setLevel('error');
       scope.captureMessage('FranceConnect POC collect step failed');

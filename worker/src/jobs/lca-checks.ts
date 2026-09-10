@@ -365,10 +365,7 @@ export async function processLcaChecksJob(
   const deadline = Date.now() + maxDurationMs();
 
   const history = await startJob(job, database, null, {});
-
   const dueRows = await selectDueRows(database, cooldownMin, attemptCeiling, data.limit);
-
-  console.log({dueRows})
   const selected = dueRows.length;
 
   console.log(

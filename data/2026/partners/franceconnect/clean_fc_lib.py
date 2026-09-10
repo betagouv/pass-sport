@@ -57,24 +57,12 @@ QUALITE_BY_GENDER = {'male': 'M', 'female': 'Mme'}
 # `sexe` du tableau `enfants` de quotient_familial : déjà au format PSP.
 GENRE_BY_SEXE = {'M': 'M', 'F': 'F'}
 
-# Route CROUS : moins de 28 ans à la date de référence de la campagne (2026-12-31, cf.
-# AGE_REFERENCE_DATE dans worker/src/lca/candidates.ts). « moins de 28 ans révolus » au
-# 31/12/2026 = né à partir du 01/01/1999. Pas de borne haute : c'est le statut boursier,
-# vérifié par API Particulier, qui ferme l'autre bout.
-CROUS_DOB_MIN = datetime(1999, 1, 1)
-
-# Route AEEH : 17-19 ans révolus.
-#
-# ATTENTION, cette fenêtre N'EST PAS partners.AEEH_DOB_MIN/MAX (6-19 ans) et ne doit pas le
-# devenir. Les deux décrivent deux choses différentes :
-#   - côté fichier partenaire, la CNAF DÉCLARE elle-même l'AEEH pour tout enfant concerné,
-#     d'où une fenêtre large de 6 à 19 ans ;
-#   - ici, c'est NOUS qui accordons l'aide, et seulement aux 17-19 ans : en dessous, le
-#     quotient familial couvre déjà l'enfant et le worker n'appelle même pas l'AEEH.
-# Ce sont les bornes AEEH_BIRTHDATE_MIN/MAX de worker/src/eligibility/types.ts, celles qui
-# ont réellement produit les verdicts qu'on est en train de rejouer.
-AEEH_DOB_MIN = datetime(2007, 1, 1)
-AEEH_DOB_MAX = datetime(2009, 12, 31)
+# Route CROUS : jusqu'à 28 ans à la date de référence de la campagne (2026-12-31, cf.
+# AGE_REFERENCE_DATE dans worker/src/lca/candidates.ts), soit né à partir du 01/01/1998.
+# Pas de borne haute : c'est le statut boursier, vérifié par API Particulier, qui ferme
+# l'autre bout. Ce sont les bornes CROUS_BIRTHDATE_MIN/MAX de
+# worker/src/eligibility/types.ts, celles qui ont réellement produit les verdicts rejoués ici.
+CROUS_DOB_MIN = datetime(1998, 1, 1)
 
 # Fournisseur du quotient familial -> organisme PSP. Le champ vient de la réponse
 # quotient_familial et dit quelle caisse a servi la donnée.
@@ -198,11 +186,11 @@ def resolve_situation(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     qf_covers = quotient < partners.QF_MAX
     jeune = is_enfant & qf_covers & _birthdate_within(dob, partners.QF_DOB_MIN, partners.QF_DOB_MAX)
 
-    # Route AEEH : 17-19 ans, pour les enfants que le quotient ne couvre pas (voir
-    # AEEH_DOB_MIN/MAX ci-dessus, qui ne sont pas celles de partners_lib). Les deux fenêtres
-    # se chevauchent sur le millésime 2009 (17 ans) et QF y est prioritaire — d'où le
-    # `& ~jeune`, qui reproduit le `else if` de candidates.ts.
-    aeeh = is_enfant & ~jeune & _birthdate_within(dob, AEEH_DOB_MIN, AEEH_DOB_MAX)
+    # Route AEEH : 6-19 ans, pour les enfants que le quotient ne couvre pas. Les deux fenêtres
+    # se chevauchent sur tout 2009-2020 et QF y est prioritaire — d'où le `& ~jeune`, qui
+    # reproduit le `else if` de candidates.ts et, côté worker, le filtre de planChildrenChecks.
+    aeeh = is_enfant & ~jeune & _birthdate_within(
+        dob, partners.AEEH_DOB_MIN, partners.AEEH_DOB_MAX)
 
     # Routes de l'allocataire lui-même.
     aah = ~is_enfant & _is_true(df['aah_est_beneficiaire']) & _birthdate_within(

@@ -123,13 +123,14 @@ def test_clean_deduplique_un_enfant_remonte_par_ses_deux_parents(tmp_path):
 
 
 def test_clean_ecarte_une_ligne_sans_situation(tmp_path):
-    # ni quotient couvrant, ni AAH, ni AEEH, ni bourse : aucune route ne s'ouvre
+    # 21 ans au 31/12/2026 : hors fenêtre QF comme hors fenêtre AEEH, donc aucune route
+    # ne s'ouvre quel que soit le quotient.
     orphelin = export_row(
         eligibility_result_id='33333333-3333-3333-3333-333333333333',
-        qf_valeur='1200', enfant_prenom='Paul', enfant_date_naissance='2014-02-02',
+        qf_valeur='1200', enfant_prenom='Paul', enfant_date_naissance='2005-02-02',
         qf_enfants=json.dumps([{
             'nom_naissance': 'MARTIN', 'prenoms': 'Paul',
-            'date_naissance': '2014-02-02', 'sexe': 'M',
+            'date_naissance': '2005-02-02', 'sexe': 'M',
         }]),
     )
     input_filepath = write_export(tmp_path, [export_row(), orphelin])

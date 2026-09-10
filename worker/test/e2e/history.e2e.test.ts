@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startStack, type Stack } from "./harness";
-import type { Allowance } from "../../src/eligibility/types";
 
 // eligibility_history is the trace of HOW an outcome was reached: one row per external
 // call, written outside the PHASE 2 transaction so it survives a job that dies partway.
@@ -17,6 +16,7 @@ let stack: Stack;
 
 beforeAll(async () => {
   stack = await startStack();
+  stack.setQfChildless(true);
 }, 180_000);
 
 afterAll(async () => {
@@ -31,20 +31,19 @@ const historyFor = async (sub: string) =>
     )
   ).rows;
 
-// CROUS only: one API Particulier call, one beneficiary. The shortest job that still
-// exercises both actors.
+// Paired with setQfChildless in beforeAll: no enfant means no per-child AEEH, which keeps
+// the expected action list short enough to read while still exercising both actors.
 const selfCrous = (sub: string) => ({
   identity: {
     family_name: "Martin",
     given_name: "Camille",
-    birthdate: "2004-05-15", // age 22 at 2026-12-31 -> CROUS eligible
+    birthdate: "2004-05-15", // age 22 at 2026-12-31 -> inside the AAH and CROUS windows
     gender: "female" as const,
     birthplace: "75056",
     birthcountry: "99100",
     email: "camille.martin@example.test",
     sub,
   },
-  aides: ["CROUS"] as Allowance[],
   isFranceConnected: true,
 });
 
@@ -61,6 +60,10 @@ describe("eligibility_history", () => {
       // First, and before any external call: the accusé de réception is what the usager
       // gets while the chain below runs.
       ["worker", "email.acknowledgment", "success"],
+      // The quotient sweep: août then septembre, neither under the threshold.
+      ["api_particulier", "dss.quotient_familial_identite", "success"],
+      ["api_particulier", "dss.quotient_familial_identite", "success"],
+      ["api_particulier", "dss.allocation_adulte_handicape_identite", "success"],
       ["api_particulier", "cnous.etudiant_boursier_identite", "success"],
       ["worker", "results.persisted", "success"],
     ]);
@@ -85,7 +88,7 @@ describe("eligibility_history", () => {
 
     // Same rule for the status: every call that reached an answer records the one it got,
     // successes included.
-    expect(api.map((r) => r.http_status)).toEqual([200]);
+    expect(api.map((r) => r.http_status)).toEqual([200, 200, 200, 200]);
   });
 
   it("keeps the raw answer, exactly as the endpoint gave it", async () => {
