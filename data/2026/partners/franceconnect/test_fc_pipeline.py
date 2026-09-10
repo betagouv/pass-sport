@@ -233,3 +233,35 @@ def test_les_trois_etapes_enchainees(tmp_path):
     assert df_writeback.loc[0, 'id_psp'] == df_prod.loc[0, 'id_psp']
     assert df_writeback.loc[0, 'eligibility_result_id'] == \
         '11111111-1111-1111-1111-111111111111'
+
+
+def test_split_matched_ne_garde_que_les_non_apparies(tmp_path):
+    cleaned = tmp_path / 'cleaned.csv'
+    pd.DataFrame([
+        {'eligibility_result_id': 'c1', 'nom': 'VOKTARIMENDO', 'prenom': 'ZUPRALIN'},
+        {'eligibility_result_id': 'c2', 'nom': 'KEDOSAVERIL', 'prenom': 'TARNU'},
+        {'eligibility_result_id': 'c3', 'nom': 'PLUNDARIS', 'prenom': 'OSVAREK'},
+    ]).to_csv(cleaned, sep=';', index=False, quoting=csv.QUOTE_ALL)
+
+    ids = tmp_path / 'non_apparies.csv'
+    pd.DataFrame([{'eligibility_result_id': 'c2'}]).to_csv(ids, sep=';', index=False)
+
+    sortie = tmp_path / 'restants.csv'
+    stats = pipeline.split_matched(cleaned, ids, sortie)
+
+    assert stats == {'lus': 3, 'apparies_ecartes': 2, 'restants': 1, 'sortie': str(sortie)}
+
+    restant = pd.read_csv(sortie, sep=';', dtype=str, keep_default_na=False)
+    assert list(restant['eligibility_result_id']) == ['c2']
+
+
+def test_split_matched_refuse_un_fichier_qui_ne_vient_pas_du_rapprochement(tmp_path):
+    cleaned = tmp_path / 'cleaned.csv'
+    pd.DataFrame([{'eligibility_result_id': 'c1'}]).to_csv(
+        cleaned, sep=';', index=False, quoting=csv.QUOTE_ALL)
+
+    ids = tmp_path / 'autre.csv'
+    pd.DataFrame([{'autre_colonne': 'c1'}]).to_csv(ids, sep=';', index=False)
+
+    with pytest.raises(AssertionError):
+        pipeline.split_matched(cleaned, ids, tmp_path / 'out.csv')

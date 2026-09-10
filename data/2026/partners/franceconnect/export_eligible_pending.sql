@@ -79,7 +79,27 @@ COPY (
     qf.response_payload -> 'data' -> 'quotient_familial' ->> 'fournisseur'   as qf_fournisseur,
     qf.response_payload -> 'data' -> 'enfants'                               as qf_enfants,
     aah.response_payload   -> 'data' ->> 'est_beneficiaire'                  as aah_est_beneficiaire,
-    crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier
+    crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier,
+
+    -- Ce qui sert au RAPPROCHEMENT avec la base bénéficiaires (match_beneficiaires.sql),
+    -- et à rien d'autre : ces trois colonnes ne survivent pas au nettoyage.
+    --
+    -- `allocataires` est l'allocataire tel que la CAF ou la MSA l'écrit — nom de naissance
+    -- ET nom d'usage, prénoms, sexe — c'est-à-dire dans le vocabulaire même du fichier
+    -- partenaire qu'on cherche à retrouver. Le pivot FranceConnect, lui, donne l'état civil,
+    -- et ne porte plus de nom d'usage depuis le retrait de preferred_username : apparier
+    -- CAF contre CAF évite cette divergence.
+    qf.response_payload -> 'data' -> 'allocataires'                          as qf_allocataires,
+
+    -- Seul signal d'adresse restant côté FranceConnect : le parcours ne demande plus la
+    -- commune de résidence, et `adresse_allocataire` vaut désormais {} sur cette source.
+    -- Sert à départager deux homonymes stricts, jamais à apparier seul.
+    qf.response_payload -> 'data' -> 'adresse'                               as qf_adresse,
+
+    -- L'INE, jointure EXACTE avec allocataire->>'matricule' sur les lignes CNOUS, qui y
+    -- rangent l'INE du boursier. La réponse quotient_familial, elle, ne porte aucun
+    -- identifiant de foyer : il n'existe pas d'équivalent pour CNAF et MSA.
+    crous.response_payload -> 'data' ->> 'ine'                               as crous_ine
 
   from eligibility_results r
 

@@ -7,12 +7,16 @@
 *.zip
 *.sql
 
-# Ces trois-là sont du code, pas des données : ce sont les requêtes d'extraction, de
-# write-back et de contrôle de la source franceconnect. Le *.sql ci-dessus vise les dumps de
-# base.
+# Celles-ci sont du code, pas des données : ce sont les requêtes d'extraction, de
+# rapprochement, de write-back et de contrôle de la source franceconnect. Le *.sql ci-dessus
+# vise les dumps de base. Toute requête ajoutée à ce dossier doit être listée ici, sans quoi
+# elle reste invisible pour git.
 !2026/partners/franceconnect/export_eligible_pending.sql
+!2026/partners/franceconnect/match_beneficiaires.sql
 !2026/partners/franceconnect/writeback_verdict.sql
+!2026/partners/franceconnect/writeback_confirmed.sql
 !2026/partners/franceconnect/check_writeback.sql
+!2026/partners/franceconnect/check_confirmed.sql
 !2026/partners/v_pays_territoire_2026.csv
 
 ignored/

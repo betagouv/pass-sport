@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Passage complet de la source FranceConnect, sans interaction : les 4 étapes décrites par
+# Passage complet de la source FranceConnect, sans interaction : les 6 étapes décrites par
 # README.md, du tunnel Scalingo jusqu'au dépôt du CSV de production dans /nfs/run.
 #
 #   crontab -e
@@ -10,9 +10,17 @@
 # sort en 0 sans rien produire. Toute autre sortie non nulle est une anomalie, et cron
 # enverra le journal par courriel.
 #
-# ORDRE CRITIQUE — le CSV de production n'est déposé qu'APRÈS que la base a été marquée et
-# le marquage vérifié. Un fichier déposé sans marquage ferait fabriquer un second code aux
-# mêmes personnes au passage suivant : le fichier est donc la dernière chose qui bouge.
+# DEUX BASES, à ne pas confondre : l'extraction et les write-backs visent la base du site,
+# sur Scalingo, à travers un tunnel ; le rapprochement de l'étape 3 vise la base
+# bénéficiaires locale (lamp01/compose.yml), en direct.
+#
+# ORDRE CRITIQUE, deux fois —
+#   1. le rapprochement passe AVANT la génération des codes. Un code tiré est comptabilisé
+#      dans EXISTING_CODES_PATHFILE_2026 et ne se reprend pas : en fabriquer un à quelqu'un
+#      qui en a déjà un est précisément ce que cette étape existe pour empêcher ;
+#   2. le CSV de production n'est déposé qu'APRÈS que la base a été marquée et le marquage
+#      vérifié. Un fichier déposé sans marquage ferait fabriquer un second code aux mêmes
+#      personnes au passage suivant : le fichier est donc la dernière chose qui bouge.
 #
 # Variables lues (data/.env, puis /etc/default/pass-sport-fc s'il existe) :
 #   SCALINGO_APP                  application Scalingo hébergeant la base      (obligatoire)
@@ -20,6 +28,9 @@
 #   FC_EXPORT_PATHFILE_2026       sortie brute de export_eligible_pending.sql  (obligatoire)
 #   DB_FC_EXPORT_2026             CSV nettoyé au schéma PSP                    (obligatoire)
 #   EXISTING_CODES_PATHFILE_2026  liste des codes déjà distribués              (obligatoire)
+#   LAMP_DB_PASSWORD              base bénéficiaires locale                   (obligatoire)
+#   LAMP_DB_HOST/PORT/USER/NAME   (défauts 127.0.0.1 / 55432 / u_passsport / passsport)
+#   FC_EXERCICE_ID                exercice de la campagne   (défaut 5)
 #   FC_PROD_DROP_DIR              dossier de dépôt          (défaut /nfs/run)
 #   FC_TUNNEL_PORT                port local du tunnel      (défaut 10000)
 #   FC_LOG_DIR                    journaux                  (défaut <ce dossier>/logs)
@@ -61,7 +72,8 @@ resolve_path() {
 CONFIG_VARS=(
   SCALINGO_APP SCALINGO_API_TOKEN SCALINGO_SSH_IDENTITY
   FC_EXPORT_PATHFILE_2026 DB_FC_EXPORT_2026 EXISTING_CODES_PATHFILE_2026
-  FC_PROD_DROP_DIR FC_TUNNEL_PORT FC_LOG_DIR FC_LOCK_FILE
+  FC_PROD_DROP_DIR FC_TUNNEL_PORT FC_LOG_DIR FC_LOCK_FILE FC_EXERCICE_ID
+  LAMP_DB_HOST LAMP_DB_PORT LAMP_DB_USER LAMP_DB_NAME LAMP_DB_PASSWORD
 )
 
 # Ce qui est déjà dans l'environnement l'emporte sur les fichiers de configuration : c'est ce
@@ -112,7 +124,7 @@ command -v scalingo >/dev/null || die "scalingo introuvable"
 EXPORT_CSV="$(resolve_path "$FC_EXPORT_PATHFILE_2026")"
 CLEANED_CSV="$(resolve_path "$DB_FC_EXPORT_2026")"
 CODES_CSV="$(resolve_path "$EXISTING_CODES_PATHFILE_2026")"
-# Le nom du fichier daté, calculé ici pour que les étapes 3 et 4 se le passent sans qu'une
+# Le nom du fichier daté, calculé ici pour que les étapes 5 et 6 se le passent sans qu'une
 # variable soit éditée à la main.
 #
 # Horodaté à la seconde, et non à la journée comme generate_codes_lib.dated_output_path : une
@@ -128,6 +140,30 @@ TS_ISO="$(date '+%Y-%m-%dT%H:%M:%S')"
 TS_COMPACT="${TS_ISO//:/-}"
 WITH_CODES_CSV="$(dirname "$CLEANED_CSV")/$TS_COMPACT-fc-with-codes.csv"
 PROD_CSV="${WITH_CODES_CSV/-with-codes.csv/-prod.csv}"
+UNMATCHED_CSV="$(dirname "$CLEANED_CSV")/$TS_COMPACT-fc-non-apparies.csv"
+
+# Noms FIGÉS, dans CE dossier : \copy est la seule commande psql qui n'interpole aucune
+# variable dans ses arguments, les .sql qui les lisent ne peuvent donc pas les recevoir en
+# paramètre. Ils sont réécrits à chaque passage.
+MATCH_CANDIDATES_CSV="$FC_DIR/fc_2026_match_candidates.csv"
+CONFIRMED_CSV="$FC_DIR/fc_2026_confirmed.csv"
+# Celui-ci n'est lu que par pandas, qui accepte un chemin : il peut être horodaté.
+UNMATCHED_IDS_CSV="$(dirname "$CLEANED_CSV")/$TS_COMPACT-fc-non-apparies-ids.csv"
+
+# La base bénéficiaires du lamp, sur cette même machine (lamp01/compose.yml). Rien ne
+# transite par le réseau : le service n'écoute que sur la boucle locale.
+LAMP_DB_HOST="${LAMP_DB_HOST:-127.0.0.1}"
+LAMP_DB_PORT="${LAMP_DB_PORT:-55432}"
+LAMP_DB_USER="${LAMP_DB_USER:-u_passsport}"
+LAMP_DB_NAME="${LAMP_DB_NAME:-passsport}"
+[[ -n "${LAMP_DB_PASSWORD:-}" ]] || die "LAMP_DB_PASSWORD manquant — voir lamp01/README.md"
+
+# Jamais journalisée : elle porte le mot de passe. Les composants, eux, le sont.
+LAMP_DATABASE_URL="postgresql://${LAMP_DB_USER}:${LAMP_DB_PASSWORD}@${LAMP_DB_HOST}:${LAMP_DB_PORT}/${LAMP_DB_NAME}"
+
+# L'exercice de la campagne : un code d'une campagne précédente n'ouvre plus aucun droit, le
+# rapprochement ne doit donc jamais le rendre.
+FC_EXERCICE_ID="${FC_EXERCICE_ID:-5}"
 
 # --- Verrou ------------------------------------------------------------------------
 # Deux passages simultanés fabriqueraient deux codes aux mêmes personnes : le second attend
@@ -201,7 +237,7 @@ run_psql() { psql "$FC_DATABASE_URL" -v ON_ERROR_STOP=1 "$@"; }
 
 # --- Étape 1 : extraction ----------------------------------------------------------
 
-log "étape 1/4 — extraction des eligible_pending -> $EXPORT_CSV"
+log "étape 1/6 — extraction des eligible_pending -> $EXPORT_CSV"
 run_psql -v out="$EXPORT_CSV" -f "$FC_DIR/export_eligible_pending.sql"
 
 # En-tête seul : personne à servir. C'est le cas nominal d'une cron fréquente, pas une
@@ -212,26 +248,74 @@ if [[ "$(wc -l < "$EXPORT_CSV")" -le 1 ]]; then
   exit 0
 fi
 
-# --- Étapes 2 et 3 : nettoyage et codes --------------------------------------------
+# --- Étape 2 : nettoyage -----------------------------------------------------------
 
-log "étape 2/4 — nettoyage vers le schéma PSP -> $CLEANED_CSV"
-"$PYTHON" "$FC_DIR/fc_pipeline.py" clean --input "$EXPORT_CSV" --output "$CLEANED_CSV"
+log "étape 2/6 — nettoyage vers le schéma PSP -> $CLEANED_CSV"
+"$PYTHON" "$FC_DIR/fc_pipeline.py" clean \
+  --input "$EXPORT_CSV" --output "$CLEANED_CSV" --match-out "$MATCH_CANDIDATES_CSV"
 
-log "étape 3/4 — génération des codes -> $WITH_CODES_CSV"
+# --- Étape 3 : rapprochement avec la base bénéficiaires -----------------------------
+# Ce qui remplace l'appel LCA que le parcours FranceConnect ne fait plus : la personne
+# est-elle déjà en base avec un code ? AVANT la génération de codes, impérativement — un
+# code tiré est comptabilisé dans EXISTING_CODES_PATHFILE_2026 et ne se reprend pas.
+#
+# `cd` obligatoire : \copy s'exécute côté client et lit fc_2026_match_candidates.csv
+# relativement au dossier d'où psql est lancé.
+cd "$FC_DIR"
+
+log "étape 3/6 — rapprochement avec la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
+psql "$LAMP_DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -v apparies="$CONFIRMED_CSV" -v non_apparies="$UNMATCHED_IDS_CSV" \
+  -v exercice="$FC_EXERCICE_ID" \
+  -f "$FC_DIR/match_beneficiaires.sql"
+
+nb_apparies="$(($(wc -l < "$CONFIRMED_CSV") - 1))"
+log "$nb_apparies bénéficiaire(s) déjà connu(s) de la base — aucun code ne leur sera fabriqué"
+
+# --- Étape 4 : write-back des appariés ----------------------------------------------
+# Fait AVANT la génération de codes : ces gens-là sortent du circuit, et rien de ce qui suit
+# ne les concerne. Un échec ici laisse simplement le passage suivant les retrouver.
+
+if (( nb_apparies > 0 )); then
+  log "étape 4/6 — marquage des appariés (verdict eligible_confirmed)"
+  run_psql -f writeback_confirmed.sql
+
+  restants_confirmes="$(run_psql -Atq -f check_confirmed.sql | tail -n 1 | tr -d '[:space:]')"
+  [[ "$restants_confirmes" == "0" ]] \
+    || die "$restants_confirmes bénéficiaire(s) apparié(s) mais non marqué(s) — passage interrompu"
+  log "contrôle du marquage des appariés : 0 restant"
+else
+  log "étape 4/6 — aucun apparié, rien à marquer"
+fi
+
+# Les non-appariés seuls continuent : eux n'ont pas de code, il faut leur en fabriquer un.
+log "mise à l'écart des appariés -> $UNMATCHED_CSV"
+"$PYTHON" "$FC_DIR/fc_pipeline.py" split-matched \
+  --input "$CLEANED_CSV" --unmatched-ids "$UNMATCHED_IDS_CSV" --output "$UNMATCHED_CSV"
+
+# Tout le monde était déjà en base : il n'y a personne à qui fabriquer un code, et donc rien
+# à déposer. Ce n'est pas une erreur — c'est même l'issue souhaitable.
+if [[ "$(wc -l < "$UNMATCHED_CSV")" -le 1 ]]; then
+  log "tous les bénéficiaires étaient déjà en base — rien à déposer"
+  exit 0
+fi
+
+# --- Étape 5 : codes ---------------------------------------------------------------
+
+log "étape 5/6 — génération des codes -> $WITH_CODES_CSV"
 "$PYTHON" "$FC_DIR/fc_pipeline.py" codes \
-  --input "$CLEANED_CSV" --output "$WITH_CODES_CSV" --existing-codes "$CODES_CSV"
+  --input "$UNMATCHED_CSV" --output "$WITH_CODES_CSV" --existing-codes "$CODES_CSV"
 
-# --- Étape 4 : write-back ----------------------------------------------------------
+# --- Étape 6 : write-back ----------------------------------------------------------
 # À partir d'ici des codes existent sans que personne ne le sache en base : c'est la fenêtre
 # que le marquage referme, et rien ne doit être déposé avant qu'elle le soit.
 
-log "étape 4/4 — découpage du fichier daté"
+log "étape 6/6 — découpage du fichier daté"
 "$PYTHON" "$FC_DIR/fc_pipeline.py" writeback \
   --with-codes "$WITH_CODES_CSV" --prod-out "$PROD_CSV"
 
-# `cd` obligatoire : \copy s'exécute côté client et lit fc_2026_writeback.csv relativement au
-# dossier d'où psql est lancé.
-cd "$FC_DIR"
+# Le `cd "$FC_DIR"` de l'étape 3 tient toujours : \copy s'exécute côté client et lit
+# fc_2026_writeback.csv relativement au dossier d'où psql est lancé.
 
 log "marquage en base (verdict eligible_pending_lca)"
 run_psql -f writeback_verdict.sql
@@ -248,7 +332,7 @@ log "contrôle du marquage : 0 bénéficiaire restant"
 mkdir -p "$FC_PROD_DROP_DIR"
 [[ -w "$FC_PROD_DROP_DIR" ]] || die "dossier de dépôt non inscriptible : $FC_PROD_DROP_DIR"
 
-# Le nombre de lignes n'est connu qu'une fois le CSV de prod écrit par l'étape 4 : le nom
+# Le nombre de lignes n'est connu qu'une fois le CSV de prod écrit par l'étape 6 : le nom
 # déposé ne peut donc être construit qu'ici, pas en même temps que PROD_CSV plus haut.
 nb_lignes="$(($(wc -l < "$PROD_CSV") - 1))"
 nom_depose="beneficiaires-insertion-$nb_lignes-$TS_COMPACT.csv"

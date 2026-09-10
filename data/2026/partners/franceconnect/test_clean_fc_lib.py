@@ -33,8 +33,11 @@ def enfant_row(**overrides):
         'qf_valeur': '650',
         'qf_fournisseur': 'CNAF',
         'qf_enfants': None,
+        'qf_allocataires': None,
+        'qf_adresse': None,
         'aah_est_beneficiaire': None,
         'crous_est_boursier': None,
+        'crous_ine': None,
     }
     row.update(overrides)
     return row
@@ -300,7 +303,9 @@ def test_l_allocataire_n_a_aucune_adresse():
     # sérialiseur JSON, qui les écartera parce qu'elles sont nulles.
     for field in ('code_insee', 'voie', 'code_postal', 'commune', 'cplt_adresse'):
         assert pd.isna(df.loc[0, f'adresse_allocataire-{field}'])
-    assert df.loc[0, 'allocataire-matricule'] == '1234567'
+    # Aucun matricule hors route boursier : la réponse quotient_familial ne porte pas de
+    # numéro d'allocataire, il n'y a donc rien de vrai à mettre là.
+    assert pd.isna(df.loc[0, 'allocataire-matricule'])
 
 
 def test_la_cle_du_write_back_survit_a_la_projection():
@@ -359,11 +364,11 @@ def test_les_colonnes_json_portent_ce_que_franceconnect_donne_et_rien_de_plus():
 
     assert allocataire == {
         'qualite': 'Mme', 'nom': 'MARTIN', 'prenom': 'CLAIRE', 'courriel': 'claire@example.org',
-        'matricule': '1234567',
     }
-    # Ni code_organisme, ni téléphone : FranceConnect n'en fournit aucun, et le sérialiseur
-    # écarte les valeurs nulles plutôt que de les porter vides. Le matricule, lui, est fixe
-    # pour cette source (voir build_psp_columns).
+    # Ni code_organisme, ni téléphone, ni matricule : FranceConnect n'en fournit aucun — la
+    # réponse quotient_familial ne porte aucun numéro d'allocataire — et le sérialiseur écarte
+    # les valeurs nulles plutôt que de les porter vides. Seule la route boursier a un
+    # matricule, l'INE (voir build_psp_columns).
     assert adresse == {}
 
 
@@ -371,3 +376,95 @@ def test_drop_intermediate_columns_tolere_les_colonnes_deja_absentes():
     # filter_rows_missing_required_fields supprime en amont les colonnes entièrement nulles.
     df = pd.DataFrame([{'eligibility_result_id': 'x', 'nom': 'MARTIN', 'source': 'enfant'}])
     assert list(lib.drop_intermediate_columns(df).columns) == ['eligibility_result_id', 'nom']
+
+
+# --- Rapprochement avec la base bénéficiaires -------------------------------------
+
+# Le foyer tel que la CAF l'écrit : nom de naissance ET nom d'usage, que le pivot
+# FranceConnect ne donne plus depuis le retrait de preferred_username. Deux allocataires,
+# comme pour un couple — c'est la date de naissance du pivot qui désigne le connecté.
+ALLOCATAIRES_QF = json.dumps([
+    {'nom_naissance': 'BOLIMEK', 'nom_usage': 'MARTIN', 'prenoms': 'Claire Ysolde',
+     'date_naissance': '02/03/1985', 'sexe': 'F'},
+    {'nom_naissance': 'VOKTARIMENDO', 'prenoms': 'Tarnu',
+     'date_naissance': '17/11/1982', 'sexe': 'M'},
+])
+
+
+def test_l_allocataire_caf_est_choisi_sur_la_date_de_naissance_du_pivot():
+    df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    assert non_resolus == 0
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'BOLIMEK'
+    assert df.loc[0, 'match-allocataire_nom_usage'] == 'MARTIN'
+    assert df.loc[0, 'match-allocataire_prenom'] == 'CLAIRE YSOLDE'
+
+
+def test_l_allocataire_caf_retombe_sur_le_pivot_sans_reponse_quotient_familial():
+    # C'est le cas de la route AAH, qui n'appelle jamais quotient_familial : il n'y a aucun
+    # tableau `allocataires`, et l'état civil du pivot est tout ce qu'on a.
+    df = pd.DataFrame([enfant_row()])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    assert non_resolus == 1
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'MARTIN'
+    assert df.loc[0, 'match-allocataire_prenom'] == 'Claire'
+
+
+def test_un_seul_allocataire_est_retenu_sans_date_de_naissance_concordante():
+    seul = json.dumps([{'nom_naissance': 'ZELVIK', 'prenoms': 'Halvi',
+                        'date_naissance': '01/01/1900'}])
+    df = pd.DataFrame([enfant_row(qf_allocataires=seul)])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    assert non_resolus == 0
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'ZELVIK'
+
+
+def test_deux_allocataires_sans_date_concordante_ne_designent_personne():
+    ambigu = json.dumps([
+        {'nom_naissance': 'ZELVIK', 'prenoms': 'Halvi', 'date_naissance': '01/01/1900'},
+        {'nom_naissance': 'OSVAREK', 'prenoms': 'Mirsa', 'date_naissance': '02/02/1901'},
+    ])
+    df = pd.DataFrame([enfant_row(qf_allocataires=ambigu)])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    # Non résolu côté CAF : le repli sur le pivot rend quand même la ligne recherchable.
+    assert non_resolus == 1
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'MARTIN'
+
+
+def test_le_code_postal_du_foyer_est_extrait_de_la_reponse_quotient_familial():
+    df = pd.DataFrame([enfant_row(qf_adresse=json.dumps({'code_postal': '88180',
+                                                         'commune': 'PLUNDARIS'}))])
+    df = lib.resolve_adresse_qf(df)
+    assert df.loc[0, 'match-code_postal'] == '88180'
+
+
+def test_l_ine_du_boursier_devient_le_matricule_de_l_allocataire():
+    df = pd.DataFrame([self_row(crous_est_boursier='true', crous_ine='INE7788')])
+    df, _ = lib.resolve_enfant_genre(df)
+    df = lib.build_psp_columns(df)
+    assert df.loc[0, 'allocataire-matricule'] == 'INE7788'
+
+
+def test_les_candidats_au_rapprochement_portent_les_colonnes_attendues():
+    import partners_lib as partners
+
+    df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
+    df, _ = lib.resolve_enfant_genre(df)
+    df, _ = lib.resolve_allocataire_caf(df)
+    df = lib.resolve_adresse_qf(df)
+    df = lib.build_psp_columns(df)
+    df = partners.add_allocataire_json_column(df)
+
+    candidats = lib.build_match_candidates(df)
+
+    assert list(candidats.columns) == lib.MATCH_COLUMNS
+    assert candidats.loc[0, 'allocataire_nom'] == 'BOLIMEK'
+    assert candidats.loc[0, 'beneficiaire_nom'] == 'MARTIN'
+    assert candidats.loc[0, 'beneficiaire_prenom'] == 'Lea'
+    assert candidats.loc[0, 'beneficiaire_date_naissance'] == '2015-06-01'
+    # Pas de route boursier ici : aucun INE, donc aucune jointure exacte à tenter.
+    assert candidats.loc[0, 'ine'] == ''

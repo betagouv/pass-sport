@@ -11,28 +11,80 @@ Ce second-là n'est pas terminal : il désigne quelqu'un que **nos** règles jug
 son `pass_sport_code` est donc toujours NULL et il n'a reçu que l'accusé de réception de sa
 demande. Ce dossier est ce qui transforme cette promesse en code.
 
-## Les 4 étapes, dans cet ordre
+## Les 6 étapes, dans cet ordre
 
 | # | Quoi | À la main | En ligne de commande |
 |---|------|-----------|----------------------|
 | 1 | Extraire les `eligible_pending` de la base | `export_eligible_pending.sql` | idem |
 | 2 | Nettoyer vers le schéma PSP | `clean_franceconnect.ipynb` | `fc_pipeline.py clean` |
-| 3 | Fabriquer les codes | `../generate_new_codes.ipynb` avec `SOURCE = 'FC'` | `fc_pipeline.py codes` |
-| 4 | Marquer les bénéficiaires servis, en base | `writeback_codes.ipynb` puis `writeback_verdict.sql` | `fc_pipeline.py writeback` puis les `.sql` |
+| 3 | Chercher chacun dans la base bénéficiaires | `match_beneficiaires.sql` | idem |
+| 4 | Marquer les **retrouvés** `eligible_confirmed` | `writeback_confirmed.sql` | idem |
+| 5 | Fabriquer les codes des **non retrouvés** | `../generate_new_codes.ipynb` avec `SOURCE = 'FC'` | `fc_pipeline.py codes` |
+| 6 | Marquer les servis `eligible_pending_lca`, en base | `writeback_codes.ipynb` puis `writeback_verdict.sql` | `fc_pipeline.py writeback` puis les `.sql` |
+
+**L'étape 3 est ce qui remplace l'appel LCA** que ce parcours ne fait plus. Sans elle, une
+personne déjà présente dans la base bénéficiaires — parce que la CNAF, la MSA ou le CNOUS
+l'ont déclarée — recevrait un second code. Elle doit passer **avant** l'étape 5 : un code
+tiré est comptabilisé dans `EXISTING_CODES_PATHFILE_2026` et ne se reprend pas.
+
+⚠️ **Deux bases, à ne pas confondre.** Les étapes 1, 4 et 6 visent la base du site, sur
+Scalingo, à travers un tunnel. L'étape 3 vise la base bénéficiaires locale du lamp
+([lamp01/](../../../../lamp01/)), en direct.
 
 ```mermaid
 flowchart TD
     DB[("eligibility_results<br/>verdict = eligible_pending")]
+    LAMP[("base bénéficiaires du lamp<br/>CNAF + MSA + CNOUS")]
 
     DB -->|"1 · export_eligible_pending.sql"| F1["fc_2026_eligible_pending.csv<br/>export brut"]
     F1 -->|"2 · fc_pipeline.py clean"| F2["DB_FC_EXPORT_2026<br/>schéma PSP"]
-    F2 -->|"3 · fc_pipeline.py codes"| F3["AAAA-MM-JJ-fc-with-codes.csv<br/>+ pass_sport_code, + eligibility_result_id"]
+    F1 -->|"2 · fc_pipeline.py clean --match-out"| M1["fc_2026_match_candidates.csv<br/>colonnes de rapprochement"]
+
+    M1 -->|"3 · match_beneficiaires.sql"| LAMP
+    LAMP -->|"retrouvés"| M2["fc_2026_confirmed.csv<br/>eligibility_result_id;id_psp"]
+    LAMP -->|"non retrouvés"| M3["ids des non-appariés"]
+    M2 -->|"4 · writeback_confirmed.sql<br/>verdict eligible_confirmed"| DB
+
+    F2 --> SPLIT{"fc_pipeline.py<br/>split-matched"}
+    M3 --> SPLIT
+    SPLIT -->|"non-appariés seuls"| F2B["AAAA-MM-JJTHH-MM-SS-fc-non-apparies.csv"]
+
+    F2B -->|"5 · fc_pipeline.py codes"| F3["AAAA-MM-JJ-fc-with-codes.csv<br/>+ pass_sport_code, + eligibility_result_id"]
     F3 -. met à jour .-> CODES[("EXISTING_CODES_PATHFILE_2026<br/>codes déjà distribués")]
-    F3 -->|"4 · fc_pipeline.py writeback"| F4A["fc_2026_writeback.csv<br/>eligibility_result_id;id_psp"]
-    F3 -->|"4 · fc_pipeline.py writeback"| F4B["AAAA-MM-JJ-fc-prod.csv<br/>sans colonne technique"]
+    F3 -->|"6 · fc_pipeline.py writeback"| F4A["fc_2026_writeback.csv<br/>eligibility_result_id;id_psp"]
+    F3 -->|"6 · fc_pipeline.py writeback"| F4B["AAAA-MM-JJ-fc-prod.csv<br/>sans colonne technique"]
     F4A -->|"writeback_verdict.sql"| DB
     F4B -->|"copie + renommage atomique"| DEPOT["beneficiaires-insertion-N-TS.csv<br/>déposé dans FC_PROD_DROP_DIR"]
 ```
+
+### Comment le rapprochement identifie quelqu'un
+
+Trois niveaux, du plus sûr au plus lâche, chacun n'examinant que ce que le précédent n'a pas
+tranché :
+
+1. **l'INE**, jointure exacte avec `allocataire->>'matricule'` — le CNOUS y range l'INE du
+   boursier, et API Particulier le rend sur cette route. Aucun équivalent n'existe pour la
+   CNAF ni la MSA : la réponse `quotient_familial` ne porte **aucun** numéro d'allocataire ;
+2. **l'identité**, sur la colonne générée `beneficiaires.cle_recherche` — nom et prénom de
+   l'allocataire, date de naissance et nom du bénéficiaire, puis ses prénoms. Recherche sur
+   le 1er prénom ; si plusieurs lignes répondent, nouvelle recherche sur les deux premiers.
+   **Deux clés sont essayées côté allocataire**, son nom de naissance et son nom d'usage,
+   parce que les deux caisses ne rangent pas la même chose dans le `allocataire.nom` qui part
+   en base : la MSA y met le nom de naissance, la CNAF y met `RESPDOS`, qui est un nom
+   d'usage. Une clé unique raterait systématiquement l'une des deux ;
+3. **la date de naissance de l'allocataire**, en dernier recours, pour départager des
+   homonymes stricts dont le bénéficiaire n'a qu'un seul prénom.
+
+Ce qui n'est **pas** dans la clé, et pourquoi : la naissance et le lieu de naissance de
+l'allocataire. La MSA et le CNOUS les déposent bien dans le JSON, mais la CNAF ne les
+sérialise pas — son pipeline mappe les colonnes puis les jette après l'appel qf-batch — et
+les lignes déjà en base n'en portent aucune. Un champ présent d'un côté et absent de l'autre
+rend la ligne **introuvable**, pas seulement moins bien identifiée : l'ajouter à la clé ne
+pourrait que perdre des appariements. D'où sa place comme départageur, où il ne fait que
+rétrécir un ensemble déjà ambigu.
+
+Un candidat qui reste ambigu après les trois niveaux n'est **pas** apparié : il reçoit un
+code neuf, ce qui est le comportement le moins risqué des deux.
 
 `fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage ; les
 fichiers horodatés (`AAAA-MM-JJ-fc-with-codes.csv`, `fc_2026_writeback.csv`,

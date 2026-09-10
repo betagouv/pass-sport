@@ -13,6 +13,17 @@ import {
 import type { OutcomeEmailKind } from "../email/notify";
 import type { PivotIdentity } from "../eligibility/types";
 
+// The verdict as the USAGER should read it. The verdict column below is where each
+// value is documented. 'eligible_pending_lca' is never produced by the worker — the code
+// generation under data/ writes it — but it is declared so the type stays the exact set
+// of values the column can hold.
+//
+// The WORKER only ever writes 'eligible_pending' or 'not_assessed' on the FranceConnect
+// path: it no longer calls LCA, so it can neither hand out a code nor pronounce a refusal.
+// Those rows are not final, though — the code generation under data/ moves them on, to
+// 'eligible_pending_lca' when it mints a code, or to 'eligible_confirmed' when it finds the
+// person already carrying one in the lamp beneficiary database. Every remaining value
+// belongs to the parcours hors FranceConnect.
 export type Verdict =
   | "eligible_confirmed"
   | "eligible_confirmed_but_email_not_matching"
@@ -79,8 +90,15 @@ export const eligibilityResults = pgTable(
     // Deliberately not email_kind: that one describes what was SENT and is null whenever
     // nothing was. Written once here so the site never has to re-derive the rule that lives
     // in jobs/shared.ts.
-    //   'eligible_confirmed'   — LCA a le bénéficiaire, un code part par email. Parcours
-    //                            hors FranceConnect uniquement.
+    //   'eligible_confirmed'   — le bénéficiaire a déjà un code. Sur le parcours hors
+    //                            FranceConnect, LCA le sert et un code part par email ;
+    //                            sur le parcours FranceConnect, ce verdict est posé par
+    //                            data/ — JAMAIS par le worker, comme 'eligible_pending_lca'
+    //                            — quand le rapprochement avec la base bénéficiaires du
+    //                            lamp a retrouvé la personne et son id_psp
+    //                            (data/2026/partners/franceconnect/writeback_confirmed.sql).
+    //                            ATTENTION : dans ce second cas aucun courriel n'est envoyé,
+    //                            email_kind et email_sent restent donc à leur valeur.
     //   'eligible_confirmed_but_email_not_matching'
     //                          — LCA a le bénéficiaire et un code lui a été servi, mais
     //                            l'adresse saisie au formulaire n'est pas celle que LCA
@@ -327,6 +345,8 @@ export const eligibilityHistory = pgTable(
     // | 'lca_checks.still_pending' — LCA does not serve this code yet
     // | 'lca_checks.code_mismatch' — LCA answered a code other than the one stored
     // | 'lca_checks.unprocessable' | 'lca_checks.skipped'
+    // | 'psp.code_match_base' — written by data/ too: the beneficiary was found in the lamp
+    //   beneficiary database with a code already assigned, so no new one was minted
     action: text("action").notNull(),
 
     // 'success' | 'not_found' | 'error' | 'rate_limited' | 'skipped'

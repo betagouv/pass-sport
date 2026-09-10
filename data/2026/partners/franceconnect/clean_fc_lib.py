@@ -86,7 +86,13 @@ FC_DEDUPLICATION_KEY_COLUMNS = ['nom', 'prenom', 'date_naissance', 'genre']
 # les colonnes de travail de l'export, et la charpente `allocataire-*` / `adresse_*` une fois
 # repliée dans les deux colonnes JSON. Équivalent de partners.FINAL_COLUMNS_TO_DROP, qui ne
 # peut pas être réutilisé tel quel : cette source nomme ses colonnes d'identité au vocabulaire
-# FranceConnect et n'a ni matricule ni adresse postale.
+# FranceConnect, n'a de matricule que sur la route boursier (l'INE) et aucune adresse postale.
+#
+# Les colonnes brutes que le rapprochement exploite (qf_allocataires, qf_adresse, crous_ine)
+# sont retirées ici comme les autres colonnes de travail : leur contenu utile a déjà été
+# extrait. Les colonnes `match-*` qui en dérivent, elles, ne figurent PAS dans cette liste :
+# ce retrait précède le filtrage et la déduplication, alors que les candidats au rapprochement
+# doivent être tirés du DataFrame final. fc_pipeline.clean les retire à part.
 #
 # `eligibility_result_id` n'en fait volontairement PAS partie : c'est la clé du write-back,
 # elle doit survivre jusqu'au CSV final (voir writeback_codes.ipynb). Après ce retrait, il
@@ -105,8 +111,11 @@ FINAL_COLUMNS_TO_DROP = [
     'qf_valeur',
     'qf_fournisseur',
     'qf_enfants',
+    'qf_allocataires',
+    'qf_adresse',
     'aah_est_beneficiaire',
     'crous_est_boursier',
+    'crous_ine',
     # charpente repliée dans la colonne JSON `allocataire`
     'allocataire-qualite',
     'allocataire-matricule',
@@ -277,6 +286,173 @@ def resolve_enfant_genre(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     return df, non_resolus
 
 
+def resolve_allocataire_caf(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Retrouve l'allocataire tel que la CAF ou la MSA l'écrit, dans `qf_allocataires`.
+
+    Sert au rapprochement avec la base bénéficiaires, et à rien d'autre : les lignes CNAF et
+    MSA de cette base portent l'orthographe du fichier partenaire, pas celle de l'état civil.
+    Le pivot FranceConnect donne `family_name`, et plus de nom d'usage depuis le retrait de
+    `preferred_username` ; le tableau `allocataires` de la réponse quotient_familial, lui,
+    porte les deux — c'est la même caisse, le même système d'information que l'export
+    partenaire qu'on cherche à retrouver.
+
+    Le tableau peut décrire un couple. L'allocataire connecté est celui dont la date de
+    naissance est celle du pivot ; à défaut, un tableau à une seule entrée ne laisse aucun
+    doute. Sinon les colonnes restent vides et le rapprochement retombera sur le pivot.
+
+    Renvoie (df, nombre de lignes sans allocataire CAF identifié).
+    """
+    df = df.copy()
+
+    def allocataire_for(row) -> tuple[str, str, str]:
+        try:
+            brut = row.get('qf_allocataires')
+            allocataires = json.loads(brut) if brut else []
+        except (TypeError, ValueError):
+            return '', '', ''
+
+        if not isinstance(allocataires, list) or not allocataires:
+            return '', '', ''
+
+        naissance_pivot = _to_iso_birthdate(row.get('allocataire-date_naissance'))
+        retenu = None
+        if naissance_pivot:
+            for allocataire in allocataires:
+                if _to_iso_birthdate(allocataire.get('date_naissance')) == naissance_pivot:
+                    retenu = allocataire
+                    break
+        if retenu is None and len(allocataires) == 1:
+            retenu = allocataires[0]
+        if retenu is None:
+            return '', '', ''
+
+        return (
+            unaccent_and_upper(str(retenu.get('nom_naissance') or '')).strip(),
+            unaccent_and_upper(str(retenu.get('nom_usage') or '')).strip(),
+            unaccent_and_upper(str(retenu.get('prenoms') or '')).strip(),
+        )
+
+    if df.empty:
+        caf_nom = caf_nom_usage = caf_prenom = pd.Series('', index=df.index, dtype=object)
+    else:
+        resolus = df.apply(allocataire_for, axis=1, result_type='expand')
+        caf_nom, caf_nom_usage, caf_prenom = resolus[0], resolus[1], resolus[2]
+
+    non_resolus = int((caf_nom == '').sum())
+
+    # Repli sur l'état civil du pivot, fait ICI et pas au moment de construire le CSV de
+    # rapprochement : `allocataire-nom_naissance` et `-prenom` sont de la charpente, que
+    # drop_intermediate_columns aura retirée d'ici là.
+    pivot_nom = df['allocataire-nom_naissance'].fillna('') \
+        if 'allocataire-nom_naissance' in df.columns else pd.Series('', index=df.index)
+    pivot_prenom = df['allocataire-prenom'].fillna('') \
+        if 'allocataire-prenom' in df.columns else pd.Series('', index=df.index)
+
+    df['match-allocataire_nom_naissance'] = caf_nom.where(caf_nom != '', pivot_nom)
+    # Pas de repli sur le pivot pour le nom d'usage : FranceConnect n'en fournit plus depuis
+    # le retrait de `preferred_username`, et le fabriquer à partir de l'état civil ne
+    # produirait que le nom de naissance — une clé en double, sans rien apporter.
+    df['match-allocataire_nom_usage'] = caf_nom_usage
+    df['match-allocataire_prenom'] = caf_prenom.where(caf_prenom != '', pivot_prenom)
+
+    return df, non_resolus
+
+
+def resolve_adresse_qf(df: pd.DataFrame) -> pd.DataFrame:
+    """Extrait le code postal de la réponse quotient_familial, pour départager les homonymes.
+
+    Seul signal d'adresse restant sur cette source : le parcours ne demande plus la commune
+    de résidence, et `adresse_allocataire` vaut désormais {}. Il ne sert jamais à apparier
+    seul — uniquement à trancher entre deux lignes que tout le reste rend indistinguables.
+    """
+    df = df.copy()
+
+    def code_postal_for(value) -> str:
+        try:
+            adresse = json.loads(value) if value else {}
+        except (TypeError, ValueError):
+            return ''
+        if not isinstance(adresse, dict):
+            return ''
+        return str(adresse.get('code_postal') or '').strip()
+
+    if df.empty or 'qf_adresse' not in df.columns:
+        df['match-code_postal'] = ''
+    else:
+        df['match-code_postal'] = df['qf_adresse'].map(code_postal_for)
+    return df
+
+
+def _champ_du_json_allocataire(valeur, champ: str) -> str:
+    """Relit un champ de la colonne JSON `allocataire`, déjà sérialisée à ce stade."""
+    try:
+        allocataire = json.loads(valeur) if valeur else {}
+    except (TypeError, ValueError):
+        return ''
+    return str(allocataire.get(champ) or '') if isinstance(allocataire, dict) else ''
+
+
+# Colonnes du CSV de rapprochement, dans l'ordre où match_beneficiaires.sql les attend. Elles
+# ne vont pas en production : elles vivent le temps d'une requête contre la base bénéficiaires.
+MATCH_COLUMNS = [
+    'eligibility_result_id',
+    'ine',
+    'allocataire_nom',
+    # Le nom d'usage n'est pas là par goût — partout ailleurs le code ne retient que le nom
+    # de naissance de la réponse quotient_familial (candidates.ts, qf-batch.ts,
+    # build_psp_columns). Il est là parce que les deux caisses ne rangent PAS la même chose
+    # dans le `allocataire.nom` qui part en base : la MSA y met le nom de naissance, la CNAF
+    # y met RESPDOS, qui est un nom d'usage. Une seule clé raterait l'une des deux.
+    'allocataire_nom_usage',
+    'allocataire_prenom',
+    # Hors clé, et volontairement : CNAF ne sérialise pas la naissance de l'allocataire dans
+    # son JSON, une clé qui l'exigerait rendrait ses lignes introuvables. MSA et CNOUS la
+    # portent, elle sert donc à DÉPARTAGER deux homonymes — jamais à apparier seule.
+    'allocataire_date_naissance',
+    'beneficiaire_nom',
+    'beneficiaire_prenom',
+    'beneficiaire_date_naissance',
+    'code_postal',
+]
+
+
+def build_match_candidates(df: pd.DataFrame) -> pd.DataFrame:
+    """Réduit les bénéficiaires nettoyés aux colonnes que le rapprochement interroge.
+
+    À appeler sur le DataFrame FINAL — après filtrage, normalisation de casse et
+    déduplication — pour que les candidats soient exactement les lignes qui continuent.
+
+    Aucune normalisation n'est faite ici : la clé est construite côté SQL, par
+    `public.normalise_recherche`, pour que les deux côtés de la comparaison passent par la
+    MÊME implémentation. Une normalisation Python en plus, et les deux dériveraient.
+
+    Le repli du nom CAF sur l'état civil du pivot a déjà eu lieu, dans
+    resolve_allocataire_caf ; l'INE, lui, a été rangé dans `allocataire-matricule` par
+    build_psp_columns et se relit dans la colonne JSON.
+    """
+    def colonne(nom: str) -> pd.Series:
+        return df[nom] if nom in df.columns else pd.Series('', index=df.index)
+
+    candidats = pd.DataFrame({
+        'eligibility_result_id': df['eligibility_result_id'],
+        'ine': df['allocataire'].map(lambda v: _champ_du_json_allocataire(v, 'matricule')),
+        'allocataire_nom': colonne('match-allocataire_nom_naissance'),
+        'allocataire_nom_usage': colonne('match-allocataire_nom_usage'),
+        'allocataire_prenom': colonne('match-allocataire_prenom'),
+        'allocataire_date_naissance': df['allocataire'].map(
+            lambda v: _champ_du_json_allocataire(v, 'date_naissance')),
+        'beneficiaire_nom': df['nom'],
+        'beneficiaire_prenom': df['prenom'],
+        # La date seule : la base stocke ces dates décalées de 4 h
+        # (partners.shift_birthdate_by_hours) et la clé de recherche n'en retient que le jour.
+        'beneficiaire_date_naissance': pd.to_datetime(
+            df['date_naissance'], errors='coerce').dt.strftime('%Y-%m-%d'),
+        'code_postal': colonne('match-code_postal').fillna(''),
+    })
+
+    return candidats[MATCH_COLUMNS].fillna('')
+
+
 def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Projette l'export vers le schéma PSP attendu par generate_new_codes.ipynb.
 
@@ -314,8 +490,13 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     # d'adresse applique au code postal ET au code INSEE — ne reconnaît comme vide que '' ou
     # None, et journalise bruyamment un échec de cast sur un NaN. Une ligne de bruit par
     # bénéficiaire noierait les compteurs du notebook.
-    
-    df['allocataire-matricule'] = '1234567'
+
+    # L'INE sur les boursiers, rien ailleurs. C'est le seul identifiant que cette source
+    # obtienne : la réponse quotient_familial ne porte AUCUN numéro d'allocataire, il n'existe
+    # donc pas d'équivalent CAF ou MSA. CNOUS range l'INE dans ce même champ, d'où la
+    # jointure exacte que match_beneficiaires.sql tente en premier.
+    df['allocataire-matricule'] = df['crous_ine'].replace('', None) \
+        if 'crous_ine' in df.columns else None
     df['allocataire-code_organisme'] = None
     df['allocataire-telephone'] = None
 

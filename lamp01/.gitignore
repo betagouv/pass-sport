@@ -1,1 +1,7 @@
+# The injection script that drains /nfs/run, its test bench and the Compose file that
+# bench spins up: not ours to version. The script is read-only material carrying host
+# addresses and passwords, and this repository is public.
 untracked_scripts/
+
+# Database credentials read by compose.yml and inject_csv.sh. See .env.example.
+.env
