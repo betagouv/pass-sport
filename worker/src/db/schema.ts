@@ -138,11 +138,21 @@ export const eligibilityResults = pgTable(
     // as OutcomeEmailKind, by design. 'acknowledgment' is excluded: that mail is job-level,
     // sent before any beneficiary is known, and belongs to eligibility_history alone.
     //
-    // Rows written before the templates carry the retired vocabulary of the hors FranceConnect
-    // path: 'code_withheld' and 'not_eligible' where a row written today says
-    // 'not_eligible_hors_fc'. This table is never purged, so a query over the hors FC mails has
-    // to match all three. What 'code_withheld' distinguished lives in verdict
-    // ('eligible_confirmed_but_email_not_matching'), which is the authoritative column anyway.
+    // A code mail names its situation, since eligibility_results has no column saying which
+    // route made someone eligible: 'code_direct_aah', 'code_direct_boursier' (CROUS or FSS) and
+    // 'code_indirect' (QF or AEEH — the beneficiary is the allocataire's child).
+    //
+    // Older rows carry a retired vocabulary, and this comment is the ONLY place documenting it:
+    // the templates were deleted once nothing could send them, so OutcomeEmailKind no longer
+    // names these and a query has to spell them out.
+    //   'code'                       — the single code mail, before the split per situation
+    //   'eligible_soon'              — FranceConnect end-of-job mails, gone with the LCA calls
+    //   'not_eligible'                 that produced them
+    //   'code_withheld'              — where a row written today says 'not_eligible_hors_fc'.
+    //                                  What it distinguished lives in verdict
+    //                                  ('eligible_confirmed_but_email_not_matching'), the
+    //                                  authoritative column anyway.
+    // This table is never purged, so a query over past mails has to match them all.
     emailKind: text("email_kind").$type<OutcomeEmailKind>(),
     emailSent: boolean("email_sent").notNull().default(false),
 
@@ -331,10 +341,12 @@ export const eligibilityHistory = pgTable(
     // 'dss.quotient_familial' | 'dss.aah' | 'cnous.etudiant_boursier' | 'dss.aeeh'
     // | 'lca.search' | 'lca.search.crous_retry' | 'lca.confirm'
     // | 'email.acknowledgment' — accusé de réception, posé à l'ouverture d'un job FranceConnect
-    // | 'email.code' | 'email.eligible_soon' | 'email.not_eligible'
+    // | 'email.code_direct_aah' | 'email.code_direct_boursier' | 'email.code_indirect'
     // | 'email.not_eligible_hors_fc' | 'email.skipped'
+    // | 'email.code' — RETIRED, written before the code mail was split per situation.
+    // | 'email.eligible_soon' | 'email.not_eligible' — RETIRED with the FranceConnect outcome mails.
     // | 'email.digest' — RETIRED, written before the per-beneficiary split. This table is
-    //   never purged, so a query over email events still has to match it.
+    //   never purged, so a query over email events still has to match all four.
     // | 'results.persisted' | 'results.skipped'
     // | 'psp.code_writeback' — written by data/, like the 'eligible_pending_lca' verdict
     // The eligible_pending_lca_checks job (jobs/lca-checks.ts), under its own prefixes so a query

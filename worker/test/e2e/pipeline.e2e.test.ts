@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { EMAIL_TEMPLATES } from "../../src/email/notify";
 import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 
 // End-to-end pipeline tests against real Redis + Postgres (Testcontainers), a real
@@ -586,7 +587,11 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
         process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT = prev;
       }
 
-      expect(stack.parsedEmails()[before].templateId).toBe("1188167");
+      // The built-in id, not the one the harness pins in the env — read from the source of
+      // truth so changing a template does not mean chasing a literal down here.
+      const builtIn = EMAIL_TEMPLATES.acknowledgment.templateId;
+      expect(builtIn).not.toBe(TEMPLATE_IDS.acknowledgment);
+      expect(stack.parsedEmails()[before].templateId).toBe(String(builtIn));
     });
   });
 

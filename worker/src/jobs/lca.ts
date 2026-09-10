@@ -4,7 +4,7 @@ import { isChildAide, type LcaJobData } from "../eligibility/types";
 import type { Database } from "../db/client";
 import { eligibilityResults, type Verdict } from "../db/schema";
 import {
-  beneficiaryVariables,
+  codeEmailVariables,
   lcaEmailKind,
   recordEmailDelivery,
   sendOutcomeEmail,
@@ -89,7 +89,8 @@ export async function processLcaJob(
       : VERDICT_BY_STATUS[lcaStatus];
 
   // Past the early return only 'confirmed' and 'not_found' remain, so an email always goes out.
-  const emailKind = lcaEmailKind(lcaStatus, emailsMatch);
+  // The aide picks which of the three code templates: AAH, boursier, or the child's own.
+  const emailKind = lcaEmailKind(lcaStatus, emailsMatch, data.aide);
 
   // BullMQ drops a job once it completes, so a usager who submits the same request twice
   // gets a second one through. The row already written is what recognises it.
@@ -171,13 +172,14 @@ export async function processLcaJob(
     send: () =>
       sendOutcomeEmail(
         data.contactEmail,
-        emailKind === "code"
-          ? {
-              kind: "code",
-              code: data.passSportCode ?? "",
-              ...beneficiaryVariables(data.beneficiary, data.allocataire),
-            }
-          : { kind: "not_eligible_hors_fc" },
+        emailKind === "not_eligible_hors_fc"
+          ? { kind: "not_eligible_hors_fc" }
+          : codeEmailVariables(
+              emailKind,
+              data.beneficiary,
+              data.allocataire,
+              data.passSportCode ?? "",
+            ),
       ),
   });
 

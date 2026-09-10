@@ -57,7 +57,8 @@ const historyFor = async (jobId: string) =>
   ).rows;
 
 describe("lca job", () => {
-  it("records the verdict and mails the code when the address matches the one LCA holds", async () => {
+  // The fixture is SITUATION.QF, a route where the beneficiary is the allocataire's child.
+  it("records the verdict and mails the indirect code when the address matches the one LCA holds", async () => {
     const jobId = "lca-confirmed";
     const before = stack.sentEmails().length;
 
@@ -70,30 +71,78 @@ describe("lca job", () => {
     expect(row.is_france_connected).toBe(false);
     expect(row.source).toBe("enfant");
     expect(row.email).toBe("allocataire@example.test");
-    expect(row.email_kind).toBe("code");
+    expect(row.email_kind).toBe("code_indirect");
     expect(row.email_sent).toBe(true);
 
     const sent = stack.parsedEmails().slice(before);
     expect(sent).toHaveLength(1);
-    expect(sent[0].campaign).toBe("pass-sport-code");
-    expect(sent[0].templateId).toBe(String(TEMPLATE_IDS.code));
-    expect(sent[0].variables["allocataire@example.test"]).toMatchObject({
-      code: "24-IIII-IIII",
-      prenom: "MANON",
-      nom: "DUPOND",
-      beneficiaire: "MANON DUPOND",
-      salutation: "Bonjour BABETTE DUPOND,",
+    expect(sent[0].campaign).toBe("pass-sport-code-indirect");
+    expect(sent[0].templateId).toBe(String(TEMPLATE_IDS.code_indirect));
+    // Capitalized names and a jj/mm/aaaa date, like the data/ campaign renders them
+    // (data/utils/emailing_utils.py) — the fixture types them in caps and in ISO.
+    expect(sent[0].variables["allocataire@example.test"]).toEqual({
+      ALLOCATAIRE_PRENOM: "Babette",
+      ALLOCATAIRE_NOM: "Dupond",
+      BENEFICIAIRE_PRENOM: "Manon",
+      BENEFICIAIRE_NOM: "Dupond",
+      DATE_NAISSANCE_BENEFICIAIRE: "01/01/2011",
+      CODE: "24-IIII-IIII",
     });
   });
 
-  it("greets without a dangling comma when the allocataire has no name", async () => {
+  it("mails an AAH allocataire their own code, naming no allocataire", async () => {
+    const jobId = "lca-confirmed-aah";
+    const before = stack.sentEmails().length;
+
+    // The AAH step-two form collects no allocataire name: on that route they are the
+    // beneficiary, and the template has no ALLOCATAIRE_* field to fill.
+    await stack.enqueueLcaAndWait(job({ aide: SITUATION.AAH, allocataire: {} }), jobId);
+
+    const [row] = await resultsFor(jobId);
+    expect(row.source).toBe("self");
+    expect(row.email_kind).toBe("code_direct_aah");
+
+    const [sent] = stack.parsedEmails().slice(before);
+    expect(sent.campaign).toBe("pass-sport-code-direct-aah");
+    expect(sent.templateId).toBe(String(TEMPLATE_IDS.code_direct_aah));
+    expect(sent.variables["allocataire@example.test"]).toEqual({
+      BENEFICIAIRE_PRENOM: "Manon",
+      BENEFICIAIRE_NOM: "Dupond",
+      DATE_NAISSANCE_BENEFICIAIRE: "01/01/2011",
+      CODE: "24-IIII-IIII",
+    });
+  });
+
+  // CROUS and FSS are two names for one bourse — one template, so FSS cannot be forgotten.
+  it.each([SITUATION.CROUS, SITUATION.FSS])("mails a %s boursier their own code", async (aide) => {
+    const jobId = `lca-confirmed-${aide}`;
+    const before = stack.sentEmails().length;
+
+    await stack.enqueueLcaAndWait(job({ aide, allocataire: {} }), jobId);
+
+    const [row] = await resultsFor(jobId);
+    expect(row.source).toBe("self");
+    expect(row.email_kind).toBe("code_direct_boursier");
+
+    const [sent] = stack.parsedEmails().slice(before);
+    expect(sent.campaign).toBe("pass-sport-code-direct-boursier");
+    expect(sent.templateId).toBe(String(TEMPLATE_IDS.code_direct_boursier));
+    expect(sent.variables["allocataire@example.test"].CODE).toBe("24-IIII-IIII");
+  });
+
+  // Empty rather than absent: Link Mobility leaves the token in the body when a merge field
+  // the template expects is missing from the send.
+  it("sends empty allocataire fields rather than none when the allocataire has no name", async () => {
     const jobId = "lca-nameless-allocataire";
     const before = stack.sentEmails().length;
 
     await stack.enqueueLcaAndWait(job({ allocataire: {} }), jobId);
 
     const [sent] = stack.parsedEmails().slice(before);
-    expect(sent.variables["allocataire@example.test"].salutation).toBe("Bonjour,");
+    expect(sent.variables["allocataire@example.test"]).toMatchObject({
+      ALLOCATAIRE_PRENOM: "",
+      ALLOCATAIRE_NOM: "",
+    });
   });
 
   it("still writes the answer of a job enqueued before the payload split", async () => {
@@ -145,10 +194,11 @@ describe("lca job", () => {
     // Nothing about the beneficiary reaches an address nobody verified.
     expect(sent.variables).toEqual({});
 
+    // Case-insensitive: the code mails capitalize names, so "Manon" is as much a leak as "MANON".
     const [body] = stack.sentEmails().slice(before);
     expect(body).not.toContain("24-IIII-IIII");
-    expect(body).not.toContain("MANON");
-    expect(body).not.toContain("DUPOND");
+    expect(body).not.toMatch(/manon/i);
+    expect(body).not.toMatch(/dupond/i);
     // The address LCA holds is only ever compared against, never written to.
     expect(body).not.toContain("allocataire@example.test");
   });

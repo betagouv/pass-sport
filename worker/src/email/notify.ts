@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { Database } from "../db/client";
 import type { HistoryRecorder } from "../db/history";
 import { eligibilityResults } from "../db/schema";
+import { isChildAide, SITUATION, type Situation } from "../eligibility/types";
 import { logPii } from "../log";
 import {
   LinkMobilityHttpError,
@@ -11,62 +12,73 @@ import {
   sendTransactionalEmail,
 } from "./link-mobility";
 
-// 'eligible_soon' and 'not_eligible' are no longer emitted by anyone: they belonged to the
-// FranceConnect end-of-job mails, which went away with the LCA calls that produced them. They
-// stay in the union because email_kind rows already written carry those words, and
-// EMAIL_TEMPLATES is what documents them.
-export type OutcomeEmailKind = "code" | "eligible_soon" | "not_eligible" | "not_eligible_hors_fc";
+// One template per situation, because the three mails do not say the same thing: an allocataire
+// holding their own code, a boursier, and a parent reading a code minted for their child.
+export type CodeEmailKind = "code_direct_aah" | "code_direct_boursier" | "code_indirect";
+
+// What a mail about a beneficiary can be. Retired words still sit in eligibility_results.email_kind
+// on older rows ('code', 'eligible_soon', 'not_eligible', 'code_withheld') — the schema comment on
+// that column is what documents them, since nothing here can send them any more.
+export type OutcomeEmailKind = CodeEmailKind | "not_eligible_hors_fc";
 export type EmailKind = OutcomeEmailKind | "acknowledgment";
-export type LcaEmailKind = Extract<OutcomeEmailKind, "code" | "not_eligible_hors_fc">;
+
+// Uppercase because these ARE the Link Mobility merge field names — a template expecting
+// BENEFICIAIRE_PRENOM renders the raw token when the key is missing from the send.
+type CodeVariables = {
+  BENEFICIAIRE_PRENOM: string;
+  BENEFICIAIRE_NOM: string;
+  DATE_NAISSANCE_BENEFICIAIRE: string;
+  CODE: string;
+};
+
+// Only the indirect template names the allocataire: they are the reader, not the beneficiary.
+type IndirectCodeVariables = CodeVariables & {
+  ALLOCATAIRE_PRENOM: string;
+  ALLOCATAIRE_NOM: string;
+};
 
 type EmailTemplate = {
   templateId: number;
   templateEnv: string;
   campaign: string;
-  subject: (vars?: BeneficiaryVariables) => string;
+  subject: (vars?: CodeVariables) => string;
   historyAction: string;
 };
 
 export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
-  code: {
-    templateId: 1187050,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_CODE",
-    campaign: "pass-sport-code",
-    subject: (vars) =>
-      vars?.prenom ? `Le code pass Sport de ${vars.prenom}` : "Votre code pass Sport",
-    historyAction: "email.code",
+  code_direct_aah: {
+    templateId: 1192621,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_AAH",
+    campaign: "pass-sport-code-direct-aah",
+    subject: () => "Votre code pass Sport",
+    historyAction: "email.code_direct_aah",
   },
-  // No longer sent: the FranceConnect path stopped mailing an outcome when LCA was unplugged
-  // from it. Kept because eligibility_results.email_kind and eligibility_history.action still
-  // carry these words on the rows written before that.
-  eligible_soon: {
-    templateId: 1187053,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_ELIGIBLE_SOON",
-    campaign: "pass-sport-eligible-soon",
-    subject: (vars) =>
-      vars?.prenom ? `${vars.prenom} est éligible au pass Sport` : "Votre demande pass Sport",
-    historyAction: "email.eligible_soon",
+  code_direct_boursier: {
+    templateId: 1192620,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_BOURSIER",
+    campaign: "pass-sport-code-direct-boursier",
+    subject: () => "Votre code pass Sport",
+    historyAction: "email.code_direct_boursier",
   },
-  // No longer sent either — same reason as eligible_soon above.
-  not_eligible: {
-    templateId: 1187056,
-    templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE",
-    campaign: "pass-sport-not-eligible",
+  code_indirect: {
+    templateId: 1192617,
+    templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_INDIRECT",
+    campaign: "pass-sport-code-indirect",
     subject: (vars) =>
-      vars?.beneficiaire
-        ? `Votre demande pass Sport pour ${vars.beneficiaire}`
-        : "Votre demande pass Sport",
-    historyAction: "email.not_eligible",
+      vars?.BENEFICIAIRE_PRENOM
+        ? `Le code pass Sport de ${vars.BENEFICIAIRE_PRENOM}`
+        : "Votre code pass Sport",
+    historyAction: "email.code_indirect",
   },
   not_eligible_hors_fc: {
-    templateId: 1187059,
+    templateId: 1192478,
     templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC",
     campaign: "pass-sport-not-eligible-hors-fc",
     subject: () => "Votre demande pass Sport",
     historyAction: "email.not_eligible_hors_fc",
   },
   acknowledgment: {
-    templateId: 1188167,
+    templateId: 1192462,
     templateEnv: "LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT",
     campaign: "pass-sport-acknowledgment",
     subject: () => "Votre demande pass Sport a bien été reçue",
@@ -91,48 +103,75 @@ const templateIdFor = (kind: EmailKind): number => {
 };
 
 // ─── Parcours hors FranceConnect ─────────────────────────────────────────────
+
+// The aide alone decides which of the three code templates goes out, and it is the only thing
+// that can: eligibility_results holds no column saying which route made someone eligible.
 export const lcaEmailKind = (
   lcaStatus: "confirmed" | "not_found",
   emailsMatch: boolean,
-): LcaEmailKind => (lcaStatus === "confirmed" && emailsMatch ? "code" : "not_eligible_hors_fc");
+  aide: Situation,
+): OutcomeEmailKind => {
+  if (lcaStatus !== "confirmed" || !emailsMatch) return "not_eligible_hors_fc";
+  if (isChildAide(aide)) return "code_indirect";
+
+  // CROUS and FSS are two names for one bourse — same LCA situation, same step-two form.
+  return aide === SITUATION.AAH ? "code_direct_aah" : "code_direct_boursier";
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-type BeneficiaryVariables = {
-  // Rendered here rather than in the template: the allocataire is optional on both paths, and
-  // a template doing "Bonjour {prenom_allocataire}," would render "Bonjour ,".
-  salutation: string;
-  prenom: string;
-  nom: string;
-  beneficiaire: string;
-};
-
 export type EmailVariables =
-  | ({ kind: "code"; code: string } & BeneficiaryVariables)
-  | ({ kind: "eligible_soon" | "not_eligible" } & BeneficiaryVariables)
+  | ({ kind: "code_direct_aah" | "code_direct_boursier" } & CodeVariables)
+  | ({ kind: "code_indirect" } & IndirectCodeVariables)
   // No merge field at all, so no later spread can put a name back into the mail that goes
   // to an address nobody verified.
   | { kind: "not_eligible_hors_fc" };
 
-// `family_name` is the nom de naissance. The nom d'usage is never collected.
+// `family_name` is the nom de naissance. The nom d'usage is collected on the FranceConnect path
+// but deliberately left out here: no mail ever names anyone by it.
 export type AllocataireIdentity = {
   given_name?: string;
   family_name?: string;
 };
 
-const fullName = (firstname?: string, lastname?: string): string =>
-  [firstname, lastname].filter(Boolean).join(" ").trim();
+// Both mirror data/utils/emailing_utils.py, so the transactional mail and the campaign CSV
+// render the same person the same way.
 
-export const beneficiaryVariables = (
-  beneficiary: { firstname: string; lastname: string },
+// pandas str.capitalize(): first letter up, the REST DOWN. "DUPOND" -> "Dupond".
+const capitalize = (name?: string): string => {
+  const trimmed = name?.trim() ?? "";
+  return trimmed ? trimmed[0].toUpperCase() + trimmed.slice(1).toLowerCase() : "";
+};
+
+// ISO "AAAA-MM-JJ" (the step-one <input type="date">) -> "JJ/MM/AAAA". Anything else is passed
+// through: a date we cannot read is better shown raw than silently emptied.
+const toFrenchDate = (birthdate: string): string => {
+  const iso = birthdate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : birthdate;
+};
+
+export const codeEmailVariables = (
+  kind: CodeEmailKind,
+  beneficiary: { firstname: string; lastname: string; birthdate: string },
   allocataire: AllocataireIdentity,
-): BeneficiaryVariables => {
-  const allocataireName = fullName(allocataire.given_name, allocataire.family_name);
+  code: string,
+): EmailVariables => {
+  const common: CodeVariables = {
+    BENEFICIAIRE_PRENOM: capitalize(beneficiary.firstname),
+    BENEFICIAIRE_NOM: capitalize(beneficiary.lastname),
+    DATE_NAISSANCE_BENEFICIAIRE: toFrenchDate(beneficiary.birthdate),
+    CODE: code,
+  };
+
+  if (kind !== "code_indirect") return { kind, ...common };
+
+  // Empty strings rather than absent keys: the step-two form makes the allocataire's name
+  // optional, and a missing merge field leaves its token in the body of the mail.
   return {
-    salutation: allocataireName ? `Bonjour ${allocataireName},` : "Bonjour,",
-    prenom: beneficiary.firstname,
-    nom: beneficiary.lastname,
-    beneficiaire: fullName(beneficiary.firstname, beneficiary.lastname),
+    kind,
+    ...common,
+    ALLOCATAIRE_PRENOM: capitalize(allocataire.given_name),
+    ALLOCATAIRE_NOM: capitalize(allocataire.family_name),
   };
 };
 

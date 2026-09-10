@@ -232,11 +232,11 @@ export const LCA_COURRIEL = "allocataire-lca@example.test";
 
 // Distinct on purpose: `message=<id>` is the only evidence of which mail went out.
 export const TEMPLATE_IDS = {
-  code: 1001,
-  eligible_soon: 1002,
-  not_eligible: 1003,
   not_eligible_hors_fc: 1004,
   acknowledgment: 1005,
+  code_direct_aah: 1006,
+  code_direct_boursier: 1007,
+  code_indirect: 1008,
 } as const;
 
 export type SentEmail = {
@@ -472,9 +472,11 @@ export async function startStack(
   process.env.LINK_MOBILITY_API_KEY = "test-key";
   process.env.LINK_MOBILITY_SENDER_EMAIL = "sender@example.test";
   process.env.LINK_MOBILITY_SENDER_NAME = "pass Sport";
-  process.env.LINK_MOBILITY_TEMPLATE_CODE = String(TEMPLATE_IDS.code);
-  process.env.LINK_MOBILITY_TEMPLATE_ELIGIBLE_SOON = String(TEMPLATE_IDS.eligible_soon);
-  process.env.LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE = String(TEMPLATE_IDS.not_eligible);
+  process.env.LINK_MOBILITY_TEMPLATE_CODE_DIRECT_AAH = String(TEMPLATE_IDS.code_direct_aah);
+  process.env.LINK_MOBILITY_TEMPLATE_CODE_DIRECT_BOURSIER = String(
+    TEMPLATE_IDS.code_direct_boursier,
+  );
+  process.env.LINK_MOBILITY_TEMPLATE_CODE_INDIRECT = String(TEMPLATE_IDS.code_indirect);
   process.env.LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC = String(
     TEMPLATE_IDS.not_eligible_hors_fc,
   );

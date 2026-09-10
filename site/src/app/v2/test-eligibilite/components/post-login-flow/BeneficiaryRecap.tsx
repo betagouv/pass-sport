@@ -85,8 +85,10 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
   }
 };
 
-// Rendered into the Card's `footer` slot rather than alongside verdictMessage in `desc`: DownloadLink
-// renders a <div>, which desc's own <p> wrapper cannot contain.
+// Rendered into the Card's `end` slot, which DSFR orders directly after `desc` inside
+// fr-card__content — so the link reads as the last line of the description. It cannot go into
+// `desc` itself: that slot is wrapped in a <p>, which cannot contain the <div> DownloadLink
+// renders.
 // /api/france-connect/pdf re-derives the allocataire's own identity from the FranceConnect
 // session; for an 'enfant' it instead re-derives it from application_results_by_sub, keyed by
 // the code so the route knows which of the caller's own children to serve — hence the `code`
@@ -98,19 +100,17 @@ const downloadLink = (b: BeneficiaryResult): ReactNode | undefined => {
   const href =
     b.source === 'self' ? '/api/france-connect/pdf' : `/api/france-connect/pdf?code=${b.code}`;
   return (
-    <div className="fr-grid-row fr-grid-row--right">
-      <DownloadLink
-        details="PDF ~ 582 kB"
-        label="Télécharger le code"
-        href={href}
-        filename={`Pass Sport ${b.givenName}.pdf`}
-      />
-    </div>
+    <DownloadLink
+      details="PDF ~ 582 kB"
+      label="Télécharger le code"
+      href={href}
+      filename={`Pass Sport ${b.givenName}.pdf`}
+    />
   );
 };
 
 const StatusBadgeFor = ({ severity, label }: StatusDisplay) => (
-  <p className="fr-mb-0">
+  <p className="fr-mb-1w">
     {/* Badge defaults to rendering as a <p>, which this wrapping <p> can't contain. */}
     <Badge as="span" severity={severity}>
       {label}
@@ -168,7 +168,7 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, j
           start={<StatusBadge verdict={b.verdict} />}
           desc={verdictMessage(b)}
           classes={{ desc: 'fr-text--md' }}
-          footer={downloadLink(b)}
+          end={downloadLink(b)}
         />
       ))}
     </section>
