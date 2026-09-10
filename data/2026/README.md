@@ -27,6 +27,13 @@ Steps ⑩ ③ ⑪ are also driven unattended, by
 only source whose input is a live table rather than a frozen export, hence a cron rather than
 a one-shot notebook run. It calls the very same functions the notebooks do.
 
+Step ⑫ is the only one outside the chain: it produces nothing the campaign consumes and draws
+no code. `DB_CNAF_EXPORT_2026` carries the 8 site-facing columns and nothing else, so a code
+handed out at ③ has lost its matricule, its address lines and its ORIGINESELECTION. ⑫ replays
+①a from the raw CNAF file without any of its column drops and merges the result onto the coded
+rows, giving each `id_psp` those columns back. It is safe to run at any time and as often as
+needed — it writes no qf-batch input, touches no parquet and rewrites no code list.
+
 ## Running a notebook without a graphical interface
 
 The processing machine is headless, so the notebooks are executed with `nbconvert` rather
@@ -163,6 +170,18 @@ flowchart TB
 
     mg3 --> FINAL_DB[("one file per source\nCSV + id_psp")]:::finalFile
     mg3 -.->|"track used codes"| EXISTING_CODES
+
+    %% Hors chaîne : ne produit rien que la campagne consomme, ne tire aucun code. Rend aux
+    %% codes déjà distribués les colonnes que l'export ①a/①b avait laissées derrière lui.
+    subgraph RECON_NB["⑫ cnaf/reconcile_cnaf_raw_with_codes.ipynb  ·  read-only, run at any time"]
+        r1["Replay ①a dropping no column at all\n(NOMCOMPLET, ADRLIG1..6, allocataire-*, situation_origine)\nno qf-batch input written, no parquet touched"]
+        r2["Merge onto the coded rows, keyed on the 8 columns\nthe export kept = the dedup key, allocataire half\nfolded into its JSON column"]
+        r1-->r2
+    end
+
+    CNAF_RAW --> r1
+    FINAL_DB -->|"CNAF + CNAF_AAH_AEEH"| r2
+    r2 --> DB_CNAF_RECON[("CNAF_RECONCILED_PATHFILE_2026\nCSV: 1 row per code, every column")]:::finalFile
 
     %% La boucle de retour, propre à la source FC : sans elle le prochain export reprendrait
     %% les mêmes bénéficiaires et leur fabriquerait un second code.

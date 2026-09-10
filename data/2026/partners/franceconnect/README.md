@@ -358,6 +358,18 @@ rejoue `/search` puis `/confirm` sur ces lignes toutes les 30 minutes, et bascul
 C'est ce qui fait apparaître le code sur le site, une fois le CSV déposé réellement injecté chez
 LCA — ce dépôt est un geste humain, donc rien ne peut prédire quand.
 
+Une seconde passe du même job **envoie ce code par courriel**, et elle ne distingue pas les deux
+issues du rapprochement : elle ramasse toute ligne FranceConnect à `eligible_confirmed` portant un
+code et pas encore d'`email_kind`, qu'elle vienne de l'étape 4 ci-dessus ou de la boucle LCA. C'est
+donc aussi ce qui sert les gens que `writeback_confirmed.sql` a marqués, à qui rien ne partait
+jusque-là.
+
+Le template dépend de l'aide, que la colonne `situation` retient désormais — le worker l'écrit à
+l'insert, ce qui rend à terme `clean_fc_lib.resolve_situation` inutile. Les lignes antérieures à
+cette colonne n'en portent pas : celles de `source = 'enfant'` s'en passent (QF et AEEH mènent au
+même courriel), celles de `source = 'self'` sont laissées de côté avec une alerte Sentry plutôt que
+de partir sur le mauvais texte.
+
 Le `/search` a besoin d'un `codeInsee` que personne n'a ici : `build_psp_columns` laisse tout
 `adresse_allocataire-*` à `None`, et le parcours FranceConnect ne demande plus de commune de
 résidence. Ce job envoie donc un code INSEE fictif, `99999`
