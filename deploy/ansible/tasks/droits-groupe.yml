@@ -24,3 +24,12 @@
     src: pass-sport-nb.sh.j2
     dest: /etc/profile.d/pass-sport-nb.sh
     mode: '0644'
+
+# `nb-logs <notebook.ipynb>` pour le groupe d'exploitation, à la place de la commande Python
+# qu'il fallait jusqu'ici retaper à la main pour relire les sorties d'un notebook exécuté.
+- name: fonction nb-logs() pour la lecture des sorties d'un notebook
+  become: true
+  ansible.builtin.template:
+    src: pass-sport-nb-logs.sh.j2
+    dest: /etc/profile.d/pass-sport-nb-logs.sh
+    mode: '0644'
