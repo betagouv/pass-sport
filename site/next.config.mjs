@@ -10,6 +10,16 @@ const nextConfig = {
   // (@valkey/valkey-glide). Bundling it makes the bundler try to resolve that
   // optional import and warn; keeping it external lets Node require it at runtime.
   serverExternalPackages: ['bullmq'],
+  // pdfkit (via @react-pdf/renderer) loads its standard fonts lazily through the
+  // "#standard-fonts/*" imports map, with createRequire() — so Node picks the "require"
+  // condition and reads the .cjs variants. File tracing resolves that map statically with
+  // the "import" condition and only copies the .mjs ones, so the standalone build throws
+  // ERR_MODULE_NOT_FOUND on Helvetica.cjs the first time a PDF is rendered.
+  outputFileTracingIncludes: {
+    '/api/france-connect/pdf': [
+      './node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/standard-fonts/**/*.cjs',
+    ],
+  },
   experimental: {
     // Prevents Next.js from focusing <main tabIndex={-1}> after client-side
     // navigation, which scrolled the header out of view (see PageTitle #header)
