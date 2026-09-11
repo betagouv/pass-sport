@@ -10,7 +10,8 @@ import BeneficiaryRecap from './components/post-login-flow/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
-import { IS_LOCAL_ENV } from '@/app/constants/env';
+import { IS_LOCAL_ENV, PARCOURS_HORS_FC_ENABLED } from '@/app/constants/env';
+import { HORS_FRANCE_CONNECT_MAINTENANCE } from './constants/maintenance';
 import styles from './styles.module.scss';
 
 export const metadata: Metadata = {
@@ -145,7 +146,15 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 exactes, je n&apos;ai pas la garantie de pouvoir récupérer mon code.
               </p>
 
-              <NoFranceConnectSection />
+              {PARCOURS_HORS_FC_ENABLED ? (
+                <NoFranceConnectSection />
+              ) : (
+                <Notice
+                  severity="warning"
+                  title={HORS_FRANCE_CONNECT_MAINTENANCE.title}
+                  description={HORS_FRANCE_CONNECT_MAINTENANCE.description}
+                />
+              )}
             </div>
           </div>
         </section>
