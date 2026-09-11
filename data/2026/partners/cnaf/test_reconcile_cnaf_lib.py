@@ -9,6 +9,7 @@ Run from data/: source .venv/bin/activate && pytest 2026/partners/cnaf/test_reco
 """
 
 import csv
+import re
 
 import numpy as np
 import pandas as pd
@@ -175,6 +176,23 @@ def test_select_rows_without_code_returns_the_beneficiaries_no_route_selected():
     assert result['prenom'].tolist() == ['HUGO']
 
 
+def test_select_output_columns_keeps_the_table_columns_and_renames_the_extra_fields():
+    df_codes = pd.DataFrame([{
+        'nom': 'ZUPRALIN', 'allocataire': '{"nom": "ZUPRALIN"}', 'id_psp': '26-AAAA-0001',
+        'zrr': 'False', 'fichier_codes': 'cnaf-with-codes.csv'}])
+    df_reconciled = df_codes.assign(**{
+        'NOMCOMPLET': 'MME ZUPRALIN KEDOSA',
+        'allocataire-matricule': '0000123',
+        'situation_origine': 'ARS',
+    } | {staging: f"valeur {staging}" for staging in lib.EXTRA_FIELD_COLUMNS})
+
+    result = lib.select_output_columns(df_reconciled, df_codes)
+
+    assert result.columns.tolist() == (
+        ['nom', 'allocataire', 'id_psp'] + list(lib.EXTRA_FIELD_COLUMNS.values()))
+    assert result['cnaf_allocataire_nom_naissance'].tolist() == ['valeur allocataire-nom_naissance']
+
+
 # --- End to end: the real chain, then the notebook's replay of it ------------------
 
 CNAF_CSV_ROWS = [
@@ -312,20 +330,18 @@ def test_the_codes_of_a_real_run_all_find_their_raw_row_again(tmp_path):
 
     assert lib.select_rows_without_code(df_full, df_codes).empty
 
-    # The notebook's last steps: flatten the JSON columns back into plain ones, then drop
-    # whatever nothing downstream needs anymore.
-    df_flat = partners.flatten_json_column(df_reconciled, 'allocataire', 'allocataire')
-    df_flat = partners.flatten_json_column(df_flat, 'adresse_allocataire', 'adresse_allocataire')
+    # The notebook's last step: the beneficiaires columns, JSON as the export wrote it, then
+    # the recovered identity under its beneficiaire_cnaf_extra_field names.
+    df_output = lib.select_output_columns(df_reconciled, df_codes)
 
-    assert 'allocataire' not in df_flat.columns
-    assert 'adresse_allocataire' not in df_flat.columns
-    assert df_flat['allocataire-matricule'].tolist() == ['0000123', '0000123']
-    assert df_flat['adresse_allocataire-commune'].tolist() == ['CAEN', 'CAEN']
+    assert df_output.columns.tolist() == (
+        [column for column in df_codes.columns if column not in lib.RECONCILED_COLUMNS_TO_DROP]
+        + list(lib.EXTRA_FIELD_COLUMNS.values()))
+    assert df_output['allocataire'].tolist() == df_codes['allocataire'].tolist()
+    assert df_output['adresse_allocataire'].tolist() == df_codes['adresse_allocataire'].tolist()
+    assert df_output['cnaf_allocataire_nom_naissance'].tolist() == ['DUPONT', 'DUPONT']
+    assert df_output['cnaf_allocataire_date_naissance'].isna().all()
 
-    df_final = partners.drop_intermediate_columns(df_flat, lib.RECONCILED_COLUMNS_TO_DROP)
-
-    assert not set(lib.RECONCILED_COLUMNS_TO_DROP) & set(df_final.columns)
-    # Everything else - including what this run started out asking for - is still there.
-    assert df_final['allocataire-nom_naissance'].tolist() == ['DUPONT', 'DUPONT']
-    assert df_final['allocataire-matricule'].tolist() == ['0000123', '0000123']
-    assert df_final['adresse_allocataire-commune'].tolist() == ['CAEN', 'CAEN']
+    # lamp01/inject_csv.sh interpolates the header into SQL and only accepts bare lowercase
+    # identifiers - the raw CNAF names and the allocataire-* staging ones would be refused.
+    assert all(re.fullmatch(r'[a-z_][a-z0-9_]*', column) for column in df_output.columns)

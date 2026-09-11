@@ -1,14 +1,15 @@
--- Schema of the beneficiary database, loaded by both ../compose.yml (the real prod and
--- integration services) and the injection test bench, so the two can never drift apart.
+-- Schema of the lamp01 beneficiary database, loaded by both services of ../compose.yml
+-- (integration and prod).
 --
--- Mirrors the production DDL, which cannot be applied as-is for one remaining reason
--- (a second one, missing enum types, used to apply too -- the production dump now carries
--- its own CREATE TYPE statements, kept in sync with the ones below):
+-- Derived from the production DDL with one deliberate difference: production stores the
+-- allocataire and its address as two JSON columns, `allocataire` and `adresse_allocataire`;
+-- here every key of those JSON objects has its own column, allocataire_<key> and
+-- adresse_allocataire_<key>. The partner CSVs still carry the JSON - ../inject_csv.sh
+-- flattens it at load time, and refuses a key that has no column below rather than losing
+-- it. The expression indexes production builds on the JSON are gone with it.
 --
---   1. Its expression indexes were rendered by a GUI tool as quoted identifiers --
---      ("(allocataire ->> 'matricule'::text)") names a *column* of that name, which does
---      not exist, so those CREATE INDEX statements error out. They are written as real
---      expressions here.
+-- The automatic injector's test bench, which writes into production, keeps its own frozen
+-- copy of the production DDL instead of this file.
 
 CREATE TYPE public.beneficiaire_genre AS ENUM ('M', 'F');
 
@@ -37,8 +38,31 @@ CREATE TABLE public.beneficiaires (
 	genre public."beneficiaire_genre" NULL,
 	"organisme" public."organisme" NULL,
 	"situation" public."situation" NULL,
-	allocataire json NULL,
-	adresse_allocataire json NULL,
+	-- partners_lib.to_json_allocataire_without_null, the core every partner writes
+	allocataire_qualite varchar(255) NULL,
+	allocataire_matricule varchar(255) NULL,
+	allocataire_code_organisme varchar(255) NULL,
+	allocataire_telephone varchar(255) NULL,
+	allocataire_nom varchar(255) NULL,
+	allocataire_prenom varchar(255) NULL,
+	allocataire_courriel varchar(255) NULL,
+	-- The allocataire's birth details, from the partners that serialise them (the
+	-- ALLOCATAIRE_JSON_EXTRA_FIELDS of clean_msa_lib and clean_cnous_lib, fc_pipeline's
+	-- ALLOCATAIRE_EXTRA_FIELDS). Text, not date: ISO from MSA and FC, %d/%m/%Y from CNOUS --
+	-- normalise_date_recherche below reconciles the two.
+	allocataire_date_naissance varchar(255) NULL,
+	allocataire_commune_naissance varchar(255) NULL,
+	allocataire_code_insee_commune_naissance varchar(255) NULL,
+	allocataire_pays_naissance varchar(255) NULL,
+	allocataire_code_iso_pays_naissance varchar(255) NULL,
+	allocataire_code_pays_naissance varchar(255) NULL,
+	-- partners_lib.to_json_adresse_without_null, plus MSA's nom_adresse_postale
+	adresse_allocataire_voie varchar(255) NULL,
+	adresse_allocataire_code_postal varchar(255) NULL,
+	adresse_allocataire_commune varchar(255) NULL,
+	adresse_allocataire_code_insee varchar(255) NULL,
+	adresse_allocataire_cplt_adresse varchar(255) NULL,
+	adresse_allocataire_nom_adresse_postale varchar(255) NULL,
 	created_at timestamptz NULL,
 	updated_at timestamptz NULL,
 	qpv bool NULL,
@@ -56,12 +80,11 @@ ALTER TABLE public.beneficiaires ADD CONSTRAINT beneficiaires_exercice_id_foreig
 	FOREIGN KEY (exercice_id) REFERENCES public.exercices(id);
 
 CREATE INDEX beneficiaires_a_valider_idx ON public.beneficiaires (a_valider);
-CREATE INDEX beneficiaires_allocataire_matricule ON public.beneficiaires ((allocataire ->> 'matricule'));
-CREATE INDEX beneficiaires_expr_idx ON public.beneficiaires ((allocataire ->> 'courriel'));
+-- The exact INE join of match_beneficiaires.sql's first level.
+CREATE INDEX beneficiaires_allocataire_matricule_idx ON public.beneficiaires (allocataire_matricule);
 CREATE INDEX beneficiaires_nom_idx ON public.beneficiaires (nom);
 CREATE INDEX beneficiaires_refuser_idx ON public.beneficiaires (refuser);
 CREATE INDEX i_datenaissance ON public.beneficiaires (date_naissance);
-CREATE INDEX i_global ON public.beneficiaires (nom, prenom, date_naissance, (adresse_allocataire ->> 'code_insee'));
 CREATE INDEX i_id_psp ON public.beneficiaires (id_psp);
 CREATE INDEX i_nom ON public.beneficiaires (nom);
 CREATE INDEX i_prenom ON public.beneficiaires (prenom);
@@ -70,7 +93,6 @@ CREATE INDEX idx_beneficiaires_exercice_id_zrr ON public.beneficiaires (exercice
 CREATE INDEX idx_beneficiaires_nom_trgm ON public.beneficiaires (nom);
 CREATE INDEX idx_beneficiaires_prenom_trgm ON public.beneficiaires (prenom);
 CREATE INDEX idx_exercice_id ON public.beneficiaires (exercice_id);
-CREATE INDEX json_field_btree_index ON public.beneficiaires ((adresse_allocataire ->> 'code_insee'));
 
 -- ---------------------------------------------------------------------------------------
 -- Search key
@@ -106,7 +128,7 @@ CREATE FUNCTION public.normalise_recherche(valeur text) RETURNS text
 			'\s+', ' ', 'g'))
 	$$;
 
--- Reconciles the two shapes an allocataire birthdate takes in the JSON: ISO from MSA and
+-- Reconciles the two shapes allocataire_date_naissance takes: ISO from MSA and
 -- from the FranceConnect pipeline, %d/%m/%Y from CNOUS
 -- (clean_cnous_lib.normalize_allocataire_birthdate). Same rule as
 -- clean_fc_lib._to_iso_birthdate. Anything unparsable yields '' rather than an error.
@@ -129,8 +151,8 @@ CREATE FUNCTION public.normalise_date_recherche(valeur text) RETURNS text
 -- The allocataire contributes nom and prenom only. Its birthdate and birthplace -- the
 -- other three of the five identity traits -- are deliberately left out even though MSA and
 -- CNOUS do carry them: CNAF does not serialise them into the JSON (its pipeline maps the
--- columns, then drops them after the qf-batch call), and rows already in the table carry
--- nothing at all. A key field present on one side and absent on the other makes the row
+-- columns, then drops them after the qf-batch call; the reconciled CNAF file only puts them
+-- in beneficiaire_cnaf_extra_field, and for ARS-origin rows alone). A key field present on one side and absent on the other makes the row
 -- INVISIBLE rather than merely less precise, so adding one can only lose matches.
 --
 -- Their place is as a tie-breaker instead, which only ever narrows an already ambiguous
@@ -153,12 +175,12 @@ CREATE FUNCTION public.normalise_date_recherche(valeur text) RETURNS text
 -- is DROP the column, CREATE OR REPLACE this function, ADD the column back -- the STORED
 -- values are recomputed by the ALTER, then rebuild the index.
 CREATE FUNCTION public.cle_recherche_beneficiaire(
-	nom text, prenom text, date_naissance timestamp, allocataire json
+	nom text, prenom text, date_naissance timestamp, allocataire_nom text, allocataire_prenom text
 ) RETURNS text
 	LANGUAGE sql IMMUTABLE PARALLEL SAFE
 	AS $$
-		SELECT public.normalise_recherche(coalesce(allocataire ->> 'nom', ''))    || '|'
-		    || public.normalise_recherche(coalesce(allocataire ->> 'prenom', '')) || '|'
+		SELECT public.normalise_recherche(coalesce(allocataire_nom, ''))      || '|'
+		    || public.normalise_recherche(coalesce(allocataire_prenom, ''))   || '|'
 		    || coalesce(
 		           lpad(extract(year  FROM date_naissance)::int::text, 4, '0') || '-' ||
 		           lpad(extract(month FROM date_naissance)::int::text, 2, '0') || '-' ||
@@ -169,7 +191,8 @@ CREATE FUNCTION public.cle_recherche_beneficiaire(
 
 ALTER TABLE public.beneficiaires ADD COLUMN cle_recherche text
 	GENERATED ALWAYS AS (
-		public.cle_recherche_beneficiaire(nom, prenom, date_naissance, allocataire)
+		public.cle_recherche_beneficiaire(
+			nom, prenom, date_naissance, allocataire_nom, allocataire_prenom)
 	) STORED;
 
 -- text_pattern_ops so LIKE 'prefix%' is index-served whatever the database collation.

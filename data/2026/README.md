@@ -181,7 +181,7 @@ flowchart TB
 
     CNAF_RAW --> r1
     FINAL_DB -->|"CNAF + CNAF_AAH_AEEH"| r2
-    r2 --> DB_CNAF_RECON[("CNAF_RECONCILED_PATHFILE_2026\nCSV: 1 row per code, every column")]:::finalFile
+    r2 --> DB_CNAF_RECON[("CNAF_RECONCILED_PATHFILE_2026\nCSV: 1 row per code\nbeneficiaires columns + beneficiaire_cnaf_extra_field columns\n→ lamp01/inject_csv.sh")]:::finalFile
 
     %% La boucle de retour, propre à la source FC : sans elle le prochain export reprendrait
     %% les mêmes bénéficiaires et leur fabriquerait un second code.

@@ -424,24 +424,6 @@ def add_adresse_allocataire_json_column(df: pd.DataFrame, extra_fields: dict = N
     return df
 
 
-def flatten_json_column(df: pd.DataFrame, column: str, prefix: str) -> pd.DataFrame:
-    """Expand a JSON column back into '<prefix>-<key>' columns, dropping the JSON column.
-
-    The inverse of to_json_allocataire_without_null / to_json_adresse_without_null - lets a
-    notebook hand back a flat, spreadsheet-friendly file instead of one carrying a serialized
-    JSON blob. Used by reconcile_cnaf_raw_with_codes.ipynb, which never calls
-    drop_intermediate_columns and so still carries the staging columns the JSON was built
-    from (e.g. 'allocataire-nom'); those are dropped here too, since the JSON's own value
-    (unaccented, upper-cased, null-filtered) is the more authoritative one to keep under
-    that name.
-    """
-    df = df.copy()
-    flattened = pd.json_normalize(df[column].apply(json.loads)).add_prefix(f'{prefix}-')
-    flattened.index = df.index
-    superseded_columns = [col for col in flattened.columns if col in df.columns]
-    return pd.concat([df.drop(columns=[column] + superseded_columns), flattened], axis=1)
-
-
 def drop_intermediate_columns(df: pd.DataFrame, columns: list = None) -> pd.DataFrame:
     """Drop the staging columns now folded into the JSON columns, plus the qf-batch pivot ones."""
     columns = FINAL_COLUMNS_TO_DROP if columns is None else columns

@@ -4,7 +4,8 @@
 `*-cnaf*-with-codes.csv` that `generate_new_codes.ipynb` writes has an `id_psp` but no
 matricule, no address, no ORIGINESELECTION. This module puts them back: phase 1 is replayed
 from the raw CNAF file without any of its column drops, and the resulting frame is merged
-onto the coded rows.
+onto the coded rows. The output is shaped for lamp01/inject_csv.sh: the beneficiaires
+columns, then the recovered fields bound for beneficiaire_cnaf_extra_field.
 
 Used by reconcile_cnaf_raw_with_codes.ipynb. Functions are pure, like the rest of the
 partner libs: they take a DataFrame and return a new one, never touching the filesystem.
@@ -30,18 +31,29 @@ MERGE_KEY_COLUMNS = [
     'adresse_allocataire',
 ]
 
-# Dropped from the final output, once everything else has been read off them:
+# The beneficiaires columns of the codes files the output leaves out:
 # - uuid_doc/zrr/qpv/a_valider/refuser are generate_codes_lib.add_production_default_columns'
 #   placeholders (a doc id and moderation flags), meaningless before a code is ever validated
 # - fichier_codes is this notebook's own bookkeeping, not part of any beneficiary's data
-# - situation_origine (CNAF's own ORIGINESELECTION) only mattered to compute 'situation'
-# - NOMCOMPLET and ADRLIG1..6DESTDOS are the raw text the adresse_allocataire-* columns were
-#   exploded from; once flattened, those columns say the same thing in structured form
-RECONCILED_COLUMNS_TO_DROP = [
-    'uuid_doc', 'zrr', 'qpv', 'a_valider', 'refuser', 'fichier_codes', 'situation_origine',
-    'NOMCOMPLET', 'ADRLIG1DESTDOS', 'ADRLIG2DESTDOS', 'ADRLIG3DESTDOS', 'ADRLIG4DESTDOS',
-    'ADRLIG5DESTDOS', 'ADRLIG6DESTDOS',
-]
+RECONCILED_COLUMNS_TO_DROP = ['uuid_doc', 'zrr', 'qpv', 'a_valider', 'refuser', 'fichier_codes']
+
+# What the replay recovered on top of the allocataire JSON's shared core, renamed to the
+# columns of lamp01's beneficiaire_cnaf_extra_field table - lamp01/inject_csv.sh routes
+# every CSV column that is not a beneficiaires one to that table, under the same name. The
+# cnaf_ prefix keeps them apart from the beneficiaires columns inject_csv.sh flattens the
+# allocataire JSON into (allocataire_date_naissance...), which would otherwise claim them. The
+# core itself (qualite, matricule, telephone, adresse...) is left to the JSON columns rather
+# than repeated here - allocataire-nom_usage included, since CNAF defaults it to the same
+# RESPDOS value already serialized as the JSON's "nom" key. Values keep the shape
+# prepare_qf_identity_columns gave them: ISO date, COG code, genre as 'male'/'female'.
+EXTRA_FIELD_COLUMNS = {
+    'allocataire-nom_naissance': 'cnaf_allocataire_nom_naissance',
+    'allocataire-date_naissance': 'cnaf_allocataire_date_naissance',
+    'allocataire-genre': 'cnaf_allocataire_genre',
+    'allocataire-code_insee_naissance': 'cnaf_allocataire_code_insee_naissance',
+    'allocataire-pays_naissance': 'cnaf_allocataire_pays_naissance',
+    'allocataire-code_pays_naissance': 'cnaf_allocataire_code_pays_naissance',
+}
 
 
 def prepare_qf_identity_columns(
@@ -125,3 +137,17 @@ def select_rows_without_code(df_full: pd.DataFrame, df_codes: pd.DataFrame) -> p
     coded_keys = pd.MultiIndex.from_frame(df_codes[MERGE_KEY_COLUMNS])
     full_keys = pd.MultiIndex.from_frame(df_full[MERGE_KEY_COLUMNS])
     return df_full[~full_keys.isin(coded_keys)]
+
+
+def select_output_columns(df_reconciled: pd.DataFrame, df_codes: pd.DataFrame) -> pd.DataFrame:
+    """One row per code: the beneficiaires columns, then the recovered extra fields.
+
+    The beneficiaires half is the codes files' own columns - allocataire and
+    adresse_allocataire JSON included, exactly as the export wrote them - minus
+    RECONCILED_COLUMNS_TO_DROP. The extra half is EXTRA_FIELD_COLUMNS, under its table
+    names. Every raw or staging column the replay carried is left out.
+    """
+    table_columns = [column for column in df_codes.columns
+                     if column not in RECONCILED_COLUMNS_TO_DROP]
+    return (df_reconciled[table_columns + list(EXTRA_FIELD_COLUMNS)]
+            .rename(columns=EXTRA_FIELD_COLUMNS))
