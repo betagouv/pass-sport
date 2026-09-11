@@ -55,10 +55,12 @@ COPY (
     r.source,
     r.created_at,
     r.allocataire_fc_sub,
-    r.residence_insee,
 
     -- allocataire_identite = identité pivot FranceConnect, sub exclu (il a sa colonne).
     r.allocataire_identite ->> 'family_name'        as "allocataire-nom_naissance",
+    -- Nom d'usage servi par FranceConnect (scope preferred_username), stocké par le worker.
+    -- Ne sert qu'au rapprochement : la CNAF range un nom d'usage (RESPDOS) dans le
+    -- `allocataire.nom` de la base, la MSA un nom de naissance.
     r.allocataire_identite ->> 'preferred_username' as "allocataire-nom_usage",
     r.allocataire_identite ->> 'given_name'         as "allocataire-prenom",
     r.allocataire_identite ->> 'birthdate'          as "allocataire-date_naissance",
@@ -67,12 +69,15 @@ COPY (
     r.allocataire_identite ->> 'birthcountry'       as "allocataire-code_pays_naissance",
     r.allocataire_identite ->> 'email'              as "allocataire-courriel",
 
-    -- enfant_identite ne porte QUE family_name/given_name/birthdate : pas de genre. Il est
-    -- récupéré côté pandas dans qf_enfants, le tableau brut de la réponse quotient_familial
-    -- (clean_fc_lib.resolve_enfant_genre).
+    -- enfant_identite ne porte ni genre ni sexe : il est récupéré côté pandas dans qf_enfants,
+    -- le tableau brut de la réponse quotient_familial (clean_fc_lib.resolve_enfant_genre).
     r.enfant_identite ->> 'family_name' as enfant_nom,
     r.enfant_identite ->> 'given_name'  as enfant_prenom,
     r.enfant_identite ->> 'birthdate'   as enfant_date_naissance,
+    -- Nom d'usage de l'enfant, que le worker reprend de qf_enfants[].nom_usage et stocke sans
+    -- jamais nommer l'enfant par lui. Absent des lignes écrites avant ce stockage :
+    -- clean_fc_lib.resolve_beneficiaire_nom_usage le retrouve alors dans qf_enfants.
+    r.enfant_identite ->> 'preferred_username' as enfant_nom_usage,
 
     -- eligibility_results ne mémorise pas QUELLE aide a rendu la personne éligible. Ces
     -- payloads sont ce qui permet de reconstruire la route (jeune/AEEH/AAH/boursier) dans
@@ -81,7 +86,22 @@ COPY (
     qf.response_payload -> 'data' -> 'quotient_familial' ->> 'fournisseur'   as qf_fournisseur,
     qf.response_payload -> 'data' -> 'enfants'                               as qf_enfants,
     aah.response_payload   -> 'data' ->> 'est_beneficiaire'                  as aah_est_beneficiaire,
-    crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier
+    crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier,
+
+    -- Ce qui sert au RAPPROCHEMENT avec la base bénéficiaires (match_beneficiaires.sql),
+    -- et à rien d'autre : ces deux colonnes ne survivent pas au nettoyage.
+    --
+    -- `allocataires` est l'allocataire tel que la CAF ou la MSA l'écrit — nom de naissance
+    -- ET nom d'usage, prénoms, sexe — c'est-à-dire dans le vocabulaire même du fichier
+    -- partenaire qu'on cherche à retrouver. Le pivot FranceConnect, lui, donne l'état civil ;
+    -- son nom d'usage (preferred_username, plus haut) ne sert que de repli quand cette
+    -- réponse n'en porte pas : apparier CAF contre CAF d'abord évite la divergence.
+    qf.response_payload -> 'data' -> 'allocataires'                          as qf_allocataires,
+
+    -- L'INE, jointure EXACTE avec beneficiaires.allocataire_matricule sur les lignes CNOUS, qui y
+    -- rangent l'INE du boursier. La réponse quotient_familial, elle, ne porte aucun
+    -- identifiant de foyer : il n'existe pas d'équivalent pour CNAF et MSA.
+    crous.response_payload -> 'data' ->> 'ine'                               as crous_ine
 
   from eligibility_results r
 

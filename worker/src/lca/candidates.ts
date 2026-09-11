@@ -1,27 +1,35 @@
 import {
+  AAH_BIRTHDATE_MAX,
+  AAH_BIRTHDATE_MIN,
   AEEH_BIRTHDATE_MAX,
   AEEH_BIRTHDATE_MIN,
+  CROUS_BIRTHDATE_MAX,
+  CROUS_BIRTHDATE_MIN,
   QF_BIRTHDATE_MAX,
   QF_BIRTHDATE_MIN,
   ALLOWANCE,
   QF_ELIGIBILITY_THRESHOLD,
   householdQfCovers,
   isWithinBirthdateWindow,
-  type AllocationEnfantHandicapeData,
   type Allowance,
-  type EtudiantBoursierData,
   type PivotIdentity,
-  type QuotientFamilialData,
   type ResourceResult,
-  type StatutBeneficiaireData,
 } from "../eligibility/types";
+import {
+  AEEH_RESOURCE,
+  childAeehVerdict,
+  findChildResource,
+  hasAahRight,
+  hasBourse,
+  readQuotientFamilial,
+} from "../eligibility/verdicts";
 import {
   LCA_SITUATION,
   ORGANISME,
   type BeneficiaryCandidate,
   type ConfirmPayload,
   type SearchItem,
-  type SearchPayload,
+  type SituationType,
 } from "./types";
 const AGE_REFERENCE_DATE = "2026-12-31";
 
@@ -49,63 +57,61 @@ export const toIsoDate = (date?: string): string | null => {
   return null;
 };
 
-const findResource = (results: ResourceResult[], prefix: string): ResourceResult | undefined =>
-  results.find(
-    (r) => r.resource.startsWith(prefix) && r.childIndex === undefined && r.success && r.data != null,
-  );
+// An allocataire outside both self windows is not a candidate: nothing was ever asked about
+// them. But when they are also the only person this job knows of, writing nothing at all leaves
+// applications_by_sub empty — the usager is not recognised as having applied, so every
+// reconnection re-burns the whole API Particulier chain, and /api/france-connect/result reads the
+// empty list as "not committed yet" and polls until it gives up. One row says what happened.
+const allocataireWithoutAnyRoute = (identity: PivotIdentity): BeneficiaryCandidate | null => {
+  if (!identity.family_name || !identity.given_name || !identity.birthdate) return null;
 
-const findChildResource = (
-  results: ResourceResult[],
-  resource: string,
-  childIndex: number,
-): ResourceResult | undefined =>
-  results.find((r) => r.resource === resource && r.childIndex === childIndex);
-
-// Verdict from a per-child AEEH row: true/false when the API answered, null when
-// there is no usable row.
-export const childStatusVerdict = (row: ResourceResult | undefined): boolean | null => {
-  if (!row) return null;
-  if (row.success && row.data) {
-    const { status } = row.data as AllocationEnfantHandicapeData;
-    return status === "allocataire" || status === "ouvrant_droit";
-  }
-  return row.httpStatus === 404 ? false : null;
+  return {
+    source: "self",
+    lastname: identity.family_name,
+    firstname: identity.given_name,
+    birthdate: identity.birthdate,
+    eligibilities: [],
+    reasons: [
+      `${ageAtReferenceDate(identity.birthdate)} ans: hors des fenêtres AAH (16-30) et CROUS (≤28), aucun enfant exploitable`,
+    ],
+  };
 };
 
-const getQf = (r: ResourceResult[]): QuotientFamilialData | null =>
-  (findResource(r, "dss.quotient_familial")?.data as QuotientFamilialData) ?? null;
-const getAah = (r: ResourceResult[]): StatutBeneficiaireData | null =>
-  (findResource(r, "dss.allocation_adulte_handicape")?.data as StatutBeneficiaireData) ?? null;
-const getBoursier = (r: ResourceResult[]): EtudiantBoursierData | null =>
-  (findResource(r, "cnous.etudiant_boursier")?.data as EtudiantBoursierData) ?? null;
-
-// Every person the LCA search can target: each QF child, plus the connected user when
-// they claimed an aide for themselves. QF and AEEH are aides for a child, so on those
-// routes the allocataire is never a beneficiary and has no business being searched.
-// Children are not filtered — the LCA base decides; eligibilities feed the fallback.
+// Every person this job pronounces on: each QF child, plus the connected user when at least
+// one of the two self routes was actually queried. QF and AEEH are aides for a child, so on
+// those routes the allocataire is not a beneficiary.
+// Children are not filtered — eligibilities carry the verdict.
 export const listBeneficiaryCandidates = (
   identity: PivotIdentity,
   results: ResourceResult[],
-  aides: Allowance[],
 ): BeneficiaryCandidate[] => {
   const candidates: BeneficiaryCandidate[] = [];
 
-  const askedAboutSelf = aides.includes(ALLOWANCE.AAH) || aides.includes(ALLOWANCE.CROUS);
+  // The same two windows sequence.ts gates the AAH and CROUS calls on, so a self row means
+  // "we asked about you, here is what came back" and never "we never looked".
+  const selfWasQueried =
+    isWithinBirthdateWindow(identity.birthdate, AAH_BIRTHDATE_MIN, AAH_BIRTHDATE_MAX) ||
+    isWithinBirthdateWindow(identity.birthdate, CROUS_BIRTHDATE_MIN, CROUS_BIRTHDATE_MAX);
 
-  // Connected user: AAH (16-30) and étudiant boursier (< 28).
-  if (askedAboutSelf && identity.family_name && identity.given_name && identity.birthdate) {
+  if (selfWasQueried && identity.family_name && identity.given_name && identity.birthdate) {
     const age = ageAtReferenceDate(identity.birthdate);
     const eligibilities: Allowance[] = [];
     const reasons: string[] = [];
 
-    if (getAah(results)?.est_beneficiaire && age >= 16 && age <= 30) {
+    if (
+      hasAahRight(results) &&
+      isWithinBirthdateWindow(identity.birthdate, AAH_BIRTHDATE_MIN, AAH_BIRTHDATE_MAX)
+    ) {
       eligibilities.push(ALLOWANCE.AAH);
       reasons.push(`AAH: bénéficiaire, ${age} ans (16-30)`);
     }
 
-    if (getBoursier(results)?.statut_boursier?.est_boursier && age < 28) {
+    if (
+      hasBourse(results) &&
+      isWithinBirthdateWindow(identity.birthdate, CROUS_BIRTHDATE_MIN, CROUS_BIRTHDATE_MAX)
+    ) {
       eligibilities.push(ALLOWANCE.CROUS);
-      reasons.push(`CROUS: boursier, ${age} ans (<28)`);
+      reasons.push(`CROUS: boursier, ${age} ans (≤28)`);
     }
 
     candidates.push({
@@ -119,17 +125,21 @@ export const listBeneficiaryCandidates = (
   }
 
   // QF children, two exclusive routes:
-  //   - QF: the household quotient is under the threshold and the usager claimed that
-  //     route -> every child 6-17 ans is eligible, no per-child call involved;
-  //   - AEEH: for 17-19 ans, on the child's own per-child verdict.
-  // The windows overlap on 17 ans (2009); QF has priority there, which is also why
-  // sequence.ts skips the AEEH call for those children.
-  const qfData = getQf(results);
-  const qfCovers = householdQfCovers(aides, qfData);
+  //   - QF: the household quotient is under the threshold -> every child 6-17 ans is
+  //     eligible, no per-child call involved;
+  //   - AEEH: for 6-19 ans, on the child's own per-child verdict.
+  // The windows overlap on 2009-2020; QF has priority there, which is also why sequence.ts
+  // skips the AEEH call for those children.
+  const qfData = readQuotientFamilial(results);
+  const qfCovers = householdQfCovers(qfData);
   const enfants = qfData?.enfants ?? [];
 
   enfants.forEach((enfant, childIndex) => {
-    const lastname = enfant.nom_usage || enfant.nom_naissance;
+    // The child is NAMED by their nom de naissance, like enfantToIdentity in
+    // ../eligibility/sequence.ts: the AEEH call goes out under that name, so naming them
+    // otherwise here would describe the child differently from the query that judged them. The
+    // nom d'usage is carried alongside, to be stored and nothing more.
+    const lastname = enfant.nom_naissance;
     const firstname = enfant.prenoms;
     const birthdate = toIsoDate(enfant.date_naissance);
     if (!lastname || !firstname || !birthdate) return;
@@ -141,9 +151,7 @@ export const listBeneficiaryCandidates = (
     const eligibilities: Allowance[] = [];
     const reasons: string[] = [];
 
-    const aeehVerdict = childStatusVerdict(
-      findChildResource(results, "dss.allocation_enfant_handicape_identite", childIndex),
-    );
+    const aeehVerdict = childAeehVerdict(findChildResource(results, AEEH_RESOURCE, childIndex));
 
     if (qfCovers && isWithinBirthdateWindow(birthdate, QF_BIRTHDATE_MIN, QF_BIRTHDATE_MAX)) {
       eligibilities.push(ALLOWANCE.QF);
@@ -155,7 +163,7 @@ export const listBeneficiaryCandidates = (
       isWithinBirthdateWindow(birthdate, AEEH_BIRTHDATE_MIN, AEEH_BIRTHDATE_MAX)
     ) {
       eligibilities.push(ALLOWANCE.AEEH);
-      reasons.push(`AEEH: bénéficiaire, ${age} ans (17-19)`);
+      reasons.push(`AEEH: bénéficiaire, ${age} ans (6-19)`);
     }
 
     candidates.push({
@@ -164,44 +172,54 @@ export const listBeneficiaryCandidates = (
       firstname,
       birthdate,
       gender,
+      nomUsage: enfant.nom_usage,
       eligibilities,
       reasons,
     });
   });
 
+  if (candidates.length === 0) {
+    const allocataire = allocataireWithoutAnyRoute(identity);
+    if (allocataire) candidates.push(allocataire);
+  }
+
   return candidates;
 };
 
-export const buildSearchPayload = (
-  candidate: BeneficiaryCandidate,
-  residenceInsee: string,
-): SearchPayload => ({
-  beneficiaryLastname: candidate.lastname,
-  beneficiaryFirstname: candidate.firstname,
-  beneficiaryBirthDate: candidate.birthdate,
-  recipientResidencePlace: residenceInsee,
-  allowanceName: candidate.eligibilities[0],
-  isFromCrous: candidate.eligibilities.includes(ALLOWANCE.CROUS),
-});
-
 // FranceConnect birthcountry is a COG INSEE code; LCA expects ISO 3166-1 alpha-2.
-// Only France mapped; foreign countries omitted (field is optional).
-const cogCountryToIso = (cog?: string): string | undefined => (cog === "99100" ? "FR" : undefined);
+// Only France mapped; foreign countries omitted (the field is optional).
+export const cogCountryToIso = (cog?: string): string | undefined =>
+  cog === "99100" ? "FR" : undefined;
 
-// Builds the LCA confirm payload for a search result. Allocataire = the connected user,
-// always from the identité pivot rather than the QF allocataires[0], which is not
-// guaranteed to be them. Matricule (server-side only) routes to INE for CROUS, else
-// CAF/MSA number.
+// A subset of the identité pivot rather than the pivot itself: allocataire_identite is stored as a
+// Partial, and this builder has to accept it as-is.
+export type AllocataireConfirmIdentity = {
+  family_name?: string;
+  given_name?: string;
+  birthdate?: string;
+  birthplace?: string;
+  birthcountry?: string;
+};
+
+// /search echoes back the 'AEEH' our own pipeline injected into the LCA base
+// (clean_fc_lib.resolve_situation), but /confirm does not know that value: there, such a child
+// belongs to 'jeune'.
+export const toConfirmSituation = (situation: SituationType): string =>
+  situation === LCA_SITUATION.AEEH ? LCA_SITUATION.JEUNE : situation;
+
+// The allocataire is named from the identité pivot rather than from the QF allocataires[0], which
+// is not guaranteed to be them. The matricule is server-side only and comes back from the search.
 export const buildConfirmPayload = (
   searchItem: SearchItem,
-  identity: PivotIdentity,
+  identity: AllocataireConfirmIdentity,
 ): ConfirmPayload => {
-  const isCrous = searchItem.situation === LCA_SITUATION.BOURSIER && searchItem.organisme === ORGANISME.CNOUS;
+  const isCrous =
+    searchItem.situation === LCA_SITUATION.BOURSIER && searchItem.organisme === ORGANISME.CNOUS;
   const matricule = searchItem.matricule || undefined;
 
   return {
     id: String(searchItem.id),
-    situation: searchItem.situation,
+    situation: toConfirmSituation(searchItem.situation),
     organisme: searchItem.organisme,
     recipientLastname: identity.family_name,
     recipientFirstname: identity.given_name || "",

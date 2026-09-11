@@ -15,38 +15,49 @@ import {
 import {
   FRANCE_CONNECT_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
+  LCA_CHECKS_JOB_ID,
+  LCA_CHECKS_JOB_NAME,
+  LCA_CHECKS_QUEUE_NAME,
   LCA_JOB_NAME,
   LCA_QUEUE_NAME,
   retryBackoff,
 } from "../../src/queues";
 import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
+import { processLcaChecksJob, type LcaChecksJobData } from "../../src/jobs/lca-checks";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
-import type { LcaClient, LcaResponse } from "../../src/lca/client";
 import { runMigrations } from "../../src/db/migrate";
+import { eligibilityResults, type Verdict } from "../../src/db/schema";
+import type { OutcomeEmailKind } from "../../src/email/notify";
+import type { LcaClient, LcaResponse } from "../../src/lca/client";
+import type {
+  ConfirmItem,
+  ConfirmPayload,
+  SearchItem,
+  SearchPayload,
+} from "../../src/lca/types";
 import type {
   EligibilityJobData,
   EligibilityJobPayload,
   LcaJobData,
   PivotIdentity,
   ResourceResult,
+  ResultSituation,
 } from "../../src/eligibility/types";
-import type {
-  ConfirmItem,
-  ConfirmPayload,
-  OrganismType,
-  SearchItem,
-  SearchPayload,
-  SituationType,
-} from "../../src/lca/types";
 
 // The real mock clients were removed with the real-only port: the worker now only
-// ships real API Particulier / LCA clients. These e2e tests still exercise the REAL
-// orchestration — Testcontainers Redis + Postgres, a real BullMQ Worker running the
-// actual processEligibilityJob — but the upstream APIs are faked at the client
-// interface (the FranceConnectDeps seam) so outcomes are deterministic and no network /
+// ships a real API Particulier client — LCA is not called from the worker at all. These
+// e2e tests still exercise the REAL orchestration — Testcontainers Redis + Postgres, a real
+// BullMQ Worker running the actual processEligibilityJob — but API Particulier is faked at the
+// client interface (the FranceConnectDeps seam) so outcomes are deterministic and no network /
 // credentials are needed. Email goes to a tiny in-process HTTP server that always
 // answers success, so the real Link Mobility client path is still covered.
+
+// Frozen clock for the whole stack. The quotient_familial sweep runs from août to the current
+// month, so call counts would otherwise drift with the calendar: pinned mid-septembre, every
+// job sweeps exactly août then septembre.
+export const STACK_NOW = new Date("2026-09-15T12:00:00Z");
+export const SWEPT_MONTHS = 2;
 
 // A parent-level success row for one resource.
 const okRow = (meta: { resource: string; label: string }, data: unknown): ResourceResult => ({
@@ -59,32 +70,65 @@ const okRow = (meta: { resource: string; label: string }, data: unknown): Resour
 });
 
 // Deterministic API Particulier client.
-// - quotient_familial: the connected user as allocataire + three children spanning the
+// - quotient_familial: the connected user as allocataire + four children spanning the
 //   QF and AEEH campaign windows (see the enfants[] comment below), and a household
 //   quotient that defaults above the eligibility threshold.
-// - étudiant boursier: always boursier (self CROUS-eligible when age < 28).
+// - étudiant boursier: boursier by default (self CROUS-eligible inside the window).
 // - per-child AEEH: status "allocataire".
 // If constructed with first429RetryAfter, the VERY FIRST call returns a 429 with
 // that Retry-After (then never again) to exercise the pause-and-retry path.
 class FakeApiClient implements ApiParticulierClient {
   private fired429 = false;
+  // Counts every resource call, so a test can make the Nth one answer 502.
+  private calls = 0;
   // Household quotient the fake QF reports. Default sits ABOVE the 700 threshold, so
   // the QF route grants nothing unless a test lowers it (setQfValeur on the Stack).
   qfValeur = 1000;
 
-  // Last name of the fake children. "Nomatch…" makes FakeLcaClient return no result, so
-  // is_eligible reflects OUR routes alone — a confirmed LCA match sets it true whatever
-  // the routes concluded (jobs/france-connect.ts), which would otherwise mask the rule under test.
+  // Per-month override, for a household that only crosses the threshold partway through the
+  // campaign. Months absent from it fall back to qfValeur.
+  qfValeurByMois: Record<string, number> = {};
+
+  // Last name of the fake children. Purely cosmetic now that no LCA base is consulted:
+  // is_eligible reflects OUR routes alone.
   childrenLastname = "Enfant";
 
   // QF answers with no enfant at all: a demande for a child aide that leaves no
   // beneficiary to search, only the demande itself to record.
   qfChildless = false;
 
-  constructor(private readonly first429RetryAfter?: number) {}
+  // Caisse that served the quotient, as API Particulier spells it.
+  qfFournisseur: string | undefined = "CNAF";
+
+  constructor(
+    private readonly first429RetryAfter?: number,
+    private readonly failOnCall?: number,
+    // Which call answers the 429. The first one leaves the checkpoint empty — nothing is
+    // committed before handleRateLimit throws — so only a later one exercises a resume that has
+    // rows to replay.
+    private readonly rateLimitOnCall: number = 1,
+  ) {}
+
+  // The gateway answering 5xx on one call of the chain: the job has no verdict for that
+  // resource, so it fails and retries rather than concluding on a partial answer.
+  private takeFailure(meta: { resource: string; label: string }): ResourceResult | null {
+    this.calls += 1;
+    if (this.calls !== this.failOnCall) return null;
+    return {
+      ...meta,
+      httpStatus: 502,
+      success: false,
+      data: null,
+      error: "API Particulier gateway answered 502",
+      rateLimitRemaining: 100,
+      rateLimitResetMs: null,
+    };
+  }
 
   private take429(meta: { resource: string; label: string }): ResourceResult | null {
-    if (!this.first429RetryAfter || this.fired429) return null;
+    if (!this.first429RetryAfter || this.fired429 || this.calls !== this.rateLimitOnCall) {
+      return null;
+    }
     this.fired429 = true;
     return {
       ...meta,
@@ -98,19 +142,27 @@ class FakeApiClient implements ApiParticulierClient {
     };
   }
 
-  async quotientFamilial(identity: PivotIdentity): Promise<ResourceResult> {
+  async quotientFamilial(identity: PivotIdentity, mois?: string): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.qf) ??
       this.take429(RESOURCE_META.qf) ??
       okRow(RESOURCE_META.qf, {
         allocataires: [
           { nom_naissance: identity.family_name, prenoms: identity.given_name ?? "" },
         ],
-        // Three children, one per zone of the two campaign windows, at the
+        // Four children, one per zone of the two campaign windows, at the
         // 2026-12-31 reference date:
+        //   Adulte born 2005 -> 21 ans: NEITHER window, never queried
         //   Aine   born 2008 -> 18 ans: AEEH window only
         //   Milieu born 2009 -> 17 ans: BOTH windows (QF has priority)
-        //   Cadet  born 2012 -> 14 ans: QF window only
+        //   Cadet  born 2012 -> 14 ans: BOTH windows (QF has priority)
         enfants: this.qfChildless ? [] : [
+          {
+            nom_naissance: this.childrenLastname,
+            prenoms: "Adulte",
+            sexe: "M",
+            date_naissance: "01/01/2005",
+          },
           {
             nom_naissance: this.childrenLastname,
             prenoms: "Aine",
@@ -125,20 +177,26 @@ class FakeApiClient implements ApiParticulierClient {
           },
           {
             nom_naissance: this.childrenLastname,
+            nom_usage: "Bravenne",
             prenoms: "Cadet",
             sexe: "F",
             date_naissance: "01/01/2012",
           },
         ],
-        quotient_familial: { valeur: this.qfValeur },
+        quotient_familial: {
+          valeur: this.qfValeurByMois[mois ?? ""] ?? this.qfValeur,
+          fournisseur: this.qfFournisseur,
+        },
       })
     );
   }
 
   aahBeneficiaire = false;
+  crousBoursier = true;
 
   async aah(): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.aah) ??
       this.take429(RESOURCE_META.aah) ??
       okRow(RESOURCE_META.aah, { est_beneficiaire: this.aahBeneficiaire })
     );
@@ -146,126 +204,47 @@ class FakeApiClient implements ApiParticulierClient {
 
   async cnous(): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.cnous) ??
       this.take429(RESOURCE_META.cnous) ??
-      okRow(RESOURCE_META.cnous, { statut_boursier: { est_boursier: true } })
+      okRow(RESOURCE_META.cnous, { statut_boursier: { est_boursier: this.crousBoursier } })
     );
   }
 
   async cnousByIne(): Promise<ResourceResult> {
     return (
+      this.takeFailure(RESOURCE_META.cnousIne) ??
       this.take429(RESOURCE_META.cnousIne) ??
       okRow(RESOURCE_META.cnousIne, { statut_boursier: { est_boursier: true } })
     );
   }
 
+  // Set false to make AEEH the losing route, which is what leaves the household quotient as the
+  // only thing that can carry a child.
+  aeehBeneficiaire = true;
+
   async aeeh(_child: PivotIdentity, childIndex: number): Promise<ResourceResult> {
     return (
-      this.take429(RESOURCE_META.aeeh) ?? {
-        ...okRow(RESOURCE_META.aeeh, { status: "allocataire" }),
+      this.takeFailure(RESOURCE_META.aeeh) ?? this.take429(RESOURCE_META.aeeh) ?? {
+        ...okRow(RESOURCE_META.aeeh, {
+          status: this.aeehBeneficiaire ? "allocataire" : "non_allocataire",
+        }),
         childIndex,
       }
     );
   }
 }
 
-// Deterministic LCA client. A last name starting with "Nomatch" yields no search
-// result (-> not_found); everyone else matches and confirms with a fixed code.
-class FakeLcaClient implements LcaClient {
-  private searchCalls = 0;
-
-  // Null derives the answer from isFromCrous; the combined-form suites pin it, since it is
-  // what declarationMatches compares the usager's step 1 against.
-  answerAs: { situation: SituationType; organisme: OrganismType } | null = null;
-
-  searchHttpStatus: number | null = null;
-
-  readonly confirmPayloads: ConfirmPayload[] = [];
-
-  constructor(private readonly failOnSearchCall?: number) {}
-
-  async search(payload: SearchPayload): Promise<LcaResponse<SearchItem[]>> {
-    this.searchCalls += 1;
-
-    if (this.failOnSearchCall && this.searchCalls === this.failOnSearchCall) {
-      throw new Error("LCA /search failed: 502");
-    }
-
-    if (this.searchHttpStatus) {
-      return {
-        httpStatus: this.searchHttpStatus,
-        body: {
-          message: `LCA /search failed: ${this.searchHttpStatus}`,
-          httpStatus: this.searchHttpStatus,
-        },
-      };
-    }
-
-    if (payload.beneficiaryLastname.toLowerCase().startsWith("nomatch")) {
-      return { httpStatus: 200, body: [] };
-    }
-    const isCrous = !!payload.isFromCrous;
-    const answer = this.answerAs ?? {
-      situation: (isCrous ? "boursier" : "jeune") as SituationType,
-      organisme: (isCrous ? "cnous" : "CAF") as OrganismType,
-    };
-    return {
-      httpStatus: 200,
-      body: [
-        {
-          id: 1,
-          nom: payload.beneficiaryLastname,
-          prenom: payload.beneficiaryFirstname,
-          date_naissance: payload.beneficiaryBirthDate,
-          situation: answer.situation,
-          organisme: answer.organisme,
-          matricule: "SECRET-MATRICULE",
-          hasMatricule: true,
-        },
-      ],
-    };
-  }
-
-  // Make /confirm answer with an empty array: LCA matched the person on /search but has
-  // no code for them.
-  confirmEmpty = false;
-
-  async confirm(payload: ConfirmPayload): Promise<LcaResponse<ConfirmItem[]>> {
-    this.confirmPayloads.push(payload);
-
-    if (this.confirmEmpty) return { httpStatus: 200, body: [] };
-
-    return {
-      httpStatus: 200,
-      body: [
-        {
-          id: 1,
-          id_psp: "PSP-CODE-123",
-          nom: "N",
-          prenom: "P",
-          date_naissance: "2004-05-15",
-          situation: "boursier",
-          organisme: "cnous",
-          // matricule is stripped by process.ts sanitize before storage.
-          allocataire: { matricule: "SECRET-MATRICULE", courriel: LCA_COURRIEL },
-          // Present so the history test can prove it is dropped rather than pass vacuously.
-          pdf_base_64: "JVBERi0xLjQK-FAKE-ATTESTATION",
-        },
-      ],
-    };
-  }
-}
-
-// The address the fake LCA holds for the allocataire, distinct from the FranceConnect one so
-// a test can tell which of the two an email went to.
+// The address LCA holds for the allocataire on the parcours hors FranceConnect, distinct from
+// the FranceConnect one so a test can tell which of the two an email went to.
 export const LCA_COURRIEL = "allocataire-lca@example.test";
 
 // Distinct on purpose: `message=<id>` is the only evidence of which mail went out.
 export const TEMPLATE_IDS = {
-  code: 1001,
-  eligible_soon: 1002,
-  not_eligible: 1003,
   not_eligible_hors_fc: 1004,
   acknowledgment: 1005,
+  code_direct_aah: 1006,
+  code_direct_boursier: 1007,
+  code_indirect: 1008,
 } as const;
 
 export type SentEmail = {
@@ -274,6 +253,8 @@ export type SentEmail = {
   templateId: string;
   recipients: string[];
   variables: Record<string, Record<string, string>>;
+  // `date`, in seconds. Null on an immediate send, which omits the parameter.
+  sendAt: number | null;
 };
 
 // URLSearchParams, never decodeURIComponent: form encoding writes a space as '+', which
@@ -290,13 +271,125 @@ export const parseSentEmail = (raw: string): SentEmail => {
   // Two recipient forms: PHP-array style with merge variables, plain list without.
   const plain = params.get("destinataires");
 
+  const sendAt = params.get("date");
+
   return {
     subject: params.get("sujet") ?? "",
     campaign: params.get("nom"),
     templateId: params.get("message") ?? "",
     recipients: plain ? plain.split(",") : Object.keys(variables),
     variables,
+    sendAt: sendAt === null ? null : Number(sendAt),
   };
+};
+
+/**
+ * Deterministic LCA client for the eligible_pending_lca_checks suite. `confirmCode` is what picks
+ * the outcome: the stored code confirms the row, another code is a mismatch, null means LCA does
+ * not serve it yet. The `HttpStatus` knobs take a function so a test can fail ONE row of a pass
+ * and watch the others settle.
+ */
+class FakeLcaClient implements LcaClient {
+  confirmCode: string | null | ((payload: ConfirmPayload) => string | null) = null;
+
+  searchHttpStatus: number | null = null;
+  confirmHttpStatus: number | null | ((payload: ConfirmPayload) => number | null) = null;
+
+  // >1 exercises the candidate loop.
+  searchResultCount = 1;
+
+  readonly noMatchPrefix = "nomatch";
+
+  readonly searchPayloads: SearchPayload[] = [];
+  readonly confirmPayloads: ConfirmPayload[] = [];
+
+  async search(payload: SearchPayload): Promise<LcaResponse<SearchItem[]>> {
+    this.searchPayloads.push(payload);
+
+    if (this.searchHttpStatus) {
+      return {
+        httpStatus: this.searchHttpStatus,
+        body: {
+          message: `LCA /search failed: ${this.searchHttpStatus}`,
+          httpStatus: this.searchHttpStatus,
+        },
+      };
+    }
+
+    if (payload.beneficiaryLastname.toLowerCase().startsWith(this.noMatchPrefix)) {
+      return { httpStatus: 200, body: [] };
+    }
+
+    const items: SearchItem[] = Array.from({ length: this.searchResultCount }, (_, index) => ({
+      id: index + 1,
+      nom: payload.beneficiaryLastname,
+      prenom: payload.beneficiaryFirstname,
+      date_naissance: payload.beneficiaryBirthDate,
+      situation: "jeune",
+      organisme: "CAF",
+      matricule: "SECRET-MATRICULE",
+      hasMatricule: true,
+    }));
+
+    return { httpStatus: 200, body: items };
+  }
+
+  async confirm(payload: ConfirmPayload): Promise<LcaResponse<ConfirmItem[]>> {
+    this.confirmPayloads.push(payload);
+
+    const failWith =
+      typeof this.confirmHttpStatus === "function"
+        ? this.confirmHttpStatus(payload)
+        : this.confirmHttpStatus;
+
+    if (failWith) {
+      return {
+        httpStatus: failWith,
+        body: { message: `LCA /confirm failed: ${failWith}`, httpStatus: failWith },
+      };
+    }
+
+    const code =
+      typeof this.confirmCode === "function" ? this.confirmCode(payload) : this.confirmCode;
+
+    if (!code) return { httpStatus: 200, body: [] };
+
+    return {
+      httpStatus: 200,
+      body: [
+        {
+          id: Number(payload.id),
+          id_psp: code,
+          nom: payload.recipientLastname ?? "",
+          prenom: payload.recipientFirstname ?? "",
+          date_naissance: payload.recipientBirthDate ?? "",
+          situation: payload.situation,
+          organisme: payload.organisme,
+          allocataire: { matricule: "SECRET-MATRICULE", courriel: LCA_COURRIEL },
+          // Present so a test can prove withoutPdf drops it rather than pass vacuously.
+          pdf_base_64: "JVBERi0xLjQK-FAKE-ATTESTATION",
+        },
+      ],
+    };
+  }
+}
+
+export type PendingLcaSeed = {
+  sub: string;
+  code: string;
+  source?: "self" | "enfant";
+  lastname?: string;
+  firstname?: string;
+  birthdate?: string;
+  attempts?: number;
+  // What the code-mail sweep reads. 'eligible_confirmed' is the state data/writeback_confirmed.sql
+  // leaves behind, the one row shape the pending_lca loop never produces itself. A non-null
+  // emailKind is what a parcours hors FranceConnect row looks like, and the sweep must ignore it.
+  verdict?: Verdict;
+  situation?: ResultSituation;
+  emailKind?: OutcomeEmailKind;
+  emailAttempts?: number;
+  email?: string;
 };
 
 export type Stack = {
@@ -314,38 +407,62 @@ export type Stack = {
   enqueueLcaAndWait: (data: LcaJobData, jobId?: string) => Promise<unknown>;
   enqueueLcaAndWaitFailure: (data: LcaJobData) => Promise<string>;
 
+  // The eligible_pending_lca_checks pass, on its own queue and worker as in production.
+  lcaChecksQueue: Queue<LcaChecksJobData>;
+  // Inserts a row exactly as data/writeback_verdict.sql leaves it. Returns its id.
+  seedPendingLcaRow: (seed: PendingLcaSeed) => Promise<string>;
+  enqueueLcaChecksAndWait: (data?: Partial<LcaChecksJobData>, jobId?: string) => Promise<unknown>;
+  setLcaConfirmCode: (code: FakeLcaClient["confirmCode"]) => void;
+  setLcaSearchHttpStatus: (status: number | null) => void;
+  setLcaConfirmHttpStatus: (status: FakeLcaClient["confirmHttpStatus"]) => void;
+  setLcaSearchResultCount: (count: number) => void;
+  lcaSearchPayloads: () => SearchPayload[];
+  lcaConfirmPayloads: () => ConfirmPayload[];
+
   // Raw form bodies received by the fake Link Mobility server, newest last.
   sentEmails: () => string[];
   parsedEmails: () => SentEmail[];
   // Answer every subsequent send with this HTTP status instead of {resultat:1}; null
   // restores the success answer.
   setEmailHttpStatus: (status: number | null) => void;
+  // Answer every subsequent send with {resultat:0, erreurs:<codes>}, a comma-separated list as
+  // Link Mobility sends it; null restores the success answer.
+  setEmailErreurs: (codes: string | null) => void;
 
-  setLcaAnswer: (answer: { situation: SituationType; organisme: OrganismType } | null) => void;
-  setLcaSearchHttpStatus: (status: number | null) => void;
-  setLcaConfirmEmpty: (value: boolean) => void;
-  lcaConfirmPayloads: () => ConfirmPayload[];
   setAahBeneficiaire: (value: boolean) => void;
+  setCrousBoursier: (value: boolean) => void;
+  setAeehBeneficiaire: (value: boolean) => void;
   // Household quotient the fake QF reports, so a test can cross the 700 threshold
   // without paying for a second container stack.
   setQfValeur: (valeur: number) => void;
-  // Last name of the fake children. Set it to "Nomatch…" to make LCA find nobody, which
-  // is what a test asserting on OUR eligibility routes needs — an LCA confirm sets
-  // is_eligible true on its own and would hide the rule under test.
+  // Quotient per campaign month, for a household that only crosses the threshold partway
+  // through the sweep.
+  setQfValeurByMois: (byMois: Record<string, number>) => void;
+  // Moves the clock the quotient sweep reads, so a test can cover more campaign months than the
+  // two STACK_NOW gives.
+  setNow: (now: Date) => void;
+  // Last name of the fake children, so a test can tell one run's beneficiaries from another's.
   setChildrenLastname: (lastname: string) => void;
   // Strips the fake children from the QF answer, leaving a child-aide demande with no
   // beneficiary at all.
   setQfChildless: (childless: boolean) => void;
+  // Caisse the fake QF answers with, undefined for a payload that names none.
+  setQfFournisseur: (fournisseur: string | undefined) => void;
   close: () => Promise<void>;
 };
 
 // Boots Redis + Postgres (Testcontainers) + a fake Link Mobility HTTP server, then
 // wires a real BullMQ Worker running the actual processEligibilityJob with the fake
 // upstream clients. Everything a pipeline test needs, torn down by close().
-// `first429RetryAfter`: make the first API Particulier call return a 429 with that
-// Retry-After, to exercise the worker's pause-and-retry-from-header behaviour.
+// `first429RetryAfter`: make one API Particulier call return a 429 with that Retry-After, to
+// exercise the worker's pause-and-retry-from-header behaviour. `apiRateLimitOnCall` chooses
+// which call that is (1-based, defaults to the first).
 export async function startStack(
-  opts: { first429RetryAfter?: number; lcaFailOnSearchCall?: number } = {},
+  opts: {
+    first429RetryAfter?: number;
+    apiFailOnCall?: number;
+    apiRateLimitOnCall?: number;
+  } = {},
 ): Promise<Stack> {
   const redisC: StartedRedisContainer = await new RedisContainer("redis:8-alpine").start();
   const pgC: StartedPostgreSqlContainer = await new PostgreSqlContainer("postgres:16-alpine").start();
@@ -359,6 +476,9 @@ export async function startStack(
   // Set to make the next answers non-2xx, so a test can exercise what the worker records
   // when Link Mobility itself is down rather than when it rejects a payload.
   let emailHttpStatus: number | null = null;
+  // The other failure: a 200 carrying {resultat:0, erreurs}. Told apart from the one above
+  // because only this one says whether a resend could ever succeed.
+  let emailErreurs: string | null = null;
   const emailServer: Server = createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on("data", (c: Buffer) => chunks.push(c));
@@ -370,7 +490,11 @@ export async function startStack(
         return;
       }
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify({ resultat: 1, id: 123 }));
+      res.end(
+        JSON.stringify(
+          emailErreurs !== null ? { resultat: 0, erreurs: emailErreurs } : { resultat: 1, id: 123 },
+        ),
+      );
     });
   });
   await new Promise<void>((resolve) => emailServer.listen(0, "127.0.0.1", () => resolve()));
@@ -381,9 +505,11 @@ export async function startStack(
   process.env.LINK_MOBILITY_API_KEY = "test-key";
   process.env.LINK_MOBILITY_SENDER_EMAIL = "sender@example.test";
   process.env.LINK_MOBILITY_SENDER_NAME = "pass Sport";
-  process.env.LINK_MOBILITY_TEMPLATE_CODE = String(TEMPLATE_IDS.code);
-  process.env.LINK_MOBILITY_TEMPLATE_ELIGIBLE_SOON = String(TEMPLATE_IDS.eligible_soon);
-  process.env.LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE = String(TEMPLATE_IDS.not_eligible);
+  process.env.LINK_MOBILITY_TEMPLATE_CODE_DIRECT_AAH = String(TEMPLATE_IDS.code_direct_aah);
+  process.env.LINK_MOBILITY_TEMPLATE_CODE_DIRECT_BOURSIER = String(
+    TEMPLATE_IDS.code_direct_boursier,
+  );
+  process.env.LINK_MOBILITY_TEMPLATE_CODE_INDIRECT = String(TEMPLATE_IDS.code_indirect);
   process.env.LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC = String(
     TEMPLATE_IDS.not_eligible_hors_fc,
   );
@@ -409,9 +535,15 @@ export async function startStack(
   await queue.setGlobalConcurrency(1);
 
   const guardConn = conn();
-  const apiClient = new FakeApiClient(opts.first429RetryAfter);
-  const lcaClient = new FakeLcaClient(opts.lcaFailOnSearchCall);
-  const deps: FranceConnectDeps = { apiClient, lcaClient, db, queue };
+  const apiClient = new FakeApiClient(
+    opts.first429RetryAfter,
+    opts.apiFailOnCall,
+    opts.apiRateLimitOnCall,
+  );
+
+  // Read per job rather than captured, so setNow can move the campaign month a test sweeps over.
+  let stackNow = STACK_NOW;
+  const deps: FranceConnectDeps = { apiClient, db, queue, now: () => stackNow };
 
   const worker = new Worker<EligibilityJobData>(
     FRANCE_CONNECT_QUEUE_NAME,
@@ -486,6 +618,84 @@ export async function startStack(
     return (await waitFor(lcaQueue, job.id!, "failed")) as string;
   };
 
+  const lcaClient = new FakeLcaClient();
+
+  const lcaChecksQueue = new Queue<LcaChecksJobData>(LCA_CHECKS_QUEUE_NAME, {
+    connection: conn(),
+  });
+  await lcaChecksQueue.setGlobalConcurrency(1);
+
+  const lcaChecksWorker = new Worker<LcaChecksJobData>(
+    LCA_CHECKS_QUEUE_NAME,
+    async (job) =>
+      processLcaChecksJob(job, job.data, { db, getLca: async () => lcaClient }),
+    { connection: conn(), settings: { backoffStrategy: retryBackoff } },
+  );
+  await lcaChecksWorker.waitUntilReady();
+
+  const seedPendingLcaRow = async (seed: PendingLcaSeed): Promise<string> => {
+    const source = seed.source ?? "self";
+    const identity = {
+      family_name: seed.lastname ?? "OSTRENYA",
+      given_name: seed.firstname ?? "Velmorak",
+      birthdate: seed.birthdate ?? "1990-03-14",
+      birthplace: "75056",
+      birthcountry: "99100",
+    };
+
+    const [inserted] = await db
+      .insert(eligibilityResults)
+      .values({
+        jobId: seed.sub,
+        source,
+        allocataireIdentite: identity,
+        enfantIdentite: source === "enfant" ? identity : null,
+        allocataireFcSub: seed.sub,
+        isEligible: true,
+        isFranceConnected: true,
+        residenceInsee: null,
+        lcaStatus: "not_applicable",
+        verdict: seed.verdict ?? "eligible_pending_lca",
+        passSportCode: seed.code,
+        lcaCheckAttempts: seed.attempts ?? 0,
+        situation: seed.situation ?? null,
+        emailKind: seed.emailKind ?? null,
+        emailAttempts: seed.emailAttempts ?? 0,
+        emailSent: false,
+        email: seed.email === undefined ? `${seed.sub}@example.test` : seed.email,
+      })
+      .returning({ id: eligibilityResults.id });
+
+    return inserted.id;
+  };
+
+  const enqueueLcaChecksAndWait = async (
+    data: Partial<LcaChecksJobData> = {},
+    jobId: string = LCA_CHECKS_JOB_ID,
+  ): Promise<unknown> => {
+    const job = await lcaChecksQueue.add(
+      LCA_CHECKS_JOB_NAME,
+      { enqueuedAt: new Date().toISOString(), reason: "manual", ...data },
+      // removeOnComplete as in production: the id is constant, so a retained job blocks every
+      // later pass.
+      { jobId, attempts: 1, removeOnComplete: true },
+    );
+    const id = job.id!;
+
+    for (let i = 0; i < 200; i++) {
+      const fresh = await lcaChecksQueue.getJob(id);
+      // A finished job is gone rather than 'completed', so its absence is the success signal.
+      if (!fresh) return undefined;
+      const state = await fresh.getState();
+      if (state === "failed") {
+        throw new Error(`job ${id} failed: ${fresh.failedReason ?? "<no reason>"}`);
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+
+    throw new Error(`job ${id} did not finish in time`);
+  };
+
   const close = async (): Promise<void> => {
     // Close BullMQ first (stops using the connections), then quit the raw
     // connections, THEN stop the containers — so nothing reconnects to a dead port.
@@ -493,6 +703,8 @@ export async function startStack(
     await queue.close();
     await lcaWorker.close();
     await lcaQueue.close();
+    await lcaChecksWorker.close();
+    await lcaChecksQueue.close();
     await Promise.all(connections.map((c) => c.quit().catch(() => {})));
     await pool.end();
     await new Promise<void>((resolve) => emailServer.close(() => resolve()));
@@ -510,21 +722,43 @@ export async function startStack(
     lcaQueue,
     enqueueLcaAndWait,
     enqueueLcaAndWaitFailure,
+    lcaChecksQueue,
+    seedPendingLcaRow,
+    enqueueLcaChecksAndWait,
+    setLcaConfirmCode: (code) => {
+      lcaClient.confirmCode = code;
+    },
+    setLcaSearchHttpStatus: (status) => {
+      lcaClient.searchHttpStatus = status;
+    },
+    setLcaConfirmHttpStatus: (status) => {
+      lcaClient.confirmHttpStatus = status;
+    },
+    setLcaSearchResultCount: (count) => {
+      lcaClient.searchResultCount = count;
+    },
+    lcaSearchPayloads: () => lcaClient.searchPayloads,
+    lcaConfirmPayloads: () => lcaClient.confirmPayloads,
     sentEmails: () => sentEmails,
     parsedEmails: () => sentEmails.map(parseSentEmail),
     setEmailHttpStatus: (status) => {
       emailHttpStatus = status;
     },
-    setLcaAnswer: (answer) => {
-      lcaClient.answerAs = answer;
+    setEmailErreurs: (codes) => {
+      emailErreurs = codes;
     },
-    setLcaSearchHttpStatus: (status) => {
-      lcaClient.searchHttpStatus = status;
+    setCrousBoursier: (value: boolean) => {
+      apiClient.crousBoursier = value;
     },
-    setLcaConfirmEmpty: (value: boolean) => {
-      lcaClient.confirmEmpty = value;
+    setAeehBeneficiaire: (value: boolean) => {
+      apiClient.aeehBeneficiaire = value;
     },
-    lcaConfirmPayloads: () => lcaClient.confirmPayloads,
+    setQfValeurByMois: (byMois: Record<string, number>) => {
+      apiClient.qfValeurByMois = byMois;
+    },
+    setNow: (now: Date) => {
+      stackNow = now;
+    },
     setAahBeneficiaire: (value: boolean) => {
       apiClient.aahBeneficiaire = value;
     },
@@ -536,6 +770,9 @@ export async function startStack(
     },
     setQfChildless: (childless: boolean) => {
       apiClient.qfChildless = childless;
+    },
+    setQfFournisseur: (fournisseur: string | undefined) => {
+      apiClient.qfFournisseur = fournisseur;
     },
     close,
   };

@@ -24,7 +24,26 @@ export class MockLcaClient implements LcaClient {
     };
   }
 
+  // Set LCA_MOCK_CONFIRM_CODE to a row's stored code to reach the happy path in local dev; unset
+  // answers [], i.e. "LCA does not serve this one yet".
   async confirm(payload: ConfirmPayload): Promise<LcaResponse<ConfirmItem[]>> {
-    return { httpStatus: 200, body: [] };
+    const code = process.env.LCA_MOCK_CONFIRM_CODE;
+
+    if (!code) return { httpStatus: 200, body: [] };
+
+    return {
+      httpStatus: 200,
+      body: [
+        {
+          id: Number(payload.id),
+          id_psp: code,
+          nom: payload.recipientLastname ?? "",
+          prenom: payload.recipientFirstname ?? "",
+          date_naissance: payload.recipientBirthDate ?? "",
+          situation: payload.situation,
+          organisme: payload.organisme,
+        },
+      ],
+    };
   }
 }

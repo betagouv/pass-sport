@@ -63,12 +63,16 @@ SOURCE = 'FC'
 
 # --- Étape 2 : nettoyage ----------------------------------------------------------
 
-def clean(input_filepath, output_filepath) -> dict:
+def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
     """Transforme l'export brut de eligibility_results en CSV au schéma de production.
 
     L'export SQL sort en CSV standard (séparateur virgule). dtype=str et
     keep_default_na=False pour que rien ne soit deviné : les codes INSEE gardent leur zéro de
     tête et une chaîne "NA" reste une chaîne.
+
+    `match_filepath` reçoit, en plus, les colonnes que le rapprochement avec la base
+    bénéficiaires interroge (fc.MATCH_COLUMNS) — un second fichier plutôt que des colonnes de
+    plus dans le premier, pour que le CSV de production garde exactement le schéma PSP.
     """
     df = pd.read_csv(
         input_filepath, sep=',', encoding='utf-8', dtype=str, keep_default_na=False,
@@ -80,6 +84,18 @@ def clean(input_filepath, output_filepath) -> dict:
     # familial. Un compte non nul mérite un coup d'œil : il signale un décalage entre
     # l'identité persistée et la réponse d'origine.
     df, genres_non_resolus = fc.resolve_enfant_genre(df)
+
+    # Identité de l'allocataire dans le vocabulaire de la CAF/MSA : ce que le rapprochement
+    # avec la base bénéficiaires interroge (match_beneficiaires.sql). Un compte non nul
+    # d'allocataires non résolus n'est pas une anomalie — la route AAH n'appelle pas
+    # quotient_familial et n'a donc aucun tableau `allocataires`.
+    df, allocataires_non_resolus = fc.resolve_allocataire_caf(df)
+
+    # Nom d'usage du bénéficiaire, seconde variante de la clé de rapprochement : celui que le
+    # worker stocke dans enfant_identite, sinon celui de qf_enfants pour les lignes plus
+    # anciennes ; sur une ligne 'self', celui de l'allocataire — d'où l'ordre, après
+    # resolve_allocataire_caf.
+    df = fc.resolve_beneficiaire_nom_usage(df)
 
     # Projection vers le schéma PSP : le bénéficiaire est l'enfant sur les lignes 'enfant',
     # l'allocataire connecté lui-même sur les lignes 'self'. Crée aussi la charpente
@@ -130,6 +146,16 @@ def clean(input_filepath, output_filepath) -> dict:
     assert df_final['eligibility_result_id'].is_unique
     assert 'id_psp' not in df_final.columns
 
+    # Les candidats au rapprochement, tirés du DataFrame FINAL pour qu'ils soient exactement
+    # les lignes qui continuent. Écrit avant le retrait des colonnes `match-*`, qui n'ont
+    # rien à faire dans le CSV de production.
+    candidats = fc.build_match_candidates(df_final)
+    if match_filepath is not None:
+        candidats.to_csv(match_filepath, sep=';', index=False, encoding='utf-8')
+
+    df_final = df_final.drop(
+        columns=[c for c in df_final.columns if c.startswith('match-')])
+
     # QUOTE_ALL et sep=';' : le format exact que relit l'étape 3.
     df_final.to_csv(
         output_filepath, sep=';', index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
@@ -137,6 +163,7 @@ def clean(input_filepath, output_filepath) -> dict:
     return {
         'lignes_lues': lignes_lues,
         'genres_non_resolus': genres_non_resolus,
+        'allocataires_caf_non_resolus': allocataires_non_resolus,
         'sans_situation': sans_situation,
         'lignes_ecartees': lignes_ecartees,
         'doublons_retires': doublons,
@@ -144,6 +171,46 @@ def clean(input_filepath, output_filepath) -> dict:
         'genre_M': len(df_final[df_final['genre'] == 'M']),
         'genre_F': len(df_final[df_final['genre'] == 'F']),
         'par_organisme_situation': df_final[['organisme', 'situation']].value_counts(),
+        'avec_ine': int((candidats['ine'] != '').sum()),
+        # La part des gens qui ont un nom d'usage distinct : c'est elle qui dit ce que la
+        # seconde variante de la clé rapporte réellement.
+        'allocataires_avec_nom_usage': int((candidats['allocataire_nom_usage'] != '').sum()),
+        'beneficiaires_avec_nom_usage': int((candidats['beneficiaire_nom_usage'] != '').sum()),
+        'sortie': str(output_filepath),
+        'candidats_rapprochement': str(match_filepath) if match_filepath else '(non écrit)',
+    }
+
+
+# --- Étape 2b : mise à l'écart des bénéficiaires déjà connus de la base ------------
+
+def split_matched(cleaned_filepath, unmatched_ids_filepath, output_filepath) -> dict:
+    """Ne garde du CSV nettoyé que les lignes que match_beneficiaires.sql n'a pas retrouvées.
+
+    Ce sont elles, et elles seules, qui continuent vers la génération de codes : les
+    appariées ont déjà un id_psp en base, leur en fabriquer un second est exactement ce que
+    le rapprochement existe pour empêcher.
+    """
+    df = pd.read_csv(
+        cleaned_filepath, sep=';', encoding='utf-8', dtype=str, keep_default_na=False,
+        quoting=csv.QUOTE_ALL,
+    )
+    non_apparies = pd.read_csv(
+        unmatched_ids_filepath, sep=';', encoding='utf-8', dtype=str, keep_default_na=False,
+    )
+
+    assert 'eligibility_result_id' in non_apparies.columns, \
+        "le fichier des non-appariés ne vient pas de match_beneficiaires.sql"
+
+    a_garder = df['eligibility_result_id'].isin(set(non_apparies['eligibility_result_id']))
+    df_restant = df[a_garder]
+
+    df_restant.to_csv(
+        output_filepath, sep=';', index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
+
+    return {
+        'lus': len(df),
+        'apparies_ecartes': len(df) - len(df_restant),
+        'restants': len(df_restant),
         'sortie': str(output_filepath),
     }
 
@@ -216,6 +283,15 @@ def _cmd_clean(args) -> dict:
     return clean(
         args.input or _required_env('FC_EXPORT_PATHFILE_2026'),
         args.output or _required_env('DB_FC_EXPORT_2026'),
+        args.match_out,
+    )
+
+
+def _cmd_split_matched(args) -> dict:
+    return split_matched(
+        args.input or _required_env('DB_FC_EXPORT_2026'),
+        args.unmatched_ids,
+        args.output,
     )
 
 
@@ -257,7 +333,18 @@ def main(argv=None) -> int:
     clean_parser = subparsers.add_parser('clean', help="étape 2 — export brut -> schéma PSP")
     clean_parser.add_argument('--input', help="défaut : $FC_EXPORT_PATHFILE_2026")
     clean_parser.add_argument('--output', help="défaut : $DB_FC_EXPORT_2026")
+    clean_parser.add_argument(
+        '--match-out', help="candidats au rapprochement ; sans lui, aucun n'est écrit")
     clean_parser.set_defaults(func=_cmd_clean)
+
+    split_parser = subparsers.add_parser(
+        'split-matched',
+        help="étape 2b — ne garder que les bénéficiaires que la base ne connaît pas")
+    split_parser.add_argument('--input', help="défaut : $DB_FC_EXPORT_2026")
+    split_parser.add_argument(
+        '--unmatched-ids', required=True, help="sortie non-appariés de match_beneficiaires.sql")
+    split_parser.add_argument('--output', required=True, help="CSV réduit aux non-appariés")
+    split_parser.set_defaults(func=_cmd_split_matched)
 
     codes_parser = subparsers.add_parser('codes', help="étape 3 — un code par bénéficiaire")
     codes_parser.add_argument('--input', help="défaut : $DB_FC_EXPORT_2026")

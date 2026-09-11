@@ -16,6 +16,8 @@ import {
 } from '@/app/api/france-connect/shared';
 import { storePocResult } from '@/app/api/france-connect/session';
 import { toPivotIdentity } from '@/app/api/france-connect/pivot';
+import { enqueueCodesJob } from '@/app/services/queue';
+import { getClientIp } from '@/utils/client-ip';
 
 const redirectToPage = (params: Record<string, string> = {}): NextResponse => {
   const url = new URL(FC_INTERNAL_PAGE_PATH, BASE_DOMAIN);
@@ -86,6 +88,31 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     await storePocResult({ identity: pivot, sub: identity.sub, idToken: tokens.idToken });
+
+    // The journey asks the usager nothing, so the eligibility job starts here. Its own
+    // try/catch: the login itself succeeded, and the session is already stored, so a Redis
+    // blip must leave the usager connected on a page that offers to relaunch rather than
+    // send them back through FranceConnect with an error about an exchange that went fine.
+    try {
+      await enqueueCodesJob(
+        {
+          identity: pivot,
+          isFranceConnected: true,
+          clientIp: getClientIp(request.headers),
+          userAgent: request.headers.get('user-agent'),
+        },
+        identity.sub,
+      );
+    } catch (e) {
+      Sentry.withScope((scope) => {
+        scope.setLevel('error');
+        scope.setTag('fc_step', 'enqueue');
+        scope.captureMessage('FranceConnect callback: eligibility job enqueue failed');
+        scope.captureException(e);
+      });
+
+      return redirectToPage({ error: 'enqueue' });
+    }
 
     return redirectToPage({ status: 'ok' });
   } catch (e) {

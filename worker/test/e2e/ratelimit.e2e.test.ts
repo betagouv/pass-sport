@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
-import type { Allowance } from "../../src/eligibility/types";
 
 // Verifies the worker's rate-limit behaviour end-to-end: when API Particulier
 // returns 429, the job is PAUSED (not failed) and only retried after the window
@@ -28,9 +27,7 @@ const job = () => ({
     birthcountry: "99100",
     email: "camille.martin@example.test",
   },
-  aides: ["CROUS"] as Allowance[],
   isFranceConnected: true,
-  residenceInsee: "75113",
 });
 
 describe("rate-limit pause + retry-from-header", () => {
@@ -50,9 +47,11 @@ describe("rate-limit pause + retry-from-header", () => {
     expect(elapsedMs).toBeGreaterThanOrEqual((RETRY_AFTER - 0.2) * 1000);
 
     // And it eventually succeeded end-to-end.
-    const rows = (await stack.pool.query("select * from eligibility_results")).rows;
+    const rows = (
+      await stack.pool.query("select * from eligibility_results where source = 'self'")
+    ).rows;
     expect(rows).toHaveLength(1);
-    expect(rows[0].lca_status).toBe("confirmed");
+    expect(rows[0].verdict).toBe("eligible_pending");
   });
 
   it("leaves both the 429 and the resumed attempt in the history", async () => {
@@ -69,15 +68,16 @@ describe("rate-limit pause + retry-from-header", () => {
     expect(limited.http_status).toBe(429);
     expect(limited.response_payload.retry_after).toBe(RETRY_AFTER);
 
-    // The resumed call is a second row for the SAME action: the 429 never reached the
-    // checkpoint, so it is re-called rather than skipped.
-    const cnous = events.filter((e) => e.action === "cnous.etudiant_boursier_identite");
-    expect(cnous.map((e) => e.status)).toEqual(["rate_limited", "success"]);
+    // The 429 lands on the first call of the chain, which is the first month of the
+    // quotient sweep. The resumed call is a second row for that SAME action: the 429 never
+    // reached the checkpoint, so it is re-called rather than skipped.
+    const swept = events.filter((e) => e.action === "dss.quotient_familial_identite");
+    expect(swept.map((e) => e.status).slice(0, 2)).toEqual(["rate_limited", "success"]);
 
-    // Both at attempt 0, and that is correct: RateLimitError requeues WITHOUT counting
+    // All at attempt 0, and that is correct: RateLimitError requeues WITHOUT counting
     // a failed attempt (see getFailedCount above), so attemptsMade never moves. `attempt`
     // separates real retries; a rate-limit resume is read from the status sequence.
-    expect(cnous.every((e) => e.attempt === 0)).toBe(true);
+    expect(swept.every((e) => e.attempt === 0)).toBe(true);
   });
 
   // attemptsMade stays 0 across a resume (see above), so a guard built on it would re-mail

@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startStack, type Stack } from "./harness";
 import { FRANCE_CONNECT_JOB_NAME } from "../../src/queues";
-import type { Allowance } from "../../src/eligibility/types";
 
 // Design A: a FranceConnect user's job id IS their pairwise `sub`, so disconnecting
 // and reconnecting cannot create a second job for the same person. These tests pin
@@ -27,9 +26,7 @@ const input = () => ({
     birthcountry: "99100",
     email: "camille.martin@example.test",
   },
-  aides: ["CROUS"] as Allowance[],
   isFranceConnected: true,
-  residenceInsee: "75113",
 });
 
 // The site's only window onto Postgres: the SELECT-only view.

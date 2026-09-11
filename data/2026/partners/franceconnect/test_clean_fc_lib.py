@@ -22,7 +22,6 @@ def enfant_row(**overrides):
         'eligibility_result_id': '11111111-1111-1111-1111-111111111111',
         'source': 'enfant',
         'allocataire_fc_sub': 'sub-A',
-        'residence_insee': '75056',
         'allocataire-nom_naissance': 'MARTIN',
         'allocataire-nom_usage': None,
         'allocataire-prenom': 'Claire',
@@ -32,11 +31,14 @@ def enfant_row(**overrides):
         'enfant_nom': 'MARTIN',
         'enfant_prenom': 'Lea',
         'enfant_date_naissance': '2015-06-01',
+        'enfant_nom_usage': None,
         'qf_valeur': '650',
         'qf_fournisseur': 'CNAF',
         'qf_enfants': None,
+        'qf_allocataires': None,
         'aah_est_beneficiaire': None,
         'crous_est_boursier': None,
+        'crous_ine': None,
     }
     row.update(overrides)
     return row
@@ -78,37 +80,39 @@ def test_enfant_couvert_par_le_quotient_est_jeune():
     assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2015-06-01')])[0] == ['jeune']
 
 
-def test_enfant_de_17_ans_sans_quotient_couvrant_passe_par_aeeh():
-    # Né en 2008 : dans la fenêtre AEEH 17-19 ans, hors fenêtre QF qui commence en 2009.
+def test_enfant_de_18_ans_sans_quotient_couvrant_passe_par_aeeh():
+    # Né en 2008 : dans la fenêtre AEEH, hors fenêtre QF qui commence en 2009.
     assert situations([enfant_row(qf_valeur=None, enfant_date_naissance='2008-04-11')])[0] == ['AEEH']
 
 
-def test_le_quotient_est_prioritaire_sur_aeeh_sur_le_millesime_qui_chevauche():
-    # 2009 est le seul millésime couvert par les deux fenêtres. QF gagne, comme dans
-    # candidates.ts — c'est aussi pour cela que le worker n'appelle pas l'AEEH pour eux.
+def test_le_quotient_est_prioritaire_sur_aeeh_sur_les_millesimes_qui_chevauchent():
+    # 2009-2020 est couvert par les deux fenêtres. QF gagne, comme dans candidates.ts —
+    # c'est aussi pour cela que le worker n'appelle pas l'AEEH pour ces enfants.
     assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2009-05-05')])[0] == ['jeune']
+    assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2015-06-01')])[0] == ['jeune']
 
 
 def test_millesime_2009_sans_quotient_couvrant_bascule_sur_aeeh():
     assert situations([enfant_row(qf_valeur='900', enfant_date_naissance='2009-05-05')])[0] == ['AEEH']
 
 
-def test_le_seuil_de_quotient_est_strict():
-    # 700 pile n'ouvre aucun droit, et 2015 est hors de la fenêtre AEEH (17-19 ans).
-    resultats, sans_situation = situations([enfant_row(qf_valeur='700', enfant_date_naissance='2015-06-01')])
-    assert resultats == [None]
-    assert sans_situation == 1
+def test_un_enfant_de_14_ans_hors_couverture_quotient_passe_par_aeeh():
+    # La fenêtre AEEH est désormais celle de partners_lib (6-19 ans) : le worker interroge
+    # l'AEEH pour tout enfant de la tranche que le quotient ne couvre pas.
+    assert situations([enfant_row(qf_valeur='900', enfant_date_naissance='2015-06-01')])[0] == ['AEEH']
+
+
+def test_un_quotient_au_seuil_bascule_l_enfant_sur_aeeh():
+    # 700 pile n'ouvre pas la route QF — le seuil est strict — donc l'enfant est jugé sur
+    # son propre verdict AEEH.
+    assert situations([enfant_row(qf_valeur='700', enfant_date_naissance='2015-06-01')])[0] == ['AEEH']
 
 
 def test_enfant_hors_fenetre_de_naissance_n_a_aucune_situation():
     # Né en 2021 : trop jeune pour QF (borne 2020-12-31) comme pour AEEH.
-    assert situations([enfant_row(qf_valeur='650', enfant_date_naissance='2021-01-01')])[0] == [None]
-
-
-def test_la_fenetre_aeeh_est_celle_du_worker_pas_celle_des_fichiers_partenaires():
-    # Un enfant de 2015 que le quotient ne couvre pas ne doit PAS tomber en AEEH : la
-    # fenêtre partenaire (6-19 ans) l'y ferait entrer, celle du worker (17-19) non.
-    assert situations([enfant_row(qf_valeur='900', enfant_date_naissance='2015-06-01')])[0] == [None]
+    resultats, sans_situation = situations([enfant_row(qf_valeur='650', enfant_date_naissance='2021-01-01')])
+    assert resultats == [None]
+    assert sans_situation == 1
 
 
 def test_allocataire_beneficiaire_aah_est_en_situation_aah():
@@ -140,8 +144,11 @@ def test_allocataire_trop_age_pour_aah_n_a_aucune_situation():
 
 
 def test_boursier_de_plus_de_28_ans_n_a_aucune_situation():
-    row = self_row(crous_est_boursier='true', **{'allocataire-date_naissance': '1998-12-31'})
-    assert situations([row])[0] == [None]
+    # 1998 est le dernier millésime retenu (28 ans au 31/12/2026) ; 1997 en a 29.
+    assert situations([self_row(
+        crous_est_boursier='true', **{'allocataire-date_naissance': '1998-12-31'})])[0] == ['boursier']
+    assert situations([self_row(
+        crous_est_boursier='true', **{'allocataire-date_naissance': '1997-12-31'})])[0] == [None]
 
 
 def test_resolve_situation_ne_mute_pas_son_entree():
@@ -194,6 +201,8 @@ def test_genre_retrouve_sur_le_nom_de_naissance_et_une_date_au_format_francais()
 
 
 def test_genre_retrouve_sur_le_nom_d_usage_et_une_date_iso():
+    # candidates.ts ne retient plus que le nom de naissance, mais les lignes écrites avant
+    # ce changement portent un nom d'usage : l'appariement doit continuer de les retrouver.
     df = pd.DataFrame([enfant_row(
         qf_enfants=ENFANTS_QF, enfant_prenom='Hugo', enfant_date_naissance='2008-04-11')])
     df, non_resolus = lib.resolve_enfant_genre(df)
@@ -266,34 +275,38 @@ def test_une_ligne_self_decrit_l_allocataire_lui_meme():
     assert df.loc[0, 'date_naissance'] == pd.Timestamp('2000-05-05')
 
 
-def test_le_nom_d_usage_du_parent_prime_sur_son_nom_de_naissance():
-    df = pd.DataFrame([enfant_row(**{'allocataire-nom_usage': 'DURAND'})])
-    df, _ = lib.resolve_enfant_genre(df)
-    df = lib.build_psp_columns(df)
-    assert df.loc[0, 'allocataire-nom'] == 'DURAND'
-
-
-def test_un_champ_vide_du_csv_vaut_un_champ_absent():
-    # Le notebook lit l'export avec keep_default_na=False : un champ non renseigné arrive en
-    # chaîne vide, pas en NaN. Sans normalisation en tête de build_psp_columns, le repli du
-    # nom d'usage sur le nom de naissance verrait '' comme une valeur et laisserait le nom de
-    # l'allocataire vide — ce que le sérialiseur JSON fait ensuite exploser.
-    df = pd.DataFrame([enfant_row(**{'allocataire-nom_usage': ''})])
+def test_le_parent_est_nomme_par_son_nom_de_naissance():
+    # Le nom d'usage n'est plus ni demandé à FranceConnect ni exporté : il ne reste qu'un
+    # seul nom possible pour l'allocataire.
+    df = pd.DataFrame([enfant_row()])
     df, _ = lib.resolve_enfant_genre(df)
     df = lib.build_psp_columns(df)
     assert df.loc[0, 'allocataire-nom'] == 'MARTIN'
 
 
-def test_le_code_insee_de_residence_devient_l_adresse_de_l_allocataire():
+def test_un_champ_vide_du_csv_vaut_un_champ_absent():
+    # Le notebook lit l'export avec keep_default_na=False : un champ non renseigné arrive en
+    # chaîne vide, pas en NaN. Sans la normalisation de build_psp_columns, le sérialiseur JSON
+    # porterait un courriel vide au lieu de l'écarter.
+    df = pd.DataFrame([enfant_row(**{'allocataire-courriel': ''})])
+    df, _ = lib.resolve_enfant_genre(df)
+    df = lib.build_psp_columns(df)
+    assert pd.isna(df.loc[0, 'allocataire-courriel'])
+
+
+def test_l_allocataire_n_a_aucune_adresse():
     df = pd.DataFrame([enfant_row()])
     df, _ = lib.resolve_enfant_genre(df)
     df = lib.build_psp_columns(df)
 
-    assert df.loc[0, 'adresse_allocataire-code_insee'] == '75056'
-    # FranceConnect ne donne aucune adresse postale : ces colonnes existent pour le
+    # Cette source ne porte plus aucune adresse : le parcours FranceConnect ne demande plus la
+    # commune de résidence depuis que LCA en est débranché. Ces colonnes existent pour le
     # sérialiseur JSON, qui les écartera parce qu'elles sont nulles.
-    assert pd.isna(df.loc[0, 'adresse_allocataire-voie'])
-    assert df.loc[0, 'allocataire-matricule'] == '1234567'
+    for field in ('code_insee', 'voie', 'code_postal', 'commune', 'cplt_adresse'):
+        assert pd.isna(df.loc[0, f'adresse_allocataire-{field}'])
+    # Aucun matricule hors route boursier : la réponse quotient_familial ne porte pas de
+    # numéro d'allocataire, il n'y a donc rien de vrai à mettre là.
+    assert pd.isna(df.loc[0, 'allocataire-matricule'])
 
 
 def test_la_cle_du_write_back_survit_a_la_projection():
@@ -331,6 +344,10 @@ def test_il_ne_reste_que_le_schema_psp_et_la_cle_du_write_back():
     df = partners.add_allocataire_json_column(df)
     df = partners.add_adresse_allocataire_json_column(df)
     df = lib.drop_intermediate_columns(df)
+    # Les colonnes `match-*` survivent volontairement à drop_intermediate_columns — les
+    # candidats au rapprochement sont tirés du DataFrame final — et c'est fc_pipeline.clean
+    # qui les retire ensuite, comme ici.
+    df = df.drop(columns=[c for c in df.columns if c.startswith('match-')])
 
     assert sorted(df.columns) == sorted([
         'eligibility_result_id', 'nom', 'prenom', 'date_naissance', 'genre',
@@ -352,15 +369,186 @@ def test_les_colonnes_json_portent_ce_que_franceconnect_donne_et_rien_de_plus():
 
     assert allocataire == {
         'qualite': 'Mme', 'nom': 'MARTIN', 'prenom': 'CLAIRE', 'courriel': 'claire@example.org',
-        'matricule': '1234567',
     }
-    # Ni code_organisme, ni téléphone : FranceConnect n'en fournit aucun, et le sérialiseur
-    # écarte les valeurs nulles plutôt que de les porter vides. Le matricule, lui, est fixe
-    # pour cette source (voir build_psp_columns).
-    assert adresse == {'code_insee': '75056'}
+    # Ni code_organisme, ni téléphone, ni matricule : FranceConnect n'en fournit aucun — la
+    # réponse quotient_familial ne porte aucun numéro d'allocataire — et le sérialiseur écarte
+    # les valeurs nulles plutôt que de les porter vides. Seule la route boursier a un
+    # matricule, l'INE (voir build_psp_columns).
+    assert adresse == {}
 
 
 def test_drop_intermediate_columns_tolere_les_colonnes_deja_absentes():
     # filter_rows_missing_required_fields supprime en amont les colonnes entièrement nulles.
     df = pd.DataFrame([{'eligibility_result_id': 'x', 'nom': 'MARTIN', 'source': 'enfant'}])
     assert list(lib.drop_intermediate_columns(df).columns) == ['eligibility_result_id', 'nom']
+
+
+# --- Rapprochement avec la base bénéficiaires -------------------------------------
+
+# Le foyer tel que la CAF l'écrit : nom de naissance ET nom d'usage, que le pivot
+# FranceConnect ne donne plus depuis le retrait de preferred_username. Deux allocataires,
+# comme pour un couple — c'est la date de naissance du pivot qui désigne le connecté.
+ALLOCATAIRES_QF = json.dumps([
+    {'nom_naissance': 'BOLIMEK', 'nom_usage': 'MARTIN', 'prenoms': 'Claire Ysolde',
+     'date_naissance': '02/03/1985', 'sexe': 'F'},
+    {'nom_naissance': 'VOKTARIMENDO', 'prenoms': 'Tarnu',
+     'date_naissance': '17/11/1982', 'sexe': 'M'},
+])
+
+
+def test_l_allocataire_caf_est_choisi_sur_la_date_de_naissance_du_pivot():
+    df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    assert non_resolus == 0
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'BOLIMEK'
+    assert df.loc[0, 'match-allocataire_nom_usage'] == 'MARTIN'
+    assert df.loc[0, 'match-allocataire_prenom'] == 'CLAIRE YSOLDE'
+
+
+def test_l_allocataire_caf_retombe_sur_le_pivot_sans_reponse_quotient_familial():
+    # C'est le cas de la route AAH, qui n'appelle jamais quotient_familial : il n'y a aucun
+    # tableau `allocataires`, et l'état civil du pivot est tout ce qu'on a.
+    df = pd.DataFrame([enfant_row()])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    assert non_resolus == 1
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'MARTIN'
+    assert df.loc[0, 'match-allocataire_prenom'] == 'Claire'
+
+
+def test_un_seul_allocataire_est_retenu_sans_date_de_naissance_concordante():
+    seul = json.dumps([{'nom_naissance': 'ZELVIK', 'prenoms': 'Halvi',
+                        'date_naissance': '01/01/1900'}])
+    df = pd.DataFrame([enfant_row(qf_allocataires=seul)])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    assert non_resolus == 0
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'ZELVIK'
+
+
+def test_deux_allocataires_sans_date_concordante_ne_designent_personne():
+    ambigu = json.dumps([
+        {'nom_naissance': 'ZELVIK', 'prenoms': 'Halvi', 'date_naissance': '01/01/1900'},
+        {'nom_naissance': 'OSVAREK', 'prenoms': 'Mirsa', 'date_naissance': '02/02/1901'},
+    ])
+    df = pd.DataFrame([enfant_row(qf_allocataires=ambigu)])
+    df, non_resolus = lib.resolve_allocataire_caf(df)
+
+    # Non résolu côté CAF : le repli sur le pivot rend quand même la ligne recherchable.
+    assert non_resolus == 1
+    assert df.loc[0, 'match-allocataire_nom_naissance'] == 'MARTIN'
+
+
+def test_l_ine_du_boursier_devient_le_matricule_de_l_allocataire():
+    df = pd.DataFrame([self_row(crous_est_boursier='true', crous_ine='INE7788')])
+    df, _ = lib.resolve_enfant_genre(df)
+    df = lib.build_psp_columns(df)
+    assert df.loc[0, 'allocataire-matricule'] == 'INE7788'
+
+
+def test_les_candidats_au_rapprochement_portent_les_colonnes_attendues():
+    import partners_lib as partners
+
+    df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
+    df, _ = lib.resolve_enfant_genre(df)
+    df, _ = lib.resolve_allocataire_caf(df)
+    df = lib.build_psp_columns(df)
+    df, _ = lib.resolve_situation(df)
+    df = lib.resolve_organisme(df)
+    df = partners.add_allocataire_json_column(df)
+
+    candidats = lib.build_match_candidates(df)
+
+    assert list(candidats.columns) == lib.MATCH_COLUMNS
+    # Le couple qui choisit la stratégie côté match_beneficiaires.sql.
+    assert candidats.loc[0, 'situation'] == 'jeune'
+    assert candidats.loc[0, 'organisme'] == 'CAF'
+    assert candidats.loc[0, 'allocataire_nom'] == 'BOLIMEK'
+    assert candidats.loc[0, 'allocataire_genre'] == 'female'
+    assert candidats.loc[0, 'beneficiaire_nom'] == 'MARTIN'
+    assert candidats.loc[0, 'beneficiaire_prenom'] == 'Lea'
+    assert candidats.loc[0, 'beneficiaire_date_naissance'] == '2015-06-01'
+    # Pas de route boursier ici : aucun INE, donc aucune jointure exacte à tenter.
+    assert candidats.loc[0, 'ine'] == ''
+
+
+# --- Noms d'usage ------------------------------------------------------------------
+
+# Le foyer tel que la CAF l'écrit pour ses enfants : la même entrée donne le genre et le nom
+# d'usage, retrouvée par nom de naissance, prénoms et date.
+ENFANTS_QF_AVEC_USAGE = json.dumps([
+    {'nom_naissance': 'MARTIN', 'nom_usage': 'ZALQUIN', 'prenoms': 'Lea',
+     'date_naissance': '01/06/2015', 'sexe': 'F'},
+])
+
+
+def noms_d_usage(row):
+    """Enchaîne les résolutions dans l'ordre de fc_pipeline.clean."""
+    df = pd.DataFrame([row])
+    df, _ = lib.resolve_enfant_genre(df)
+    df, _ = lib.resolve_allocataire_caf(df)
+    df = lib.resolve_beneficiaire_nom_usage(df)
+    return df.loc[0, 'match-allocataire_nom_usage'], df.loc[0, 'match-beneficiaire_nom_usage']
+
+
+def test_sans_reponse_qf_le_nom_d_usage_de_l_allocataire_vient_de_franceconnect():
+    # Route AAH : aucun appel quotient_familial, donc aucun tableau `allocataires`. Le
+    # preferred_username FranceConnect est alors le seul nom d'usage disponible — et c'est un
+    # nom d'usage que la CNAF range dans RESPDOS.
+    allocataire, _ = noms_d_usage(self_row(aah_est_beneficiaire='true',
+                                           **{'allocataire-nom_usage': 'Vorsalde'}))
+    assert allocataire == 'Vorsalde'
+
+
+def test_le_nom_d_usage_de_la_caf_prime_sur_celui_de_franceconnect():
+    # La base cherchée porte l'orthographe de la caisse : autant la préférer quand on l'a.
+    allocataire, _ = noms_d_usage(enfant_row(qf_allocataires=ALLOCATAIRES_QF,
+                                             **{'allocataire-nom_usage': 'Vorsalde'}))
+    assert allocataire == 'MARTIN'
+
+
+def test_le_nom_d_usage_de_l_enfant_vient_de_enfant_identite():
+    _, beneficiaire = noms_d_usage(enfant_row(enfant_nom_usage='Bravenne',
+                                              qf_enfants=ENFANTS_QF_AVEC_USAGE))
+    assert beneficiaire == 'Bravenne'
+
+
+def test_sans_nom_d_usage_stocke_celui_de_l_enfant_est_repris_de_qf_enfants():
+    # Lignes écrites avant que le worker ne stocke enfant_identite.preferred_username : la
+    # réponse quotient_familial le porte toujours.
+    _, beneficiaire = noms_d_usage(enfant_row(qf_enfants=ENFANTS_QF_AVEC_USAGE))
+    assert beneficiaire == 'ZALQUIN'
+
+
+def test_sur_une_ligne_self_le_beneficiaire_porte_le_nom_d_usage_de_l_allocataire():
+    # Le bénéficiaire EST l'allocataire : une seule valeur sert les deux moitiés de la clé.
+    allocataire, beneficiaire = noms_d_usage(self_row(**{'allocataire-nom_usage': 'Vorsalde'}))
+    assert beneficiaire == allocataire == 'Vorsalde'
+
+
+def test_sans_aucun_nom_d_usage_la_variante_reste_vide():
+    allocataire, beneficiaire = noms_d_usage(enfant_row())
+    assert (allocataire, beneficiaire) == ('', '')
+
+
+def test_les_candidats_portent_le_genre_la_qualite_et_les_noms_d_usage():
+    import partners_lib as partners
+
+    df = pd.DataFrame([enfant_row(qf_enfants=ENFANTS_QF_AVEC_USAGE,
+                                  **{'allocataire-nom_usage': 'Vorsalde'})])
+    df, _ = lib.resolve_enfant_genre(df)
+    df, _ = lib.resolve_allocataire_caf(df)
+    df = lib.resolve_beneficiaire_nom_usage(df)
+    df = lib.build_psp_columns(df)
+    df, _ = lib.resolve_situation(df)
+    df = lib.resolve_organisme(df)
+    df = partners.add_allocataire_json_column(df)
+
+    candidats = lib.build_match_candidates(df)
+
+    assert list(candidats.columns) == lib.MATCH_COLUMNS
+    assert candidats.loc[0, 'allocataire_nom_usage'] == 'Vorsalde'
+    assert candidats.loc[0, 'beneficiaire_nom_usage'] == 'ZALQUIN'
+    assert candidats.loc[0, 'beneficiaire_genre'] == 'F'
+    assert candidats.loc[0, 'allocataire_qualite'] == 'Mme'

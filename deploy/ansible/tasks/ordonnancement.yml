@@ -32,6 +32,29 @@
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]
 
+# Referme la boucle des codes fabriqués par la cron ci-dessus : elle marque les bénéficiaires en
+# 'eligible_pending_lca' et dépose un CSV, un humain l'injecte chez LCA, et ce passage-ci
+# redemande à LCA si elle les sert enfin — auquel cas le verdict passe à 'eligible_confirmed' et
+# le site affiche le code. Rien du traitement n'a lieu sur cette machine : le script pose un job
+# BullMQ et le worker Scalingo fait le reste (worker/src/jobs/lca-checks.ts).
+#
+# Horaire paramétré, pas en dur : la bonne cadence dépend du délai réel d'injection chez LCA, qui
+# ne se connaîtra qu'en production. `10,40` et non `*/30` pour éviter la minute 30, où
+# pass-sport-fc monte son propre tunnel Scalingo quatre fois par jour — les deux crons se
+# croiseraient sinon, et la seconde échouerait.
+#
+# Posée DÉSACTIVÉE comme pass-sport-fc, même procédure d'activation (voir lamp-setup.yml).
+- name: Vérification des eligible_pending_lca (toutes les 30 minutes par défaut)
+  become: true
+  ansible.builtin.cron:
+    name: pass-sport-lca-checks
+    user: "{{ pass_sport_user }}"
+    minute: "{{ pass_sport_lca_checks_cron_minute }}"
+    hour: "{{ pass_sport_lca_checks_cron_hour }}"
+    job: "{{ pass_sport_repo }}/worker/src/scripts/run-lca-checks.sh"
+    disabled: "{{ not pass_sport_lca_checks_cron_enabled }}"
+  tags: [lca-checks-cron]
+
 - name: Unité systemd qf-batch (templatée par partenaire)
   become: true
   ansible.builtin.template:

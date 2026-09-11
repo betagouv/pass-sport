@@ -25,16 +25,12 @@ export function createCheckpointRunner<TData extends CheckpointedJob>(
   results: ResourceResult[];
   run: (call: CheckpointedCall) => Promise<ResourceResult | undefined>;
 } {
-  const checkpoint: EligibilityCheckpoint = job.data.checkpoint ?? { done: {}, results: [] };
+  const checkpoint: EligibilityCheckpoint = job.data.checkpoint ?? { results: [] };
 
   const run = async (call: CheckpointedCall): Promise<ResourceResult | undefined> => {
-    // childIndex is part of the identity of a row: AEEH answers for several children all
-    // carry the same `resource`, so matching on that alone would replay the wrong one.
-    const cached = checkpoint.done[call.key]
-      ? checkpoint.results.find(
-          (r) => r.resource === call.resource && r.childIndex === call.childIndex,
-        )
-      : undefined;
+    // Matched on the key alone: several rows share one `resource` — one per swept quotient
+    // month, one per child on AEEH — so anything coarser replays the wrong answer.
+    const cached = checkpoint.results.find((r) => r.checkpointKey === call.key);
 
     if (cached) {
       // Recorded rather than skipped silently: on a retry this is what shows the
@@ -58,8 +54,7 @@ export function createCheckpointRunner<TData extends CheckpointedJob>(
       params: call.params,
       invoke: call.invoke,
       commit: async (r) => {
-        checkpoint.results.push(r);
-        checkpoint.done[call.key] = true;
+        checkpoint.results.push({ ...r, checkpointKey: call.key });
         await job.updateData({ ...job.data, checkpoint });
       },
     });

@@ -228,18 +228,18 @@ describe('BeneficiaryRecap', () => {
     expect(screen.getByText('Votre enfant')).toBeInTheDocument();
   });
 
-  it('shows a Card for a not_assessed child alongside the assessed ones, not just the assessed ones', () => {
+  it('shows a Card for every child, not just the ones already served a code', () => {
     const { container } = renderRecap([
-      beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'not_assessed' }),
+      beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'eligible_pending' }),
       beneficiary({ source: 'enfant', givenName: 'Astravelle', verdict: 'eligible_confirmed' }),
     ]);
 
-    const [notAssessedCard, confirmedCard] = cards(container);
+    const [pendingCard, confirmedCard] = cards(container);
     expect(cards(container)).toHaveLength(2);
 
-    expect(within(notAssessedCard).getByText('Quorindel')).toBeInTheDocument();
-    const notAssessedBadge = within(notAssessedCard).getByText('En cours de traitement');
-    expect(notAssessedBadge).toHaveClass('fr-badge--info');
+    expect(within(pendingCard).getByText('Quorindel')).toBeInTheDocument();
+    const pendingBadge = within(pendingCard).getByText('En cours de traitement');
+    expect(pendingBadge).toHaveClass('fr-badge--info');
 
     expect(within(confirmedCard).getByText('Astravelle')).toBeInTheDocument();
     const confirmedBadge = within(confirmedCard).getByText('Eligible');

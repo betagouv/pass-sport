@@ -2,7 +2,14 @@
 
 import type { Allowance } from "../eligibility/types";
 
-export const LCA_SITUATION = { JEUNE: "jeune", AAH: "AAH", BOURSIER: "boursier" } as const;
+// AEEH: what clean_fc_lib.resolve_situation writes into the LCA base, so a /search about one of
+// our own injected beneficiaries can answer it.
+export const LCA_SITUATION = {
+  JEUNE: "jeune",
+  AAH: "AAH",
+  AEEH: "AEEH",
+  BOURSIER: "boursier",
+} as const;
 
 export type SituationType = (typeof LCA_SITUATION)[keyof typeof LCA_SITUATION];
 
@@ -73,6 +80,7 @@ export type BeneficiaryCandidate = {
   // candidates.ts). 'self' candidates leave this unset: the PDF route sources the
   // allocataire's gender from their FranceConnect session identity, not from here.
   gender?: "male" | "female";
+  nomUsage?: string;
   eligibilities: Allowance[];
   reasons: string[];
 };

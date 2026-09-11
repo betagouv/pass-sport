@@ -1,0 +1,1 @@
+ALTER TABLE "eligibility_results" ADD COLUMN "caisse" text;

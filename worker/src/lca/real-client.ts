@@ -8,7 +8,6 @@ import type {
   SearchPayload,
 } from "./types";
 
-// Real LCA (Gravitee) client: X-Gravitee-Api-Key auth, GET with query params.
 const SEARCH_PATH = "/apim/api-asso-admin/passsport/beneficiaires/search";
 const CONFIRM_PATH = "/apim/api-asso-admin/passsport/beneficiaires/confirm";
 

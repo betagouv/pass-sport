@@ -21,7 +21,6 @@ const REQUIRED_COLUMNS = [
 ] as const;
 const IDENTITY_COLUMNS = [
   "allocataire-nom_naissance",
-  "allocataire-nom_usage",
   "allocataire-prenom",
   "allocataire-date_naissance",
   "allocataire-genre",
@@ -128,7 +127,6 @@ const rowToIdentity = (row: Record<string, string>): PivotIdentity | null => {
   const gender = row["allocataire-genre"]?.trim().toLowerCase();
   return {
     family_name: familyName,
-    preferred_username: row["allocataire-nom_usage"]?.trim() || undefined,
     given_name: row["allocataire-prenom"]?.trim() || undefined,
     birthdate,
     gender: gender === "male" || gender === "female" ? gender : undefined,

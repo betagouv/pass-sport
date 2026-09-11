@@ -58,7 +58,7 @@
     # Tient lieu du montage NFS réel : lamp-setup.yml ne fait que vérifier que
     # fc_prod_drop_dir est inscriptible (le montage lui-même appartient à l'infra), donc ce
     # test le fournit comme le ferait l'infra en vrai — voir --extra-vars dans converge.yml.
-    - name: Dossier de dépôt de test (tient lieu de /nfs/postgresql)
+    - name: Dossier de dépôt de test (tient lieu de /nfs/run)
       ansible.builtin.file:
         path: /tmp/fc-drop
         state: directory

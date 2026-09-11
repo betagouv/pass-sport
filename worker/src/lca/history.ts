@@ -2,8 +2,7 @@ import * as Sentry from "@sentry/node";
 import type { HistoryRecorder } from "../db/history";
 import type { ConfirmItem, LcaError, SearchItem } from "./types";
 
-// CROUS students often have no address on file — retry with this default INSEE.
-export const DEFAULT_INSEE_CODE = "75113";
+export { DEFAULT_INSEE_CODE } from "./insee";
 
 export const isLcaError = (outcome: unknown): outcome is LcaError =>
   typeof outcome === "object" && outcome !== null && "message" in outcome;

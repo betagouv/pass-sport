@@ -3,35 +3,95 @@
 Cette source n'est pas un fichier partenaire : c'est une requête sur la table
 `eligibility_results` du worker, en production.
 
-Le parcours FranceConnect du site range chaque bénéficiaire dans l'un des quatre verdicts
-documentés dans [worker/src/db/schema.ts](../../../../worker/src/db/schema.ts). Trois sont
-terminaux ; `eligible_pending` ne l'est pas. Il désigne quelqu'un que **nos** règles jugent
-éligible mais que la base LCA ne connaît pas : son `pass_sport_code` est NULL et il n'a reçu
-qu'un courriel « éligibilité confirmée, code à venir ». Ce dossier est ce qui transforme cette
-promesse en code.
+Le parcours FranceConnect du site n'écrit plus que deux des verdicts documentés dans
+[worker/src/db/schema.ts](../../../../worker/src/db/schema.ts) : `not_eligible` quand aucune
+route n'est ouverte, et `eligible_pending` quand les réponses d'API Particulier en ouvrent une.
+Ce second-là n'est pas terminal : il désigne quelqu'un que **nos** règles jugent
+éligible et à qui aucun code n'a été servi — ce parcours n'interroge plus la base LCA du tout,
+son `pass_sport_code` est donc toujours NULL et il n'a reçu que l'accusé de réception de sa
+demande. Ce dossier est ce qui transforme cette promesse en code.
 
-## Les 4 étapes, dans cet ordre
+## Les 6 étapes, dans cet ordre
 
 | # | Quoi | À la main | En ligne de commande |
 |---|------|-----------|----------------------|
 | 1 | Extraire les `eligible_pending` de la base | `export_eligible_pending.sql` | idem |
 | 2 | Nettoyer vers le schéma PSP | `clean_franceconnect.ipynb` | `fc_pipeline.py clean` |
-| 3 | Fabriquer les codes | `../generate_new_codes.ipynb` avec `SOURCE = 'FC'` | `fc_pipeline.py codes` |
-| 4 | Marquer les bénéficiaires servis, en base | `writeback_codes.ipynb` puis `writeback_verdict.sql` | `fc_pipeline.py writeback` puis les `.sql` |
+| 3 | Chercher chacun dans la base bénéficiaires | `match_beneficiaires.sql` | idem |
+| 4 | Marquer les **retrouvés** `eligible_confirmed` | `writeback_confirmed.sql` | idem |
+| 5 | Fabriquer les codes des **non retrouvés** | `../generate_new_codes.ipynb` avec `SOURCE = 'FC'` | `fc_pipeline.py codes` |
+| 6 | Marquer les servis `eligible_pending_lca`, en base | `writeback_codes.ipynb` puis `writeback_verdict.sql` | `fc_pipeline.py writeback` puis les `.sql` |
+
+**L'étape 3 est ce qui remplace l'appel LCA** que ce parcours ne fait plus. Sans elle, une
+personne déjà présente dans la base bénéficiaires — parce que la CNAF, la MSA ou le CNOUS
+l'ont déclarée — recevrait un second code. Elle doit passer **avant** l'étape 5 : un code
+tiré est comptabilisé dans `EXISTING_CODES_PATHFILE_2026` et ne se reprend pas.
+
+⚠️ **Deux bases, à ne pas confondre.** Les étapes 1, 4 et 6 visent la base du site, sur
+Scalingo, à travers un tunnel. L'étape 3 vise la base bénéficiaires locale du lamp
+([lamp01/](../../../../lamp01/)), en direct.
 
 ```mermaid
 flowchart TD
     DB[("eligibility_results<br/>verdict = eligible_pending")]
+    LAMP[("base bénéficiaires du lamp<br/>CNAF + MSA + CNOUS")]
 
     DB -->|"1 · export_eligible_pending.sql"| F1["fc_2026_eligible_pending.csv<br/>export brut"]
     F1 -->|"2 · fc_pipeline.py clean"| F2["DB_FC_EXPORT_2026<br/>schéma PSP"]
-    F2 -->|"3 · fc_pipeline.py codes"| F3["AAAA-MM-JJ-fc-with-codes.csv<br/>+ pass_sport_code, + eligibility_result_id"]
+    F1 -->|"2 · fc_pipeline.py clean --match-out"| M1["fc_2026_match_candidates.csv<br/>colonnes de rapprochement"]
+
+    M1 -->|"3 · match_beneficiaires.sql"| LAMP
+    LAMP -->|"retrouvés"| M2["fc_2026_confirmed.csv<br/>eligibility_result_id;id_psp"]
+    LAMP -->|"non retrouvés"| M3["ids des non-appariés"]
+    M2 -->|"4 · writeback_confirmed.sql<br/>verdict eligible_confirmed"| DB
+
+    F2 --> SPLIT{"fc_pipeline.py<br/>split-matched"}
+    M3 --> SPLIT
+    SPLIT -->|"non-appariés seuls"| F2B["AAAA-MM-JJTHH-MM-SS-fc-non-apparies.csv"]
+
+    F2B -->|"5 · fc_pipeline.py codes"| F3["AAAA-MM-JJ-fc-with-codes.csv<br/>+ pass_sport_code, + eligibility_result_id"]
     F3 -. met à jour .-> CODES[("EXISTING_CODES_PATHFILE_2026<br/>codes déjà distribués")]
-    F3 -->|"4 · fc_pipeline.py writeback"| F4A["fc_2026_writeback.csv<br/>eligibility_result_id;id_psp"]
-    F3 -->|"4 · fc_pipeline.py writeback"| F4B["AAAA-MM-JJ-fc-prod.csv<br/>sans colonne technique"]
+    F3 -->|"6 · fc_pipeline.py writeback"| F4A["fc_2026_writeback.csv<br/>eligibility_result_id;id_psp"]
+    F3 -->|"6 · fc_pipeline.py writeback"| F4B["AAAA-MM-JJ-fc-prod.csv<br/>sans colonne technique"]
     F4A -->|"writeback_verdict.sql"| DB
     F4B -->|"copie + renommage atomique"| DEPOT["beneficiaires-insertion-N-TS.csv<br/>déposé dans FC_PROD_DROP_DIR"]
 ```
+
+### Comment le rapprochement identifie quelqu'un
+
+**Une stratégie par (situation, caisse)**, choisie par la `situation` et l'`organisme` du
+candidat (résolus par `clean_fc_lib`), et qui ne cherche que les lignes de base portant cette
+même situation et cette même caisse (plus `exercice_id` et un `id_psp` non nul). Le verdict
+est **strict** : un candidat est apparié ssi sa stratégie retourne **exactement un** `id_psp`
+distinct. Zéro ou plusieurs = non apparié → code neuf, le comportement le moins risqué des
+deux. Aucun départageur.
+
+| stratégie | allocataire | bénéficiaire |
+|---|---|---|
+| **boursier** | `allocataire_matricule` = INE, exact — le CNOUS y range l'INE du boursier ; rien d'équivalent CNAF/MSA | — |
+| **AAH MSA** | — | nom de **naissance** (`family_name`) · prénoms ⊆ · genre · naissance |
+| **AAH CAF** | — | nom d'**usage** (`preferred_username`, seul disponible : la route AAH n'appelle pas QF) · prénoms ⊆ · genre · naissance |
+| **AEEH MSA** | nom de naissance · prénoms ⊆ · qualité (M/Mme) · naissance | nom · prénoms stricts · genre · naissance |
+| **AEEH CAF** | nom d'usage (`RESPDOS`) · prénoms ⊆ · qualité · *pas* de naissance (la CNAF ne la sérialise pas) | nom (`NOMENF`, accepté sous ses deux formes candidat) · prénoms stricts · genre · naissance |
+| **jeune MSA** | nom de naissance · prénoms ⊆ · qualité · naissance | nom · prénoms ⊆ · genre · naissance |
+| **jeune CAF** | nom de **naissance**, genre et naissance depuis `beneficiaire_cnaf_extra_field` (rempli pour l'origine ARS, la population QF) · prénoms ⊆ | nom (deux formes) · prénoms ⊆ · genre · naissance |
+
+**⊆ — le containment des prénoms** : les prénoms venus de la base LAMP doivent être
+**contenus** dans les prénoms FranceConnect — sous-ensemble de mots, ordre libre, après
+normalisation des deux côtés. La CNAF ne stocke qu'un prénom (`PRENOMDOS`, `NOMENF`),
+FranceConnect les porte tous.
+
+**AAH, cas particulier** : la caisse est indéterminable depuis l'API (aucun appel
+`quotient_familial` sur cette route), les **deux** stratégies sont donc essayées. Concluant
+ssi exactement une des deux retourne exactement une ligne et l'autre aucune — deux stratégies
+à une ligne, même identique, restent inconcluantes.
+
+Côté candidat, les noms viennent de la réponse `quotient_familial` d'abord (le vocabulaire
+même de la caisse), du pivot FranceConnect en repli : nom de naissance =
+`qf_allocataires[].nom_naissance` à défaut `family_name`, nom d'usage =
+`qf_allocataires[].nom_usage` à défaut `preferred_username`. Pour un enfant, l'usage est
+celui que le worker stocke dans `enfant_identite`, à défaut `qf_enfants[].nom_usage` ; sur
+une ligne `self`, c'est celui de l'allocataire.
 
 `fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage ; les
 fichiers horodatés (`AAAA-MM-JJ-fc-with-codes.csv`, `fc_2026_writeback.csv`,
@@ -55,10 +115,10 @@ exports figés ; ici la table continue de vivre entre deux passages.
 
 [run_fc_pipeline.sh](run_fc_pipeline.sh) enchaîne les 4 étapes sans interaction : il ouvre et
 referme lui-même le tunnel Scalingo, et dépose le CSV final dans `FC_PROD_DROP_DIR`
-(`/nfs/postgresql` par défaut), d'où il est injecté en base de production.
+(`/nfs/run` par défaut), d'où il est injecté en base de production.
 
 L'entrée de crontab n'est plus posée à la main : elle l'est par
-[deploy/ansible/traitement.yml](../../../../deploy/ansible/traitement.yml), qui la nomme
+[deploy/ansible/lamp-setup.yml](../../../../deploy/ansible/lamp-setup.yml), qui la nomme
 `pass-sport-fc` — rejouer le playbook ne la duplique donc pas.
 
 ```crontab
@@ -87,6 +147,11 @@ Les fichiers que la cron produit sont horodatés à la seconde
 s'en tiennent au jour : une cron peut passer plusieurs fois par jour, et deux passages
 écraseraient sinon le fichier du précédent — y compris dans `FC_PROD_DROP_DIR`, où il n'a
 peut-être pas encore été injecté.
+
+Une **seconde** entrée de crontab, `pass-sport-lca-checks`, referme la boucle que celle-ci ouvre :
+elle redemande à LCA si elle sert enfin les codes déposés et fait passer les bénéficiaires de
+`eligible_pending_lca` à `eligible_confirmed`. Voir [Comment on en sort](#comment-on-en-sort) plus
+bas. Elle est décalée sur les minutes 10 et 40 pour ne pas croiser le tunnel Scalingo de celle-ci.
 
 Le journal du jour est écrit dans `FC_LOG_DIR` (`logs/` de ce dossier par défaut) ; toute
 sortie non nulle est une anomalie, que cron enverra par courriel. En cas d'échec après
@@ -153,7 +218,10 @@ select count(*) from eligibility_results where verdict = 'eligible_pending';
   le sexe est retrouvé par appariement dans le tableau `enfants` de la réponse quotient
   familial ;
 - **le schéma PSP** — l'identité arrive au vocabulaire FranceConnect, répartie sur deux
-  colonnes JSON selon `source`.
+  colonnes JSON selon `source`. `adresse_allocataire` y vaut `{}` : le parcours ne demande plus
+  la commune de résidence depuis que LCA en est débranché, et FranceConnect n'a jamais fourni
+  d'adresse postale. Rien ne rend ce champ obligatoire — les colonnes requises sont
+  `nom, prenom, date_naissance, genre` (`partners_lib.NECESSARY_COLUMNS`) plus `situation`.
 
 Ces règles vivent dans `clean_fc_lib.py` ; leur enchaînement, dans `fc_pipeline.clean` :
 
@@ -165,11 +233,10 @@ pytest 2026/partners/franceconnect/test_clean_fc_lib.py 2026/partners/franceconn
 python 2026/partners/franceconnect/fc_pipeline.py clean
 ```
 
-⚠️ La fenêtre AEEH de cette source est celle du worker (17-19 ans), **pas** celle de
-`partners_lib` (6-19 ans). Les deux décrivent deux situations différentes : la CNAF déclare
-elle-même l'AEEH sur toute la tranche, alors qu'ici c'est nous qui accordons l'aide, et
-seulement aux enfants que le quotient familial ne couvre pas déjà. Voir le commentaire de
-`clean_fc_lib.AEEH_DOB_MIN`.
+La fenêtre AEEH de cette source est celle de `partners_lib` (6-19 ans) : le worker interroge
+l'AEEH pour chaque enfant de cette tranche que le quotient familial ne couvre pas déjà. C'est
+ce `& ~jeune` qui reste la seule différence avec le fichier partenaire, où la CNAF déclare
+elle-même l'AEEH sans regarder le quotient.
 
 ## Étape 3 — génération des codes
 
@@ -247,7 +314,7 @@ ce qui permet un passage d'essai avec un dossier de dépôt détourné —
 ```bash
 SCALINGO_APP="<application hébergeant la base>"   # obligatoire
 SCALINGO_API_TOKEN="<jeton>"                      # pour un scalingo non interactif
-FC_PROD_DROP_DIR="/nfs/postgresql"                # où le CSV final est déposé
+FC_PROD_DROP_DIR="/nfs/run"                       # où le CSV final est déposé
 FC_TUNNEL_PORT="10000"                            # port local du tunnel
 FC_LOG_DIR="./2026/partners/franceconnect/logs"   # journaux, un par jour
 FC_LOCK_FILE="/tmp/pass-sport-fc.lock"            # verrou anti-chevauchement
@@ -267,3 +334,39 @@ aucune migration. Elle est en revanche déclarée partout où l'ensemble des ver
   — le composant range les bénéficiaires en trois blocs, et une valeur qu'il ne connaît pas
   disparaîtrait de la page. `eligible_pending_lca` rejoint le bloc « éligibilité confirmée,
   code à venir », qui reste vrai tant que LCA ne sert pas le code.
+
+### Comment on en sort
+
+C'est un état **transitoire**, et sa sortie n'est pas dans ce dossier : le job
+`eligible_pending_lca_checks` ([worker/src/jobs/lca-checks.ts](../../../../worker/src/jobs/lca-checks.ts))
+rejoue `/search` puis `/confirm` sur ces lignes toutes les 30 minutes, et bascule à
+`eligible_confirmed` celles dont le `/confirm` répond le code que la chaîne ci-dessus a fabriqué.
+C'est ce qui fait apparaître le code sur le site, une fois le CSV déposé réellement injecté chez
+LCA — ce dépôt est un geste humain, donc rien ne peut prédire quand.
+
+Une seconde passe du même job **envoie ce code par courriel**, et elle ne distingue pas les deux
+issues du rapprochement : elle ramasse toute ligne FranceConnect à `eligible_confirmed` portant un
+code et pas encore d'`email_kind`, qu'elle vienne de l'étape 4 ci-dessus ou de la boucle LCA. C'est
+donc aussi ce qui sert les gens que `writeback_confirmed.sql` a marqués, à qui rien ne partait
+jusque-là.
+
+Le template dépend de l'aide, que la colonne `situation` retient désormais — le worker l'écrit à
+l'insert, ce qui rend à terme `clean_fc_lib.resolve_situation` inutile. Les lignes antérieures à
+cette colonne n'en portent pas : celles de `source = 'enfant'` s'en passent (QF et AEEH mènent au
+même courriel), celles de `source = 'self'` sont laissées de côté avec une alerte Sentry plutôt que
+de partir sur le mauvais texte.
+
+Le `/search` a besoin d'un `codeInsee` que personne n'a ici : `build_psp_columns` laisse tout
+`adresse_allocataire-*` à `None`, et le parcours FranceConnect ne demande plus de commune de
+résidence. Ce job envoie donc un code INSEE fictif, `99999`
+([worker/src/lca/insee.ts](../../../../worker/src/lca/insee.ts)).
+
+Deux conséquences pour qui réconcilie des compteurs :
+
+- une ligne dont le `/confirm` répond un **autre** code que celui fabriqué n'est pas basculée et
+  son `pass_sport_code` n'est pas réécrit : la clé de recherche est (nom, prénom, date de
+  naissance) plus une commune constante, donc un homonyme est une collision réelle. Ces cas
+  ressortent en `eligibility_history` sous `lca_checks.code_mismatch`, avec une alerte Sentry ;
+- `eligibility_results.lca_check_attempts` compte les essais. Une ligne qui plafonne
+  (`lca_check_attempts >= 200`, soit environ huit jours) n'est plus interrogée — c'est la requête
+  qui répond à « lesquelles ne sont jamais arrivées chez LCA ».

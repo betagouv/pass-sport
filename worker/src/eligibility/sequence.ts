@@ -9,22 +9,24 @@ import {
 import { createCheckpointRunner } from "./checkpoint";
 import type { HistoryRecorder } from "../db/history";
 import {
+  AAH_BIRTHDATE_MAX,
+  AAH_BIRTHDATE_MIN,
   AEEH_BIRTHDATE_MAX,
   AEEH_BIRTHDATE_MIN,
-  ALLOWANCE,
-  ALLOWANCE_RESOURCES,
+  CROUS_BIRTHDATE_MAX,
+  CROUS_BIRTHDATE_MIN,
   QF_BIRTHDATE_MAX,
   QF_BIRTHDATE_MIN,
-  RESOURCE_ORDER,
   householdQfCovers,
   isWithinBirthdateWindow,
+  qfReferenceMonths,
   type EligibilityJobData,
   type PersonneQuotientFamilial,
   type PivotIdentity,
   type QuotientFamilialData,
-  type ResourceKey,
   type ResourceResult,
 } from "./types";
+import { isAahBeneficiaryRow, readQuotientFamilial } from "./verdicts";
 
 // QF dates come back as "AAAA-MM-JJ" or "JJ/MM/AAAA" — normalize to ISO.
 export const toIsoBirthdate = (date?: string): string | undefined => {
@@ -50,7 +52,6 @@ export const enfantToIdentity = (
 
   return {
     family_name: familyName,
-    preferred_username: enfant.nom_usage || undefined,
     given_name: enfant.prenoms,
     gender: enfant.sexe === "F" ? "female" : enfant.sexe === "M" ? "male" : undefined,
     birthdate,
@@ -61,10 +62,10 @@ export const enfantToIdentity = (
 
 // One planned per-child AEEH call. A child is queried only when all three hold:
 //   - the QF row yields a usable pivot (name + prénoms + date de naissance);
-//   - they are 17-19 ans (AEEH_BIRTHDATE_MIN/MAX) — younger or older children can
-//     never be granted AEEH by candidates.ts, so an appel would be pure quota burn;
-//   - the household quotient does NOT already cover them. QF has priority: on the
-//     overlapping 2009 millésime an eligible household saves the call entirely.
+//   - they are 6-19 ans (AEEH_BIRTHDATE_MIN/MAX) — outside that window candidates.ts can
+//     never grant AEEH, so an appel would be pure quota burn;
+//   - the household quotient does NOT already cover them. QF has priority over the whole
+//     2009-2020 overlap: an eligible household is only ever charged for its 18-19 ans.
 type ChildCheck = { childIndex: number; identity: PivotIdentity };
 
 const planChildrenChecks = (
@@ -85,8 +86,9 @@ const planChildrenChecks = (
     return [{ childIndex, identity }];
   });
 
-// Sequential API Particulier chain: QF -> [AAH] -> [CROUS] -> per child: AEEH.
-// Sequential on purpose (never Promise.all). Checkpoints after every success so a
+// Sequential API Particulier chain: QF (month by month) -> [AAH] -> [CROUS] -> per child: AEEH.
+// Nothing is selected by the usager any more: each resource is gated by its own birthdate
+// window alone. Sequential on purpose (never Promise.all). Checkpoints after every success so a
 // 429-interrupted job resumes instead of re-calling completed resources.
 export async function runEligibilitySequence(
   job: Job<EligibilityJobData>,
@@ -94,54 +96,65 @@ export async function runEligibilitySequence(
   client: ApiParticulierClient,
   queue: Queue<EligibilityJobData>,
   history: HistoryRecorder,
+  now: Date = new Date(),
 ): Promise<ResourceResult[]> {
   const checkpoint = createCheckpointRunner(job, queue, history);
+  const { identity } = data;
 
-  const wanted = new Set<ResourceKey>(data.aides.flatMap((a) => ALLOWANCE_RESOURCES[a] ?? []));
-  const parentKeys = RESOURCE_ORDER.filter((k) => wanted.has(k));
-
-  const parentCall: Record<ResourceKey, () => Promise<ResourceResult>> = {
-    qf: () => client.quotientFamilial(data.identity),
-    aah: () => client.aah(data.identity),
-    cnous: () => client.cnous(data.identity),
-  };
-
-  const parentParams: Record<ResourceKey, Record<string, unknown>> = {
-    qf: toQfParams(data.identity),
-    aah: toDssParams(data.identity),
-    cnous: toCnousParams(data.identity),
-  };
-
-  for (const key of parentKeys) {
-    await checkpoint.run({
-      key,
-      resource: RESOURCE_META[key].resource,
+  // Always first: quotient_familial is the only source of the household's children. Swept over
+  // the campaign months and stopped on the first one under the threshold — a further month
+  // could no longer change the outcome and would only cost quota.
+  for (const mois of qfReferenceMonths(now)) {
+    const row = await checkpoint.run({
+      key: `qf:${mois}`,
+      resource: RESOURCE_META.qf.resource,
       subject: "self",
-      params: parentParams[key],
-      invoke: parentCall[key],
+      params: toQfParams(identity, mois),
+      invoke: () => client.quotientFamilial(identity, mois),
+    });
+
+    if (householdQfCovers(row?.data as QuotientFamilialData | null)) break;
+  }
+
+  const aahRow = isWithinBirthdateWindow(identity.birthdate, AAH_BIRTHDATE_MIN, AAH_BIRTHDATE_MAX)
+    ? await checkpoint.run({
+        key: "aah",
+        resource: RESOURCE_META.aah.resource,
+        subject: "self",
+        params: toDssParams(identity),
+        invoke: () => client.aah(identity),
+      })
+    : undefined;
+
+  // The only short-circuit of the chain, and it stays within one subject: a second route for an
+  // allocataire the AAH already carries would change nothing about them.
+  if (
+    !isAahBeneficiaryRow(aahRow) &&
+    isWithinBirthdateWindow(identity.birthdate, CROUS_BIRTHDATE_MIN, CROUS_BIRTHDATE_MAX)
+  ) {
+    await checkpoint.run({
+      key: "cnous",
+      resource: RESOURCE_META.cnous.resource,
+      subject: "self",
+      params: toCnousParams(identity),
+      invoke: () => client.cnous(identity),
     });
   }
 
-  // Per-child AEEH, fed by the QF response's enfants[].
-  if (data.aides.includes(ALLOWANCE.AEEH)) {
-    const qf = checkpoint.results.find(
-      (r) => r.resource.startsWith("dss.quotient_familial") && r.success && r.data,
-    );
+  // Every child is asked about, never just the first one to answer yes: each of them is a
+  // beneficiary in their own right, with their own row and their own code.
+  const qfData = readQuotientFamilial(checkpoint.results);
+  const qfCovers = householdQfCovers(qfData);
 
-    const qfData = qf?.data as QuotientFamilialData | undefined;
-    const enfants = qfData?.enfants ?? [];
-    const qfCovers = householdQfCovers(data.aides, qfData);
-
-    for (const check of planChildrenChecks(enfants, data.identity, qfCovers)) {
-      await checkpoint.run({
-        key: `aeeh:${check.childIndex}`,
-        resource: RESOURCE_META.aeeh.resource,
-        subject: "enfant",
-        childIndex: check.childIndex,
-        params: toDssParams(check.identity),
-        invoke: () => client.aeeh(check.identity, check.childIndex),
-      });
-    }
+  for (const check of planChildrenChecks(qfData?.enfants ?? [], identity, qfCovers)) {
+    await checkpoint.run({
+      key: `aeeh:${check.childIndex}`,
+      resource: RESOURCE_META.aeeh.resource,
+      subject: "enfant",
+      childIndex: check.childIndex,
+      params: toDssParams(check.identity),
+      invoke: () => client.aeeh(check.identity, check.childIndex),
+    });
   }
 
   return checkpoint.results;

@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import Card from '@codegouvfr/react-dsfr/Card';
 import type { BeneficiaryResult } from '@/app/services/applications';
-import BeneficiaryRecap, { StatusBadge, type AllocataireIdentity } from './BeneficiaryRecap';
+import BeneficiaryRecap, { ProcessingBadge, type AllocataireIdentity } from './BeneficiaryRecap';
 
 const POLL_INTERVAL_MS = 20_000;
 const MAX_POLLS = 9;
@@ -29,9 +29,11 @@ type State =
 
 interface Props {
   allocataireIdentity: AllocataireIdentity;
+  // "Demande soumise le …", for a usager coming back to a request already on its way.
+  jobInfo?: ReactNode;
 }
 
-export default function ResultPanel({ allocataireIdentity }: Props) {
+export default function ResultPanel({ allocataireIdentity, jobInfo }: Props) {
   const [state, setState] = useState<State>({ kind: 'polling' });
 
   useEffect(() => {
@@ -97,6 +99,7 @@ export default function ResultPanel({ allocataireIdentity }: Props) {
         <BeneficiaryRecap
           beneficiaries={state.beneficiaries}
           allocataireIdentity={allocataireIdentity}
+          jobInfo={jobInfo}
         />
       </div>
     );
@@ -109,8 +112,13 @@ export default function ResultPanel({ allocataireIdentity }: Props) {
       nativeDivProps={{ role: 'status', 'aria-live': 'polite' }}
       title="Demande enregistrée"
       titleAs="h2"
-      start={<StatusBadge verdict="not_assessed" />}
-      desc={STILL_PROCESSING_MESSAGE}
+      start={<ProcessingBadge />}
+      desc={
+        <>
+          {STILL_PROCESSING_MESSAGE}
+          {jobInfo}
+        </>
+      }
     />
   );
 }
