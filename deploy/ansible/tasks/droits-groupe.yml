@@ -33,3 +33,4 @@
     src: pass-sport-nb-logs.sh.j2
     dest: /etc/profile.d/pass-sport-nb-logs.sh
     mode: '0644'
+  tags: [nb-logs]
