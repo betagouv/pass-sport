@@ -240,9 +240,10 @@ export default function PdfPassSport({
             <Text style={styles.title}>Où utiliser le pass Sport ?</Text>
             <Text style={styles.sectionText}>
               Vous pouvez utiliser le pass Sport dès maintenant dans plus de 85 000 clubs,
-              associations sportives et salles de sport partenaires : football, breakdance, judo,
-              basketball, skateboard, escalade, salle de sport…et bien d&apos;autres disciplines !
-              Si vous avez déjà choisi une structure, demandez-lui s&apos;il accepte le pass Sport.
+              associations sportives et salles de sport partenaires : football, cécifoot, judo,
+              basket fauteuil, skateboard, handball, escalade, salle de sport, et bien d’autres
+              disciplines ! Si vous avez déjà choisi une structure, demandez-lui s&apos;il accepte
+              le pass Sport.
             </Text>
           </View>
 
