@@ -1,13 +1,20 @@
 import type { Job } from "bullmq";
-import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import * as Sentry from "@sentry/node";
 import type { Database } from "../db/client";
 import { createHistoryRecorder, startTimer, type HistoryRecorder } from "../db/history";
 import { eligibilityResults } from "../db/schema";
+import { recordEmailDelivery, sendOutcomeEmail } from "../email/notify";
 import { buildConfirmQuery, buildSearchQuery, type LcaClient } from "../lca/client";
 import { recordLcaConfirm, recordLcaSearch } from "../lca/history";
 import { pendingCheckInseeCode } from "../lca/insee";
 import { logPii } from "../log";
+import {
+  decideEmailKind,
+  type FcCodeEmailRow,
+  rowSubject as codeEmailRowSubject,
+  rowToEmailVariables,
+} from "./fc-code-emails-rows";
 import {
   decideConfirmOutcome,
   decideSearchOutcome,
@@ -49,6 +56,22 @@ const maxDurationMs = (): number =>
 
 const maxCandidates = (): number => positiveNumberFromEnv("LCA_CHECKS_MAX_CANDIDATES", 3);
 
+// Deliberately tighter than the LCA ceiling: a code mail that has failed three times is failing on
+// something a fourth send will not change, and every attempt costs a real recipient a risk of
+// duplicate.
+const maxEmailAttempts = (): number => positiveNumberFromEnv("FC_CODE_EMAIL_MAX_ATTEMPTS", 3);
+
+const emailCooldownMinutes = (): number => {
+  const parsed = Number(process.env.FC_CODE_EMAIL_COOLDOWN_MIN);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 60;
+};
+
+// How far out the code mail is programmed on Link Mobility. 0 sends it on the spot.
+const emailDelayMinutes = (): number => {
+  const parsed = Number(process.env.FC_CODE_EMAIL_DELAY_MIN);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 30;
+};
+
 const isDryRun = (data: LcaChecksJobData): boolean =>
   data.dryRun ?? process.env.LCA_CHECKS_DRY_RUN === "1";
 
@@ -59,6 +82,10 @@ type Counters = {
   mismatches: number;
   errors: number;
   skipped: number;
+  mailed: number;
+  mailSkipped: number;
+  mailFailed: number;
+  mailTerminal: number;
 };
 
 const isDueForCheck = (cooldownMin: number, attemptCeiling: number) =>
@@ -342,19 +369,282 @@ async function settleRow(
   });
 }
 
+// ─── Seconde passe : le code par courriel ────────────────────────────────────
+
+/**
+ * The FranceConnect beneficiaries who hold a code and have never been told.
+ *
+ * `email_kind is null` is what restricts this to the FranceConnect path, and it is not a
+ * convention: the parcours hors FranceConnect names its template at insert time (jobs/lca.ts), so
+ * a null there means no code mail has ever been decided for this row. It also keeps the hors-FC
+ * rows whose mail FAILED out of this sweep — those belong to that job, not this one.
+ *
+ * Two chemins amènent une ligne ici, et cette requête ne les distingue pas : le rapprochement avec
+ * la base bénéficiaires du lamp (writeback_confirmed.sql) et la boucle ci-dessus. Ce qui compte
+ * est l'état, pas comment on y est arrivé.
+ */
+const selectMailableRows = async (
+  database: Database,
+  cooldownMin: number,
+  attemptCeiling: number,
+  limit?: number,
+): Promise<FcCodeEmailRow[]> => {
+  const query = database
+    .select({
+      id: eligibilityResults.id,
+      source: eligibilityResults.source,
+      situation: eligibilityResults.situation,
+      allocataireIdentite: eligibilityResults.allocataireIdentite,
+      enfantIdentite: eligibilityResults.enfantIdentite,
+      passSportCode: eligibilityResults.passSportCode,
+      email: eligibilityResults.email,
+      emailAttempts: eligibilityResults.emailAttempts,
+      allocataireFcSub: eligibilityResults.allocataireFcSub,
+    })
+    .from(eligibilityResults)
+    .where(
+      and(
+        eq(eligibilityResults.verdict, "eligible_confirmed"),
+        isNotNull(eligibilityResults.passSportCode),
+        isNotNull(eligibilityResults.email),
+        eq(eligibilityResults.emailSent, false),
+        isNull(eligibilityResults.emailKind),
+        lt(eligibilityResults.emailAttempts, attemptCeiling),
+        or(
+          eq(eligibilityResults.emailAttempts, 0),
+          lt(eligibilityResults.updatedAt, sql`now() - make_interval(mins => ${cooldownMin})`),
+        ),
+      ),
+    )
+    .orderBy(asc(eligibilityResults.emailAttempts), asc(eligibilityResults.updatedAt));
+
+  return limit != null ? query.limit(limit) : query;
+};
+
+/**
+ * Records the attempt BEFORE the mail goes out, and returns whether this pass owns the row.
+ *
+ * The order is the whole idempotence story. Link Mobility answers a verdict in three of its four
+ * outcomes — accepted, rejected, HTTP error — and recordEmailDelivery marks the row from that
+ * answer. The fourth is the one with no answer at all: a timeout, a severed socket, a worker
+ * killed mid-POST. There is nothing to read then, and the mail may or may not have left. This
+ * counter is what turns that unknown into a bounded number of resends instead of an endless one.
+ *
+ * The guard on email_sent also makes the claim atomic, which matters less than it looks: the queue
+ * runs at a global concurrency of 1 (index.ts). It is a redelivered stalled job, not a second
+ * worker, that this actually protects against.
+ */
+const claimEmailAttempt = async (
+  database: Database,
+  row: FcCodeEmailRow,
+  attemptCeiling: number,
+): Promise<boolean> => {
+  const claimed = await database
+    .update(eligibilityResults)
+    .set({ emailAttempts: row.emailAttempts + 1 })
+    .where(
+      and(
+        eq(eligibilityResults.id, row.id),
+        eq(eligibilityResults.emailSent, false),
+        lt(eligibilityResults.emailAttempts, attemptCeiling),
+      ),
+    )
+    .returning({ id: eligibilityResults.id });
+
+  return claimed.length > 0;
+};
+
+// Link Mobility named a rejection bound to the request itself. Spending the remaining attempts on
+// it would only delay the moment someone reads the Sentry alert.
+const freezeRow = async (
+  database: Database,
+  rowId: string,
+  attemptCeiling: number,
+): Promise<void> => {
+  await database
+    .update(eligibilityResults)
+    .set({ emailAttempts: attemptCeiling })
+    .where(eq(eligibilityResults.id, rowId));
+};
+
+async function mailRow(
+  job: Job<LcaChecksJobData>,
+  database: Database,
+  row: FcCodeEmailRow,
+  history: HistoryRecorder,
+  counters: Counters,
+  attemptCeiling: number,
+  dryRun: boolean,
+): Promise<void> {
+  const subject = codeEmailRowSubject(row);
+  const decision = decideEmailKind(row);
+
+  if ("skip" in decision) {
+    counters.mailSkipped += 1;
+
+    // 'unknown_situation' is the only one worth an alert: the others describe a row that could
+    // never be mailed, this one describes a row we stopped being able to mail.
+    if (decision.skip === "unknown_situation") {
+      Sentry.captureMessage("FranceConnect row holds a code but no situation to pick a template", {
+        level: "warning",
+        tags: { component: "fc-code-emails", app: "worker" },
+        extra: { eligibilityResultId: row.id, source: row.source },
+      });
+    }
+
+    await history.record({
+      actor: "worker",
+      action: "fc_code_emails.skipped",
+      status: "skipped",
+      subject,
+      responsePayload: { eligibility_result_id: row.id, reason: decision.skip },
+    });
+    return;
+  }
+
+  if (dryRun) {
+    counters.mailed += 1;
+    return;
+  }
+
+  if (!(await claimEmailAttempt(database, row, attemptCeiling))) {
+    counters.mailSkipped += 1;
+    await history.record({
+      actor: "worker",
+      action: "fc_code_emails.skipped",
+      status: "skipped",
+      subject,
+      responsePayload: { eligibility_result_id: row.id, reason: "claim_lost" },
+    });
+    return;
+  }
+
+  const recipient = row.email ?? "";
+  const { kind } = decision;
+  const delayMinutes = emailDelayMinutes();
+  const sendAt = delayMinutes > 0 ? new Date(Date.now() + delayMinutes * 60_000) : undefined;
+
+  // email_sent_at dates the acceptance, scheduled_for the diffusion.
+  const delivery = await recordEmailDelivery({
+    job,
+    database,
+    history,
+    resultId: row.id,
+    kind,
+    subject,
+    recipient,
+    bodyPayload: {
+      to: recipient,
+      email_kind: kind,
+      attempt: row.emailAttempts + 1,
+      scheduled_for: sendAt?.toISOString() ?? null,
+    },
+    send: () => sendOutcomeEmail(recipient, rowToEmailVariables(row, kind), sendAt),
+  });
+
+  if (delivery.sent) {
+    counters.mailed += 1;
+    return;
+  }
+
+  if (delivery.terminal) {
+    counters.mailTerminal += 1;
+    await freezeRow(database, row.id, attemptCeiling);
+
+    Sentry.captureMessage("Link Mobility rejected a pass Sport code mail for good", {
+      level: "error",
+      tags: { component: "fc-code-emails", app: "worker" },
+      extra: { eligibilityResultId: row.id, emailKind: kind },
+    });
+
+    await history.record({
+      actor: "worker",
+      action: "fc_code_emails.terminal",
+      status: "error",
+      subject,
+      responsePayload: { eligibility_result_id: row.id, email_kind: kind },
+    });
+    return;
+  }
+
+  counters.mailFailed += 1;
+}
+
+async function sweepCodeEmails(
+  job: Job<LcaChecksJobData>,
+  database: Database,
+  counters: Counters,
+  options: {
+    deadline: number;
+    dryRun: boolean;
+    limit?: number;
+  },
+): Promise<{ selected: number; stoppedEarly: boolean }> {
+  const attemptCeiling = maxEmailAttempts();
+  const rows = await selectMailableRows(
+    database,
+    emailCooldownMinutes(),
+    attemptCeiling,
+    options.limit,
+  );
+
+  const delayMinutes = emailDelayMinutes();
+
+  console.log(
+    `[pass-sport-worker] job ${job.id}: ${rows.length} confirmed row(s) awaiting their code mail${delayMinutes > 0 ? `, programmé à +${delayMinutes} min` : ""}${options.dryRun ? " (dry run)" : ""}`,
+  );
+
+  let stoppedEarly = false;
+
+  for (const row of rows) {
+    if (Date.now() >= options.deadline) {
+      stoppedEarly = true;
+      break;
+    }
+
+    const rowHistory = createHistoryRecorder(database, {
+      allocataireFcSub: row.allocataireFcSub,
+      jobId: job.id ?? null,
+      attempt: job.attemptsMade,
+    });
+
+    try {
+      await mailRow(job, database, row, rowHistory, counters, attemptCeiling, options.dryRun);
+    } catch (e) {
+      // recordEmailDelivery swallows its own failures, so only the claim or the history write can
+      // land here. Never rethrown: the pass owes the remaining rows their turn.
+      counters.mailFailed += 1;
+      Sentry.captureException(e, { tags: { component: "fc-code-emails", app: "worker" } });
+    }
+  }
+
+  return { selected: rows.length, stoppedEarly };
+}
+
 /**
  * Re-asks LCA about every beneficiary still carrying 'eligible_pending_lca': the data/ pipeline
  * minted a code for them and shipped it to LCA, and nothing until now noticed when that injection
  * landed. A /confirm answering the code we hold is that proof, and moving the verdict on to
  * 'eligible_confirmed' is what lets BeneficiaryRecap show the code and the PDF route serve the
- * attestation. Sends no email.
+ * attestation.
+ *
+ * A second pass then mails that code to the FranceConnect beneficiaries who now hold one — from
+ * either route, this loop or the rapprochement with the lamp beneficiary database
+ * (data/2026/partners/franceconnect/writeback_confirmed.sql). It runs after, in the same pass, so
+ * a row confirmed above is mailed without waiting for the next cron.
  */
 export async function processLcaChecksJob(
   job: Job<LcaChecksJobData>,
   data: LcaChecksJobData,
   deps: LcaChecksDeps,
 ): Promise<
-  Counters & { selected: number; stoppedEarly: boolean; dryRun: boolean; processedAt: string }
+  Counters & {
+    selected: number;
+    mailSelected: number;
+    stoppedEarly: boolean;
+    dryRun: boolean;
+    processedAt: string;
+  }
 > {
   const { db: database } = deps;
   const dryRun = isDryRun(data);
@@ -393,6 +683,10 @@ export async function processLcaChecksJob(
     mismatches: 0,
     errors: 0,
     skipped: 0,
+    mailed: 0,
+    mailSkipped: 0,
+    mailFailed: 0,
+    mailTerminal: 0,
   };
   let stoppedEarly = false;
 
@@ -439,7 +733,18 @@ export async function processLcaChecksJob(
     }
   }
 
-  const summary = { ...counters, selected, stoppedEarly, dryRun };
+  // Runs even when the loop above stopped on the deadline, and even when it selected nothing: the
+  // rows it mails may have been confirmed by the lamp rapprochement days ago. Its own deadline
+  // check is what keeps the pass inside the cron interval.
+  const mailPass = await sweepCodeEmails(job, database, counters, {
+    deadline,
+    dryRun,
+    limit: data.limit,
+  });
+
+  stoppedEarly = stoppedEarly || mailPass.stoppedEarly;
+
+  const summary = { ...counters, selected, mailSelected: mailPass.selected, stoppedEarly, dryRun };
 
   await history.record({
     actor: "worker",
@@ -448,6 +753,7 @@ export async function processLcaChecksJob(
     responsePayload: {
       ...counters,
       selected,
+      mail_selected: mailPass.selected,
       stopped_early: stoppedEarly,
       dry_run: dryRun,
       duration_ms: elapsed(),
@@ -455,7 +761,7 @@ export async function processLcaChecksJob(
   });
 
   console.log(
-    `[pass-sport-worker] job ${job.id}: ${counters.confirmed} confirmed, ${counters.stillPending} still pending, ${counters.mismatches} mismatch(es), ${counters.errors} error(s)${stoppedEarly ? " — stopped on the deadline" : ""}`,
+    `[pass-sport-worker] job ${job.id}: ${counters.confirmed} confirmed, ${counters.stillPending} still pending, ${counters.mismatches} mismatch(es), ${counters.errors} error(s), ${counters.mailed} code mail(s) sent, ${counters.mailSkipped} skipped, ${counters.mailFailed} failed, ${counters.mailTerminal} frozen${stoppedEarly ? " — stopped on the deadline" : ""}`,
   );
 
   return { ...summary, processedAt: new Date().toISOString() };

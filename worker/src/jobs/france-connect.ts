@@ -175,10 +175,16 @@ export async function processEligibilityJob(
           lcaStatus: "not_applicable",
           verdict: outcomes[index].verdict,
           passSportCode: null,
-          // No outcome email is sent, so there is no template to name.
+          // No outcome email is sent HERE — the code does not exist yet. The template is named
+          // later, by the second pass of eligible_pending_lca_checks, and a null email_kind is
+          // exactly how that pass recognises a row of this path as never mailed.
           emailKind: null,
           emailSent: false,
           email: to,
+          // First rather than only: the two routes a candidate can carry are pushed in priority
+          // order by listBeneficiaryCandidates (QF before AEEH, AAH before CROUS). Undefined on
+          // the rows that opened no route at all, which are the 'not_eligible' ones.
+          situation: candidate.eligibilities[0] ?? null,
         });
       }
     });

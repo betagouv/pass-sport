@@ -15,6 +15,7 @@
     "test": "tsc --noEmit && vitest run",
     "qf:batch": "tsx src/scripts/qf-batch.ts",
     "lca:checks:enqueue": "tsx src/scripts/enqueue-lca-checks.ts",
+    "email:test": "tsx src/scripts/send-test-email.ts",
     "redis:decode": "tsx src/scripts/redis-decode.ts"
   },
   "dependencies": {

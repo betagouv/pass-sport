@@ -11,7 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { OutcomeEmailKind } from "../email/notify";
-import type { PivotIdentity } from "../eligibility/types";
+import type { Allowance, PivotIdentity } from "../eligibility/types";
 
 // The verdict as the USAGER should read it. The verdict column below is where each
 // value is documented. 'eligible_pending_lca' is never produced by the worker — the code
@@ -97,8 +97,10 @@ export const eligibilityResults = pgTable(
     //                            — quand le rapprochement avec la base bénéficiaires du
     //                            lamp a retrouvé la personne et son id_psp
     //                            (data/2026/partners/franceconnect/writeback_confirmed.sql).
-    //                            ATTENTION : dans ce second cas aucun courriel n'est envoyé,
-    //                            email_kind et email_sent restent donc à leur valeur.
+    //                            Dans ce second cas le courriel ne part pas avec le verdict : il
+    //                            est envoyé plus tard par la seconde passe de
+    //                            eligible_pending_lca_checks (jobs/lca-checks.ts), qui ramasse
+    //                            les lignes FranceConnect encore à email_kind NULL.
     //   'eligible_confirmed_but_email_not_matching'
     //                          — LCA a le bénéficiaire et un code lui a été servi, mais
     //                            l'adresse saisie au formulaire n'est pas celle que LCA
@@ -156,10 +158,33 @@ export const eligibilityResults = pgTable(
     emailKind: text("email_kind").$type<OutcomeEmailKind>(),
     emailSent: boolean("email_sent").notNull().default(false),
 
+    // When Link Mobility accepted the send, null while it has not. Null too on the rows mailed
+    // before this column existed — eligibility_history is what dates those.
+    emailSentAt: timestamp("email_sent_at", { withTimezone: true }),
+
+    // How many times the code mail has been ATTEMPTED, incremented before the call rather than
+    // after it. That order is the whole point: a worker killed between the POST and the response
+    // leaves no verdict to read, and this counter is the only thing that then stops the row from
+    // being replayed forever. Same role as lca_check_attempts, one column over.
+    emailAttempts: integer("email_attempts").notNull().default(0),
+
     // Where the recapitulative email went. Kept so a usager coming back can be told which
     // mailbox to look in — never handed out whole: the site only ever reads the masked
     // projection in application_results_by_job_id.
     email: text("email"),
+
+    // Which aide opened the right, and therefore which of the three code templates goes out.
+    // Written by the FranceConnect path at insert time (jobs/france-connect.ts) from the
+    // candidate's own eligibilities; the parcours hors FranceConnect leaves it null, having
+    // already named its template in email_kind.
+    //
+    // 'FSS' is absent by construction: an LCA situation with no API Particulier counterpart, so
+    // this path can never produce it.
+    //
+    // Null on every row written before the column existed. decideEmailKind
+    // (jobs/fc-code-emails-rows.ts) falls back to `source` there, which settles 'enfant' rows on
+    // its own — QF and AEEH both mail code_indirect — and leaves only 'self' undecidable.
+    situation: text("situation").$type<Allowance>(),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 
@@ -171,6 +196,13 @@ export const eligibilityResults = pgTable(
     index("eligibility_results_pending_lca_idx")
       .on(t.lcaCheckAttempts, t.updatedAt)
       .where(sql`${t.verdict} = 'eligible_pending_lca'`),
+    // Same shape for the code-mail sweep. email_kind IS NULL is what restricts it to the
+    // FranceConnect path: the other one always names its template at insert time.
+    index("eligibility_results_code_email_idx")
+      .on(t.emailAttempts, t.updatedAt)
+      .where(
+        sql`${t.verdict} = 'eligible_confirmed' and ${t.emailSent} = false and ${t.emailKind} is null`,
+      ),
   ],
 );
 
@@ -357,6 +389,10 @@ export const eligibilityHistory = pgTable(
     // | 'lca_checks.still_pending' — LCA does not serve this code yet
     // | 'lca_checks.code_mismatch' — LCA answered a code other than the one stored
     // | 'lca_checks.unprocessable' | 'lca_checks.skipped'
+    // Its second pass, which mails the code to the FranceConnect beneficiaries who now hold one:
+    // | 'fc_code_emails.skipped' — no recipient, or a 'self' row whose situation is unknown
+    // | 'fc_code_emails.terminal' — Link Mobility named a rejection no resend will ever fix
+    //   The send itself is recorded under the same 'email.code_*' actions as everywhere else.
     // | 'psp.code_match_base' — written by data/ too: the beneficiary was found in the lamp
     //   beneficiary database with a code already assigned, so no new one was minted
     action: text("action").notNull(),

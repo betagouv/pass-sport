@@ -156,7 +156,7 @@ export async function processLcaJob(
     `job ${job.id}: ${data.aide} -> LCA ${data.lcaStatus}, recipient ${data.contactEmail}, kind ${emailKind}`,
   );
 
-  const emailed = await recordEmailDelivery({
+  const delivery = await recordEmailDelivery({
     job,
     database,
     history,
@@ -183,7 +183,7 @@ export async function processLcaJob(
       ),
   });
 
-  console.log(`[pass-sport-worker] job ${job.id}: verdict=${verdict}, emailed=${emailed}`);
+  console.log(`[pass-sport-worker] job ${job.id}: verdict=${verdict}, emailed=${delivery.sent}`);
 
-  return { verdict, emailed, skipped: false, processedAt: new Date().toISOString() };
+  return { verdict, emailed: delivery.sent, skipped: false, processedAt: new Date().toISOString() };
 }

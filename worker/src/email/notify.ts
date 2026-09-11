@@ -7,6 +7,7 @@ import { eligibilityResults } from "../db/schema";
 import { isChildAide, SITUATION, type Situation } from "../eligibility/types";
 import { logPii } from "../log";
 import {
+  isTerminalEmailError,
   LinkMobilityHttpError,
   type SendEmailResult,
   sendTransactionalEmail,
@@ -102,21 +103,24 @@ const templateIdFor = (kind: EmailKind): number => {
   return templateId;
 };
 
-// ─── Parcours hors FranceConnect ─────────────────────────────────────────────
-
-// The aide alone decides which of the three code templates goes out, and it is the only thing
-// that can: eligibility_results holds no column saying which route made someone eligible.
-export const lcaEmailKind = (
-  lcaStatus: "confirmed" | "not_found",
-  emailsMatch: boolean,
-  aide: Situation,
-): OutcomeEmailKind => {
-  if (lcaStatus !== "confirmed" || !emailsMatch) return "not_eligible_hors_fc";
+// The aide alone decides which of the three code templates goes out. Shared by both paths: the
+// parcours hors FranceConnect reads it off the job payload, the FranceConnect one off the
+// situation column its insert now fills.
+export const codeEmailKindForAide = (aide: Situation): CodeEmailKind => {
   if (isChildAide(aide)) return "code_indirect";
 
   // CROUS and FSS are two names for one bourse — same LCA situation, same step-two form.
   return aide === SITUATION.AAH ? "code_direct_aah" : "code_direct_boursier";
 };
+
+// ─── Parcours hors FranceConnect ─────────────────────────────────────────────
+
+export const lcaEmailKind = (
+  lcaStatus: "confirmed" | "not_found",
+  emailsMatch: boolean,
+  aide: Situation,
+): OutcomeEmailKind =>
+  lcaStatus === "confirmed" && emailsMatch ? codeEmailKindForAide(aide) : "not_eligible_hors_fc";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -202,6 +206,7 @@ export function sendAcknowledgmentEmail(
 export function sendOutcomeEmail(
   recipient: string,
   vars: EmailVariables,
+  sendAt?: Date,
 ): Promise<SendEmailResult> {
   const template = EMAIL_TEMPLATES[vars.kind];
   const templateId = templateIdFor(vars.kind);
@@ -212,6 +217,7 @@ export function sendOutcomeEmail(
       name: template.campaign,
       templateId,
       recipients: [recipient],
+      sendAt,
     });
   }
 
@@ -223,8 +229,17 @@ export function sendOutcomeEmail(
     templateId,
     recipients: [recipient],
     variables: { [recipient]: merge },
+    sendAt,
   });
 }
+
+/**
+ * What the caller learns about a send. `terminal` is what tells a retrying caller to stop: Link
+ * Mobility named a rejection bound to the request itself, so the same request will be rejected
+ * again. Everything else — a rate limit, an HTTP error, a throw — leaves it false and stays
+ * replayable.
+ */
+export type EmailDeliveryOutcome = { sent: boolean; terminal: boolean };
 
 // A failure here is recorded and swallowed: the verdicts are already persisted, and failing
 // the job would re-run every external call just to re-send one email.
@@ -240,9 +255,13 @@ export async function recordEmailDelivery(params: {
   recipient: string;
   bodyPayload: Record<string, unknown>;
   send: () => Promise<SendEmailResult>;
-}): Promise<boolean> {
+}): Promise<EmailDeliveryOutcome> {
   const { job, database, history, resultId, kind, subject, recipient, bodyPayload, send } = params;
   const action = EMAIL_TEMPLATES[kind].historyAction;
+
+  // The accusé de réception is job-level and never carries a resultId, so email_kind — which only
+  // ever names an OutcomeEmailKind — has nothing to receive on that one.
+  const outcomeKind = kind === "acknowledgment" ? null : kind;
 
   try {
     const result = await send();
@@ -269,14 +288,18 @@ export async function recordEmailDelivery(params: {
         bodyPayload,
         responsePayload: result,
       });
-      return false;
+      return { sent: false, terminal: isTerminalEmailError(result.errorCodes) };
     }
 
     // updated_at is maintained by a BEFORE UPDATE trigger, never by the writer.
     if (resultId) {
       await database
         .update(eligibilityResults)
-        .set({ emailSent: true })
+        .set(
+          outcomeKind
+            ? { emailSent: true, emailSentAt: new Date(), emailKind: outcomeKind }
+            : { emailSent: true, emailSentAt: new Date() },
+        )
         .where(eq(eligibilityResults.id, resultId));
     }
 
@@ -293,7 +316,7 @@ export async function recordEmailDelivery(params: {
       responsePayload: result,
     });
 
-    return true;
+    return { sent: true, terminal: false };
   } catch (e) {
     console.warn(
       `[pass-sport-worker] job ${job.id}: ${kind} email send threw: ${(e as Error).message}`,
@@ -312,6 +335,8 @@ export async function recordEmailDelivery(params: {
       error: (e as Error).message,
       bodyPayload,
     });
-    return false;
+    // Not terminal: a throw is a transport failure or an HTTP status, and neither says the request
+    // itself was refused. A resend is the right answer to both.
+    return { sent: false, terminal: false };
   }
 }

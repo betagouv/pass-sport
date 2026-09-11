@@ -27,7 +27,8 @@ import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
 import { processLcaChecksJob, type LcaChecksJobData } from "../../src/jobs/lca-checks";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
 import { runMigrations } from "../../src/db/migrate";
-import { eligibilityResults } from "../../src/db/schema";
+import { eligibilityResults, type Verdict } from "../../src/db/schema";
+import type { OutcomeEmailKind } from "../../src/email/notify";
 import type { LcaClient, LcaResponse } from "../../src/lca/client";
 import type {
   ConfirmItem,
@@ -36,6 +37,7 @@ import type {
   SearchPayload,
 } from "../../src/lca/types";
 import type {
+  Allowance,
   EligibilityJobData,
   EligibilityJobPayload,
   LcaJobData,
@@ -245,6 +247,8 @@ export type SentEmail = {
   templateId: string;
   recipients: string[];
   variables: Record<string, Record<string, string>>;
+  // `date`, in seconds. Null on an immediate send, which omits the parameter.
+  sendAt: number | null;
 };
 
 // URLSearchParams, never decodeURIComponent: form encoding writes a space as '+', which
@@ -261,12 +265,15 @@ export const parseSentEmail = (raw: string): SentEmail => {
   // Two recipient forms: PHP-array style with merge variables, plain list without.
   const plain = params.get("destinataires");
 
+  const sendAt = params.get("date");
+
   return {
     subject: params.get("sujet") ?? "",
     campaign: params.get("nom"),
     templateId: params.get("message") ?? "",
     recipients: plain ? plain.split(",") : Object.keys(variables),
     variables,
+    sendAt: sendAt === null ? null : Number(sendAt),
   };
 };
 
@@ -369,6 +376,14 @@ export type PendingLcaSeed = {
   firstname?: string;
   birthdate?: string;
   attempts?: number;
+  // What the code-mail sweep reads. 'eligible_confirmed' is the state data/writeback_confirmed.sql
+  // leaves behind, the one row shape the pending_lca loop never produces itself. A non-null
+  // emailKind is what a parcours hors FranceConnect row looks like, and the sweep must ignore it.
+  verdict?: Verdict;
+  situation?: Allowance;
+  emailKind?: OutcomeEmailKind;
+  emailAttempts?: number;
+  email?: string;
 };
 
 export type Stack = {
@@ -404,6 +419,9 @@ export type Stack = {
   // Answer every subsequent send with this HTTP status instead of {resultat:1}; null
   // restores the success answer.
   setEmailHttpStatus: (status: number | null) => void;
+  // Answer every subsequent send with {resultat:0, erreurs:<codes>}, a comma-separated list as
+  // Link Mobility sends it; null restores the success answer.
+  setEmailErreurs: (codes: string | null) => void;
 
   setAahBeneficiaire: (value: boolean) => void;
   setCrousBoursier: (value: boolean) => void;
@@ -450,6 +468,9 @@ export async function startStack(
   // Set to make the next answers non-2xx, so a test can exercise what the worker records
   // when Link Mobility itself is down rather than when it rejects a payload.
   let emailHttpStatus: number | null = null;
+  // The other failure: a 200 carrying {resultat:0, erreurs}. Told apart from the one above
+  // because only this one says whether a resend could ever succeed.
+  let emailErreurs: string | null = null;
   const emailServer: Server = createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on("data", (c: Buffer) => chunks.push(c));
@@ -461,7 +482,11 @@ export async function startStack(
         return;
       }
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify({ resultat: 1, id: 123 }));
+      res.end(
+        JSON.stringify(
+          emailErreurs !== null ? { resultat: 0, erreurs: emailErreurs } : { resultat: 1, id: 123 },
+        ),
+      );
     });
   });
   await new Promise<void>((resolve) => emailServer.listen(0, "127.0.0.1", () => resolve()));
@@ -622,12 +647,14 @@ export async function startStack(
         isFranceConnected: true,
         residenceInsee: null,
         lcaStatus: "not_applicable",
-        verdict: "eligible_pending_lca",
+        verdict: seed.verdict ?? "eligible_pending_lca",
         passSportCode: seed.code,
         lcaCheckAttempts: seed.attempts ?? 0,
-        emailKind: null,
+        situation: seed.situation ?? null,
+        emailKind: seed.emailKind ?? null,
+        emailAttempts: seed.emailAttempts ?? 0,
         emailSent: false,
-        email: `${seed.sub}@example.test`,
+        email: seed.email === undefined ? `${seed.sub}@example.test` : seed.email,
       })
       .returning({ id: eligibilityResults.id });
 
@@ -708,6 +735,9 @@ export async function startStack(
     parsedEmails: () => sentEmails.map(parseSentEmail),
     setEmailHttpStatus: (status) => {
       emailHttpStatus = status;
+    },
+    setEmailErreurs: (codes) => {
+      emailErreurs = codes;
     },
     setCrousBoursier: (value: boolean) => {
       apiClient.crousBoursier = value;
