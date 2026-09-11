@@ -103,7 +103,7 @@ def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
     df = fc.build_psp_columns(df)
 
     # Situation : quelle aide ouvre le droit. Reconstruite depuis les réponses brutes d'API
-    # Particulier, en rejouant les règles de worker/src/lca/candidates.ts (fenêtres de
+    # Particulier, en rejouant les règles de worker/src/eligibility/candidates.ts (fenêtres de
     # naissance et seuil de quotient compris). Puis l'organisme : la caisse d'où vient le
     # droit.
     df, sans_situation = fc.resolve_situation(df)

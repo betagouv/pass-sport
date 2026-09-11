@@ -22,7 +22,7 @@ export const ORGANISME_BOURSIER = "cnous";
 export type ResultCaisse = Caisse | typeof ORGANISME_BOURSIER;
 
 // pass Sport 2026 campaign windows, as inclusive birthdate bounds. Derived from
-// AGE_REFERENCE_DATE (2026-12-31, lca/candidates.ts) — the reference being a 31 December,
+// AGE_REFERENCE_DATE (2026-12-31, candidates.ts) — the reference being a 31 December,
 // the birth YEAR alone decides the age:
 //
 //   QF     enfant       6-17 ans

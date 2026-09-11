@@ -407,7 +407,7 @@ export const eligibilityHistory = pgTable(
 
     // The RAW response. Deliberately unfiltered: id_psp, matricule, courriel and ine all
     // land here, so a case can be replayed exactly as it happened. The single exception
-    // is pdf_base_64, dropped for its weight (lca/process.ts) — nothing reads it back.
+    // is pdf_base_64, dropped for its weight before it is journaled — nothing reads it back.
     //
     // Rows are kept INDEFINITELY: there is no purge, so this table only ever grows and
     // nothing bounds how long the codes and matricules in it live. That makes it the most

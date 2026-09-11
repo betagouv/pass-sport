@@ -114,7 +114,7 @@ COPY (
   -- d'historique ne portent pas le childIndex (action identique pour tous les enfants d'un
   -- même job), elles ne sont donc rattachables à aucun enfant en particulier. La route AEEH
   -- se redéduit sans elles — quotient + fenêtre de naissance suffisent, exactement comme
-  -- dans worker/src/lca/candidates.ts.
+  -- dans worker/src/eligibility/candidates.ts.
   left join api qf
     on qf.job_id = r.job_id
    and qf.action = 'dss.quotient_familial_identite'

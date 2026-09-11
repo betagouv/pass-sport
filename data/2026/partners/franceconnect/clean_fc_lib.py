@@ -19,7 +19,7 @@ cette source impose, et qui tient en trois manques du schéma :
 
 Les règles reproduites ici sont celles du worker, et doivent le rester : les fenêtres de
 naissance et le seuil de quotient viennent de partners_lib (donc de worker/src/eligibility/
-types.ts), et l'attribution des routes suit worker/src/lca/candidates.ts.
+types.ts), et l'attribution des routes suit worker/src/eligibility/candidates.ts.
 
 Fonctions pures : elles prennent un DataFrame (plus des paramètres explicites) et en
 renvoient un nouveau, sans jamais muter leur entrée ni toucher au système de fichiers ou à
@@ -58,7 +58,7 @@ QUALITE_BY_GENDER = {'male': 'M', 'female': 'Mme'}
 GENRE_BY_SEXE = {'M': 'M', 'F': 'F'}
 
 # Route CROUS : jusqu'à 28 ans à la date de référence de la campagne (2026-12-31, cf.
-# AGE_REFERENCE_DATE dans worker/src/lca/candidates.ts), soit né à partir du 01/01/1998.
+# AGE_REFERENCE_DATE dans worker/src/eligibility/candidates.ts), soit né à partir du 01/01/1998.
 # Pas de borne haute : c'est le statut boursier, vérifié par API Particulier, qui ferme
 # l'autre bout. Ce sont les bornes CROUS_BIRTHDATE_MIN/MAX de
 # worker/src/eligibility/types.ts, celles qui ont réellement produit les verdicts rejoués ici.
@@ -144,7 +144,7 @@ FINAL_COLUMNS_TO_DROP = [
 def _to_iso_birthdate(value) -> str:
     """Normalise une date d'API Particulier ('JJ/MM/AAAA' ou ISO) en 'AAAA-MM-JJ'.
 
-    Même normalisation que toIsoDate dans worker/src/lca/candidates.ts : les deux formats
+    Même normalisation que toIsoDate dans worker/src/eligibility/candidates.ts : les deux formats
     cohabitent dans les réponses quotient_familial.
     """
     if not isinstance(value, str):
@@ -177,7 +177,7 @@ def resolve_situation(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
 
     `eligibility_results` ne la mémorise pas : elle ne retient que `source` (self/enfant) et
     un booléen d'éligibilité. La route se redéduit des réponses brutes d'API Particulier,
-    exactement comme listBeneficiaryCandidates le fait dans worker/src/lca/candidates.ts.
+    exactement comme listBeneficiaryCandidates le fait dans worker/src/eligibility/candidates.ts.
 
     À appeler APRÈS build_psp_columns : la fenêtre de naissance porte sur le bénéficiaire de
     la ligne, dont la date de naissance vient de `enfant_identite` ou de

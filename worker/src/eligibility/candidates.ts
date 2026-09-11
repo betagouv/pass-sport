@@ -14,7 +14,7 @@ import {
   type Allowance,
   type PivotIdentity,
   type ResourceResult,
-} from "../eligibility/types";
+} from "./types";
 import {
   AEEH_RESOURCE,
   childAeehVerdict,
@@ -22,15 +22,23 @@ import {
   hasAahRight,
   hasBourse,
   readQuotientFamilial,
-} from "../eligibility/verdicts";
-import {
-  LCA_SITUATION,
-  ORGANISME,
-  type BeneficiaryCandidate,
-  type ConfirmPayload,
-  type SearchItem,
-  type SituationType,
-} from "./types";
+} from "./verdicts";
+
+// A person this job pronounces on (self or a QF child).
+export type BeneficiaryCandidate = {
+  source: "self" | "enfant";
+  lastname: string;
+  firstname: string;
+  birthdate: string; // YYYY-MM-DD
+  // Only ever set for 'enfant' — derived from the QF response's own sexe field. 'self'
+  // candidates leave this unset: the PDF route sources the allocataire's gender from their
+  // FranceConnect session identity, not from here.
+  gender?: "male" | "female";
+  nomUsage?: string;
+  eligibilities: Allowance[];
+  reasons: string[];
+};
+
 const AGE_REFERENCE_DATE = "2026-12-31";
 
 // Completed years ("ans révolus") at the reference date.
@@ -135,8 +143,7 @@ export const listBeneficiaryCandidates = (
   const enfants = qfData?.enfants ?? [];
 
   enfants.forEach((enfant, childIndex) => {
-    // The child is NAMED by their nom de naissance, like enfantToIdentity in
-    // ../eligibility/sequence.ts: the AEEH call goes out under that name, so naming them
+    // The child is NAMED by their nom de naissance, like enfantToIdentity in sequence.ts: the AEEH call goes out under that name, so naming them
     // otherwise here would describe the child differently from the query that judged them. The
     // nom d'usage is carried alongside, to be stored and nothing more.
     const lastname = enfant.nom_naissance;
@@ -144,7 +151,7 @@ export const listBeneficiaryCandidates = (
     const birthdate = toIsoDate(enfant.date_naissance);
     if (!lastname || !firstname || !birthdate) return;
 
-    // Same conversion as enfantToIdentity in ../eligibility/sequence.ts.
+    // Same conversion as enfantToIdentity in sequence.ts.
     const gender = enfant.sexe === "F" ? "female" : enfant.sexe === "M" ? "male" : undefined;
 
     const age = ageAtReferenceDate(birthdate);
@@ -184,49 +191,4 @@ export const listBeneficiaryCandidates = (
   }
 
   return candidates;
-};
-
-// FranceConnect birthcountry is a COG INSEE code; LCA expects ISO 3166-1 alpha-2.
-// Only France mapped; foreign countries omitted (the field is optional).
-export const cogCountryToIso = (cog?: string): string | undefined =>
-  cog === "99100" ? "FR" : undefined;
-
-// A subset of the identité pivot rather than the pivot itself: allocataire_identite is stored as a
-// Partial, and this builder has to accept it as-is.
-export type AllocataireConfirmIdentity = {
-  family_name?: string;
-  given_name?: string;
-  birthdate?: string;
-  birthplace?: string;
-  birthcountry?: string;
-};
-
-// /search echoes back the 'AEEH' our own pipeline injected into the LCA base
-// (clean_fc_lib.resolve_situation), but /confirm does not know that value: there, such a child
-// belongs to 'jeune'.
-export const toConfirmSituation = (situation: SituationType): string =>
-  situation === LCA_SITUATION.AEEH ? LCA_SITUATION.JEUNE : situation;
-
-// The allocataire is named from the identité pivot rather than from the QF allocataires[0], which
-// is not guaranteed to be them. The matricule is server-side only and comes back from the search.
-export const buildConfirmPayload = (
-  searchItem: SearchItem,
-  identity: AllocataireConfirmIdentity,
-): ConfirmPayload => {
-  const isCrous =
-    searchItem.situation === LCA_SITUATION.BOURSIER && searchItem.organisme === ORGANISME.CNOUS;
-  const matricule = searchItem.matricule || undefined;
-
-  return {
-    id: String(searchItem.id),
-    situation: toConfirmSituation(searchItem.situation),
-    organisme: searchItem.organisme,
-    recipientLastname: identity.family_name,
-    recipientFirstname: identity.given_name || "",
-    recipientIneNumber: isCrous ? matricule : undefined,
-    recipientCafNumber: isCrous ? undefined : matricule,
-    recipientBirthDate: identity.birthdate,
-    recipientBirthPlace: identity.birthplace || undefined,
-    recipientBirthCountry: cogCountryToIso(identity.birthcountry),
-  };
 };

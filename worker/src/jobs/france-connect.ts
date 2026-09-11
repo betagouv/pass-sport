@@ -8,7 +8,7 @@ import {
   toResultSituation,
   type EligibilityJobData,
 } from "../eligibility/types";
-import { listBeneficiaryCandidates } from "../lca/candidates";
+import { listBeneficiaryCandidates } from "../eligibility/candidates";
 import { recordEmailDelivery, sendAcknowledgmentEmail } from "../email/notify";
 import type { HistoryRecorder } from "../db/history";
 import { startJob } from "./shared";

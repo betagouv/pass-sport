@@ -1,4 +1,4 @@
-// Reading an API Particulier answer as a yes/no. Lives here rather than in lca/candidates.ts so
+// Reading an API Particulier answer as a yes/no. Lives here rather than in candidates.ts so
 // that sequence.ts — which needs the AAH verdict to decide whether to spend a CROUS call — can
 // share the definitions instead of restating them.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listBeneficiaryCandidates } from "../../src/lca/candidates";
+import { listBeneficiaryCandidates } from "../../src/eligibility/candidates";
 import type { PivotIdentity, QuotientFamilialData, ResourceResult } from "../../src/eligibility/types";
 
 // Fictional syllable-based identities: pass-sport processes real beneficiary data, so test

@@ -10,7 +10,7 @@ if (process.env.SENTRY_DSN && process.env.ENV) {
     tracesSampleRate: 0.03,
     attachStacktrace: true,
     // Identities flow through this process; never let Sentry attach them.
-    // Captures must stay PII-free at the call site too (see lca/process.ts).
+    // Captures must stay PII-free at the call site too.
     sendDefaultPii: false,
   });
   console.info("[pass-sport-worker] Sentry initialized for " + process.env.ENV);
