@@ -103,7 +103,7 @@ COPY (
     -- Sert à départager deux homonymes stricts, jamais à apparier seul.
     qf.response_payload -> 'data' -> 'adresse'                               as qf_adresse,
 
-    -- L'INE, jointure EXACTE avec allocataire->>'matricule' sur les lignes CNOUS, qui y
+    -- L'INE, jointure EXACTE avec beneficiaires.allocataire_matricule sur les lignes CNOUS, qui y
     -- rangent l'INE du boursier. La réponse quotient_familial, elle, ne porte aucun
     -- identifiant de foyer : il n'existe pas d'équivalent pour CNAF et MSA.
     crous.response_payload -> 'data' ->> 'ine'                               as crous_ine

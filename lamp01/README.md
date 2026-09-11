@@ -7,8 +7,8 @@ FranceConnect interroge désormais avant de fabriquer un code.
 ```
 lamp01/
 ├── compose.yml            les deux services, integration et prod
-├── db-init/               le schéma, chargé par les deux — et par le banc de test
-│   ├── 00-schema.sql      beneficiaires, calquée sur le DDL de production
+├── db-init/               le schéma, chargé par les deux services
+│   ├── 00-schema.sql      beneficiaires, le DDL de production au JSON près : aplati
 │   └── 01-beneficiaire-cnaf-extra-field.sql   ce que la CNAF laisse hors du JSON
 ├── inject_csv.sh          injecte un CSV désigné par son chemin
 └── untracked_scripts/     hors dépôt : l'injecteur automatique et son banc
@@ -41,6 +41,21 @@ renseignés que si la base a été créée sous d'autres noms. Sans `LAMP_DB_PAS
 refuse de démarrer plutôt que de retomber sur une valeur par défaut que personne ne penserait
 à changer.
 
+## Changer le schéma
+
+`db-init/` ne s'exécute que sur un volume **vierge** : modifier un de ses fichiers ne change
+rien à une base déjà créée. Il n'y a pas de script de migration — on recrée les volumes, puis
+on réinjecte les CSV :
+
+```bash
+docker compose -f lamp01/compose.yml down -v     # efface pgdata-integration ET pgdata-prod
+docker compose -f lamp01/compose.yml up -d
+./lamp01/inject_csv.sh <chaque CSV MSA, CNOUS et CNAF réconcilié>       # puis --env prod
+```
+
+`down -v` détruit les deux bases, prod comprise : garder sous la main tous les CSV à
+réinjecter avant de le lancer.
+
 ## Injecter un CSV
 
 ```bash
@@ -56,9 +71,18 @@ Il accepte tel quel ce que produisent :
 | `cnous/clean_cnous.ipynb` | `DB_CNOUS_EXPORT_2026` | `beneficiaires` |
 | `cnaf/reconcile_cnaf_raw_with_codes.ipynb` | `CNAF_RECONCILED_PATHFILE_2026` | `beneficiaires` **et** `beneficiaire_cnaf_extra_field` |
 
+Les CSV portent l'allocataire et son adresse en JSON, dans les colonnes `allocataire` et
+`adresse_allocataire`, comme la production les stocke. La base lamp01, elle, n'a pas de
+colonne JSON : l'injection **aplatit** chaque clé dans sa colonne, `allocataire_<clé>` et
+`adresse_allocataire_<clé>` (`{"matricule": "…"}` → `allocataire_matricule`). La liste des
+colonnes aplaties est lue dans le schéma, rien n'est codé en dur dans le script. Et une clé
+sans colonne correspondante fait échouer toute l'injection, qui la nomme, plutôt que d'être
+perdue en silence : il suffit alors d'ajouter la colonne à `00-schema.sql`.
+
 Chaque colonne du CSV qui n'existe pas dans `beneficiaires` mais existe dans
 `beneficiaire_cnaf_extra_field` est chargée dans cette dernière, reliée par `id_psp`, dans la
-même transaction que les bénéficiaires. Une colonne absente des deux fait échouer le pré-vol.
+même transaction que les bénéficiaires. Une colonne absente des deux, ou fournie à la fois
+en colonne et dans le JSON, fait échouer le pré-vol.
 
 Le fichier CNAF réconcilié porte les codes déjà distribués par les deux `*cnaf*-with-codes.csv` :
 il **remplace** ces fichiers dans la base, il ne s'y ajoute pas. Si leurs `id_psp` y sont déjà,
@@ -73,7 +97,10 @@ scanne ce répertoire tout seul : les deux ne se marchent pas dessus.
 La CNAF ne sérialise dans le JSON `allocataire` que le tronc commun (qualité, matricule, nom,
 prénom, contact) - son "nom" y est déjà le nom d'usage (RESPDOS). Son nom de naissance, sa
 date, son genre et son lieu de naissance, que `reconcile_cnaf_raw_with_codes.ipynb` retrouve
-dans le fichier brut, vont dans `beneficiaire_cnaf_extra_field`, une ligne par `id_psp` :
+dans le fichier brut, vont dans `beneficiaire_cnaf_extra_field`, une ligne par `id_psp`, sous
+des colonnes préfixées `cnaf_` (`cnaf_allocataire_date_naissance`…). Le préfixe est
+nécessaire : l'injection range d'abord une colonne du CSV dans `beneficiaires`, qui a déjà
+`allocataire_date_naissance` et consorts, aplatis du JSON des autres partenaires.
 
 ```sql
 SELECT b.*, e.*
@@ -81,24 +108,17 @@ FROM beneficiaires b
 LEFT JOIN beneficiaire_cnaf_extra_field e USING (id_psp);
 ```
 
-Une table à part plutôt que des colonnes de plus : `beneficiaires` garde le DDL de production,
-et les fichiers des autres partenaires s'y chargent sans changement. La suppression d'un
+Une table à part plutôt que des colonnes de plus dans `beneficiaires` : seule la CNAF les
+porte, et seulement dans le fichier réconcilié. La suppression d'un
 bénéficiaire emporte sa ligne (`ON DELETE CASCADE`). Seules les lignes d'origine ARS ont la date
 et le lieu de naissance : la CNAF ne les remplit pas pour l'AAH et l'AEEH.
-
-**Sur un volume initialisé avant cette table**, `db-init/` ne se rejoue pas : l'appliquer à la
-main, le fichier est écrit pour pouvoir l'être autant de fois qu'on veut.
-
-```bash
-psql -h 127.0.0.1 -p 55432 -U u_passsport -d passsport -f lamp01/db-init/01-beneficiaire-cnaf-extra-field.sql
-```
 
 ## La colonne de recherche
 
 `beneficiaires.cle_recherche` est une colonne **générée** qui concatène, normalisés :
 
 ```
-allocataire.nom | allocataire.prenom | date_naissance | nom | prénoms + ' '
+allocataire_nom | allocataire_prenom | date_naissance | nom | prénoms + ' '
 ```
 
 Les prénoms du bénéficiaire viennent en dernier, suivis d'un espace : c'est ce qui permet à
@@ -107,8 +127,7 @@ premier est ambigu, par simple allongement du préfixe — servi par l'index
 `beneficiaires_cle_recherche_idx` en `text_pattern_ops`.
 
 La date de naissance et le lieu de naissance de l'allocataire n'entrent **pas** dans la clé :
-seuls CNOUS et le pipeline FranceConnect les déposent dans le JSON, les inclure rendrait
-toute ligne CNAF ou MSA introuvable.
+la CNAF ne les dépose pas dans le JSON, les inclure rendrait toute ligne CNAF introuvable.
 
 **Changer l'ensemble des colonnes** demande de reconstruire la colonne — une colonne générée
 n'est pas recalculée quand la fonction derrière elle change, et cette fonction ne peut pas
@@ -121,10 +140,11 @@ ALTER TABLE public.beneficiaires DROP COLUMN cle_recherche;
 -- depuis db-init/00-schema.sql
 ```
 
-## Le schéma est partagé
+## Le schéma de production
 
-`db-init/` est monté par les deux services **et** par le banc de test de
-`untracked_scripts/test/` : il n'existe qu'une définition du schéma, et le banc ne peut pas
-passer contre une version périmée. Les valeurs d'énumération y sont déduites du code des
-pipelines partenaires, pas d'un dump de production — **les réaligner sur la vraie base**, une
-valeur manquante ici ferait passer les tests et échouer la production.
+`db-init/` n'est plus le DDL de production : il en diffère par l'aplatissement du JSON. Le
+banc de test de l'injecteur automatique (`untracked_scripts/test/`), qui écrit dans les vraies
+bases où le JSON reste, charge donc sa propre copie figée du DDL de production, et non ce
+dossier. Les valeurs d'énumération des deux sont déduites du code des pipelines partenaires,
+pas d'un dump de production — **les réaligner sur la vraie base**, une valeur manquante ferait
+passer les tests et échouer la production.

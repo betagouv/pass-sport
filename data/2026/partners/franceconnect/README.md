@@ -64,7 +64,7 @@ n'ont pas appariés, et ne retient que s'il trouve **exactement un** `id_psp` :
 
 | # | critère | nature |
 |---|---|---|
-| 1 | **INE** = `allocataire->>'matricule'` | exact. Le CNOUS y range l'INE du boursier. Rien d'équivalent pour la CNAF ni la MSA : `quotient_familial` ne porte aucun numéro d'allocataire |
+| 1 | **INE** = `allocataire_matricule` (le matricule du JSON allocataire, aplati à l'injection) | exact. Le CNOUS y range l'INE du boursier. Rien d'équivalent pour la CNAF ni la MSA : `quotient_familial` ne porte aucun numéro d'allocataire |
 | 2 | **clé** + 1er prénom du bénéficiaire | préfixe sur `beneficiaires.cle_recherche` |
 | 3 | **clé** + 2 premiers prénoms | pour les ambigus du niveau 2 |
 | 4 | **genre** du bénéficiaire, et `qualite` de l'allocataire | départage |

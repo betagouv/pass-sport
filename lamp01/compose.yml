@@ -38,8 +38,8 @@ services:
       # database from the network. 5432 is taken by the development stack's db service.
       - '127.0.0.1:55432:5432'
     volumes:
-      # Runs once, on a fresh volume, before anything else connects. Same file as the
-      # injection test bench loads, so the bench cannot pass against a stale schema.
+      # Runs once, on a fresh volume, before anything else connects: a schema change needs
+      # the volumes recreated (see README.md, « Changer le schéma »).
       - ./db-init:/docker-entrypoint-initdb.d:ro
       # Mounted one level above the data directory: since 18 the image stores its cluster in
       # a version-specific subdirectory and refuses to start on a mount at the old path.

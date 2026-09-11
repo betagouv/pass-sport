@@ -149,8 +149,8 @@ where alloc_nom.v is not null
 -- inférieure.
 
 -- --- Niveau 1 : l'INE ------------------------------------------------------------------
--- Jointure exacte, la seule de tout ce fichier : CNOUS range l'INE du boursier dans
--- allocataire->>'matricule', et API Particulier le rend sur la route boursier. Aucun
+-- Jointure exacte, la seule de tout ce fichier : CNOUS range l'INE du boursier dans le
+-- matricule de l'allocataire (beneficiaires.allocataire_matricule, indexé), et API Particulier le rend sur la route boursier. Aucun
 -- équivalent n'existe pour CNAF et MSA — la réponse quotient_familial ne porte pas de
 -- numéro d'allocataire.
 insert into fc_apparies (eligibility_result_id, id_psp, niveau)
@@ -159,7 +159,7 @@ from (
 	select distinct n.eligibility_result_id, b.id_psp
 	from fc_norm n
 	join public.beneficiaires b
-	  on b.allocataire ->> 'matricule' = n.ine
+	  on b.allocataire_matricule = n.ine
 	 and b.exercice_id = :exercice
 	 and b.id_psp is not null
 	where n.ine is not null
@@ -178,9 +178,9 @@ select distinct
 	-- 5e segment de la clé : les prénoms du bénéficiaire ; son 2e mot est le second prénom.
 	split_part(split_part(b.cle_recherche, '|', 5), ' ', 2) as prenom_2_base,
 	b.genre::text as genre_base,
-	b.allocataire ->> 'qualite' as qualite_base,
-	public.normalise_date_recherche(b.allocataire ->> 'date_naissance') as alloc_naissance_base,
-	b.adresse_allocataire ->> 'code_postal' as code_postal_base
+	b.allocataire_qualite as qualite_base,
+	public.normalise_date_recherche(b.allocataire_date_naissance) as alloc_naissance_base,
+	b.adresse_allocataire_code_postal as code_postal_base
 from fc_cles k
 join fc_norm n on n.eligibility_result_id = k.eligibility_result_id
 cross join lateral (select k.cle_stable || n.prenom_1 || ' ' as prefixe) p
@@ -256,7 +256,8 @@ group by d.eligibility_result_id
 having count(*) = 1;
 
 -- --- Niveau 5 : départage par la date de naissance de l'allocataire ---------------------
--- MSA et CNOUS la déposent dans le JSON ; la CNAF non — son pipeline mappe les colonnes puis
+-- MSA et CNOUS la déposent dans le JSON allocataire, que l'injection aplatit en
+-- beneficiaires.allocataire_date_naissance ; la CNAF non — son pipeline mappe les colonnes puis
 -- les jette après l'appel qf-batch. normalise_date_recherche réconcilie l'ISO de la MSA et de
 -- FranceConnect avec le JJ/MM/AAAA du CNOUS.
 insert into fc_apparies (eligibility_result_id, id_psp, niveau)
@@ -271,7 +272,7 @@ group by d.eligibility_result_id
 having count(*) = 1;
 
 -- --- Niveau 6 : départage par le code postal du foyer -----------------------------------
--- Le code postal de la réponse quotient_familial, confronté à `adresse_allocataire`. Seul
+-- Le code postal de la réponse quotient_familial, confronté à `adresse_allocataire_code_postal`. Seul
 -- reste d'adresse côté FranceConnect depuis que le parcours ne demande plus la commune de
 -- résidence.
 insert into fc_apparies (eligibility_result_id, id_psp, niveau)
