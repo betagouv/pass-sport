@@ -18,6 +18,9 @@ export const CAISSE = { CAF: "CAF", MSA: "MSA" } as const;
 
 export type Caisse = (typeof CAISSE)[keyof typeof CAISSE];
 
+export const ORGANISME_BOURSIER = "cnous";
+export type ResultCaisse = Caisse | typeof ORGANISME_BOURSIER;
+
 // pass Sport 2026 campaign windows, as inclusive birthdate bounds. Derived from
 // AGE_REFERENCE_DATE (2026-12-31, lca/candidates.ts) — the reference being a 31 December,
 // the birth YEAR alone decides the age:
@@ -234,12 +237,22 @@ export const SITUATION = { ...ALLOWANCE, FSS: "FSS" } as const;
 
 export type Situation = (typeof SITUATION)[keyof typeof SITUATION];
 
+export const RESULT_SITUATION_BOURSIER = "boursier";
+
+export type ResultSituation =
+  | Exclude<Allowance, typeof ALLOWANCE.CROUS>
+  | typeof RESULT_SITUATION_BOURSIER;
+
+export const toResultSituation = (aide: Allowance): ResultSituation =>
+  aide === ALLOWANCE.CROUS ? RESULT_SITUATION_BOURSIER : aide;
+
 // Routes where the pass Sport beneficiary is a child of the allocataire. On every other
 // route the allocataire IS the beneficiary, which decides who API Particulier is queried
 // about and whose identity the job is keyed on.
-const CHILD_AIDES: Situation[] = [SITUATION.QF, SITUATION.AEEH];
+const CHILD_AIDES: (Situation | ResultSituation)[] = [SITUATION.QF, SITUATION.AEEH];
 
-export const isChildAide = (aide: Situation): boolean => CHILD_AIDES.includes(aide);
+export const isChildAide = (aide: Situation | ResultSituation): boolean =>
+  CHILD_AIDES.includes(aide);
 
 // One LCA call as the site observed it, replayed verbatim into eligibility_history. The site
 // performs /search and /confirm itself now, so it is the only place that sees the raw

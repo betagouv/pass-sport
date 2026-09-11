@@ -37,12 +37,12 @@ import type {
   SearchPayload,
 } from "../../src/lca/types";
 import type {
-  Allowance,
   EligibilityJobData,
   EligibilityJobPayload,
   LcaJobData,
   PivotIdentity,
   ResourceResult,
+  ResultSituation,
 } from "../../src/eligibility/types";
 
 // The real mock clients were removed with the real-only port: the worker now only
@@ -96,6 +96,9 @@ class FakeApiClient implements ApiParticulierClient {
   // QF answers with no enfant at all: a demande for a child aide that leaves no
   // beneficiary to search, only the demande itself to record.
   qfChildless = false;
+
+  // Caisse that served the quotient, as API Particulier spells it.
+  qfFournisseur: string | undefined = "CNAF";
 
   constructor(
     private readonly first429RetryAfter?: number,
@@ -180,7 +183,10 @@ class FakeApiClient implements ApiParticulierClient {
             date_naissance: "01/01/2012",
           },
         ],
-        quotient_familial: { valeur: this.qfValeurByMois[mois ?? ""] ?? this.qfValeur },
+        quotient_familial: {
+          valeur: this.qfValeurByMois[mois ?? ""] ?? this.qfValeur,
+          fournisseur: this.qfFournisseur,
+        },
       })
     );
   }
@@ -380,7 +386,7 @@ export type PendingLcaSeed = {
   // leaves behind, the one row shape the pending_lca loop never produces itself. A non-null
   // emailKind is what a parcours hors FranceConnect row looks like, and the sweep must ignore it.
   verdict?: Verdict;
-  situation?: Allowance;
+  situation?: ResultSituation;
   emailKind?: OutcomeEmailKind;
   emailAttempts?: number;
   email?: string;
@@ -440,6 +446,8 @@ export type Stack = {
   // Strips the fake children from the QF answer, leaving a child-aide demande with no
   // beneficiary at all.
   setQfChildless: (childless: boolean) => void;
+  // Caisse the fake QF answers with, undefined for a payload that names none.
+  setQfFournisseur: (fournisseur: string | undefined) => void;
   close: () => Promise<void>;
 };
 
@@ -762,6 +770,9 @@ export async function startStack(
     },
     setQfChildless: (childless: boolean) => {
       apiClient.qfChildless = childless;
+    },
+    setQfFournisseur: (fournisseur: string | undefined) => {
+      apiClient.qfFournisseur = fournisseur;
     },
     close,
   };

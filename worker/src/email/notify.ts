@@ -4,7 +4,12 @@ import { eq } from "drizzle-orm";
 import type { Database } from "../db/client";
 import type { HistoryRecorder } from "../db/history";
 import { eligibilityResults } from "../db/schema";
-import { isChildAide, SITUATION, type Situation } from "../eligibility/types";
+import {
+  isChildAide,
+  SITUATION,
+  type ResultSituation,
+  type Situation,
+} from "../eligibility/types";
 import { logPii } from "../log";
 import {
   isTerminalEmailError,
@@ -106,10 +111,11 @@ const templateIdFor = (kind: EmailKind): number => {
 // The aide alone decides which of the three code templates goes out. Shared by both paths: the
 // parcours hors FranceConnect reads it off the job payload, the FranceConnect one off the
 // situation column its insert now fills.
-export const codeEmailKindForAide = (aide: Situation): CodeEmailKind => {
+export const codeEmailKindForAide = (aide: Situation | ResultSituation): CodeEmailKind => {
   if (isChildAide(aide)) return "code_indirect";
 
-  // CROUS and FSS are two names for one bourse — same LCA situation, same step-two form.
+  // CROUS, FSS and the stored 'boursier' are three names for one bourse — same LCA situation,
+  // same step-two form — so everything that is not AAH lands on the same template here.
   return aide === SITUATION.AAH ? "code_direct_aah" : "code_direct_boursier";
 };
 

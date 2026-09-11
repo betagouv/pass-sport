@@ -11,7 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { OutcomeEmailKind } from "../email/notify";
-import type { Allowance, PivotIdentity } from "../eligibility/types";
+import type { PivotIdentity, ResultCaisse, ResultSituation } from "../eligibility/types";
 
 // The verdict as the USAGER should read it. The verdict column below is where each
 // value is documented. 'eligible_pending_lca' is never produced by the worker — the code
@@ -178,13 +178,35 @@ export const eligibilityResults = pgTable(
     // candidate's own eligibilities; the parcours hors FranceConnect leaves it null, having
     // already named its template in email_kind.
     //
+    // 'jeune' | 'AAH' | 'AEEH' | 'boursier' is lamp01's public.situation enum, and the boursier
+    // route is spelled that way here rather than 'CROUS' — see ResultSituation. 'QF' is the one
+    // value still carrying our own vocabulary instead of lamp's 'jeune'.
+    //
     // 'FSS' is absent by construction: an LCA situation with no API Particulier counterpart, so
     // this path can never produce it.
     //
     // Null on every row written before the column existed. decideEmailKind
     // (jobs/fc-code-emails-rows.ts) falls back to `source` there, which settles 'enfant' rows on
     // its own — QF and AEEH both mail code_indirect — and leaves only 'self' undecidable.
-    situation: text("situation").$type<Allowance>(),
+    situation: text("situation").$type<ResultSituation>(),
+
+    // Where the right comes from, per beneficiary. 'cnous' on the boursier route — the bourse
+    // is served by CNOUS, and the household quotient says nothing about it — otherwise the
+    // caisse that served the quotient familial, 'CAF' or 'MSA', read off
+    // quotient_familial.fournisseur (eligibility/verdicts.ts readCaisse). That second value is
+    // household-level, so the rows of one job that are not boursier all share it.
+    //
+    // Same rule and same spellings as clean_fc_lib.resolve_organisme, which derives its own
+    // `organisme` from the raw qf payload in eligibility_history. This column is what lets the
+    // caisse be read without that join, and the two have to move together.
+    //
+    // Null whenever nothing named one: the AAH route, which makes no quotient_familial call,
+    // and every row written before this column existed. Not defaulted to CAF the way
+    // clean_fc_lib does — a guess would be indistinguishable from an answer here.
+    //
+    // The parcours hors FranceConnect leaves it null too: the usager declares their caisse
+    // there, and nothing has confirmed it.
+    caisse: text("caisse").$type<ResultCaisse>(),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 

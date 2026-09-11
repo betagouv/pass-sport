@@ -2,12 +2,14 @@
 // that sequence.ts — which needs the AAH verdict to decide whether to spend a CROUS call — can
 // share the definitions instead of restating them.
 
-import type {
-  AllocationEnfantHandicapeData,
-  EtudiantBoursierData,
-  QuotientFamilialData,
-  ResourceResult,
-  StatutBeneficiaireData,
+import {
+  CAISSE,
+  type AllocationEnfantHandicapeData,
+  type Caisse,
+  type EtudiantBoursierData,
+  type QuotientFamilialData,
+  type ResourceResult,
+  type StatutBeneficiaireData,
 } from "./types";
 
 export const QF_RESOURCE_PREFIX = "dss.quotient_familial";
@@ -43,6 +45,17 @@ export const readQuotientFamilial = (results: ResourceResult[]): QuotientFamilia
   }
 
   return null;
+};
+
+const CAISSE_BY_FOURNISSEUR: Record<string, Caisse> = {
+  CNAF: CAISSE.CAF,
+  CAF: CAISSE.CAF,
+  MSA: CAISSE.MSA,
+};
+
+export const readCaisse = (results: ResourceResult[]): Caisse | null => {
+  const fournisseur = readQuotientFamilial(results)?.quotient_familial?.fournisseur;
+  return (fournisseur && CAISSE_BY_FOURNISSEUR[fournisseur.trim().toUpperCase()]) || null;
 };
 
 export const readAah = (results: ResourceResult[]): StatutBeneficiaireData | null =>

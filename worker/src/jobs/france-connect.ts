@@ -1,8 +1,13 @@
 import type { Job, Queue } from "bullmq";
 import { type ApiParticulierClient } from "../eligibility/client";
 import { runEligibilitySequence } from "../eligibility/sequence";
-import { readQuotientFamilial } from "../eligibility/verdicts";
-import type { EligibilityJobData, QuotientFamilialData } from "../eligibility/types";
+import { readCaisse, readQuotientFamilial } from "../eligibility/verdicts";
+import {
+  ORGANISME_BOURSIER,
+  RESULT_SITUATION_BOURSIER,
+  toResultSituation,
+  type EligibilityJobData,
+} from "../eligibility/types";
 import { listBeneficiaryCandidates } from "../lca/candidates";
 import { recordEmailDelivery, sendAcknowledgmentEmail } from "../email/notify";
 import type { HistoryRecorder } from "../db/history";
@@ -88,6 +93,7 @@ export async function processEligibilityJob(
   const { identity, isFranceConnected } = data;
   const candidates = listBeneficiaryCandidates(identity, results);
   const qfPayload = readQuotientFamilial(results);
+  const householdCaisse = readCaisse(results);
 
   if (qfPayload) {
     const qfValue = qfPayload.quotient_familial?.valeur;
@@ -162,6 +168,12 @@ export async function processEligibilityJob(
             }
           : null;
 
+        // First rather than only: the two routes a candidate can carry are pushed in priority
+        // order by listBeneficiaryCandidates (QF before AEEH, AAH before CROUS). Null on the
+        // rows that opened no route at all, which are the 'not_eligible' ones.
+        const aide = candidate.eligibilities[0];
+        const situation = aide ? toResultSituation(aide) : null;
+
         await tx.insert(eligibilityResults).values({
           jobId: job.id ?? null,
           source: candidate.source,
@@ -181,10 +193,8 @@ export async function processEligibilityJob(
           emailKind: null,
           emailSent: false,
           email: to,
-          // First rather than only: the two routes a candidate can carry are pushed in priority
-          // order by listBeneficiaryCandidates (QF before AEEH, AAH before CROUS). Undefined on
-          // the rows that opened no route at all, which are the 'not_eligible' ones.
-          situation: candidate.eligibilities[0] ?? null,
+          situation,
+          caisse: situation === RESULT_SITUATION_BOURSIER ? ORGANISME_BOURSIER : householdCaisse,
         });
       }
     });

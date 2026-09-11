@@ -9,12 +9,12 @@ import {
   codeEmailVariables,
   type EmailVariables,
 } from "../email/notify";
-import type { Allowance, PivotIdentity } from "../eligibility/types";
+import type { PivotIdentity, ResultSituation } from "../eligibility/types";
 
 export type FcCodeEmailRow = {
   id: string;
   source: string;
-  situation: Allowance | null;
+  situation: ResultSituation | null;
   allocataireIdentite: AllocataireIdentite | null;
   enfantIdentite: Partial<PivotIdentity> | null;
   passSportCode: string | null;

@@ -124,7 +124,7 @@ describe("fc code emails", () => {
 
   // The point of the whole feature.
   it("does not mail the same beneficiary twice across two passes", async () => {
-    const id = await seedConfirmed({ sub: "sub-once", code: "PSP-ONCE", situation: "CROUS" });
+    const id = await seedConfirmed({ sub: "sub-once", code: "PSP-ONCE", situation: "boursier" });
 
     await stack.enqueueLcaChecksAndWait();
     await stack.enqueueLcaChecksAndWait();

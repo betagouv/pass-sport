@@ -3,6 +3,7 @@ import {
   childAeehVerdict,
   hasAahRight,
   isAahBeneficiaryRow,
+  readCaisse,
   readQuotientFamilial,
 } from "../../src/eligibility/verdicts";
 import type { ResourceResult } from "../../src/eligibility/types";
@@ -43,6 +44,35 @@ describe("readQuotientFamilial", () => {
 
   it("answers null when no month came back", () => {
     expect(readQuotientFamilial([])).toBeNull();
+  });
+});
+
+const qfFournisseur = (fournisseur: string): ResourceResult =>
+  answered("dss.quotient_familial_identite", {
+    allocataires: [],
+    enfants: [],
+    quotient_familial: { valeur: 650, fournisseur },
+  });
+
+describe("readCaisse", () => {
+  it.each([
+    ["CNAF", "CAF"],
+    ["CAF", "CAF"],
+    ["MSA", "MSA"],
+    [" msa ", "MSA"],
+  ])("reads fournisseur %s as %s", (fournisseur, caisse) => {
+    expect(readCaisse([qfFournisseur(fournisseur)])).toBe(caisse);
+  });
+
+  it("answers null rather than guessing a caisse", () => {
+    expect(readCaisse([])).toBeNull();
+    expect(readCaisse([qfMonth(650)])).toBeNull();
+    expect(readCaisse([qfFournisseur("POLE_EMPLOI")])).toBeNull();
+  });
+
+  // Same deciding row as readQuotientFamilial: the month that opened the right.
+  it("takes the last quotient_familial answer", () => {
+    expect(readCaisse([qfFournisseur("CNAF"), qfFournisseur("MSA")])).toBe("MSA");
   });
 });
 

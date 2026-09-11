@@ -30,6 +30,7 @@ beforeEach(async () => {
   stack.setAahBeneficiaire(false);
   stack.setCrousBoursier(true);
   stack.setChildrenLastname("Enfant");
+  stack.setQfFournisseur("CNAF");
 });
 
 const rows = async () =>
@@ -168,6 +169,42 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect(stack.parsedEmails().slice(before).map((e) => e.templateId)).toEqual([
       String(TEMPLATE_IDS.acknowledgment),
     ]);
+  });
+
+  // The quotient caisse is household-level, so it lands on every row it applies to.
+  it("la caisse du quotient est écrite sur les lignes enfant", async () => {
+    await stack.enqueueAndWait(allocataire());
+
+    const enfants = await enfantRows();
+    expect(enfants.length).toBeGreaterThan(0);
+    expect(enfants.every((x) => x.caisse === "CAF")).toBe(true);
+
+    await stack.pool.query("TRUNCATE eligibility_results");
+    stack.setQfFournisseur("MSA");
+    await stack.enqueueAndWait(allocataire());
+
+    expect((await enfantRows()).every((x) => x.caisse === "MSA")).toBe(true);
+  });
+
+  // The bourse comes from CNOUS, not from the caisse that served the household quotient —
+  // which is answering CNAF on this very job.
+  it("route boursier: la caisse est 'cnous', pas celle du quotient", async () => {
+    await stack.enqueueAndWait(allocataire());
+
+    const self = await selfRows();
+    expect(self).toHaveLength(1);
+    expect(self[0].situation).toBe("boursier");
+    expect(self[0].caisse).toBe("cnous");
+    // Not vacuous: the same job wrote the quotient caisse on its other rows.
+    expect((await enfantRows()).every((x) => x.caisse === "CAF")).toBe(true);
+  });
+
+  // A quotient payload naming no fournisseur: null rather than a guessed CAF.
+  it("aucun fournisseur annoncé: la caisse reste nulle", async () => {
+    stack.setQfFournisseur(undefined);
+    await stack.enqueueAndWait(allocataire());
+
+    expect((await enfantRows()).every((x) => x.caisse === null)).toBe(true);
   });
 
   // The self gate: a row about the allocataire exists only when a self resource was actually

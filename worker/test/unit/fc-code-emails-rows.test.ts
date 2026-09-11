@@ -39,10 +39,18 @@ describe("decideEmailKind", () => {
     expect(decideEmailKind(row({ situation: "AAH" }))).toEqual({ kind: "code_direct_aah" });
   });
 
-  it("picks the boursier template for an allocataire on the CROUS route", () => {
-    expect(decideEmailKind(row({ situation: "CROUS" }))).toEqual({
+  it("picks the boursier template for an allocataire on the boursier route", () => {
+    expect(decideEmailKind(row({ situation: "boursier" }))).toEqual({
       kind: "code_direct_boursier",
     });
+  });
+
+  // A worker still running the previous version writes 'CROUS' after the backfill has passed,
+  // and that row is mailed by the version that comes after. Both spellings name one bourse.
+  it("still reads the retired 'CROUS' spelling as a boursier row", () => {
+    const legacy = { ...row({}), situation: "CROUS" } as unknown as FcCodeEmailRow;
+
+    expect(decideEmailKind(legacy)).toEqual({ kind: "code_direct_boursier" });
   });
 
   it.each(["QF", "AEEH"] as const)("picks the indirect template on the %s route", (situation) => {
