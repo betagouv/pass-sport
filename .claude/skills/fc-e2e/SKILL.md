@@ -1,9 +1,9 @@
 ---
 name: fc-e2e
-description: Test de bout en bout du parcours FranceConnect en local — semer lamp01 depuis les lignes eligibility_results réelles, dérouler le writeback (export, clean, rapprochement, marquage) puis la boucle lca-checks, et vérifier chaque étape. À utiliser quand on veut valider la chaîne parcours FC → writeback → lca-checks sur la stack locale.
+description: Test de bout en bout du parcours FranceConnect en local — semer lamp01 depuis les lignes eligibility_results réelles, dérouler le writeback (export, clean, rapprochement, marquage) puis le job fc_code_emails, et vérifier chaque étape. À utiliser quand on veut valider la chaîne parcours FC → writeback → courriel du code sur la stack locale.
 ---
 
-# Test e2e local : parcours FranceConnect → writeback → lca-checks
+# Test e2e local : parcours FranceConnect → writeback → courriel du code
 
 Rejoue la boucle complète sur les bases locales. Aucune donnée réelle : les identités
 viennent du sandbox FranceConnect via le parcours joué sur `http://localhost:3000`.
@@ -90,8 +90,8 @@ Contrôles : le récap du rapprochement doit compter 1 par stratégie semée et
 `non_apparies=0` ; `writeback_confirmed.sql` doit afficher `lignes_csv = lignes_marquees` ;
 les lignes passent `eligible_confirmed` avec le code lamp, trace `psp.code_match_base`.
 
-Branche **code neuf** (pour tester `eligible_pending_lca` → lca-checks) : ne pas semer
-une identité (ou changer son `nom`), puis :
+Branche **code neuf** (code fabriqué, confirmé tout de suite) : ne pas semer une identité
+(ou changer son `nom`), puis :
 
 ```bash
 ../../../.venv/bin/python fc_pipeline.py split-matched --input fc_2026_clean.csv \
@@ -103,21 +103,26 @@ psql "$FC_DATABASE_URL" -v ON_ERROR_STOP=1 -f writeback_verdict.sql
 psql "$FC_DATABASE_URL" -Atq -f check_writeback.sql    # DOIT rendre 0
 ```
 
-## Étape 4 — lca-checks
+Contrôles : les lignes passent `eligible_confirmed` avec le code fabriqué, trace
+`psp.code_writeback` (`verdict_after = eligible_confirmed`).
+
+## Étape 4 — le courriel du code (fc_code_emails)
+
+En production, `run_fc_pipeline.sh` pose ce job lui-même en fin de passage. En local, à la
+main :
 
 ```bash
 cd worker && source "$NVM_DIR/nvm.sh" && nvm use
-LCA_CHECKS_REDIS_URL="redis://passsport:passsport@localhost:6379" \
-  npm run lca:checks:enqueue -- --dry-run --limit 5
+FC_CODE_EMAILS_REDIS_URL="redis://passsport:passsport@localhost:6379" \
+  npm run fc:code-emails:enqueue -- --dry-run --limit 5
 # puis le passage réel :
-LCA_CHECKS_REDIS_URL="redis://passsport:passsport@localhost:6379" npm run lca:checks:enqueue
-docker logs pass-sport-worker-1 --since 2m | grep lca_checks
+FC_CODE_EMAILS_REDIS_URL="redis://passsport:passsport@localhost:6379" npm run fc:code-emails:enqueue
+docker logs pass-sport-worker-1 --since 2m | grep -E 'fc_code_emails|code mail'
 ```
 
-Attendu dans les logs : `N eligible_pending_lca row(s) to re-check` (0 si tout est passé
-par la base), `N confirmed row(s) awaiting their code mail` avec le **template de la
-situation** (`code_direct_aah`, `code_direct_boursier`, `code_indirect`). La confirmation
-LCA réelle exige `LCA_API_URL`/`LCA_API_KEY` d'intégration dans l'env du worker.
+Attendu dans les logs : `N confirmed row(s) awaiting their code mail` (les deux branches,
+base et code neuf), puis `N code mail(s) sent` avec le **template de la situation**
+(`code_direct_aah`, `code_direct_boursier`, `code_indirect`).
 
 ## Remise à zéro (pour rejouer)
 
@@ -128,7 +133,7 @@ psql "$LAMP_DATABASE_URL" -c "delete from beneficiaires where id_psp like '26-TE
 docker exec pass-sport-db-1 psql -U passsport -d passsport -c \
  "update eligibility_results set verdict='eligible_pending', pass_sport_code=null
    where pass_sport_code like '26-TEST-%';
-  delete from eligibility_history where action='psp.code_match_base';"
+  delete from eligibility_history where action in ('psp.code_match_base', 'psp.code_writeback');"
 rm -f data/2026/partners/franceconnect/fc_2026_*.csv
 ```
 

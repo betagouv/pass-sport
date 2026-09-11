@@ -70,29 +70,23 @@ The `pass-sport-qf-batch@` systemd unit is deployed by [deploy/ansible/](../depl
 but never enabled or auto-started — each partner's run is started by hand. See
 [deploy/ansible/README.md](../deploy/ansible/README.md) for provisioning the machine.
 
-### LCA pending checks (`lca:checks:enqueue`)
+### FC code emails (`fc:code-emails:enqueue`)
 
-Closes the loop the FranceConnect pipeline opens. That pipeline
-([data/2026/partners/franceconnect/](../data/2026/partners/franceconnect/)) mints a pass Sport code
-for every `eligible_pending` beneficiary, marks them `eligible_pending_lca`, and drops a CSV for
-injection into the LCA base. Until that injection lands, the site shows "en cours de traitement" and
-deliberately hides the code.
+Mails their code to the FranceConnect beneficiaries. The FranceConnect pipeline
+([data/2026/partners/franceconnect/](../data/2026/partners/franceconnect/)) sets every row it serves
+to `eligible_confirmed` with its code — a code found in the lamp beneficiary database
+(`writeback_confirmed.sql`) or a freshly minted one (`writeback_verdict.sql`) — which is what lets
+`BeneficiaryRecap` show the code and the PDF route serve the attestation straight away.
 
-The `eligible_pending_lca_checks` job is what notices it landed: for every row still carrying
-`eligible_pending_lca` it replays LCA `/search` then `/confirm`, and when the confirm answers the
-code we stored it flips the verdict to `eligible_confirmed` — which is what lets
-`BeneficiaryRecap` show the code and the PDF route serve the attestation.
+The `fc_code_emails` job sweeps every FranceConnect row sitting at `eligible_confirmed` with a code
+and no `email_kind` and sends the template its `situation` names. `email_kind is null` is what
+restricts it to the FranceConnect path: the parcours hors FranceConnect names its template at insert
+time and mails inline.
 
-A second pass then mails that code. It sweeps every FranceConnect row sitting at
-`eligible_confirmed` with a code and no `email_kind` — from either route, the loop above or the
-rapprochement with the lamp beneficiary database (`writeback_confirmed.sql`) — and sends the
-template its `situation` names. `email_kind is null` is what restricts it to the FranceConnect
-path: the parcours hors FranceConnect names its template at insert time and mails inline.
-
-Sending once is the whole difficulty, since the pass runs every 30 minutes over a table that keeps
-what it has already served. `email_attempts` is incremented **before** the POST, not after: Link
-Mobility answers a verdict in three of its four outcomes — accepted, rejected, HTTP error — and the
-row is marked from that answer, but the fourth (a timeout, a severed socket, a worker killed
+Sending once is the whole difficulty, since the pass runs after every pipeline run over a table that
+keeps what it has already served. `email_attempts` is incremented **before** the POST, not after:
+Link Mobility answers a verdict in three of its four outcomes — accepted, rejected, HTTP error — and
+the row is marked from that answer, but the fourth (a timeout, a severed socket, a worker killed
 mid-POST) leaves nothing to read. That counter is what bounds the resends in the only case where
 nothing else can.
 
@@ -105,64 +99,42 @@ and can still be moved (`/api/campaign/edit`) or cancelled (`/api/campaign/delet
 returned id.
 
 This script only enqueues; the pass itself runs in the worker
-([src/jobs/lca-checks.ts](src/jobs/lca-checks.ts)).
+([src/jobs/fc-code-emails.ts](src/jobs/fc-code-emails.ts)).
 
 ```bash
-pnpm lca:checks:enqueue                      # a nominal pass: every eligible row
-pnpm lca:checks:enqueue --dry-run --limit 5   # essai à blanc, no verdict moved
+pnpm fc:code-emails:enqueue                      # a nominal pass: every row awaiting its mail
+pnpm fc:code-emails:enqueue --dry-run --limit 5   # essai à blanc, nothing sent
 ```
 
 The job id is constant, so a second enqueue while a pass is queued or running is ignored rather
-than stacked, and the script exits 0 — that is the nominal case of a frequent cron.
+than stacked, and the script exits 0.
 
 Configuration, all optional, on the worker app:
 
 | var | default | role |
 |---|---|---|
-| `LCA_PENDING_CHECK_INSEE_CODE` | `99999` | the fictional commune `/search` is given, no row carrying a real one ([src/lca/insee.ts](src/lca/insee.ts)) |
-| `LCA_CHECKS_COOLDOWN_MIN` | `60` | minimum delay before a row is asked about again — what actually paces the load on LCA |
-| `LCA_CHECKS_MAX_ATTEMPTS` | `200` | rows past this are abandoned (≈ 8 days at the default cooldown) |
-| `LCA_CHECKS_MAX_DURATION_MIN` | `20` | wall-clock stop, to keep under the cron interval |
-| `LCA_CHECKS_MAX_CANDIDATES` | `3` | how many records a multi-result `/search` is confirmed against |
-| `LCA_CHECKS_DRY_RUN` | off | `1` plays both calls and journals them without moving a verdict |
-| `FC_CODE_EMAIL_MAX_ATTEMPTS` | `3` | code mails per row before it is abandoned — tighter than the LCA ceiling, each attempt risking a duplicate for a real recipient |
+| `FC_CODE_EMAIL_MAX_DURATION_MIN` | `20` | wall-clock stop, to keep under the interval between two pipeline runs |
+| `FC_CODE_EMAIL_DRY_RUN` | off | `1` selects and journals the rows without sending anything |
+| `FC_CODE_EMAIL_MAX_ATTEMPTS` | `3` | code mails per row before it is abandoned — each attempt risks a duplicate for a real recipient |
 | `FC_CODE_EMAIL_COOLDOWN_MIN` | `60` | minimum delay before a failed code mail is retried |
 | `FC_CODE_EMAIL_DELAY_MIN` | `30` | how far out the code mail is programmed on Link Mobility; `0` sends it on the spot |
 
-`LCA_API_URL` and `LCA_API_KEY` are required for a real pass. Locally, `LCA_MODE=mock` with
-`LCA_MOCK_CONFIRM_CODE` set to a seeded row's code exercises the happy path with no network.
-
 #### On the processing machine
 
-The cron goes through [src/scripts/run-lca-checks.sh](src/scripts/run-lca-checks.sh), which opens a
-Scalingo Redis tunnel (`scalingo db-tunnel SCALINGO_REDIS_URL`, port 10001) and runs the enqueuer
-against it. It reads `/etc/default/pass-sport-fc` like
-[run_fc_pipeline.sh](../data/2026/partners/franceconnect/run_fc_pipeline.sh), and holds a `flock`
-so a stuck tunnel cannot pile up SSH sessions.
-
-```bash
-SCALINGO_APP=<app> ./src/scripts/run-lca-checks.sh
-SCALINGO_APP=<app> ./src/scripts/run-lca-checks.sh --dry-run --limit 5
-```
-
-The `pass-sport-lca-checks` crontab entry is deployed by [deploy/ansible/](../deploy/ansible/) but
-posted DISABLED, and its schedule is a playbook variable — see
-[deploy/ansible/README.md](../deploy/ansible/README.md).
+There is no cron of its own: [run_fc_pipeline.sh](../data/2026/partners/franceconnect/run_fc_pipeline.sh)
+enqueues the job at the end of every successful run — even one with nobody new to serve, since the
+pass also retries the failed mails. It opens a second Scalingo tunnel for that, to Redis
+(`scalingo db-tunnel SCALINGO_REDIS_URL`, port `FC_REDIS_TUNNEL_PORT`, 10001 by default), and runs
+the enqueuer against it with `FC_CODE_EMAILS_REDIS_URL`. `FC_CODE_EMAILS_DRY_RUN=1` on the pipeline
+enqueues a dry-run pass.
 
 Reading a pass back, through the tunnel:
 
 ```sql
 select action, status, count(*)
   from eligibility_history
- where action like 'lca.pending_check.%' or action like 'lca_checks.%'
+ where action like 'fc_code_emails.%' or action like 'email.code_%'
  group by 1, 2 order by 1;
-```
-
-Rows LCA never ended up serving:
-
-```sql
-select count(*) from eligibility_results
- where verdict = 'eligible_pending_lca' and lca_check_attempts >= 200;
 ```
 
 ### Test email (`email:test`)

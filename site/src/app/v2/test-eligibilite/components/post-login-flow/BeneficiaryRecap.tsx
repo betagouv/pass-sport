@@ -46,7 +46,6 @@ const STATUS_DISPLAY_BY_VERDICT: Record<Verdict, StatusDisplay> = {
   eligible_confirmed: { severity: 'success', label: 'Eligible' },
   eligible_confirmed_but_email_not_matching: { severity: 'info', label: 'En cours de traitement' },
   eligible_pending: { severity: 'info', label: 'En cours de traitement' },
-  eligible_pending_lca: { severity: 'info', label: 'En cours de traitement' },
   not_eligible: { severity: 'error', label: 'Non-Eligible' },
 };
 
@@ -65,7 +64,6 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
       ) : (
         PENDING_CODE_MESSAGE
       );
-    case 'eligible_pending_lca':
     case 'eligible_pending':
       return PENDING_CODE_MESSAGE;
     case 'not_eligible':

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # Passage complet de la source FranceConnect, sans interaction : les 6 étapes décrites par
-# README.md, du tunnel Scalingo jusqu'au dépôt du CSV de production dans /nfs/run.
+# README.md, du tunnel Scalingo jusqu'au dépôt du CSV de production dans /nfs/run, puis la mise
+# en file du job fc_code_emails du worker, qui envoie leur code aux bénéficiaires confirmés.
 #
 #   crontab -e
 #   30 4 * * * /chemin/vers/data/2026/partners/franceconnect/run_fc_pipeline.sh
@@ -32,7 +33,9 @@
 #   LAMP_DB_HOST/PORT/USER/NAME   (défauts 127.0.0.1 / 55432 / u_passsport / passsport)
 #   FC_EXERCICE_ID                exercice de la campagne   (défaut 5)
 #   FC_PROD_DROP_DIR              dossier de dépôt          (défaut /nfs/run)
-#   FC_TUNNEL_PORT                port local du tunnel      (défaut 10000)
+#   FC_TUNNEL_PORT                port local du tunnel Postgres (défaut 10000)
+#   FC_REDIS_TUNNEL_PORT          port local du tunnel Redis    (défaut 10001)
+#   FC_CODE_EMAILS_DRY_RUN        1 : job courriel posé en dry-run, pour un passage d'essai
 #   FC_LOG_DIR                    journaux                  (défaut <ce dossier>/logs)
 #   FC_LOCK_FILE                  verrou anti-chevauchement (défaut /tmp/pass-sport-fc.lock)
 #   SCALINGO_SSH_IDENTITY         clé privée SSH pour db-tunnel (optionnel, voir plus bas)
@@ -40,7 +43,8 @@
 # Les chemins relatifs de data/.env sont résolus depuis data/, comme pour les notebooks.
 #
 # Prérequis sur la machine : `psql`, `scalingo` authentifié (SCALINGO_API_TOKEN) avec une clé
-# SSH sans phrase de passe, et le virtualenv data/.venv.
+# SSH sans phrase de passe, le virtualenv data/.venv, et pnpm avec `pnpm install` fait dans
+# worker/ (pour la mise en file du job courriel).
 #
 # db-tunnel monte sa propre connexion SSH, indépendante de l'authentification `scalingo` :
 # `scalingo login --ssh-identity` ne configure que la poignée de main de login, pas db-tunnel.
@@ -55,6 +59,7 @@ umask 027
 FC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="$(cd "$FC_DIR/../../.." && pwd)"
 PYTHON="$DATA_DIR/.venv/bin/python"
+WORKER_DIR="$(dirname "$DATA_DIR")/worker"
 
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { log "ERREUR : $*" >&2; exit 1; }
@@ -72,7 +77,8 @@ resolve_path() {
 CONFIG_VARS=(
   SCALINGO_APP SCALINGO_API_TOKEN SCALINGO_SSH_IDENTITY
   FC_EXPORT_PATHFILE_2026 DB_FC_EXPORT_2026 EXISTING_CODES_PATHFILE_2026
-  FC_PROD_DROP_DIR FC_TUNNEL_PORT FC_LOG_DIR FC_LOCK_FILE FC_EXERCICE_ID
+  FC_PROD_DROP_DIR FC_TUNNEL_PORT FC_REDIS_TUNNEL_PORT FC_CODE_EMAILS_DRY_RUN
+  FC_LOG_DIR FC_LOCK_FILE FC_EXERCICE_ID
   LAMP_DB_HOST LAMP_DB_PORT LAMP_DB_USER LAMP_DB_NAME LAMP_DB_PASSWORD
 )
 
@@ -105,6 +111,7 @@ done
 
 FC_PROD_DROP_DIR="${FC_PROD_DROP_DIR:-/nfs/run}"
 FC_TUNNEL_PORT="${FC_TUNNEL_PORT:-10000}"
+FC_REDIS_TUNNEL_PORT="${FC_REDIS_TUNNEL_PORT:-10001}"
 FC_LOG_DIR="${FC_LOG_DIR:-$FC_DIR/logs}"
 FC_LOCK_FILE="${FC_LOCK_FILE:-/tmp/pass-sport-fc.lock}"
 
@@ -119,7 +126,9 @@ for var in SCALINGO_APP FC_EXPORT_PATHFILE_2026 DB_FC_EXPORT_2026 EXISTING_CODES
 done
 command -v psql >/dev/null     || die "psql introuvable"
 command -v scalingo >/dev/null || die "scalingo introuvable"
+command -v pnpm >/dev/null     || die "pnpm introuvable"
 [[ -x "$PYTHON" ]]             || die "virtualenv absent : $PYTHON"
+[[ -d "$WORKER_DIR/node_modules" ]] || die "dépendances du worker absentes : pnpm install dans $WORKER_DIR"
 
 EXPORT_CSV="$(resolve_path "$FC_EXPORT_PATHFILE_2026")"
 CLEANED_CSV="$(resolve_path "$DB_FC_EXPORT_2026")"
@@ -190,40 +199,48 @@ if (( ${#backlog[@]} > 0 )); then
   die "dépôt précédent non consommé dans $FC_PROD_DROP_DIR : ${backlog[*]} — traitement suspendu tant qu'il n'a pas été retiré"
 fi
 
-# --- Tunnel Scalingo ---------------------------------------------------------------
+# --- Tunnels Scalingo --------------------------------------------------------------
+# Deux tunnels, sur deux ports : Postgres pour les étapes 1, 4 et 6, Redis pour la mise en file
+# du job courriel en fin de passage.
 
-TUNNEL_PID=""
+TUNNEL_PIDS=()
 cleanup() {
-  if [[ -n "$TUNNEL_PID" ]] && kill -0 "$TUNNEL_PID" 2>/dev/null; then
-    kill "$TUNNEL_PID" 2>/dev/null || true
-    wait "$TUNNEL_PID" 2>/dev/null || true
-    log "tunnel refermé"
-  fi
+  local pid
+  for pid in "${TUNNEL_PIDS[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      log "tunnel refermé"
+    fi
+  done
 }
 trap cleanup EXIT
 
-log "ouverture du tunnel vers $SCALINGO_APP, port local $FC_TUNNEL_PORT"
 # db-tunnel monte sa propre connexion SSH, indépendante de `scalingo login` : sans -i, elle
 # retombe sur l'agent SSH puis sur ~/.ssh/id_rsa, qui peut ne pas exister sur cette machine.
-tunnel_args=(--app "$SCALINGO_APP" db-tunnel -p "$FC_TUNNEL_PORT")
-[[ -n "${SCALINGO_SSH_IDENTITY:-}" ]] && tunnel_args+=(-i "$SCALINGO_SSH_IDENTITY")
-tunnel_args+=(SCALINGO_POSTGRESQL_URL)
+open_tunnel() {
+  local addon_url_var="$1" port="$2" pid
+  local tunnel_args=(--app "$SCALINGO_APP" db-tunnel -p "$port")
+  [[ -n "${SCALINGO_SSH_IDENTITY:-}" ]] && tunnel_args+=(-i "$SCALINGO_SSH_IDENTITY")
+  tunnel_args+=("$addon_url_var")
 
-scalingo "${tunnel_args[@]}" >>"$LOG_FILE" 2>&1 &
-TUNNEL_PID=$!
+  log "ouverture du tunnel $addon_url_var vers $SCALINGO_APP, port local $port"
+  scalingo "${tunnel_args[@]}" >>"$LOG_FILE" 2>&1 &
+  pid=$!
+  TUNNEL_PIDS+=("$pid")
 
-for _ in $(seq 1 30); do
-  if (exec 3<>"/dev/tcp/127.0.0.1/$FC_TUNNEL_PORT") 2>/dev/null; then
-    exec 3<&- 3>&-
-    break
-  fi
-  kill -0 "$TUNNEL_PID" 2>/dev/null || die "le tunnel s'est arrêté — voir le journal"
-  sleep 1
-done
-(exec 3<>"/dev/tcp/127.0.0.1/$FC_TUNNEL_PORT") 2>/dev/null \
-  || die "le port $FC_TUNNEL_PORT ne répond toujours pas"
-exec 3<&- 3>&-
-log "tunnel ouvert"
+  for _ in $(seq 1 30); do
+    if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+      log "tunnel ouvert"
+      return 0
+    fi
+    kill -0 "$pid" 2>/dev/null || die "le tunnel s'est arrêté — voir le journal"
+    sleep 1
+  done
+  die "le port $port ne répond toujours pas"
+}
+
+open_tunnel SCALINGO_POSTGRESQL_URL "$FC_TUNNEL_PORT"
 
 # L'URL de la base, hôte et port remplacés par ceux du tunnel, et les options de la requête
 # par le sslmode que le tunnel impose. Jamais journalisée : elle porte le mot de passe.
@@ -235,6 +252,39 @@ FC_DATABASE_URL="$(printf '%s' "$REMOTE_URL" \
 
 run_psql() { psql "$FC_DATABASE_URL" -v ON_ERROR_STOP=1 "$@"; }
 
+# --- Mise en file du job courriel --------------------------------------------------
+# Le worker Scalingo envoie leur code aux lignes FranceConnect confirmées et pas encore
+# prévenues (worker/src/jobs/fc-code-emails.ts) : ce passage-ci ne fait que poser le job. Posé à
+# chaque sortie réussie, même sans nouveau bénéficiaire, car il retente aussi les courriels
+# échoués. Ni sur une erreur, ni quand le verrou est pris : le passage suivant s'en charge.
+
+enqueue_code_emails() {
+  open_tunnel SCALINGO_REDIS_URL "$FC_REDIS_TUNNEL_PORT"
+
+  # Jamais journalisée : elle porte le mot de passe. rediss:// -> redis:// : le certificat de
+  # Scalingo ne correspond pas à 127.0.0.1, et le tunnel SSH chiffre déjà le transport.
+  local remote_redis_url
+  remote_redis_url="$(scalingo --app "$SCALINGO_APP" env-get SCALINGO_REDIS_URL)"
+  [[ -n "$remote_redis_url" ]] || die "SCALINGO_REDIS_URL introuvable sur $SCALINGO_APP"
+  FC_CODE_EMAILS_REDIS_URL="$(printf '%s' "$remote_redis_url" \
+    | sed -E "s#^rediss://#redis://#; s#@[^@/]+/#@127.0.0.1:$FC_REDIS_TUNNEL_PORT/#; s#@[^@/]+\$#@127.0.0.1:$FC_REDIS_TUNNEL_PORT#")"
+  export FC_CODE_EMAILS_REDIS_URL
+
+  local enqueue_args=()
+  [[ "${FC_CODE_EMAILS_DRY_RUN:-}" == "1" ]] && enqueue_args+=(--dry-run)
+
+  # Le pnpm du checkout, donc les mêmes versions bullmq/ioredis que celles que Scalingo
+  # construit : BullMQ encode les métadonnées de ses jobs dans Redis.
+  log "mise en file du job fc_code_emails${enqueue_args[*]:+ (${enqueue_args[*]})}"
+  (cd "$WORKER_DIR" && pnpm fc:code-emails:enqueue "${enqueue_args[@]}")
+}
+
+finish() {
+  enqueue_code_emails
+  log "=== passage terminé"
+  exit 0
+}
+
 # --- Étape 1 : extraction ----------------------------------------------------------
 
 log "étape 1/6 — extraction des eligible_pending -> $EXPORT_CSV"
@@ -245,7 +295,7 @@ run_psql -v out="$EXPORT_CSV" -f "$FC_DIR/export_eligible_pending.sql"
 # s'est refermée.
 if [[ "$(wc -l < "$EXPORT_CSV")" -le 1 ]]; then
   log "aucun bénéficiaire à traiter — rien à déposer"
-  exit 0
+  finish
 fi
 
 # --- Étape 2 : nettoyage -----------------------------------------------------------
@@ -297,7 +347,7 @@ log "mise à l'écart des appariés -> $UNMATCHED_CSV"
 # à déposer. Ce n'est pas une erreur — c'est même l'issue souhaitable.
 if [[ "$(wc -l < "$UNMATCHED_CSV")" -le 1 ]]; then
   log "tous les bénéficiaires étaient déjà en base — rien à déposer"
-  exit 0
+  finish
 fi
 
 # --- Étape 5 : codes ---------------------------------------------------------------
@@ -317,7 +367,7 @@ log "étape 6/6 — découpage du fichier daté"
 # Le `cd "$FC_DIR"` de l'étape 3 tient toujours : \copy s'exécute côté client et lit
 # fc_2026_writeback.csv relativement au dossier d'où psql est lancé.
 
-log "marquage en base (verdict eligible_pending_lca)"
+log "marquage en base (verdict eligible_confirmed)"
 run_psql -f writeback_verdict.sql
 
 # -Atq : une valeur nue, sans en-tête ni étiquettes de commande. `tail -n 1` par prudence,
@@ -350,4 +400,4 @@ mv "$temporaire" "$depose"
 rm -f "$PROD_CSV"
 
 log "déposé -> $depose ($nb_lignes bénéficiaire(s))"
-log "=== passage terminé"
+finish

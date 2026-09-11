@@ -10,11 +10,10 @@ export type ExistingApplication = {
 
 // Mirror of the worker's Verdict (worker/src/db/schema.ts).
 //
-// On the FranceConnect path only two of these are ever written: 'eligible_pending' when a route
-// is open, 'not_eligible' when none is. That path calls no LCA base any more, so it can never
-// confirm a code — every row carrying another value comes from the no-FranceConnect form, or
-// from the data/ pipeline ('eligible_pending_lca': a code has been minted for this person but
-// LCA does not serve it yet).
+// On the FranceConnect path the worker only ever writes two of these: 'eligible_pending' when a
+// route is open, 'not_eligible' when none is. That path calls no LCA base any more, so it can
+// never confirm a code itself — the data/ pipeline moves its rows on to 'eligible_confirmed' with
+// a code, and every other value comes from the no-FranceConnect form.
 //
 // 'eligible_confirmed_but_email_not_matching' is written by the no-FranceConnect form only, so it
 // never reaches application_results_by_sub, which is keyed on a FranceConnect sub.
@@ -22,7 +21,6 @@ export type Verdict =
   | 'eligible_confirmed'
   | 'eligible_confirmed_but_email_not_matching'
   | 'eligible_pending'
-  | 'eligible_pending_lca'
   | 'not_eligible';
 
 export type BeneficiaryResult = {
@@ -36,9 +34,8 @@ export type BeneficiaryResult = {
   birthdate: string | null;
   gender: 'male' | 'female' | null;
   verdict: Verdict;
-  // Set on 'eligible_confirmed' and on 'eligible_pending_lca' (a minted code LCA does not
-  // serve yet). Null elsewhere, and on rows written before the code was stored at all —
-  // those users only ever got it by email.
+  // Set on 'eligible_confirmed'. Null elsewhere, and on rows written before the code was stored
+  // at all — those users only ever got it by email.
   code: string | null;
 };
 

@@ -1,13 +1,13 @@
 -- Marque les bénéficiaires que le rapprochement a RETROUVÉS dans la base bénéficiaires.
 --
--- Pendant de writeback_verdict.sql, pour l'autre issue du rapprochement : là où celui-ci
--- pose 'eligible_pending_lca' sur les gens à qui un code vient d'être fabriqué, celui-ci
--- pose 'eligible_confirmed' sur ceux qui en avaient déjà un — match_beneficiaires.sql a
--- retrouvé leur ligne et son id_psp.
+-- Pendant de writeback_verdict.sql, pour l'autre issue du rapprochement : les deux posent
+-- 'eligible_confirmed' et le code, celui-ci sur les gens qui en avaient déjà un —
+-- match_beneficiaires.sql a retrouvé leur ligne et son id_psp —, celui-là sur ceux à qui un
+-- code vient d'être fabriqué. Seule l'action d'historique les distingue.
 --
 -- Le parcours FranceConnect n'appelle plus LCA et ne peut donc plus produire ce verdict
--- lui-même : comme 'eligible_pending_lca', il est désormais posé depuis data/. C'est
--- documenté dans worker/src/db/schema.ts, à côté de la définition de la colonne.
+-- lui-même : il est désormais posé depuis data/. C'est documenté dans
+-- worker/src/db/schema.ts, à côté de la définition de la colonne.
 --
 -- Usage, à travers le tunnel Scalingo, DEPUIS CE DOSSIER :
 --
@@ -43,8 +43,7 @@ with marked as (
     from fc_confirmes c
    where r.id = c.eligibility_result_id
      -- Ce qui rend le script rejouable, et ce qui protège d'un écrasement : seule une ligne
-     -- encore en attente est marquée. Une ligne déjà passée à 'eligible_pending_lca' porte
-     -- un code FABRIQUÉ pour elle, qu'il ne faut surtout pas remplacer par celui-ci.
+     -- encore en attente est marquée, jamais une ligne qui porte déjà un code.
      and r.verdict = 'eligible_pending'
   returning r.id, r.job_id, r.allocataire_fc_sub, r.source, r.pass_sport_code
 )

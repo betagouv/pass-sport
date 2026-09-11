@@ -21,6 +21,9 @@
 # Tag `fc-cron`, distinct de ce réglage : `--skip-tags fc-cron` saute la tâche entièrement
 # (rien posé, rien à retirer), là où pass_sport_fc_cron_enabled ne fait que commenter une
 # entrée déjà posée. Sert à reporter tout le volet FC — le reste du provisioning tourne.
+#
+# Le passage finit en posant le job BullMQ fc_code_emails, que le worker Scalingo exécute
+# (worker/src/jobs/fc-code-emails.ts) : aucune autre cron n'est nécessaire pour les courriels.
 - name: Passage FranceConnect toutes les 6 heures
   become: true
   ansible.builtin.cron:
@@ -32,27 +35,15 @@
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]
 
-# Referme la boucle des codes fabriqués par la cron ci-dessus : elle marque les bénéficiaires en
-# 'eligible_pending_lca' et dépose un CSV, un humain l'injecte chez LCA, et ce passage-ci
-# redemande à LCA si elle les sert enfin — auquel cas le verdict passe à 'eligible_confirmed' et
-# le site affiche le code. Rien du traitement n'a lieu sur cette machine : le script pose un job
-# BullMQ et le worker Scalingo fait le reste (worker/src/jobs/lca-checks.ts).
-#
-# Horaire paramétré, pas en dur : la bonne cadence dépend du délai réel d'injection chez LCA, qui
-# ne se connaîtra qu'en production. `10,40` et non `*/30` pour éviter la minute 30, où
-# pass-sport-fc monte son propre tunnel Scalingo quatre fois par jour — les deux crons se
-# croiseraient sinon, et la seconde échouerait.
-#
-# Posée DÉSACTIVÉE comme pass-sport-fc, même procédure d'activation (voir lamp-setup.yml).
-- name: Vérification des eligible_pending_lca (toutes les 30 minutes par défaut)
+# Retire l'ancienne entrée qui appelait worker/src/scripts/run-lca-checks.sh, supprimé depuis
+# que run_fc_pipeline.sh pose lui-même le job courriel : laissée en place, elle échouerait
+# toutes les 30 minutes. Sans effet sur une machine qui ne l'a jamais eue.
+- name: Retrait de l'ancienne cron pass-sport-lca-checks
   become: true
   ansible.builtin.cron:
     name: pass-sport-lca-checks
     user: "{{ pass_sport_user }}"
-    minute: "{{ pass_sport_lca_checks_cron_minute }}"
-    hour: "{{ pass_sport_lca_checks_cron_hour }}"
-    job: "{{ pass_sport_repo }}/worker/src/scripts/run-lca-checks.sh"
-    disabled: "{{ not pass_sport_lca_checks_cron_enabled }}"
+    state: absent
   tags: [lca-checks-cron]
 
 - name: Unité systemd qf-batch (templatée par partenaire)

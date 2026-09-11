@@ -202,26 +202,6 @@ describe('BeneficiaryRecap', () => {
     expect(notEligibleBadge).toHaveClass('fr-badge--error');
   });
 
-  it('does not show the code for an eligible_pending_lca beneficiary even when one already exists', () => {
-    const { container } = renderRecap([
-      beneficiary({
-        source: 'enfant',
-        givenName: 'Balthazine',
-        verdict: 'eligible_pending_lca',
-        code: '24-WOLX-TREP',
-      }),
-    ]);
-
-    expect(screen.getByText('Balthazine')).toBeInTheDocument();
-    expect(screen.queryByText('24-WOLX-TREP')).not.toBeInTheDocument();
-    expect(screen.queryByText(/24-WOLX-TREP/)).not.toBeInTheDocument();
-
-    const badges = statusBadges(container);
-    expect(badges).toHaveLength(1);
-    expect(badges[0]).toHaveClass('fr-badge--info');
-    expect(badges[0]).toHaveTextContent('En cours de traitement');
-  });
-
   it('falls back to "Votre enfant" when a child has no given name', () => {
     renderRecap([beneficiary({ source: 'enfant', givenName: null })]);
 

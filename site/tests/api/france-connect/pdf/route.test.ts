@@ -96,18 +96,6 @@ describe('GET /api/france-connect/pdf', () => {
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
   });
 
-  it('never surfaces an eligible_pending_lca code, even though the column may already hold one', async () => {
-    authenticate();
-    mockedFindResultsForSub.mockResolvedValue([
-      result({ verdict: 'eligible_pending_lca', code: '24-WOLX-TREP' }),
-    ]);
-
-    const response = await GET(request());
-
-    expect(response.status).toBe(404);
-    expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
-  });
-
   it('ignores an enfant row when no code is requested, even one with a confirmed code', async () => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([
@@ -209,7 +197,7 @@ describe('GET /api/france-connect/pdf', () => {
   it('builds the PDF from the session identity and the self code, never from request input', async () => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([
-      result({ verdict: 'eligible_pending_lca', code: '24-WOLX-TREP' }),
+      result({ verdict: 'eligible_pending', code: null }),
       result({ code: '24-ZORV-QYXA' }),
     ]);
 

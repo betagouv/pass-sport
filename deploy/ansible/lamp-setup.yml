@@ -21,21 +21,17 @@
 # (systemd-journal) et écrire les fichiers de campagne (setgid + umask 007). Il ne peut PAS
 # faire `enable`/`disable` — voir templates/pass-sport-sudoers.j2 pour la raison.
 #
-# Ni qf-batch ni les deux crons ne démarrent tout seuls à l'issue de ce playbook :
+# Ni qf-batch ni la cron FranceConnect ne démarrent tout seuls à l'issue de ce playbook :
 # - l'unité systemd qf-batch@ est déposée mais jamais activée (`systemctl enable`) ni
 #   démarrée — chaque passage se déclenche à la main, `systemctl start qf-batch@<partenaire>` ;
 # - l'entrée crontab de FranceConnect est posée DÉSACTIVÉE (commentée) par défaut : le
 #   premier passage automatique n'a lieu qu'après l'avoir explicitement activée, une fois que
 #   l'empreinte SSH Scalingo a été amorcée à la main (voir deploy/ansible/README.md) et qu'un
-#   essai à blanc (FC_PROD_DROP_DIR détourné) a été validé ;
-# - l'entrée crontab pass-sport-lca-checks, qui referme la boucle en redemandant à LCA si elle
-#   sert enfin les codes déposés, est posée DÉSACTIVÉE selon la même règle et attend le même
-#   essai à blanc (LCA_CHECKS_DRY_RUN=1 côté worker Scalingo).
+#   essai à blanc (FC_PROD_DROP_DIR détourné, FC_CODE_EMAILS_DRY_RUN=1) a été validé.
 #
-# Ces entrées crontab peuvent elles-mêmes être sautées en entier (pas seulement posées
-# désactivées) avec `--skip-tags fc-cron` et `--skip-tags lca-checks-cron` — pour rejouer le reste
-# du provisioning, CLI Scalingo comprise, avant que le volet concerné (jeton, empreinte SSH) soit
-# prêt.
+# Cette entrée crontab peut elle-même être sautée en entier (pas seulement posée désactivée)
+# avec `--skip-tags fc-cron` — pour rejouer le reste du provisioning, CLI Scalingo comprise,
+# avant que le volet FC (jeton, empreinte SSH) soit prêt.
 #
 # Les tâches sont réparties dans tasks/ (un fichier par section, importé ci-dessous dans
 # l'ordre de jeu) : ce fichier ne sert que de sommaire et de définition des variables. Chaque
@@ -78,16 +74,6 @@
     # avec `--extra-vars pass_sport_fc_cron_enabled=true` une fois les prérequis validés
     # (empreinte SSH amorcée, essai à blanc réussi).
     pass_sport_fc_cron_enabled: false
-    # Même interrupteur pour la cron qui referme la boucle : elle redemande à LCA si elle sert
-    # enfin les codes déposés par le passage FC (worker/src/jobs/lca-checks.ts). Activer avec
-    # `--extra-vars pass_sport_lca_checks_cron_enabled=true`.
-    pass_sport_lca_checks_cron_enabled: false
-    # Toutes les 30 minutes. Horaire paramétré et non figé dans le script : la bonne cadence
-    # dépend du délai réel d'injection chez LCA, qui ne se connaîtra qu'en production —
-    # `--extra-vars pass_sport_lca_checks_cron_minute='*/10'`. Voir tasks/ordonnancement.yml
-    # pour la raison du décalage avec pass-sport-fc.
-    pass_sport_lca_checks_cron_minute: '10,40'
-    pass_sport_lca_checks_cron_hour: '*'
     # Chemin, sous le home de passsport, vers la clé privée que `db-tunnel` doit utiliser —
     # `run_fc_pipeline.sh` retombe sinon sur l'agent SSH puis sur ~/.ssh/id_rsa, qui n'a
     # aucune raison d'exister sous ce compte. Vide par défaut : le playbook ne génère ni ne

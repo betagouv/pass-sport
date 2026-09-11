@@ -237,32 +237,6 @@ test.describe('BeneficiaryRecap', () => {
     await expect(notEligibleBadge).toHaveClass(/fr-badge--error/);
   });
 
-  test('does not show the code for an eligible_pending_lca beneficiary even when one already exists', async ({
-    mount,
-  }) => {
-    const component = await mount(
-      <BeneficiaryRecap
-        beneficiaries={[
-          beneficiary({
-            source: 'enfant',
-            givenName: 'Balthazine',
-            verdict: 'eligible_pending_lca',
-            code: '24-WOLX-TREP',
-          }),
-        ]}
-        allocataireIdentity={ALLOCATAIRE_IDENTITY}
-      />,
-    );
-
-    await expect(component.getByText('Balthazine')).toBeVisible();
-    await expect(component.getByText('24-WOLX-TREP')).toHaveCount(0);
-
-    const badges = component.locator('.fr-badge');
-    await expect(badges).toHaveCount(1);
-    await expect(badges).toHaveClass(/fr-badge--info/);
-    await expect(badges).toHaveText('En cours de traitement');
-  });
-
   test('falls back to "Votre enfant" when a child has no given name', async ({ mount }) => {
     const component = await mount(
       <BeneficiaryRecap

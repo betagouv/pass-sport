@@ -188,8 +188,8 @@ export async function processEligibilityJob(
           verdict: outcomes[index].verdict,
           passSportCode: null,
           // No outcome email is sent HERE — the code does not exist yet. The template is named
-          // later, by the second pass of eligible_pending_lca_checks, and a null email_kind is
-          // exactly how that pass recognises a row of this path as never mailed.
+          // later, by the fc_code_emails job, and a null email_kind is exactly how that job
+          // recognises a row of this path as never mailed.
           emailKind: null,
           emailSent: false,
           email: to,

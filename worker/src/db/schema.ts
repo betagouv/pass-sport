@@ -14,21 +14,18 @@ import type { OutcomeEmailKind } from "../email/notify";
 import type { PivotIdentity, ResultCaisse, ResultSituation } from "../eligibility/types";
 
 // The verdict as the USAGER should read it. The verdict column below is where each
-// value is documented. 'eligible_pending_lca' is never produced by the worker — the code
-// generation under data/ writes it — but it is declared so the type stays the exact set
-// of values the column can hold.
+// value is documented.
 //
 // The WORKER only ever writes 'eligible_pending' or 'not_assessed' on the FranceConnect
 // path: it no longer calls LCA, so it can neither hand out a code nor pronounce a refusal.
-// Those rows are not final, though — the code generation under data/ moves them on, to
-// 'eligible_pending_lca' when it mints a code, or to 'eligible_confirmed' when it finds the
-// person already carrying one in the lamp beneficiary database. Every remaining value
-// belongs to the parcours hors FranceConnect.
+// Those rows are not final, though — the code generation under data/ moves them on to
+// 'eligible_confirmed' with a code, whether it mints one or finds the person already carrying
+// one in the lamp beneficiary database. Every remaining value belongs to the parcours hors
+// FranceConnect.
 export type Verdict =
   | "eligible_confirmed"
   | "eligible_confirmed_but_email_not_matching"
   | "eligible_pending"
-  | "eligible_pending_lca"
   | "not_eligible";
 
 /**
@@ -74,17 +71,9 @@ export const eligibilityResults = pgTable(
     residenceInsee: text("residence_insee"),
     passSportCode: text("pass_sport_code"),
 
-    // 'confirmed' | 'not_found' | 'error'. Written by the parcours hors FranceConnect, and by the
-    // eligible_pending_lca_checks job (jobs/lca-checks.ts) once it has asked LCA about a code the
-    // data/ pipeline minted. 'not_applicable' is the initial value of a FranceConnect row: that
-    // path itself never calls LCA, so nothing had been asked yet.
+    // 'confirmed' | 'not_found' | 'error', written by the parcours hors FranceConnect.
+    // 'not_applicable' on every FranceConnect row: that path never calls LCA.
     lcaStatus: text("lca_status").notNull(),
-
-    // How many times eligible_pending_lca_checks has asked LCA about this row. Bounds both the
-    // volume of LCA calls and the growth of eligibility_history, which that job is the first thing
-    // here to write to in a LOOP. 0 means never asked, which is what gets a freshly marked row
-    // checked without waiting out the cooldown.
-    lcaCheckAttempts: integer("lca_check_attempts").notNull().default(0),
 
     // The verdict as the USAGER should read it, and the only column the site is granted.
     // Deliberately not email_kind: that one describes what was SENT and is null whenever
@@ -93,14 +82,14 @@ export const eligibilityResults = pgTable(
     //   'eligible_confirmed'   — le bénéficiaire a déjà un code. Sur le parcours hors
     //                            FranceConnect, LCA le sert et un code part par email ;
     //                            sur le parcours FranceConnect, ce verdict est posé par
-    //                            data/ — JAMAIS par le worker, comme 'eligible_pending_lca'
-    //                            — quand le rapprochement avec la base bénéficiaires du
-    //                            lamp a retrouvé la personne et son id_psp
-    //                            (data/2026/partners/franceconnect/writeback_confirmed.sql).
+    //                            data/ — JAMAIS par le worker —, avec le code, quand le
+    //                            rapprochement avec la base bénéficiaires du lamp a retrouvé
+    //                            la personne (writeback_confirmed.sql) ou quand un code vient
+    //                            de lui être fabriqué (writeback_verdict.sql, tous deux dans
+    //                            data/2026/partners/franceconnect/).
     //                            Dans ce second cas le courriel ne part pas avec le verdict : il
-    //                            est envoyé plus tard par la seconde passe de
-    //                            eligible_pending_lca_checks (jobs/lca-checks.ts), qui ramasse
-    //                            les lignes FranceConnect encore à email_kind NULL.
+    //                            est envoyé par le job fc_code_emails (jobs/fc-code-emails.ts),
+    //                            qui ramasse les lignes FranceConnect encore à email_kind NULL.
     //   'eligible_confirmed_but_email_not_matching'
     //                          — LCA a le bénéficiaire et un code lui a été servi, mais
     //                            l'adresse saisie au formulaire n'est pas celle que LCA
@@ -111,17 +100,6 @@ export const eligibilityResults = pgTable(
     //                            n'est servi ici : le parcours FranceConnect n'appelle plus
     //                            LCA, et c'est la génération côté data/ qui en fabriquera un.
     //                            SEUL verdict positif du parcours FranceConnect.
-    //   'eligible_pending_lca' — un code a été fabriqué pour cette personne et part vers
-    //                            LCA, qui ne le sert pas encore. Jamais ÉCRIT par le worker :
-    //                            il est posé par la génération de codes côté data/, qui
-    //                            ramasse les 'eligible_pending' et les marque une fois le
-    //                            CSV produit (data/2026/partners/franceconnect/). C'est ce
-    //                            qui rend ce ramassage rejouable — sans lui, un second
-    //                            passage refabriquerait un code aux mêmes personnes.
-    //                            État transitoire : le job eligible_pending_lca_checks
-    //                            (jobs/lca-checks.ts) rejoue /search puis /confirm sur ces
-    //                            lignes et les fait passer à 'eligible_confirmed' dès que LCA
-    //                            sert le code.
     //   'not_eligible'         — aucune route n'est ouverte, et c'est un refus prononçable.
     //                            Deux chemins y mènent : LCA ne connaît pas le bénéficiaire
     //                            (parcours hors FranceConnect), ou ni les réponses d'API
@@ -214,12 +192,9 @@ export const eligibilityResults = pgTable(
   },
   (t) => [
     index("eligibility_results_allocataire_fc_sub_idx").on(t.allocataireFcSub),
-    // Covers the whole WHERE and ORDER BY of the eligible_pending_lca_checks selection.
-    index("eligibility_results_pending_lca_idx")
-      .on(t.lcaCheckAttempts, t.updatedAt)
-      .where(sql`${t.verdict} = 'eligible_pending_lca'`),
-    // Same shape for the code-mail sweep. email_kind IS NULL is what restricts it to the
-    // FranceConnect path: the other one always names its template at insert time.
+    // Covers the whole WHERE and ORDER BY of the code-mail sweep. email_kind IS NULL is what
+    // restricts it to the FranceConnect path: the other one always names its template at insert
+    // time.
     index("eligibility_results_code_email_idx")
       .on(t.emailAttempts, t.updatedAt)
       .where(
@@ -402,16 +377,12 @@ export const eligibilityHistory = pgTable(
     // | 'email.digest' — RETIRED, written before the per-beneficiary split. This table is
     //   never purged, so a query over email events still has to match all four.
     // | 'results.persisted' | 'results.skipped'
-    // | 'psp.code_writeback' — written by data/, like the 'eligible_pending_lca' verdict
-    // The eligible_pending_lca_checks job (jobs/lca-checks.ts), under its own prefixes so a query
-    // can separate it from the LCA calls the site makes:
-    // | 'lca.pending_check.search' | 'lca.pending_check.confirm'
-    // | 'lca_checks.run_started' | 'lca_checks.run_finished'
-    // | 'lca_checks.confirmed' — verdict moved on to 'eligible_confirmed'
-    // | 'lca_checks.still_pending' — LCA does not serve this code yet
-    // | 'lca_checks.code_mismatch' — LCA answered a code other than the one stored
-    // | 'lca_checks.unprocessable' | 'lca_checks.skipped'
-    // Its second pass, which mails the code to the FranceConnect beneficiaries who now hold one:
+    // | 'psp.code_writeback' — written by data/: a code was minted for this beneficiary
+    // | 'lca.pending_check.search' | 'lca.pending_check.confirm' | 'lca_checks.*' — RETIRED with
+    //   the job that re-asked LCA about minted codes, before they were confirmed on the spot.
+    // The fc_code_emails job (jobs/fc-code-emails.ts), which mails the code to the FranceConnect
+    // beneficiaries who now hold one:
+    // | 'fc_code_emails.run_started' | 'fc_code_emails.run_finished'
     // | 'fc_code_emails.skipped' — no recipient, or a 'self' row whose situation is unknown
     // | 'fc_code_emails.terminal' — Link Mobility named a rejection no resend will ever fix
     //   The send itself is recorded under the same 'email.code_*' actions as everywhere else.

@@ -13,29 +13,22 @@ import {
 // Worker code under test — imported from src (extensionless; Vitest/Vite resolve
 // the .ts sources directly, matching the tsconfig "bundler" moduleResolution).
 import {
+  FC_CODE_EMAILS_JOB_ID,
+  FC_CODE_EMAILS_JOB_NAME,
+  FC_CODE_EMAILS_QUEUE_NAME,
   FRANCE_CONNECT_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
-  LCA_CHECKS_JOB_ID,
-  LCA_CHECKS_JOB_NAME,
-  LCA_CHECKS_QUEUE_NAME,
   LCA_JOB_NAME,
   LCA_QUEUE_NAME,
   retryBackoff,
 } from "../../src/queues";
 import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
-import { processLcaChecksJob, type LcaChecksJobData } from "../../src/jobs/lca-checks";
+import { processFcCodeEmailsJob, type FcCodeEmailsJobData } from "../../src/jobs/fc-code-emails";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
 import { runMigrations } from "../../src/db/migrate";
 import { eligibilityResults, type Verdict } from "../../src/db/schema";
 import type { OutcomeEmailKind } from "../../src/email/notify";
-import type { LcaClient, LcaResponse } from "../../src/lca/client";
-import type {
-  ConfirmItem,
-  ConfirmPayload,
-  SearchItem,
-  SearchPayload,
-} from "../../src/lca/types";
 import type {
   EligibilityJobData,
   EligibilityJobPayload,
@@ -234,10 +227,6 @@ class FakeApiClient implements ApiParticulierClient {
   }
 }
 
-// The address LCA holds for the allocataire on the parcours hors FranceConnect, distinct from
-// the FranceConnect one so a test can tell which of the two an email went to.
-export const LCA_COURRIEL = "allocataire-lca@example.test";
-
 // Distinct on purpose: `message=<id>` is the only evidence of which mail went out.
 export const TEMPLATE_IDS = {
   not_eligible_hors_fc: 1004,
@@ -283,108 +272,15 @@ export const parseSentEmail = (raw: string): SentEmail => {
   };
 };
 
-/**
- * Deterministic LCA client for the eligible_pending_lca_checks suite. `confirmCode` is what picks
- * the outcome: the stored code confirms the row, another code is a mismatch, null means LCA does
- * not serve it yet. The `HttpStatus` knobs take a function so a test can fail ONE row of a pass
- * and watch the others settle.
- */
-class FakeLcaClient implements LcaClient {
-  confirmCode: string | null | ((payload: ConfirmPayload) => string | null) = null;
-
-  searchHttpStatus: number | null = null;
-  confirmHttpStatus: number | null | ((payload: ConfirmPayload) => number | null) = null;
-
-  // >1 exercises the candidate loop.
-  searchResultCount = 1;
-
-  readonly noMatchPrefix = "nomatch";
-
-  readonly searchPayloads: SearchPayload[] = [];
-  readonly confirmPayloads: ConfirmPayload[] = [];
-
-  async search(payload: SearchPayload): Promise<LcaResponse<SearchItem[]>> {
-    this.searchPayloads.push(payload);
-
-    if (this.searchHttpStatus) {
-      return {
-        httpStatus: this.searchHttpStatus,
-        body: {
-          message: `LCA /search failed: ${this.searchHttpStatus}`,
-          httpStatus: this.searchHttpStatus,
-        },
-      };
-    }
-
-    if (payload.beneficiaryLastname.toLowerCase().startsWith(this.noMatchPrefix)) {
-      return { httpStatus: 200, body: [] };
-    }
-
-    const items: SearchItem[] = Array.from({ length: this.searchResultCount }, (_, index) => ({
-      id: index + 1,
-      nom: payload.beneficiaryLastname,
-      prenom: payload.beneficiaryFirstname,
-      date_naissance: payload.beneficiaryBirthDate,
-      situation: "jeune",
-      organisme: "CAF",
-      matricule: "SECRET-MATRICULE",
-      hasMatricule: true,
-    }));
-
-    return { httpStatus: 200, body: items };
-  }
-
-  async confirm(payload: ConfirmPayload): Promise<LcaResponse<ConfirmItem[]>> {
-    this.confirmPayloads.push(payload);
-
-    const failWith =
-      typeof this.confirmHttpStatus === "function"
-        ? this.confirmHttpStatus(payload)
-        : this.confirmHttpStatus;
-
-    if (failWith) {
-      return {
-        httpStatus: failWith,
-        body: { message: `LCA /confirm failed: ${failWith}`, httpStatus: failWith },
-      };
-    }
-
-    const code =
-      typeof this.confirmCode === "function" ? this.confirmCode(payload) : this.confirmCode;
-
-    if (!code) return { httpStatus: 200, body: [] };
-
-    return {
-      httpStatus: 200,
-      body: [
-        {
-          id: Number(payload.id),
-          id_psp: code,
-          nom: payload.recipientLastname ?? "",
-          prenom: payload.recipientFirstname ?? "",
-          date_naissance: payload.recipientBirthDate ?? "",
-          situation: payload.situation,
-          organisme: payload.organisme,
-          allocataire: { matricule: "SECRET-MATRICULE", courriel: LCA_COURRIEL },
-          // Present so a test can prove withoutPdf drops it rather than pass vacuously.
-          pdf_base_64: "JVBERi0xLjQK-FAKE-ATTESTATION",
-        },
-      ],
-    };
-  }
-}
-
-export type PendingLcaSeed = {
+export type ConfirmedSeed = {
   sub: string;
   code: string;
   source?: "self" | "enfant";
   lastname?: string;
   firstname?: string;
   birthdate?: string;
-  attempts?: number;
-  // What the code-mail sweep reads. 'eligible_confirmed' is the state data/writeback_confirmed.sql
-  // leaves behind, the one row shape the pending_lca loop never produces itself. A non-null
-  // emailKind is what a parcours hors FranceConnect row looks like, and the sweep must ignore it.
+  // What the code-mail sweep reads. A non-null emailKind is what a parcours hors FranceConnect
+  // row looks like, and the sweep must ignore it.
   verdict?: Verdict;
   situation?: ResultSituation;
   emailKind?: OutcomeEmailKind;
@@ -407,17 +303,15 @@ export type Stack = {
   enqueueLcaAndWait: (data: LcaJobData, jobId?: string) => Promise<unknown>;
   enqueueLcaAndWaitFailure: (data: LcaJobData) => Promise<string>;
 
-  // The eligible_pending_lca_checks pass, on its own queue and worker as in production.
-  lcaChecksQueue: Queue<LcaChecksJobData>;
-  // Inserts a row exactly as data/writeback_verdict.sql leaves it. Returns its id.
-  seedPendingLcaRow: (seed: PendingLcaSeed) => Promise<string>;
-  enqueueLcaChecksAndWait: (data?: Partial<LcaChecksJobData>, jobId?: string) => Promise<unknown>;
-  setLcaConfirmCode: (code: FakeLcaClient["confirmCode"]) => void;
-  setLcaSearchHttpStatus: (status: number | null) => void;
-  setLcaConfirmHttpStatus: (status: FakeLcaClient["confirmHttpStatus"]) => void;
-  setLcaSearchResultCount: (count: number) => void;
-  lcaSearchPayloads: () => SearchPayload[];
-  lcaConfirmPayloads: () => ConfirmPayload[];
+  // The fc_code_emails pass, on its own queue and worker as in production.
+  fcCodeEmailsQueue: Queue<FcCodeEmailsJobData>;
+  // Inserts a row exactly as the data/ write-backs leave it: confirmed, holding a code, never
+  // mailed. Returns its id.
+  seedConfirmedRow: (seed: ConfirmedSeed) => Promise<string>;
+  enqueueFcCodeEmailsAndWait: (
+    data?: Partial<FcCodeEmailsJobData>,
+    jobId?: string,
+  ) => Promise<unknown>;
 
   // Raw form bodies received by the fake Link Mobility server, newest last.
   sentEmails: () => string[];
@@ -618,22 +512,19 @@ export async function startStack(
     return (await waitFor(lcaQueue, job.id!, "failed")) as string;
   };
 
-  const lcaClient = new FakeLcaClient();
-
-  const lcaChecksQueue = new Queue<LcaChecksJobData>(LCA_CHECKS_QUEUE_NAME, {
+  const fcCodeEmailsQueue = new Queue<FcCodeEmailsJobData>(FC_CODE_EMAILS_QUEUE_NAME, {
     connection: conn(),
   });
-  await lcaChecksQueue.setGlobalConcurrency(1);
+  await fcCodeEmailsQueue.setGlobalConcurrency(1);
 
-  const lcaChecksWorker = new Worker<LcaChecksJobData>(
-    LCA_CHECKS_QUEUE_NAME,
-    async (job) =>
-      processLcaChecksJob(job, job.data, { db, getLca: async () => lcaClient }),
+  const fcCodeEmailsWorker = new Worker<FcCodeEmailsJobData>(
+    FC_CODE_EMAILS_QUEUE_NAME,
+    async (job) => processFcCodeEmailsJob(job, job.data, { db }),
     { connection: conn(), settings: { backoffStrategy: retryBackoff } },
   );
-  await lcaChecksWorker.waitUntilReady();
+  await fcCodeEmailsWorker.waitUntilReady();
 
-  const seedPendingLcaRow = async (seed: PendingLcaSeed): Promise<string> => {
+  const seedConfirmedRow = async (seed: ConfirmedSeed): Promise<string> => {
     const source = seed.source ?? "self";
     const identity = {
       family_name: seed.lastname ?? "OSTRENYA",
@@ -655,9 +546,8 @@ export async function startStack(
         isFranceConnected: true,
         residenceInsee: null,
         lcaStatus: "not_applicable",
-        verdict: seed.verdict ?? "eligible_pending_lca",
+        verdict: seed.verdict ?? "eligible_confirmed",
         passSportCode: seed.code,
-        lcaCheckAttempts: seed.attempts ?? 0,
         situation: seed.situation ?? null,
         emailKind: seed.emailKind ?? null,
         emailAttempts: seed.emailAttempts ?? 0,
@@ -669,12 +559,12 @@ export async function startStack(
     return inserted.id;
   };
 
-  const enqueueLcaChecksAndWait = async (
-    data: Partial<LcaChecksJobData> = {},
-    jobId: string = LCA_CHECKS_JOB_ID,
+  const enqueueFcCodeEmailsAndWait = async (
+    data: Partial<FcCodeEmailsJobData> = {},
+    jobId: string = FC_CODE_EMAILS_JOB_ID,
   ): Promise<unknown> => {
-    const job = await lcaChecksQueue.add(
-      LCA_CHECKS_JOB_NAME,
+    const job = await fcCodeEmailsQueue.add(
+      FC_CODE_EMAILS_JOB_NAME,
       { enqueuedAt: new Date().toISOString(), reason: "manual", ...data },
       // removeOnComplete as in production: the id is constant, so a retained job blocks every
       // later pass.
@@ -683,7 +573,7 @@ export async function startStack(
     const id = job.id!;
 
     for (let i = 0; i < 200; i++) {
-      const fresh = await lcaChecksQueue.getJob(id);
+      const fresh = await fcCodeEmailsQueue.getJob(id);
       // A finished job is gone rather than 'completed', so its absence is the success signal.
       if (!fresh) return undefined;
       const state = await fresh.getState();
@@ -703,8 +593,8 @@ export async function startStack(
     await queue.close();
     await lcaWorker.close();
     await lcaQueue.close();
-    await lcaChecksWorker.close();
-    await lcaChecksQueue.close();
+    await fcCodeEmailsWorker.close();
+    await fcCodeEmailsQueue.close();
     await Promise.all(connections.map((c) => c.quit().catch(() => {})));
     await pool.end();
     await new Promise<void>((resolve) => emailServer.close(() => resolve()));
@@ -722,23 +612,9 @@ export async function startStack(
     lcaQueue,
     enqueueLcaAndWait,
     enqueueLcaAndWaitFailure,
-    lcaChecksQueue,
-    seedPendingLcaRow,
-    enqueueLcaChecksAndWait,
-    setLcaConfirmCode: (code) => {
-      lcaClient.confirmCode = code;
-    },
-    setLcaSearchHttpStatus: (status) => {
-      lcaClient.searchHttpStatus = status;
-    },
-    setLcaConfirmHttpStatus: (status) => {
-      lcaClient.confirmHttpStatus = status;
-    },
-    setLcaSearchResultCount: (count) => {
-      lcaClient.searchResultCount = count;
-    },
-    lcaSearchPayloads: () => lcaClient.searchPayloads,
-    lcaConfirmPayloads: () => lcaClient.confirmPayloads,
+    fcCodeEmailsQueue,
+    seedConfirmedRow,
+    enqueueFcCodeEmailsAndWait,
     sentEmails: () => sentEmails,
     parsedEmails: () => sentEmails.map(parseSentEmail),
     setEmailHttpStatus: (status) => {

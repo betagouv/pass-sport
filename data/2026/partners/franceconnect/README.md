@@ -20,7 +20,7 @@ demande. Ce dossier est ce qui transforme cette promesse en code.
 | 3 | Chercher chacun dans la base bénéficiaires | `match_beneficiaires.sql` | idem |
 | 4 | Marquer les **retrouvés** `eligible_confirmed` | `writeback_confirmed.sql` | idem |
 | 5 | Fabriquer les codes des **non retrouvés** | `../generate_new_codes.ipynb` avec `SOURCE = 'FC'` | `fc_pipeline.py codes` |
-| 6 | Marquer les servis `eligible_pending_lca`, en base | `writeback_codes.ipynb` puis `writeback_verdict.sql` | `fc_pipeline.py writeback` puis les `.sql` |
+| 6 | Marquer les servis `eligible_confirmed`, code compris, en base | `writeback_codes.ipynb` puis `writeback_verdict.sql` | `fc_pipeline.py writeback` puis les `.sql` |
 
 **L'étape 3 est ce qui remplace l'appel LCA** que ce parcours ne fait plus. Sans elle, une
 personne déjà présente dans la base bénéficiaires — parce que la CNAF, la MSA ou le CNOUS
@@ -106,16 +106,17 @@ reprendre une étape isolément.
 
 **L'étape 4 n'est pas optionnelle.** La génération de codes déduplique les *codes*, jamais
 les *personnes* : sans elle, le prochain passage réextrairait les mêmes bénéficiaires et leur
-fabriquerait un second code. C'est elle qui bascule les lignes traitées dans le verdict
-`eligible_pending_lca` — « un code a été fabriqué, LCA ne le sert pas encore » — que l'étape 1
-exclut ensuite. La question ne se pose pas pour les fichiers partenaires, qui sont des
+fabriquerait un second code. C'est elle qui bascule les lignes traitées en
+`eligible_confirmed` avec leur code, que l'étape 1 exclut ensuite. La question ne se pose pas pour les fichiers partenaires, qui sont des
 exports figés ; ici la table continue de vivre entre deux passages.
 
 ## Passage automatique — la cron
 
 [run_fc_pipeline.sh](run_fc_pipeline.sh) enchaîne les 4 étapes sans interaction : il ouvre et
 referme lui-même le tunnel Scalingo, et dépose le CSV final dans `FC_PROD_DROP_DIR`
-(`/nfs/run` par défaut), d'où il est injecté en base de production.
+(`/nfs/run` par défaut), d'où il est injecté en base de production. Il finit en posant le job
+`fc_code_emails` du worker, qui envoie leur code par courriel — voir
+[Après le write-back](#après-le-write-back).
 
 L'entrée de crontab n'est plus posée à la main : elle l'est par
 [deploy/ansible/lamp-setup.yml](../../../../deploy/ansible/lamp-setup.yml), qui la nomme
@@ -140,18 +141,16 @@ Ce que le script garantit, et qu'un passage à la main doit respecter aussi :
   chevaucherait un autre, pour la même raison ;
 - **rien à traiter n'est pas une erreur** : si l'export ne rend qu'un en-tête, le script sort
   en 0 sans rien déposer. C'est le cas nominal d'une cron plus fréquente que les
-  resoumissions, et c'est aussi la preuve que le passage précédent a bien refermé la boucle.
+  resoumissions, et c'est aussi la preuve que le passage précédent a bien refermé la boucle ;
+- **le job courriel est posé à chaque sortie réussie**, même sans nouveau bénéficiaire : il
+  retente les courriels échoués et sert les appariés d'un passage précédent. Il ne l'est ni
+  sur une erreur ni quand le verrou est déjà pris — le passage suivant s'en charge.
 
 Les fichiers que la cron produit sont horodatés à la seconde
 (`AAAA-MM-JJTHH-MM-SS-fc-with-codes.csv`, et le `-prod.csv` qui en dérive), là où les notebooks
 s'en tiennent au jour : une cron peut passer plusieurs fois par jour, et deux passages
 écraseraient sinon le fichier du précédent — y compris dans `FC_PROD_DROP_DIR`, où il n'a
 peut-être pas encore été injecté.
-
-Une **seconde** entrée de crontab, `pass-sport-lca-checks`, referme la boucle que celle-ci ouvre :
-elle redemande à LCA si elle sert enfin les codes déposés et fait passer les bénéficiaires de
-`eligible_pending_lca` à `eligible_confirmed`. Voir [Comment on en sort](#comment-on-en-sort) plus
-bas. Elle est décalée sur les minutes 10 et 40 pour ne pas croiser le tunnel Scalingo de celle-ci.
 
 Le journal du jour est écrit dans `FC_LOG_DIR` (`logs/` de ce dossier par défaut) ; toute
 sortie non nulle est une anomalie, que cron enverra par courriel. En cas d'échec après
@@ -278,7 +277,7 @@ pas par le worker, et n'aurait sinon aucune trace.
 Il affiche quatre comptes : `lignes_csv`, `lignes_marquees` et `lignes_historisees` doivent
 être égaux, et `ids_introuvables` valoir 0. Il est idempotent — rejoué, il affiche `UPDATE 0`,
 le filtre `verdict = 'eligible_pending'` empêchant de re-marquer une ligne ou d'écraser un code
-venu de LCA.
+déjà confirmé.
 
 `check_writeback.sql` rend une seule valeur, celle sur laquelle la cron s'arrête : combien des
 bénéficiaires de ce passage sont **encore** en `eligible_pending` ou sans ligne d'historique.
@@ -315,58 +314,28 @@ ce qui permet un passage d'essai avec un dossier de dépôt détourné —
 SCALINGO_APP="<application hébergeant la base>"   # obligatoire
 SCALINGO_API_TOKEN="<jeton>"                      # pour un scalingo non interactif
 FC_PROD_DROP_DIR="/nfs/run"                       # où le CSV final est déposé
-FC_TUNNEL_PORT="10000"                            # port local du tunnel
+FC_TUNNEL_PORT="10000"                            # port local du tunnel Postgres
+FC_REDIS_TUNNEL_PORT="10001"                      # port local du tunnel Redis (job courriel)
+FC_CODE_EMAILS_DRY_RUN="1"                        # essai : job courriel posé en dry-run
 FC_LOG_DIR="./2026/partners/franceconnect/logs"   # journaux, un par jour
 FC_LOCK_FILE="/tmp/pass-sport-fc.lock"            # verrou anti-chevauchement
 ```
 
-## Le verdict `eligible_pending_lca`
+## Après le write-back
 
-`verdict` est une colonne `text` sans contrainte ni enum : ajouter cette valeur n'a demandé
-aucune migration. Elle est en revanche déclarée partout où l'ensemble des verdicts est
-énuméré, pour que les types restent le miroir exact de la colonne :
+Les deux write-backs posent `eligible_confirmed` et le code : le site affiche celui-ci tout de
+suite, et l'attestation PDF est servie. Seule l'action d'historique distingue un code
+**fabriqué** (`psp.code_writeback`, étape 6) d'un code **retrouvé** (`psp.code_match_base`,
+étape 4).
 
-- [worker/src/db/schema.ts](../../../../worker/src/db/schema.ts) — la documentation de
-  référence des quatre autres valeurs ;
-- [worker/src/index.ts](../../../../worker/src/index.ts) — le worker ne l'écrit jamais ;
-- [site/src/app/services/applications.ts](../../../../site/src/app/services/applications.ts) ;
-- [site/.../BeneficiaryRecap.tsx](../../../../site/src/app/v2/test-eligibilite/components/post-login-flow/BeneficiaryRecap.tsx)
-  — le composant range les bénéficiaires en trois blocs, et une valeur qu'il ne connaît pas
-  disparaîtrait de la page. `eligible_pending_lca` rejoint le bloc « éligibilité confirmée,
-  code à venir », qui reste vrai tant que LCA ne sert pas le code.
-
-### Comment on en sort
-
-C'est un état **transitoire**, et sa sortie n'est pas dans ce dossier : le job
-`eligible_pending_lca_checks` ([worker/src/jobs/lca-checks.ts](../../../../worker/src/jobs/lca-checks.ts))
-rejoue `/search` puis `/confirm` sur ces lignes toutes les 30 minutes, et bascule à
-`eligible_confirmed` celles dont le `/confirm` répond le code que la chaîne ci-dessus a fabriqué.
-C'est ce qui fait apparaître le code sur le site, une fois le CSV déposé réellement injecté chez
-LCA — ce dépôt est un geste humain, donc rien ne peut prédire quand.
-
-Une seconde passe du même job **envoie ce code par courriel**, et elle ne distingue pas les deux
-issues du rapprochement : elle ramasse toute ligne FranceConnect à `eligible_confirmed` portant un
-code et pas encore d'`email_kind`, qu'elle vienne de l'étape 4 ci-dessus ou de la boucle LCA. C'est
-donc aussi ce qui sert les gens que `writeback_confirmed.sql` a marqués, à qui rien ne partait
-jusque-là.
+L'envoi par courriel n'est pas dans ce dossier : c'est le job `fc_code_emails` du worker
+([worker/src/jobs/fc-code-emails.ts](../../../../worker/src/jobs/fc-code-emails.ts)), que
+`run_fc_pipeline.sh` pose sur sa queue en fin de passage, à travers un second tunnel, vers le
+Redis de Scalingo. Il ramasse toute ligne FranceConnect à `eligible_confirmed` portant un code
+et pas encore d'`email_kind`, sans distinguer les deux issues du rapprochement.
 
 Le template dépend de l'aide, que la colonne `situation` retient désormais — le worker l'écrit à
 l'insert, ce qui rend à terme `clean_fc_lib.resolve_situation` inutile. Les lignes antérieures à
 cette colonne n'en portent pas : celles de `source = 'enfant'` s'en passent (QF et AEEH mènent au
 même courriel), celles de `source = 'self'` sont laissées de côté avec une alerte Sentry plutôt que
 de partir sur le mauvais texte.
-
-Le `/search` a besoin d'un `codeInsee` que personne n'a ici : `build_psp_columns` laisse tout
-`adresse_allocataire-*` à `None`, et le parcours FranceConnect ne demande plus de commune de
-résidence. Ce job envoie donc un code INSEE fictif, `99999`
-([worker/src/lca/insee.ts](../../../../worker/src/lca/insee.ts)).
-
-Deux conséquences pour qui réconcilie des compteurs :
-
-- une ligne dont le `/confirm` répond un **autre** code que celui fabriqué n'est pas basculée et
-  son `pass_sport_code` n'est pas réécrit : la clé de recherche est (nom, prénom, date de
-  naissance) plus une commune constante, donc un homonyme est une collision réelle. Ces cas
-  ressortent en `eligibility_history` sous `lca_checks.code_mismatch`, avec une alerte Sentry ;
-- `eligibility_results.lca_check_attempts` compte les essais. Une ligne qui plafonne
-  (`lca_check_attempts >= 200`, soit environ huit jours) n'est plus interrogée — c'est la requête
-  qui répond à « lesquelles ne sont jamais arrivées chez LCA ».

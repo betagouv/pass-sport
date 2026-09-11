@@ -137,7 +137,7 @@ flowchart TB
     m5a --> DB_MSA_AAH_AEEH[("DB_MSA_EXPORT_2026_AAH_AEEH\nCSV")]:::cleanedFile
 
     subgraph FC_NB["⑩ franceconnect/  ·  pas un fichier partenaire : une requête sur la prod"]
-        fc0["export_eligible_pending.sql (tunnel Scalingo)\nverdict='eligible_pending' · dernier run par sub\nexclut ceux déjà servis (eligible_pending_lca)"]
+        fc0["export_eligible_pending.sql (tunnel Scalingo)\nverdict='eligible_pending' · dernier run par sub\nexclut ceux déjà servis (eligible_confirmed + code)"]
         fc1["clean_franceconnect.ipynb\nsituation redéduite des payloads API Particulier\ngenre des enfants retrouvé dans la réponse QF"]
         fc2["Serialize allocataire + adresse_allocataire → JSON\ndédup sur l'identité seule (un enfant, deux parents)"]
         fc0-->fc1-->fc2
@@ -149,7 +149,7 @@ flowchart TB
 
     subgraph FC_WB["⑪ franceconnect/writeback_codes.ipynb + writeback_verdict.sql"]
         wb1["Découpe le CSV daté en deux :\nfc_2026_writeback.csv (id + code)\net le CSV de prod, sans colonne technique"]
-        wb2["UPDATE eligibility_results\nverdict → 'eligible_pending_lca' · pass_sport_code"]
+        wb2["UPDATE eligibility_results\nverdict → 'eligible_confirmed' · pass_sport_code"]
         wb3["check_writeback.sql : 0 bénéficiaire du passage\nencore en 'eligible_pending' — sinon rien n'est déposé"]
         wb1-->wb2-->wb3
     end

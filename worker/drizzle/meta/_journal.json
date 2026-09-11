@@ -99,6 +99,13 @@
       "when": 1789124019180,
       "tag": "0013_situation_boursier",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789140450958,
+      "tag": "0014_drop_lca_check_attempts",
+      "breakpoints": true
     }
   ]
 }

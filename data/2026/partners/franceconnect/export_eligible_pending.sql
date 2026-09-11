@@ -13,8 +13,9 @@
 -- lignes (\copy est une méta-commande psql qui doit tenir sur une seule), et TO STDOUT ne
 -- demande aucun droit superuser contrairement à COPY TO '<fichier>'.
 --
--- Rejouable : les lignes déjà servies portent 'eligible_pending_lca' (posé par
--- writeback_verdict.sql) et sont écartées par les deux filtres du WHERE final.
+-- Rejouable : les lignes déjà servies portent 'eligible_confirmed' et un code (posés par
+-- writeback_verdict.sql ou writeback_confirmed.sql) et sont écartées par les deux filtres du
+-- WHERE final.
 
 \set ON_ERROR_STOP on
 \if :{?out}
@@ -128,11 +129,12 @@ COPY (
     -- Second garde-fou, complémentaire du filtre ci-dessus : une resoumission crée des
     -- lignes NEUVES en 'eligible_pending' pour quelqu'un déjà servi lors d'un run précédent,
     -- et latest_run les retiendrait. On écarte donc tout bénéficiaire (même sub, même
-    -- source, même identité enfant) portant déjà un 'eligible_pending_lca'.
+    -- source, même identité enfant) portant déjà un 'eligible_confirmed' avec un code.
     and not exists (
       select 1
       from eligibility_results prev
-      where prev.verdict = 'eligible_pending_lca'
+      where prev.verdict = 'eligible_confirmed'
+        and prev.pass_sport_code is not null
         and prev.allocataire_fc_sub = r.allocataire_fc_sub
         and prev.source = r.source
         and coalesce(prev.enfant_identite ->> 'given_name',  '') = coalesce(r.enfant_identite ->> 'given_name',  '')

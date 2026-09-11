@@ -1,6 +1,5 @@
-// The pure half of the code-mail sweep that rides in lca-checks.ts, kept apart for the same
-// reason as lca-checks-rows.ts: the mapping and the decisions are unit-testable without
-// containers.
+// The pure half of the fc_code_emails job (fc-code-emails.ts), kept apart so the mapping and the
+// decisions are unit-testable without containers.
 
 import type { AllocataireIdentite } from "../db/schema";
 import {
@@ -30,8 +29,7 @@ export type EmailDecision =
 export const rowSubject = (row: FcCodeEmailRow): "self" | "enfant" =>
   row.source === "enfant" ? "enfant" : "self";
 
-// Same split as lca-checks-rows.beneficiaryIdentity: the beneficiary is the child on 'enfant'
-// rows, the connected allocataire on every other one.
+// The beneficiary is the child on 'enfant' rows, the connected allocataire on every other one.
 const beneficiaryIdentity = (row: FcCodeEmailRow): Partial<PivotIdentity> | null =>
   row.source === "enfant" ? row.enfantIdentite : row.allocataireIdentite;
 

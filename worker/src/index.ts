@@ -9,11 +9,10 @@ import { getClient } from "./eligibility/client";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
-import { processLcaChecksJob, type LcaChecksJobData } from "./jobs/lca-checks";
-import { getLcaClient } from "./lca/client";
+import { processFcCodeEmailsJob, type FcCodeEmailsJobData } from "./jobs/fc-code-emails";
 import {
   FRANCE_CONNECT_QUEUE_NAME,
-  LCA_CHECKS_QUEUE_NAME,
+  FC_CODE_EMAILS_QUEUE_NAME,
   LCA_QUEUE_NAME,
   retryBackoff,
 } from "./queues";
@@ -114,16 +113,13 @@ async function main(): Promise<void> {
     },
   });
 
-  // getLcaClient is passed rather than called: RealLcaClient throws when LCA_API_URL/LCA_API_KEY
-  // are missing, and a worker refusing to boot over that would take the two flows that never touch
-  // LCA down with it.
-  const lcaChecks = await startFlow<LcaChecksJobData>({
-    queueName: LCA_CHECKS_QUEUE_NAME,
-    process: (job) => processLcaChecksJob(job, job.data, { db, getLca: getLcaClient }),
+  const fcCodeEmails = await startFlow<FcCodeEmailsJobData>({
+    queueName: FC_CODE_EMAILS_QUEUE_NAME,
+    process: (job) => processFcCodeEmailsJob(job, job.data, { db }),
     workerOptions: { lockDuration: 10 * 60_000 },
   });
 
-  const flows = [franceConnect, lca, lcaChecks];
+  const flows = [franceConnect, lca, fcCodeEmails];
 
   console.log("[pass-sport-worker] standalone worker started");
 

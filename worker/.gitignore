@@ -22,7 +22,7 @@ dist
 *.pem
 
 # debug
-# src/scripts/run-lca-checks.sh writes its dated logs here on the processing machine.
+# Dated logs left on the processing machine by the retired run-lca-checks.sh.
 logs/
 npm-debug.log*
 yarn-debug.log*
