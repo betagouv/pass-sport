@@ -1,0 +1,31 @@
+# Posé par deploy/ansible/lamp-setup.yml — ne pas éditer à la main.
+#
+# `nb-logs <notebook.ipynb>` affiche les sorties d'un notebook déjà exécuté (par `nb`,
+# --inplace), sans repasser par une interface graphique : on ne peut pas ouvrir le .ipynb
+# dans Jupyter sur cette machine headless (voir data/2026/README.md, section "Running a
+# notebook without a graphical interface"), mais un notebook exécuté en place reste un fichier
+# JSON lisible par un simple script Python qui en extrait les sorties de cellule.
+#
+# Chemin de l'interpréteur en dur ({{ pass_sport_repo }}), comme pour `nb` : la fonction reste
+# utilisable même si l'opérateur n'est pas exactement dans data/2026/partners. Le chemin du
+# NOTEBOOK passé en argument, lui, reste relatif au dossier courant.
+#
+# Réservée au groupe d'exploitation, comme la fonction nb() voisine (pass-sport-nb.sh) : ce
+# sont ses membres qui possèdent les notebooks de campagne dont ce sont ici les sorties.
+# Ne s'applique qu'aux shells de connexion, ce qui couvre le cas réel : une session SSH.
+if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx '{{ pass_sport_group }}'; then
+    nb-logs() {
+        "{{ pass_sport_repo }}/data/.venv/bin/python" -c "
+import json
+import sys
+
+nb = json.load(open(sys.argv[1]))
+for i, c in enumerate(nb['cells']):
+    for o in c.get('outputs', []):
+        t = ''.join(o.get('text', [])) or ''.join(o.get('data', {}).get('text/plain', []))
+        if t.strip():
+            print(f'--- cell {i} ---')
+            print(t.rstrip())
+" "$1" | less
+    }
+fi
