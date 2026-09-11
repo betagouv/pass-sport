@@ -30,6 +30,39 @@ MERGE_KEY_COLUMNS = [
     'adresse_allocataire',
 ]
 
+# Dropped from the final output, once everything else has been read off them:
+# - uuid_doc/zrr/qpv/a_valider/refuser are generate_codes_lib.add_production_default_columns'
+#   placeholders (a doc id and moderation flags), meaningless before a code is ever validated
+# - fichier_codes is this notebook's own bookkeeping, not part of any beneficiary's data
+# - situation_origine (CNAF's own ORIGINESELECTION) only mattered to compute 'situation'
+# - NOMCOMPLET and ADRLIG1..6DESTDOS are the raw text the adresse_allocataire-* columns were
+#   exploded from; once flattened, those columns say the same thing in structured form
+RECONCILED_COLUMNS_TO_DROP = [
+    'uuid_doc', 'zrr', 'qpv', 'a_valider', 'refuser', 'fichier_codes', 'situation_origine',
+    'NOMCOMPLET', 'ADRLIG1DESTDOS', 'ADRLIG2DESTDOS', 'ADRLIG3DESTDOS', 'ADRLIG4DESTDOS',
+    'ADRLIG5DESTDOS', 'ADRLIG6DESTDOS',
+]
+
+
+def prepare_qf_identity_columns(
+    df: pd.DataFrame, cog_by_country_label: pd.Series
+) -> tuple[pd.DataFrame, list, int]:
+    """Shape the allocataire-* pivot columns the same way the qf-batch input does, on every row.
+
+    clean_cnaf_1_before_qf_batch.ipynb only does this for the ARS-origin allocataires the
+    qf-batch input needs (partners.select_qf_route_allocataires). This notebook carries every
+    beneficiary, ARS or not, so the same shaping is applied broadly: a row CNAF never sent
+    this pivot identity for (AAH/AEEH - see the CNAF_COLUMN_MAPPING comment in clean_cnaf_lib)
+    simply keeps blank pivot columns, exactly like the qf-batch input would.
+
+    Returns (df, unmapped_labels, born_abroad_count) - see partners.map_birth_country_to_cog
+    and partners.clear_foreign_birthplace_insee.
+    """
+    df = partners.format_qf_identity_fields(df)
+    df, unmapped_labels = partners.map_birth_country_to_cog(df, cog_by_country_label)
+    df, born_abroad_count = partners.clear_foreign_birthplace_insee(df)
+    return df, unmapped_labels, born_abroad_count
+
 
 def filter_rows_missing_required_fields(df: pd.DataFrame) -> pd.DataFrame:
     """Phase 1's row filter, without the all-null column drop that comes bundled with it.

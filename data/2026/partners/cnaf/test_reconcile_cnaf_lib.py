@@ -55,6 +55,55 @@ def test_merge_key_columns_are_the_deduplication_key_minus_its_allocataire_half(
     ) | {'allocataire', 'adresse_allocataire'}
 
 
+def _cog_lookup():
+    return partners.build_country_cog_lookup(pd.DataFrame({
+        'COG': ['99100', '99350'],
+        'LIBCOG': ['France', 'Maroc'],
+        'LIBENR': ['République française', 'Royaume du Maroc'],
+    }))
+
+
+def test_prepare_qf_identity_columns_shapes_an_ars_row_like_the_qf_batch_input():
+    df = pd.DataFrame({
+        'allocataire-nom': ['DUPONT'],
+        'allocataire-genre': ['F'],
+        'allocataire-date_naissance': ['09/02/1980'],
+        'allocataire-pays_naissance': ['FRANCE'],
+        'allocataire-code_insee_naissance': ['75056'],
+    })
+
+    result, unmapped_labels, born_abroad_count = lib.prepare_qf_identity_columns(df, _cog_lookup())
+
+    assert result['allocataire-nom_usage'].tolist() == ['DUPONT']
+    assert result['allocataire-genre'].tolist() == ['female']
+    assert result['allocataire-date_naissance'].tolist() == ['1980-02-09']
+    assert result['allocataire-code_pays_naissance'].tolist() == ['99100']
+    assert result['allocataire-code_insee_naissance'].tolist() == ['75056']
+    assert unmapped_labels == []
+    assert born_abroad_count == 0
+
+
+def test_prepare_qf_identity_columns_leaves_a_row_cnaf_never_sent_the_pivot_for_blank():
+    # AAH/AEEH rows: CNAF leaves these columns empty in the raw file itself (see the
+    # CNAF_COLUMN_MAPPING comment in clean_cnaf_lib) - nothing here can recover data the
+    # source file never carried, so the shaped columns stay null, same as an ARS row would
+    # if qf-batch.ts had never been able to parse its birthdate.
+    df = pd.DataFrame({
+        'allocataire-nom': ['DUBOIS'],
+        'allocataire-genre': [''],
+        'allocataire-date_naissance': [''],
+        'allocataire-pays_naissance': [''],
+        'allocataire-code_insee_naissance': [''],
+    })
+
+    result, unmapped_labels, born_abroad_count = lib.prepare_qf_identity_columns(df, _cog_lookup())
+
+    assert pd.isna(result['allocataire-genre'].iloc[0])
+    assert pd.isna(result['allocataire-date_naissance'].iloc[0])
+    assert pd.isna(result['allocataire-code_pays_naissance'].iloc[0])
+    assert unmapped_labels == []
+
+
 def test_filter_rows_missing_required_fields_drops_the_rows_but_keeps_empty_columns():
     df = _full_frame({}, {'nom': np.nan})
     df['ADRLIG6DESTDOS'] = np.nan
@@ -129,18 +178,20 @@ def test_select_rows_without_code_returns_the_beneficiaries_no_route_selected():
 # --- End to end: the real chain, then the notebook's replay of it ------------------
 
 CNAF_CSV_ROWS = [
-    # AEEH route, so the fixture needs no qf-batch verdict to reach the export.
+    # AEEH route, so the fixture needs no qf-batch verdict to reach the export. NOMNAIDOS is
+    # set (CNAF fills it for every route) but DTNAIDOS/SEXDOS/COMMUNENAIDOS/PAYSNAIDOS are
+    # not (CNAF only fills those for ARS), matching CDBSP1O1N.csv's real AEEH/AAH rows.
     {'CODORG': '014', 'MATRICULE': '0000123', 'QUALDOS': 'MME', 'RESPDOS': 'DUPONT',
-     'PRENOMDOS': 'MARIE', 'ADRMAIL': 'Marie.Dupont@Example.Fr', 'NUMTEL': '612345678',
-     'NOMCOMPLET': 'MME  DUPONT   MARIE', 'ADRLIG1DESTDOS': 'CHEZ M MARTIN',
-     'ADRLIG3DESTDOS': '12 RUE', 'ADRLIG4DESTDOS': 'DES LILAS',
+     'NOMNAIDOS': 'DUPONT', 'PRENOMDOS': 'MARIE', 'ADRMAIL': 'Marie.Dupont@Example.Fr',
+     'NUMTEL': '612345678', 'NOMCOMPLET': 'MME  DUPONT   MARIE',
+     'ADRLIG1DESTDOS': 'CHEZ M MARTIN', 'ADRLIG3DESTDOS': '12 RUE', 'ADRLIG4DESTDOS': 'DES LILAS',
      'ADRLIG5DESTDOS': '14000 CAEN', 'NUMINSEE': '14118',
      'NOMENF': 'DUPONT', 'PRENOMENF': 'LEA', 'DTNAIENF': '12/06/2015', 'SEXENF': 'F',
      'ORIGINESELECTION': 'AEEH'},
     {'CODORG': '014', 'MATRICULE': '0000123', 'QUALDOS': 'MME', 'RESPDOS': 'DUPONT',
-     'PRENOMDOS': 'MARIE', 'ADRMAIL': 'Marie.Dupont@Example.Fr', 'NUMTEL': '612345678',
-     'NOMCOMPLET': 'MME  DUPONT   MARIE', 'ADRLIG1DESTDOS': 'CHEZ M MARTIN',
-     'ADRLIG3DESTDOS': '12 RUE', 'ADRLIG4DESTDOS': 'DES LILAS',
+     'NOMNAIDOS': 'DUPONT', 'PRENOMDOS': 'MARIE', 'ADRMAIL': 'Marie.Dupont@Example.Fr',
+     'NUMTEL': '612345678', 'NOMCOMPLET': 'MME  DUPONT   MARIE',
+     'ADRLIG1DESTDOS': 'CHEZ M MARTIN', 'ADRLIG3DESTDOS': '12 RUE', 'ADRLIG4DESTDOS': 'DES LILAS',
      'ADRLIG5DESTDOS': '14000 CAEN', 'NUMINSEE': '14118',
      'NOMENF': 'DUPONT', 'PRENOMENF': 'HUGO', 'DTNAIENF': '03/02/2012', 'SEXENF': 'M',
      'ORIGINESELECTION': 'AEEH'},
@@ -164,11 +215,14 @@ def _write_raw_cnaf_csv(path):
     )
 
 
-def _run_phase_1(filepath, filter_rows_missing_required_fields, drop_raw_address_columns):
+def _run_phase_1(filepath, filter_rows_missing_required_fields, drop_raw_address_columns,
+                 prepare_qf_identity_columns=lambda df: df):
     """clean_cnaf_1_before_qf_batch.ipynb, minus the qf-batch input it writes.
 
-    The two steps the reconciliation notebook swaps out are injected, so the real chain and
-    the notebook's replay of it differ here and nowhere else.
+    The steps the reconciliation notebook swaps out are injected, so the real chain and the
+    notebook's replay of it differ here and nowhere else. prepare_qf_identity_columns
+    defaults to a no-op: the real chain only shapes the ARS-only qf-batch input, off a frame
+    this function never builds, so it has nothing to inject here.
     """
     df = cnaf.read_raw_cnaf_csv(str(filepath))
     df = cnaf.clean_raw_cnaf(df)
@@ -180,6 +234,7 @@ def _run_phase_1(filepath, filter_rows_missing_required_fields, drop_raw_address
     df = cnaf.build_allocataire_address_fields(df)
     df = cnaf.set_organisme_and_situation(df)
     df = partners.parse_beneficiary_birthdate(df)
+    df = prepare_qf_identity_columns(df)
     df = drop_raw_address_columns(df)
     df = filter_rows_missing_required_fields(df)
     df = partners.normalize_identity_casing(df)
@@ -218,13 +273,20 @@ def test_the_codes_of_a_real_run_all_find_their_raw_row_again(tmp_path):
     codes_filepath = tmp_path / "cnaf_aah_aeeh-with-codes.csv"
     generate_codes_lib.generate_codes_for_file(
         tmp_path / "cnaf_export.csv", codes_filepath, tmp_path / "existing_codes.csv")
+    # The notebook tags each coded row with the file it came from (cell-24) before merging -
+    # replayed here since RECONCILED_COLUMNS_TO_DROP expects that column to exist.
     df_codes = pd.read_csv(
-        codes_filepath, sep=';', encoding='utf-8', dtype=str, keep_default_na=False)
+        codes_filepath, sep=';', encoding='utf-8', dtype=str, keep_default_na=False
+    ).assign(fichier_codes=codes_filepath.name)
+
+    cog_lookup = partners.build_country_cog_lookup(pd.DataFrame({
+        'COG': ['99100'], 'LIBCOG': ['France'], 'LIBENR': ['République française']}))
 
     df_full = _run_phase_1(
         raw_filepath,
         filter_rows_missing_required_fields=lib.filter_rows_missing_required_fields,
-        drop_raw_address_columns=lambda df: df)
+        drop_raw_address_columns=lambda df: df,
+        prepare_qf_identity_columns=lambda df: lib.prepare_qf_identity_columns(df, cog_lookup)[0])
     df_full = lib.format_date_naissance_as_exported(df_full)
     df_full, collision_count = lib.drop_merge_key_collisions(df_full)
     assert collision_count == 0
@@ -242,4 +304,28 @@ def test_the_codes_of_a_real_run_all_find_their_raw_row_again(tmp_path):
     assert df_reconciled['ADRLIG1DESTDOS'].tolist() == ['CHEZ M MARTIN', 'CHEZ M MARTIN']
     assert df_reconciled['adresse_allocataire-code_insee'].tolist() == ['14118', '14118']
 
+    # CNAF fills NOMNAIDOS for every route, so it survives even for this AEEH beneficiary...
+    assert df_reconciled['allocataire-nom_naissance'].tolist() == ['DUPONT', 'DUPONT']
+    # ...but DTNAIDOS/SEXDOS, ARS-only, stay blank - not a bug, see the notebook's ⚠️ note.
+    assert df_reconciled['allocataire-date_naissance'].isna().all()
+    assert df_reconciled['allocataire-genre'].isna().all()
+
     assert lib.select_rows_without_code(df_full, df_codes).empty
+
+    # The notebook's last steps: flatten the JSON columns back into plain ones, then drop
+    # whatever nothing downstream needs anymore.
+    df_flat = partners.flatten_json_column(df_reconciled, 'allocataire', 'allocataire')
+    df_flat = partners.flatten_json_column(df_flat, 'adresse_allocataire', 'adresse_allocataire')
+
+    assert 'allocataire' not in df_flat.columns
+    assert 'adresse_allocataire' not in df_flat.columns
+    assert df_flat['allocataire-matricule'].tolist() == ['0000123', '0000123']
+    assert df_flat['adresse_allocataire-commune'].tolist() == ['CAEN', 'CAEN']
+
+    df_final = partners.drop_intermediate_columns(df_flat, lib.RECONCILED_COLUMNS_TO_DROP)
+
+    assert not set(lib.RECONCILED_COLUMNS_TO_DROP) & set(df_final.columns)
+    # Everything else - including what this run started out asking for - is still there.
+    assert df_final['allocataire-nom_naissance'].tolist() == ['DUPONT', 'DUPONT']
+    assert df_final['allocataire-matricule'].tolist() == ['0000123', '0000123']
+    assert df_final['adresse_allocataire-commune'].tolist() == ['CAEN', 'CAEN']

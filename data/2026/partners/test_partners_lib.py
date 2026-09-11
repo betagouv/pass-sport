@@ -524,6 +524,41 @@ def test_add_adresse_allocataire_json_column_carries_the_partner_extra_fields():
     assert adresse['code_postal'] == '07501'
 
 
+def test_flatten_json_column_expands_the_json_into_prefixed_columns():
+    df = pd.DataFrame([{'allocataire': json.dumps({'matricule': '123', 'nom': 'DUPONT'})}])
+
+    result = lib.flatten_json_column(df, 'allocataire', 'allocataire')
+
+    assert result['allocataire-matricule'].tolist() == ['123']
+    assert result['allocataire-nom'].tolist() == ['DUPONT']
+    assert 'allocataire' not in result.columns
+
+
+def test_flatten_json_column_replaces_the_staging_column_it_was_built_from():
+    # The JSON was built from a differently-cased 'allocataire-nom' - the JSON's own value
+    # (what add_allocataire_json_column actually wrote) is the one that should survive.
+    df = pd.DataFrame([{'allocataire-nom': 'Dupont',
+                        'allocataire': json.dumps({'nom': 'DUPONT'})}])
+
+    result = lib.flatten_json_column(df, 'allocataire', 'allocataire')
+
+    assert result['allocataire-nom'].tolist() == ['DUPONT']
+    assert len(result.columns) == 1
+
+
+def test_flatten_json_column_leaves_a_field_absent_from_the_json_as_null():
+    # to_json_allocataire_without_null drops null fields entirely, so a row with no
+    # telephone has no 'telephone' key at all - json_normalize must not choke on that.
+    df = pd.DataFrame([
+        {'allocataire': json.dumps({'matricule': '123', 'telephone': '0600000000'})},
+        {'allocataire': json.dumps({'matricule': '456'})},
+    ])
+
+    result = lib.flatten_json_column(df, 'allocataire', 'allocataire')
+
+    assert pd.isna(result['allocataire-telephone'].iloc[1])
+
+
 def test_drop_intermediate_columns():
     df = pd.DataFrame([{column: 'x' for column in lib.FINAL_COLUMNS_TO_DROP} | {'nom': 'DUPONT'}])
 
