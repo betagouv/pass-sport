@@ -89,7 +89,7 @@ COPY (
     crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier,
 
     -- Ce qui sert au RAPPROCHEMENT avec la base bénéficiaires (match_beneficiaires.sql),
-    -- et à rien d'autre : ces trois colonnes ne survivent pas au nettoyage.
+    -- et à rien d'autre : ces deux colonnes ne survivent pas au nettoyage.
     --
     -- `allocataires` est l'allocataire tel que la CAF ou la MSA l'écrit — nom de naissance
     -- ET nom d'usage, prénoms, sexe — c'est-à-dire dans le vocabulaire même du fichier
@@ -97,11 +97,6 @@ COPY (
     -- son nom d'usage (preferred_username, plus haut) ne sert que de repli quand cette
     -- réponse n'en porte pas : apparier CAF contre CAF d'abord évite la divergence.
     qf.response_payload -> 'data' -> 'allocataires'                          as qf_allocataires,
-
-    -- Seul signal d'adresse restant côté FranceConnect : le parcours ne demande plus la
-    -- commune de résidence, et `adresse_allocataire` vaut désormais {} sur cette source.
-    -- Sert à départager deux homonymes stricts, jamais à apparier seul.
-    qf.response_payload -> 'data' -> 'adresse'                               as qf_adresse,
 
     -- L'INE, jointure EXACTE avec beneficiaires.allocataire_matricule sur les lignes CNOUS, qui y
     -- rangent l'INE du boursier. La réponse quotient_familial, elle, ne porte aucun

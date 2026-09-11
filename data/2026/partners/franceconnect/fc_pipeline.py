@@ -85,12 +85,11 @@ def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
     # l'identité persistée et la réponse d'origine.
     df, genres_non_resolus = fc.resolve_enfant_genre(df)
 
-    # Identité de l'allocataire dans le vocabulaire de la CAF/MSA, et code postal du foyer :
-    # ce que le rapprochement avec la base bénéficiaires interroge (match_beneficiaires.sql).
-    # Un compte non nul d'allocataires non résolus n'est pas une anomalie — la route AAH
-    # n'appelle pas quotient_familial et n'a donc aucun tableau `allocataires`.
+    # Identité de l'allocataire dans le vocabulaire de la CAF/MSA : ce que le rapprochement
+    # avec la base bénéficiaires interroge (match_beneficiaires.sql). Un compte non nul
+    # d'allocataires non résolus n'est pas une anomalie — la route AAH n'appelle pas
+    # quotient_familial et n'a donc aucun tableau `allocataires`.
     df, allocataires_non_resolus = fc.resolve_allocataire_caf(df)
-    df = fc.resolve_adresse_qf(df)
 
     # Nom d'usage du bénéficiaire, seconde variante de la clé de rapprochement : celui que le
     # worker stocke dans enfant_identite, sinon celui de qf_enfants pour les lignes plus

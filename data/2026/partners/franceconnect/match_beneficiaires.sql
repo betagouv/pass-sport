@@ -22,18 +22,28 @@
 -- comptabilisé dans EXISTING_CODES_PATHFILE_2026 et ne se reprend pas ; en fabriquer un
 -- pour quelqu'un qui en a déjà un est précisément ce qu'on cherche à éviter.
 --
--- Six niveaux, du plus sûr au plus lâche. Chacun n'examine que les candidats que les
--- précédents n'ont pas appariés, et ne retient QUE s'il trouve exactement un id_psp :
+-- UNE STRATÉGIE PAR (SITUATION, CAISSE), parce que les caisses n'écrivent pas les mêmes
+-- champs en base, ni la même nature de nom :
 --
---   N1  INE                                  recherche exacte
---   N2  clé + 1er prénom du bénéficiaire     recherche par préfixe, jusqu'à 8 variantes
---   N3  clé + 2 premiers prénoms             pour les ambigus de N2
---   N4  genre                                départage des ambigus de N2
---   N5  naissance de l'allocataire           départage
---   N6  code postal du foyer                 départage
+--   boursier   INE exact (beneficiaires.allocataire_matricule)
+--   AAH        bénéficiaire seul ; nom de NAISSANCE côté MSA, nom d'USAGE côté CAF —
+--              et la caisse est indéterminable depuis l'API (aucun appel quotient_familial
+--              sur cette route), donc les DEUX stratégies sont essayées
+--   AEEH       allocataire + bénéficiaire ; côté MSA le nom de naissance et la date de
+--              naissance de l'allocataire, côté CAF le nom d'usage (RESPDOS) sans date
+--   jeune (QF) allocataire + bénéficiaire, sur le nom de NAISSANCE de l'allocataire des
+--              deux côtés — la CNAF le porte dans beneficiaire_cnaf_extra_field, rempli
+--              pour les lignes d'origine ARS uniquement
 --
--- Un candidat encore ambigu après N6 n'est pas apparié : il recevra un code neuf, ce qui est
--- le moins risqué des deux.
+-- Les prénoms venus de la base LAMP doivent être CONTENUS dans les prénoms FranceConnect :
+-- sous-ensemble de mots, ordre libre (opérateur <@ sur les tableaux de mots normalisés).
+-- La CNAF ne stocke qu'un prénom (PRENOMDOS, NOMENF), FranceConnect les porte tous.
+--
+-- VERDICT STRICT : un candidat est apparié ssi sa stratégie retourne exactement UN id_psp.
+-- Zéro ou plusieurs lignes = non apparié -> il recevra un code neuf, le moins risqué des
+-- deux. Aucun départageur. Pour l'AAH : exactement une des deux stratégies retourne
+-- exactement une ligne et l'autre aucune — deux stratégies à une ligne, même identique,
+-- restent inconcluantes.
 
 \set ON_ERROR_STOP on
 
@@ -55,236 +65,295 @@
 
 begin;
 
--- Tout en text : la clé de recherche est du texte, et une colonne typée ferait échouer le
--- \copy sur les valeurs vides que le producteur écrit pour un champ absent.
+-- Tout en text : les comparaisons se font sur du texte normalisé, et une colonne typée
+-- ferait échouer le \copy sur les valeurs vides que le producteur écrit pour un champ
+-- absent.
 create temp table fc_candidats (
 	eligibility_result_id text not null,
+	situation text,
+	organisme text,
 	ine text,
 	allocataire_nom text,
 	allocataire_nom_usage text,
 	allocataire_prenom text,
 	allocataire_date_naissance text,
 	allocataire_qualite text,
+	allocataire_genre text,
 	beneficiaire_nom text,
 	beneficiaire_nom_usage text,
 	beneficiaire_prenom text,
 	beneficiaire_date_naissance text,
-	beneficiaire_genre text,
-	code_postal text
+	beneficiaire_genre text
 ) on commit drop;
 
 -- `header match` : l'en-tête du fichier doit nommer exactement ces colonnes, dans cet ordre.
 -- Sans lui, COPY chargerait par position, et une colonne ajoutée à clean_fc_lib.MATCH_COLUMNS
 -- sans l'être ici décalerait silencieusement tout le fichier.
-\copy fc_candidats (eligibility_result_id, ine, allocataire_nom, allocataire_nom_usage, allocataire_prenom, allocataire_date_naissance, allocataire_qualite, beneficiaire_nom, beneficiaire_nom_usage, beneficiaire_prenom, beneficiaire_date_naissance, beneficiaire_genre, code_postal) from 'fc_2026_match_candidates.csv' with (format csv, header match, delimiter ';')
+\copy fc_candidats (eligibility_result_id, situation, organisme, ine, allocataire_nom, allocataire_nom_usage, allocataire_prenom, allocataire_date_naissance, allocataire_qualite, allocataire_genre, beneficiaire_nom, beneficiaire_nom_usage, beneficiaire_prenom, beneficiaire_date_naissance, beneficiaire_genre) from 'fc_2026_match_candidates.csv' with (format csv, header match, delimiter ';')
+
+-- Chaque candidat, normalisé UNE fois, par les mêmes fonctions que celles appliquées côté
+-- base dans les jointures plus bas : c'est ce qui garantit que les deux côtés de la
+-- comparaison s'écrivent pareil. Les champs absents restent NULL — un critère dont le
+-- candidat n'a pas la valeur ne peut pas apparier.
+--
+-- Les prénoms deviennent des TABLEAUX de mots : le containment « prénoms LAMP contenus
+-- dans les prénoms FranceConnect » s'écrit alors base_prenoms <@ fc_prenoms, ordre libre.
+create temp table fc_norm on commit drop as
+select
+	c.eligibility_result_id,
+	nullif(btrim(c.situation), '') as situation,
+	nullif(btrim(c.organisme), '') as organisme,
+	nullif(btrim(c.ine), '') as ine,
+	nullif(public.normalise_recherche(c.allocataire_nom), '') as alloc_nom_naissance,
+	nullif(public.normalise_recherche(c.allocataire_nom_usage), '') as alloc_nom_usage,
+	string_to_array(nullif(public.normalise_recherche(c.allocataire_prenom), ''), ' ')
+		as alloc_prenoms,
+	nullif(public.normalise_date_recherche(c.allocataire_date_naissance), '')
+		as alloc_naissance,
+	nullif(btrim(c.allocataire_qualite), '') as alloc_qualite,
+	-- 'male'/'female', le vocabulaire du pivot, que cnaf_allocataire_genre partage.
+	nullif(lower(btrim(c.allocataire_genre)), '') as alloc_genre,
+	nullif(public.normalise_recherche(c.beneficiaire_nom), '') as benef_nom_naissance,
+	nullif(public.normalise_recherche(c.beneficiaire_nom_usage), '') as benef_nom_usage,
+	-- Les deux formes : le texte pour l'égalité stricte (AEEH), le tableau pour le
+	-- containment (AAH, jeune).
+	nullif(public.normalise_recherche(c.beneficiaire_prenom), '') as benef_prenoms_texte,
+	string_to_array(nullif(public.normalise_recherche(c.beneficiaire_prenom), ''), ' ')
+		as benef_prenoms,
+	nullif(btrim(c.beneficiaire_date_naissance), '')::date as benef_naissance,
+	nullif(upper(btrim(c.beneficiaire_genre)), '') as benef_genre
+from fc_candidats c;
+
+-- Toutes les lignes de base que chaque stratégie atteint, avant verdict : c'est sur cette
+-- table que se comptent les « exactement un id_psp » et les inconcluants du récap. `distinct`
+-- parce que compter des LIGNES serait faux — le même id_psp atteint par deux chemins (nom de
+-- naissance ET nom d'usage identiques, par exemple) ne fait qu'une personne.
+create temp table fc_essais (
+	eligibility_result_id text not null,
+	id_psp text not null,
+	strategie text not null
+) on commit drop;
 
 create temp table fc_apparies (
 	eligibility_result_id text not null,
 	id_psp text not null,
-	niveau text not null
+	strategie text not null
 ) on commit drop;
 
--- Chaque candidat, normalisé UNE fois, par la même fonction que la colonne générée
--- beneficiaires.cle_recherche : c'est ce qui garantit que les deux côtés de la comparaison
--- s'écrivent pareil. Les noms d'usage restent NULL quand ils manquent, pour que la variante
--- correspondante ne soit pas générée plus bas.
-create temp table fc_norm on commit drop as
-select
-	c.eligibility_result_id,
-	nullif(btrim(c.ine), '') as ine,
-	coalesce(public.normalise_recherche(c.allocataire_nom), '') as alloc_nom_naissance,
-	nullif(public.normalise_recherche(c.allocataire_nom_usage), '') as alloc_nom_usage,
-	coalesce(public.normalise_recherche(c.allocataire_prenom), '') as alloc_prenom,
-	coalesce(c.beneficiaire_date_naissance, '') as benef_naissance,
-	coalesce(public.normalise_recherche(c.beneficiaire_nom), '') as benef_nom_naissance,
-	nullif(public.normalise_recherche(c.beneficiaire_nom_usage), '') as benef_nom_usage,
-	coalesce(split_part(public.normalise_recherche(c.beneficiaire_prenom), ' ', 1), '') as prenom_1,
-	coalesce(split_part(public.normalise_recherche(c.beneficiaire_prenom), ' ', 2), '') as prenom_2,
-	nullif(public.normalise_date_recherche(c.allocataire_date_naissance), '') as alloc_naissance,
-	nullif(btrim(c.allocataire_qualite), '') as alloc_qualite,
-	nullif(upper(btrim(c.beneficiaire_genre)), '') as benef_genre,
-	nullif(btrim(c.code_postal), '') as code_postal
-from fc_candidats c;
-
--- Les variantes de la clé, une ligne par candidat et par variante. La base porte UN nom par
--- moitié de clé ; le candidat en essaie deux de chaque côté, parce que les caisses ne rangent
--- pas la même nature de nom dans ces champs :
---
---   MSA  : allocataire.nom = nom de NAISSANCE   (nom_naissance_allocataire, clean_msa_lib.py)
---   CNAF : allocataire.nom = nom d'USAGE        (RESPDOS, clean_cnaf_lib.py), et NOMENF, le
---          nom de l'enfant, ne porte pas le suffixe NAI de ses noms de naissance
---
--- Côté candidat, le nom d'usage de l'allocataire vient de la réponse quotient_familial, à
--- défaut du preferred_username FranceConnect ; celui du bénéficiaire, de enfant_identite, à
--- défaut de qf_enfants — ou, sur une ligne 'self', de l'allocataire lui-même.
---
--- Le prénom de l'allocataire a lui aussi deux variantes, complet et premier seul. Il est au
--- 2e champ de la clé, donc comparé à l'égalité stricte — la seule zone préfixe est la fin,
--- occupée par les prénoms du bénéficiaire — et la CNAF n'en stocke qu'un seul (PRENOMDOS).
---
--- 2 × 2 × 2 = 8 variantes au plus. Une variante dont le nom d'usage manque n'est pas
--- générée, et `distinct` fond celles qui coïncident.
-create temp table fc_cles on commit drop as
-select distinct
-	n.eligibility_result_id,
-	alloc_nom.v || '|' || alloc_prenom.v || '|' || n.benef_naissance || '|' || benef_nom.v || '|'
-		as cle_stable
-from fc_norm n
-cross join lateral (values (n.alloc_nom_naissance), (n.alloc_nom_usage)) as alloc_nom(v)
-cross join lateral (values (n.alloc_prenom), (split_part(n.alloc_prenom, ' ', 1))) as alloc_prenom(v)
-cross join lateral (values (n.benef_nom_naissance), (n.benef_nom_usage)) as benef_nom(v)
-where alloc_nom.v is not null
-  and benef_nom.v is not null;
-
--- Comment compter. Chaque niveau fait `select distinct (candidat, id_psp)`, puis
--- `group by candidat having count(*) = 1` : min(id_psp) est alors le seul. Compter des
--- LIGNES serait faux — plusieurs variantes de clé atteignent souvent la même ligne de
--- beneficiaires, et un candidat parfaitement identifié passerait pour ambigu.
---
--- Comment chercher. Le préfixe s'exprime en bornes, avec ~>=~ et ~<~, les opérateurs de
--- text_pattern_ops, et non en LIKE : le motif est calculé ligne par ligne, et PostgreSQL ne
--- tire de bornes d'index d'un LIKE que si le motif est une constante. Un LIKE forcerait un
--- parcours complet de beneficiaires pour chaque candidat. chr(1114111), le plus grand
--- caractère Unicode, ferme la borne haute : toute clé qui commence par le préfixe lui est
--- inférieure.
-
--- --- Niveau 1 : l'INE ------------------------------------------------------------------
+-- --- boursier : l'INE ------------------------------------------------------------------
 -- Jointure exacte, la seule de tout ce fichier : CNOUS range l'INE du boursier dans le
--- matricule de l'allocataire (beneficiaires.allocataire_matricule, indexé), et API Particulier le rend sur la route boursier. Aucun
--- équivalent n'existe pour CNAF et MSA — la réponse quotient_familial ne porte pas de
--- numéro d'allocataire.
-insert into fc_apparies (eligibility_result_id, id_psp, niveau)
-select eligibility_result_id, min(id_psp), 'ine'
-from (
-	select distinct n.eligibility_result_id, b.id_psp
-	from fc_norm n
-	join public.beneficiaires b
-	  on b.allocataire_matricule = n.ine
-	 and b.exercice_id = :exercice
-	 and b.id_psp is not null
-	where n.ine is not null
-) t
-group by eligibility_result_id
-having count(*) = 1;
-
--- --- Niveau 2 : identité, sur le premier prénom -----------------------------------------
--- La clé se termine par les prénoms suivis d'un espace : chercher sur le premier prénom est
--- un préfixe, et l'espace final ferme la frontière de mot — 'ZUPRALIN ' ne rencontre jamais
--- ZUPRALINE. Tout ce que les départageurs relisent est pris ici, une fois.
-create temp table fc_essai_1 on commit drop as
-select distinct
-	k.eligibility_result_id,
-	b.id_psp,
-	-- 5e segment de la clé : les prénoms du bénéficiaire ; son 2e mot est le second prénom.
-	split_part(split_part(b.cle_recherche, '|', 5), ' ', 2) as prenom_2_base,
-	b.genre::text as genre_base,
-	b.allocataire_qualite as qualite_base,
-	public.normalise_date_recherche(b.allocataire_date_naissance) as alloc_naissance_base,
-	b.adresse_allocataire_code_postal as code_postal_base
-from fc_cles k
-join fc_norm n on n.eligibility_result_id = k.eligibility_result_id
-cross join lateral (select k.cle_stable || n.prenom_1 || ' ' as prefixe) p
+-- matricule de l'allocataire (beneficiaires.allocataire_matricule, indexé), et API
+-- Particulier le rend sur la route boursier.
+insert into fc_essais (eligibility_result_id, id_psp, strategie)
+select distinct n.eligibility_result_id, b.id_psp, 'boursier'
+from fc_norm n
 join public.beneficiaires b
-  on b.cle_recherche ~>=~ p.prefixe
- -- Parenthèses obligatoires : ~<~ et || ont la même priorité et s'associent à gauche, sans
- -- elles la comparaison serait faite avant la concaténation.
- and b.cle_recherche ~<~ (p.prefixe || chr(1114111))
+  on b.allocataire_matricule = n.ine
+ and b.organisme = 'cnous'
+ and b.situation = 'boursier'
  and b.exercice_id = :exercice
  and b.id_psp is not null
-where n.prenom_1 <> ''
-  and not exists (select 1 from fc_apparies a
-                   where a.eligibility_result_id = k.eligibility_result_id);
+where n.situation = 'boursier'
+  and n.ine is not null;
 
-insert into fc_apparies (eligibility_result_id, id_psp, niveau)
-select eligibility_result_id, min(id_psp), 'prenom_1'
-from fc_essai_1
+-- --- AAH, stratégie MSA : le nom de naissance du bénéficiaire ---------------------------
+-- Le bénéficiaire est l'allocataire lui-même (ligne 'self'). La MSA écrit son nom de
+-- naissance dans beneficiaires.nom ; côté FranceConnect c'est le family_name du pivot.
+insert into fc_essais (eligibility_result_id, id_psp, strategie)
+select distinct n.eligibility_result_id, b.id_psp, 'aah_msa'
+from fc_norm n
+join public.beneficiaires b
+  on public.normalise_recherche(b.nom) = n.benef_nom_naissance
+ and b.organisme = 'MSA'
+ and b.situation = 'AAH'
+ and b.exercice_id = :exercice
+ and b.id_psp is not null
+ and b.date_naissance::date = n.benef_naissance
+ and b.genre::text = n.benef_genre
+ and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
+where n.situation = 'AAH'
+  and n.benef_nom_naissance is not null
+  and n.benef_naissance is not null
+  and n.benef_genre is not null
+  and n.benef_prenoms is not null;
+
+-- --- AAH, stratégie CAF : le nom d'usage du bénéficiaire --------------------------------
+-- La CNAF range un nom d'usage dans beneficiaires.nom ; côté FranceConnect le seul nom
+-- d'usage disponible sur cette route est le preferred_username du pivot (aucun appel
+-- quotient_familial). Sans lui, la stratégie ne retourne rien.
+insert into fc_essais (eligibility_result_id, id_psp, strategie)
+select distinct n.eligibility_result_id, b.id_psp, 'aah_caf'
+from fc_norm n
+join public.beneficiaires b
+  on public.normalise_recherche(b.nom) = n.benef_nom_usage
+ and b.organisme = 'CAF'
+ and b.situation = 'AAH'
+ and b.exercice_id = :exercice
+ and b.id_psp is not null
+ and b.date_naissance::date = n.benef_naissance
+ and b.genre::text = n.benef_genre
+ and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
+where n.situation = 'AAH'
+  and n.benef_nom_usage is not null
+  and n.benef_naissance is not null
+  and n.benef_genre is not null
+  and n.benef_prenoms is not null;
+
+-- --- AEEH, caisse MSA -------------------------------------------------------------------
+-- Allocataire : nom de naissance, prénoms contenus, qualité (M/Mme, le seul « genre » que
+-- les partenaires écrivent en base pour l'allocataire) et date de naissance — la MSA la
+-- porte, contrairement à la CNAF. Bénéficiaire : identité complète, en égalité stricte.
+insert into fc_essais (eligibility_result_id, id_psp, strategie)
+select distinct n.eligibility_result_id, b.id_psp, 'aeeh_msa'
+from fc_norm n
+join public.beneficiaires b
+  on public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_naissance
+ and b.organisme = 'MSA'
+ and b.situation = 'AEEH'
+ and b.exercice_id = :exercice
+ and b.id_psp is not null
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
+ and b.allocataire_qualite = n.alloc_qualite
+ and public.normalise_date_recherche(b.allocataire_date_naissance) = n.alloc_naissance
+ and public.normalise_recherche(b.nom) = n.benef_nom_naissance
+ and public.normalise_recherche(b.prenom) = n.benef_prenoms_texte
+ and b.genre::text = n.benef_genre
+ and b.date_naissance::date = n.benef_naissance
+where n.situation = 'AEEH'
+  and n.organisme = 'MSA'
+  and n.alloc_nom_naissance is not null
+  and n.alloc_prenoms is not null
+  and n.alloc_qualite is not null
+  and n.alloc_naissance is not null
+  and n.benef_nom_naissance is not null
+  and n.benef_prenoms_texte is not null
+  and n.benef_genre is not null
+  and n.benef_naissance is not null;
+
+-- --- AEEH, caisse CAF -------------------------------------------------------------------
+-- Allocataire : nom d'USAGE (RESPDOS) et pas de date de naissance — la CNAF ne sérialise ni
+-- l'un ni l'autre pour l'AEEH, et beneficiaire_cnaf_extra_field n'est rempli que pour les
+-- lignes d'origine ARS. Bénéficiaire : NOMENF ne porte pas le suffixe NAI des noms de
+-- naissance CNAF, le nom du candidat est donc accepté sous ses deux formes.
+insert into fc_essais (eligibility_result_id, id_psp, strategie)
+select distinct n.eligibility_result_id, b.id_psp, 'aeeh_caf'
+from fc_norm n
+join public.beneficiaires b
+  on public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_usage
+ and b.organisme = 'CAF'
+ and b.situation = 'AEEH'
+ and b.exercice_id = :exercice
+ and b.id_psp is not null
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
+ and b.allocataire_qualite = n.alloc_qualite
+ and public.normalise_recherche(b.nom) in (n.benef_nom_naissance, n.benef_nom_usage)
+ and public.normalise_recherche(b.prenom) = n.benef_prenoms_texte
+ and b.genre::text = n.benef_genre
+ and b.date_naissance::date = n.benef_naissance
+where n.situation = 'AEEH'
+  and n.organisme = 'CAF'
+  and n.alloc_nom_usage is not null
+  and n.alloc_prenoms is not null
+  and n.alloc_qualite is not null
+  and n.benef_nom_naissance is not null
+  and n.benef_prenoms_texte is not null
+  and n.benef_genre is not null
+  and n.benef_naissance is not null;
+
+-- --- jeune (QF), caisse MSA -------------------------------------------------------------
+-- Même bloc allocataire que l'AEEH MSA ; bénéficiaire en containment de prénoms — la règle
+-- QF le demande explicitement, là où l'AEEH exige l'égalité.
+insert into fc_essais (eligibility_result_id, id_psp, strategie)
+select distinct n.eligibility_result_id, b.id_psp, 'qf_msa'
+from fc_norm n
+join public.beneficiaires b
+  on public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_naissance
+ and b.organisme = 'MSA'
+ and b.situation = 'jeune'
+ and b.exercice_id = :exercice
+ and b.id_psp is not null
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
+ and b.allocataire_qualite = n.alloc_qualite
+ and public.normalise_date_recherche(b.allocataire_date_naissance) = n.alloc_naissance
+ and public.normalise_recherche(b.nom) = n.benef_nom_naissance
+ and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
+ and b.genre::text = n.benef_genre
+ and b.date_naissance::date = n.benef_naissance
+where n.situation = 'jeune'
+  and n.organisme = 'MSA'
+  and n.alloc_nom_naissance is not null
+  and n.alloc_prenoms is not null
+  and n.alloc_qualite is not null
+  and n.alloc_naissance is not null
+  and n.benef_nom_naissance is not null
+  and n.benef_prenoms is not null
+  and n.benef_genre is not null
+  and n.benef_naissance is not null;
+
+-- --- jeune (QF), caisse CAF -------------------------------------------------------------
+-- Le nom de NAISSANCE, le genre et la date de naissance de l'allocataire viennent de
+-- beneficiaire_cnaf_extra_field — remplis par reconcile_cnaf pour les lignes d'origine ARS,
+-- précisément la population QF. cnaf_allocataire_genre partage le vocabulaire du pivot
+-- ('male'/'female'), d'où alloc_genre plutôt que la qualité. Le prénom de l'allocataire
+-- reste PRENOMDOS, dans beneficiaires.
+insert into fc_essais (eligibility_result_id, id_psp, strategie)
+select distinct n.eligibility_result_id, b.id_psp, 'qf_caf'
+from fc_norm n
+join public.beneficiaires b
+  on public.normalise_recherche(b.nom) in (n.benef_nom_naissance, n.benef_nom_usage)
+ and b.organisme = 'CAF'
+ and b.situation = 'jeune'
+ and b.exercice_id = :exercice
+ and b.id_psp is not null
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
+ and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
+ and b.genre::text = n.benef_genre
+ and b.date_naissance::date = n.benef_naissance
+join public.beneficiaire_cnaf_extra_field x
+  on x.id_psp = b.id_psp
+ and public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = n.alloc_nom_naissance
+ and lower(btrim(x.cnaf_allocataire_genre)) = n.alloc_genre
+ and x.cnaf_allocataire_date_naissance = n.alloc_naissance::date
+where n.situation = 'jeune'
+  and n.organisme = 'CAF'
+  and n.alloc_nom_naissance is not null
+  and n.alloc_prenoms is not null
+  and n.alloc_genre is not null
+  and n.alloc_naissance is not null
+  and n.benef_nom_naissance is not null
+  and n.benef_prenoms is not null
+  and n.benef_genre is not null
+  and n.benef_naissance is not null;
+
+-- --- Verdicts ---------------------------------------------------------------------------
+
+-- Hors AAH, un candidat ne relève que d'une stratégie (sa situation et sa caisse la
+-- choisissent) : concluant ssi elle atteint exactement un id_psp.
+insert into fc_apparies (eligibility_result_id, id_psp, strategie)
+select eligibility_result_id, min(id_psp), min(strategie)
+from fc_essais
+where strategie not in ('aah_msa', 'aah_caf')
 group by eligibility_result_id
-having count(*) = 1;
+having count(distinct id_psp) = 1;
 
--- Ceux que le premier prénom laisse ambigus : les seuls que les niveaux suivants examinent.
-create temp table fc_ambigus on commit drop as
-select eligibility_result_id
-from fc_essai_1
-group by eligibility_result_id
-having count(*) > 1;
-
--- --- Niveau 3 : identité, sur les deux premiers prénoms ---------------------------------
--- Rechercher le préfixe allongé revient exactement à garder, parmi les lignes du niveau 2,
--- celles dont le second prénom est celui du candidat : pas besoin d'un second passage sur
--- l'index. Sans second prénom, rien ne distingue le candidat à ce niveau.
-insert into fc_apparies (eligibility_result_id, id_psp, niveau)
-select e.eligibility_result_id, min(e.id_psp), 'prenom_2'
-from fc_essai_1 e
-join fc_ambigus am on am.eligibility_result_id = e.eligibility_result_id
-join fc_norm n on n.eligibility_result_id = e.eligibility_result_id
-where n.prenom_2 <> ''
-  and e.prenom_2_base = n.prenom_2
-group by e.eligibility_result_id
-having count(*) = 1;
-
--- --- Les lignes que les départageurs peuvent examiner -----------------------------------
--- Les ambigus pas encore appariés, restreints aux lignes dont le second prénom ne CONTREDIT
--- pas celui du candidat : vide d'un côté ou de l'autre, ou identique. Sans ce filtre, un
--- candidat « TARNU ZELVIK » que le niveau 3 ne trouve pas pourrait être départagé vers une
--- ligne « TARNU BOLIMEK », que son second prénom exclut pourtant.
-create temp table fc_departage on commit drop as
-select e.*
-from fc_essai_1 e
-join fc_ambigus am on am.eligibility_result_id = e.eligibility_result_id
-join fc_norm n on n.eligibility_result_id = e.eligibility_result_id
-where not exists (select 1 from fc_apparies a
-                   where a.eligibility_result_id = e.eligibility_result_id)
-  and (n.prenom_2 = '' or e.prenom_2_base = '' or e.prenom_2_base = n.prenom_2);
-
--- Aucun des trois critères suivants n'est dans la clé, et c'est voulu : dans la clé, un
--- champ présent d'un côté et absent de l'autre rend la ligne introuvable. Ici ils ne font
--- que RÉTRÉCIR un ensemble déjà ambigu, et une valeur absente ne tranche simplement pas.
-
--- --- Niveau 4 : départage par le genre --------------------------------------------------
--- Genre du bénéficiaire, et qualité de l'allocataire (M / Mme) quand les deux côtés la
--- portent. Un seul bit d'information, et côté FranceConnect le genre de l'enfant est
--- *dérivé* par appariement dans qf_enfants — raison de plus pour ne l'utiliser qu'ici. Avant
--- le code postal : deux frères et sœurs du même foyer partagent le code postal, pas le genre.
-insert into fc_apparies (eligibility_result_id, id_psp, niveau)
-select d.eligibility_result_id, min(d.id_psp), 'genre'
-from fc_departage d
-join fc_norm n on n.eligibility_result_id = d.eligibility_result_id
-where n.benef_genre is not null
-  and d.genre_base = n.benef_genre
-  and (n.alloc_qualite is null or d.qualite_base is null or d.qualite_base = n.alloc_qualite)
-group by d.eligibility_result_id
-having count(*) = 1;
-
--- --- Niveau 5 : départage par la date de naissance de l'allocataire ---------------------
--- MSA et CNOUS la déposent dans le JSON allocataire, que l'injection aplatit en
--- beneficiaires.allocataire_date_naissance ; la CNAF non — son pipeline mappe les colonnes puis
--- les jette après l'appel qf-batch. normalise_date_recherche réconcilie l'ISO de la MSA et de
--- FranceConnect avec le JJ/MM/AAAA du CNOUS.
-insert into fc_apparies (eligibility_result_id, id_psp, niveau)
-select d.eligibility_result_id, min(d.id_psp), 'naissance_allocataire'
-from fc_departage d
-join fc_norm n on n.eligibility_result_id = d.eligibility_result_id
-where n.alloc_naissance is not null
-  and d.alloc_naissance_base = n.alloc_naissance
-  and not exists (select 1 from fc_apparies a
-                   where a.eligibility_result_id = d.eligibility_result_id)
-group by d.eligibility_result_id
-having count(*) = 1;
-
--- --- Niveau 6 : départage par le code postal du foyer -----------------------------------
--- Le code postal de la réponse quotient_familial, confronté à `adresse_allocataire_code_postal`. Seul
--- reste d'adresse côté FranceConnect depuis que le parcours ne demande plus la commune de
--- résidence.
-insert into fc_apparies (eligibility_result_id, id_psp, niveau)
-select d.eligibility_result_id, min(d.id_psp), 'code_postal'
-from fc_departage d
-join fc_norm n on n.eligibility_result_id = d.eligibility_result_id
-where n.code_postal is not null
-  and d.code_postal_base = n.code_postal
-  and not exists (select 1 from fc_apparies a
-                   where a.eligibility_result_id = d.eligibility_result_id)
-group by d.eligibility_result_id
-having count(*) = 1;
+-- AAH : les deux stratégies ont été essayées. Concluant ssi exactement UNE des deux
+-- retourne exactement une ligne et l'autre aucune. Deux stratégies à une ligne — même la
+-- même — restent inconcluantes.
+insert into fc_apparies (eligibility_result_id, id_psp, strategie)
+select
+	eligibility_result_id,
+	case when coalesce(m.nb, 0) = 1 then m.seul else f.seul end,
+	case when coalesce(m.nb, 0) = 1 then 'aah_msa' else 'aah_caf' end
+from (
+	select eligibility_result_id, count(distinct id_psp) as nb, min(id_psp) as seul
+	from fc_essais where strategie = 'aah_msa' group by eligibility_result_id
+) m
+full join (
+	select eligibility_result_id, count(distinct id_psp) as nb, min(id_psp) as seul
+	from fc_essais where strategie = 'aah_caf' group by eligibility_result_id
+) f using (eligibility_result_id)
+where (coalesce(m.nb, 0) = 1 and coalesce(f.nb, 0) = 0)
+   or (coalesce(m.nb, 0) = 0 and coalesce(f.nb, 0) = 1);
 
 -- Un même id_psp servi à deux candidats différents signalerait un rapprochement trop lâche :
 -- mieux vaut refuser le passage que distribuer deux fois le même code.
@@ -320,21 +389,21 @@ copy (
 ) to stdout with (format csv, header, delimiter ';');
 \o
 
--- Ce qu'un humain lit dans le journal de la cron : combien par niveau, combien d'homonymes
--- que rien n'a su départager, et combien restent.
+-- Ce qu'un humain lit dans le journal de la cron : combien par stratégie, combien
+-- d'inconcluants (des lignes atteintes, mais pas exactement une), et combien restent.
 select
 	(select count(*) from fc_candidats) as candidats,
-	(select count(*) from fc_apparies where niveau = 'ine') as par_ine,
-	(select count(*) from fc_apparies where niveau = 'prenom_1') as par_prenom_1,
-	(select count(*) from fc_apparies where niveau = 'prenom_2') as par_prenom_2,
-	(select count(*) from fc_apparies where niveau = 'genre') as par_genre,
-	(select count(*) from fc_apparies where niveau = 'naissance_allocataire')
-		as par_naissance_allocataire,
-	(select count(*) from fc_apparies where niveau = 'code_postal') as par_code_postal,
-	(select count(*) from fc_ambigus am
+	(select count(*) from fc_apparies where strategie = 'boursier') as par_boursier,
+	(select count(*) from fc_apparies where strategie = 'aah_msa') as par_aah_msa,
+	(select count(*) from fc_apparies where strategie = 'aah_caf') as par_aah_caf,
+	(select count(*) from fc_apparies where strategie = 'aeeh_msa') as par_aeeh_msa,
+	(select count(*) from fc_apparies where strategie = 'aeeh_caf') as par_aeeh_caf,
+	(select count(*) from fc_apparies where strategie = 'qf_msa') as par_qf_msa,
+	(select count(*) from fc_apparies where strategie = 'qf_caf') as par_qf_caf,
+	(select count(distinct e.eligibility_result_id) from fc_essais e
 	  where not exists (select 1 from fc_apparies a
-	                     where a.eligibility_result_id = am.eligibility_result_id))
-		as ambigus_non_departages,
+	                     where a.eligibility_result_id = e.eligibility_result_id))
+		as inconcluants,
 	(select count(*) from fc_candidats c
 	  where not exists (select 1 from fc_apparies a
 	                     where a.eligibility_result_id = c.eligibility_result_id)) as non_apparies;

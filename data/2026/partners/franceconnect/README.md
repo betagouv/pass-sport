@@ -59,53 +59,39 @@ flowchart TD
 
 ### Comment le rapprochement identifie quelqu'un
 
-Six niveaux, du plus sûr au plus lâche. Chacun n'examine que les candidats que les précédents
-n'ont pas appariés, et ne retient que s'il trouve **exactement un** `id_psp` :
+**Une stratégie par (situation, caisse)**, choisie par la `situation` et l'`organisme` du
+candidat (résolus par `clean_fc_lib`), et qui ne cherche que les lignes de base portant cette
+même situation et cette même caisse (plus `exercice_id` et un `id_psp` non nul). Le verdict
+est **strict** : un candidat est apparié ssi sa stratégie retourne **exactement un** `id_psp`
+distinct. Zéro ou plusieurs = non apparié → code neuf, le comportement le moins risqué des
+deux. Aucun départageur.
 
-| # | critère | nature |
+| stratégie | allocataire | bénéficiaire |
 |---|---|---|
-| 1 | **INE** = `allocataire_matricule` (le matricule du JSON allocataire, aplati à l'injection) | exact. Le CNOUS y range l'INE du boursier. Rien d'équivalent pour la CNAF ni la MSA : `quotient_familial` ne porte aucun numéro d'allocataire |
-| 2 | **clé** + 1er prénom du bénéficiaire | préfixe sur `beneficiaires.cle_recherche` |
-| 3 | **clé** + 2 premiers prénoms | pour les ambigus du niveau 2 |
-| 4 | **genre** du bénéficiaire, et `qualite` de l'allocataire | départage |
-| 5 | **naissance de l'allocataire** | départage |
-| 6 | **code postal** du foyer | départage |
+| **boursier** | `allocataire_matricule` = INE, exact — le CNOUS y range l'INE du boursier ; rien d'équivalent CNAF/MSA | — |
+| **AAH MSA** | — | nom de **naissance** (`family_name`) · prénoms ⊆ · genre · naissance |
+| **AAH CAF** | — | nom d'**usage** (`preferred_username`, seul disponible : la route AAH n'appelle pas QF) · prénoms ⊆ · genre · naissance |
+| **AEEH MSA** | nom de naissance · prénoms ⊆ · qualité (M/Mme) · naissance | nom · prénoms stricts · genre · naissance |
+| **AEEH CAF** | nom d'usage (`RESPDOS`) · prénoms ⊆ · qualité · *pas* de naissance (la CNAF ne la sérialise pas) | nom (`NOMENF`, accepté sous ses deux formes candidat) · prénoms stricts · genre · naissance |
+| **jeune MSA** | nom de naissance · prénoms ⊆ · qualité · naissance | nom · prénoms ⊆ · genre · naissance |
+| **jeune CAF** | nom de **naissance**, genre et naissance depuis `beneficiaire_cnaf_extra_field` (rempli pour l'origine ARS, la population QF) · prénoms ⊆ | nom (deux formes) · prénoms ⊆ · genre · naissance |
 
-**La clé** : `alloc_nom | alloc_prenom | date_benef | benef_nom | benef_prénoms`. La base en
-porte une par ligne ; le candidat en essaie jusqu'à **8 variantes**, parce que les caisses ne
-rangent pas la même nature de nom dans ces champs :
+**⊆ — le containment des prénoms** : les prénoms venus de la base LAMP doivent être
+**contenus** dans les prénoms FranceConnect — sous-ensemble de mots, ordre libre, après
+normalisation des deux côtés. La CNAF ne stocke qu'un prénom (`PRENOMDOS`, `NOMENF`),
+FranceConnect les porte tous.
 
-- nom de l'allocataire : **naissance** (`qf_allocataires[].nom_naissance`, à défaut
-  `family_name`) et **usage** (`qf_allocataires[].nom_usage`, à défaut le
-  `preferred_username` FranceConnect). La MSA range un nom de naissance, la CNAF un nom
-  d'usage (`RESPDOS`) ;
-- prénom de l'allocataire : **complet** et **premier seul**. Il est comparé à l'égalité
-  stricte, et la CNAF n'en stocke qu'un ;
-- nom du bénéficiaire : **naissance** et **usage**. Pour un enfant, l'usage est celui que le
-  worker stocke dans `enfant_identite`, à défaut `qf_enfants[].nom_usage` pour les lignes
-  plus anciennes. Sur une ligne `self`, c'est celui de l'allocataire.
+**AAH, cas particulier** : la caisse est indéterminable depuis l'API (aucun appel
+`quotient_familial` sur cette route), les **deux** stratégies sont donc essayées. Concluant
+ssi exactement une des deux retourne exactement une ligne et l'autre aucune — deux stratégies
+à une ligne, même identique, restent inconcluantes.
 
-Chaque niveau compte des `id_psp` **distincts** : plusieurs variantes peuvent atteindre la même
-ligne, qui ne doit compter qu'une fois.
-
-**Les départageurs** (4 à 6) ne font que rétrécir l'ensemble trouvé au niveau 2, et seulement
-parmi les lignes dont le second prénom ne contredit pas celui du candidat. Le genre et la
-naissance de l'allocataire restent **hors de la clé** : dans la clé, un champ présent d'un
-côté et absent de l'autre rend la ligne introuvable — la CNAF ne sérialise pas la naissance de
-l'allocataire — alors qu'en départage il ne coûte rien.
-
-Un candidat encore ambigu après les six niveaux n'est **pas** apparié : il reçoit un code neuf,
-le comportement le moins risqué des deux.
-
-Ce que chaque case peut exploiter — le CNOUS n'a que des boursiers, et aucune autre caisse n'en
-a :
-
-| | CAF | MSA | CNOUS |
-|---|---|---|---|
-| **jeune** | noms d'usage de l'allocataire et de l'enfant ↔ `RESPDOS` / `NOMENF` · genre · code postal · *pas* de naissance de l'allocataire | nom de naissance ↔ nom de naissance · genre · naissance de l'allocataire · code postal | — |
-| **AEEH** | comme `jeune` (même appel QF) | comme `jeune` | — |
-| **AAH** | ligne `self` : le nom d'usage FranceConnect sert les deux moitiés de la clé · genre · pas de code postal | nom de naissance ↔ nom de naissance · genre · naissance de l'allocataire | — |
-| **boursier** | — | — | INE exact · clé à variantes en repli · genre · naissance de l'allocataire |
+Côté candidat, les noms viennent de la réponse `quotient_familial` d'abord (le vocabulaire
+même de la caisse), du pivot FranceConnect en repli : nom de naissance =
+`qf_allocataires[].nom_naissance` à défaut `family_name`, nom d'usage =
+`qf_allocataires[].nom_usage` à défaut `preferred_username`. Pour un enfant, l'usage est
+celui que le worker stocke dans `enfant_identite`, à défaut `qf_enfants[].nom_usage` ; sur
+une ligne `self`, c'est celui de l'allocataire.
 
 `fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage ; les
 fichiers horodatés (`AAAA-MM-JJ-fc-with-codes.csv`, `fc_2026_writeback.csv`,

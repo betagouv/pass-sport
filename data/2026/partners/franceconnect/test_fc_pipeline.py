@@ -246,6 +246,12 @@ def test_clean_ecrit_les_noms_d_usage_dans_les_candidats_au_rapprochement(tmp_pa
     stats = pipeline.clean(input_filepath, output_filepath, match_filepath)
 
     candidats = pd.read_csv(match_filepath, sep=';', dtype=str, keep_default_na=False)
+    # L'en-tête exact que le `header match` de match_beneficiaires.sql exige.
+    assert list(candidats.columns) == pipeline.fc.MATCH_COLUMNS
+    # Le couple qui choisit la stratégie de rapprochement.
+    assert candidats.loc[0, 'situation'] == 'jeune'
+    assert candidats.loc[0, 'organisme'] == 'CAF'
+    assert candidats.loc[0, 'allocataire_genre'] == 'female'
     assert candidats.loc[0, 'allocataire_nom_usage'] == 'Vorsalde'
     assert candidats.loc[0, 'beneficiaire_nom_usage'] == 'Bravenne'
     assert stats['allocataires_avec_nom_usage'] == 1

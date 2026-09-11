@@ -113,25 +113,34 @@ porte, et seulement dans le fichier réconcilié. La suppression d'un
 bénéficiaire emporte sa ligne (`ON DELETE CASCADE`). Seules les lignes d'origine ARS ont la date
 et le lieu de naissance : la CNAF ne les remplit pas pour l'AAH et l'AEEH.
 
-## La colonne de recherche
+## Les index de rapprochement
 
-`beneficiaires.cle_recherche` est une colonne **générée** qui concatène, normalisés :
+`match_beneficiaires.sql` interroge la table par **stratégie** : une requête par
+(situation, caisse), chacune ancrée sur l'égalité d'un nom normalisé plus le filtre
+`exercice_id` / `organisme` / `situation`. Deux index d'expression la servent —
+`normalise_recherche` est IMMUTABLE, ce qui les rend possibles :
 
+```sql
+beneficiaires_match_nom_idx             (exercice_id, organisme, situation, normalise_recherche(nom))
+beneficiaires_match_allocataire_nom_idx (exercice_id, organisme, situation, normalise_recherche(allocataire_nom))
 ```
-allocataire_nom | allocataire_prenom | date_naissance | nom | prénoms + ' '
-```
 
-Les prénoms du bénéficiaire viennent en dernier, suivis d'un espace : c'est ce qui permet à
-`match_beneficiaires.sql` de chercher sur le 1er prénom, puis sur les deux premiers quand le
-premier est ambigu, par simple allongement du préfixe — servi par l'index
-`beneficiaires_cle_recherche_idx` en `text_pattern_ops`.
+Le premier ancre les stratégies qui cherchent le bénéficiaire (AAH, et les stratégies CAF
+qui joignent ensuite `beneficiaire_cnaf_extra_field` par `id_psp`) ; le second, celles qui
+cherchent l'allocataire (AEEH/QF côté MSA). La route boursier passe par l'index existant sur
+`allocataire_matricule` (l'INE).
 
-La date de naissance et le lieu de naissance de l'allocataire n'entrent **pas** dans la clé :
-la CNAF ne les dépose pas dans le JSON, les inclure rendrait toute ligne CNAF introuvable.
+## La colonne de recherche (héritée)
 
-**Changer l'ensemble des colonnes** demande de reconstruire la colonne — une colonne générée
-n'est pas recalculée quand la fonction derrière elle change, et cette fonction ne peut pas
-être remplacée tant qu'une colonne en dépend :
+`beneficiaires.cle_recherche` est une colonne **générée** (`allocataire_nom |
+allocataire_prenom | date_naissance | nom | prénoms + ' '`, normalisés) qui servait la
+recherche par préfixe de l'ancien rapprochement en cascade. Le rapprochement par stratégies
+ne l'utilise **plus** ; la colonne, sa fonction et son index sont conservés en attendant une
+suppression dédiée (le DDL de production les porte aussi).
+
+Pour la reconstruire malgré tout — une colonne générée n'est pas recalculée quand la
+fonction derrière elle change, et cette fonction ne peut pas être remplacée tant qu'une
+colonne en dépend :
 
 ```sql
 DROP INDEX public.beneficiaires_cle_recherche_idx;

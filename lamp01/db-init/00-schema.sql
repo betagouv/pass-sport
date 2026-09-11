@@ -95,11 +95,15 @@ CREATE INDEX idx_beneficiaires_prenom_trgm ON public.beneficiaires (prenom);
 CREATE INDEX idx_exercice_id ON public.beneficiaires (exercice_id);
 
 -- ---------------------------------------------------------------------------------------
--- Search key
+-- Search key (legacy)
 --
 -- Answers one question: is the person a FranceConnect run just judged eligible already in
--- this table, carrying an id_psp? The FranceConnect path no longer calls LCA, so this
--- lookup is what replaces it (data/2026/partners/franceconnect/match_beneficiaires.sql).
+-- this table, carrying an id_psp? match_beneficiaires.sql used to serve that question with
+-- a prefix search over this key; it now runs one query per (situation, caisse) against the
+-- per-strategy indexes below, and no longer reads cle_recherche. The column, its functions
+-- and its index are kept until a dedicated removal -- the production DDL carries them too.
+-- normalise_recherche and normalise_date_recherche themselves are still very much alive:
+-- the per-strategy matching normalises both sides with them.
 --
 -- Everything below is IMMUTABLE because a generated column demands it, which also rules
 -- out the unaccent extension: its result depends on a dictionary the planner may not
@@ -198,3 +202,20 @@ ALTER TABLE public.beneficiaires ADD COLUMN cle_recherche text
 -- text_pattern_ops so LIKE 'prefix%' is index-served whatever the database collation.
 CREATE INDEX beneficiaires_cle_recherche_idx
 	ON public.beneficiaires (cle_recherche text_pattern_ops);
+
+-- ---------------------------------------------------------------------------------------
+-- Per-strategy matching indexes
+--
+-- match_beneficiaires.sql now runs one query per (situation, caisse), each anchored on an
+-- equality over a normalised name plus the exercice/organisme/situation filter. Two
+-- anchors exist: the beneficiary's own name (boursier joins on allocataire_matricule,
+-- AAH and the CAF strategies on nom) and the allocataire's name (the MSA AEEH/QF
+-- strategies). normalise_recherche is IMMUTABLE, which is what makes these expression
+-- indexes legal.
+-- ---------------------------------------------------------------------------------------
+
+CREATE INDEX beneficiaires_match_nom_idx ON public.beneficiaires
+	(exercice_id, organisme, situation, (public.normalise_recherche(nom)));
+
+CREATE INDEX beneficiaires_match_allocataire_nom_idx ON public.beneficiaires
+	(exercice_id, organisme, situation, (public.normalise_recherche(allocataire_nom)));

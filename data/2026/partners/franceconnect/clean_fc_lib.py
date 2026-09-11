@@ -88,7 +88,7 @@ FC_DEDUPLICATION_KEY_COLUMNS = ['nom', 'prenom', 'date_naissance', 'genre']
 # peut pas être réutilisé tel quel : cette source nomme ses colonnes d'identité au vocabulaire
 # FranceConnect, n'a de matricule que sur la route boursier (l'INE) et aucune adresse postale.
 #
-# Les colonnes brutes que le rapprochement exploite (qf_allocataires, qf_adresse, crous_ine)
+# Les colonnes brutes que le rapprochement exploite (qf_allocataires, crous_ine)
 # sont retirées ici comme les autres colonnes de travail : leur contenu utile a déjà été
 # extrait. Les colonnes `match-*` qui en dérivent, elles, ne figurent PAS dans cette liste :
 # ce retrait précède le filtrage et la déduplication, alors que les candidats au rapprochement
@@ -112,7 +112,6 @@ FINAL_COLUMNS_TO_DROP = [
     'qf_fournisseur',
     'qf_enfants',
     'qf_allocataires',
-    'qf_adresse',
     'aah_est_beneficiaire',
     'crous_est_boursier',
     'crous_ine',
@@ -384,8 +383,9 @@ def resolve_allocataire_caf(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
 
     df['match-allocataire_nom_naissance'] = caf_nom.where(caf_nom != '', pivot_nom)
     # Nom d'usage : celui de la caisse d'abord, à défaut celui que FranceConnect a servi. Sans
-    # l'un ni l'autre la variante reste vide — la fabriquer depuis l'état civil ne donnerait
-    # que le nom de naissance, une clé en double.
+    # l'un ni l'autre la colonne reste vide et les stratégies CAF, qui comparent ce nom-là,
+    # ne retournent rien — le fabriquer depuis l'état civil ne donnerait que le nom de
+    # naissance sous une étiquette mensongère.
     df['match-allocataire_nom_usage'] = caf_nom_usage.where(caf_nom_usage != '', pivot_nom_usage)
     df['match-allocataire_prenom'] = caf_prenom.where(caf_prenom != '', pivot_prenom)
 
@@ -393,10 +393,10 @@ def resolve_allocataire_caf(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
 
 
 def resolve_beneficiaire_nom_usage(df: pd.DataFrame) -> pd.DataFrame:
-    """Le nom d'usage du bénéficiaire : la seconde variante de la moitié bénéficiaire de la clé.
+    """Le nom d'usage du bénéficiaire, ce que les stratégies CAF du rapprochement comparent.
 
     Côté base, la CNAF range dans `nom` le NOMENF de son export, qui ne porte pas le suffixe
-    NAI de ses noms de naissance : un nom d'usage, présumément. Le candidat en essaie donc un
+    NAI de ses noms de naissance : un nom d'usage, présumément. Le candidat en porte donc un
     aussi, pris :
 
     - sur une ligne 'enfant', dans `enfant_identite.preferred_username`, que le worker reprend
@@ -423,31 +423,6 @@ def resolve_beneficiaire_nom_usage(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def resolve_adresse_qf(df: pd.DataFrame) -> pd.DataFrame:
-    """Extrait le code postal de la réponse quotient_familial, pour départager les homonymes.
-
-    Seul signal d'adresse restant sur cette source : le parcours ne demande plus la commune
-    de résidence, et `adresse_allocataire` vaut désormais {}. Il ne sert jamais à apparier
-    seul — uniquement à trancher entre deux lignes que tout le reste rend indistinguables.
-    """
-    df = df.copy()
-
-    def code_postal_for(value) -> str:
-        try:
-            adresse = json.loads(value) if value else {}
-        except (TypeError, ValueError):
-            return ''
-        if not isinstance(adresse, dict):
-            return ''
-        return str(adresse.get('code_postal') or '').strip()
-
-    if df.empty or 'qf_adresse' not in df.columns:
-        df['match-code_postal'] = ''
-    else:
-        df['match-code_postal'] = df['qf_adresse'].map(code_postal_for)
-    return df
-
-
 def _champ_du_json_allocataire(valeur, champ: str) -> str:
     """Relit un champ de la colonne JSON `allocataire`, déjà sérialisée à ce stade."""
     try:
@@ -463,31 +438,38 @@ def _champ_du_json_allocataire(valeur, champ: str) -> str:
 # aussi à sa table fc_candidats, sinon le chargement échoue au lieu de décaler les données.
 MATCH_COLUMNS = [
     'eligibility_result_id',
+    # Ce couple choisit la STRATÉGIE de rapprochement (une par situation et par caisse) : les
+    # caisses n'écrivent pas la même nature de nom ni les mêmes champs allocataire en base.
+    # Sur la route AAH, `organisme` est un défaut (aucun appel quotient_familial n'a nommé la
+    # caisse) : match_beneficiaires.sql y essaie les DEUX stratégies.
+    'situation',
+    'organisme',
     'ine',
     'allocataire_nom',
     # Le nom d'usage n'est pas là par goût — partout ailleurs le code ne retient que le nom
     # de naissance de la réponse quotient_familial (candidates.ts, qf-batch.ts,
     # build_psp_columns). Il est là parce que les deux caisses ne rangent PAS la même chose
     # dans le `allocataire.nom` qui part en base : la MSA y met le nom de naissance, la CNAF
-    # y met RESPDOS, qui est un nom d'usage. Une seule clé raterait l'une des deux.
+    # y met RESPDOS, qui est un nom d'usage. Les stratégies MSA comparent le premier, les
+    # stratégies CAF le second.
     'allocataire_nom_usage',
     'allocataire_prenom',
-    # Hors clé, et volontairement : CNAF ne sérialise pas la naissance de l'allocataire dans
-    # son JSON, une clé qui l'exigerait rendrait ses lignes introuvables. MSA et CNOUS la
-    # portent, elle sert donc à DÉPARTAGER deux homonymes — jamais à apparier seule.
+    # Exigée par les stratégies qui la portent des deux côtés (AEEH/QF côté MSA, QF côté CAF
+    # via beneficiaire_cnaf_extra_field) ; les autres ne la regardent pas — CNAF ne la
+    # sérialise pas dans son JSON pour AAH/AEEH.
     'allocataire_date_naissance',
-    # Départageur, hors clé pour la même raison : M / Mme, comme les partenaires l'écrivent.
+    # Le « genre » de l'allocataire tel que les partenaires l'écrivent en base : M / Mme.
     'allocataire_qualite',
+    # Le même, au vocabulaire du pivot ('male'/'female') : ce que la stratégie QF-CAF
+    # confronte à cnaf_allocataire_genre.
+    'allocataire_genre',
     'beneficiaire_nom',
     # Seconde variante du nom du bénéficiaire, pour la même raison que celle de l'allocataire :
     # la CNAF range dans NOMENF un nom sans le suffixe NAI de ses noms de naissance.
     'beneficiaire_nom_usage',
     'beneficiaire_prenom',
     'beneficiaire_date_naissance',
-    # Départageur, hors clé : un seul bit d'information, et côté FranceConnect le genre de
-    # l'enfant est dérivé par appariement dans qf_enfants, qui peut échouer.
     'beneficiaire_genre',
-    'code_postal',
 ]
 
 
@@ -510,6 +492,8 @@ def build_match_candidates(df: pd.DataFrame) -> pd.DataFrame:
 
     candidats = pd.DataFrame({
         'eligibility_result_id': df['eligibility_result_id'],
+        'situation': df['situation'],
+        'organisme': df['organisme'],
         'ine': df['allocataire'].map(lambda v: _champ_du_json_allocataire(v, 'matricule')),
         'allocataire_nom': colonne('match-allocataire_nom_naissance'),
         'allocataire_nom_usage': colonne('match-allocataire_nom_usage'),
@@ -518,15 +502,15 @@ def build_match_candidates(df: pd.DataFrame) -> pd.DataFrame:
             lambda v: _champ_du_json_allocataire(v, 'date_naissance')),
         'allocataire_qualite': df['allocataire'].map(
             lambda v: _champ_du_json_allocataire(v, 'qualite')),
+        'allocataire_genre': colonne('match-allocataire_genre'),
         'beneficiaire_nom': df['nom'],
         'beneficiaire_nom_usage': colonne('match-beneficiaire_nom_usage'),
         'beneficiaire_prenom': df['prenom'],
         # La date seule : la base stocke ces dates décalées de 4 h
-        # (partners.shift_birthdate_by_hours) et la clé de recherche n'en retient que le jour.
+        # (partners.shift_birthdate_by_hours) et le rapprochement n'en retient que le jour.
         'beneficiaire_date_naissance': pd.to_datetime(
             df['date_naissance'], errors='coerce').dt.strftime('%Y-%m-%d'),
         'beneficiaire_genre': df['genre'],
-        'code_postal': colonne('match-code_postal').fillna(''),
     })
 
     return candidats[MATCH_COLUMNS].fillna('')
@@ -558,6 +542,12 @@ def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     gender = df['allocataire-genre'].fillna('').astype(str).str.strip().str.lower()
     df['genre'] = np.where(is_enfant, df['enfant_genre'], gender.map(GENRE_BY_GENDER).fillna(''))
+
+    # Le genre de l'allocataire au vocabulaire du pivot ('male'/'female'), pour le
+    # rapprochement : la stratégie QF-CAF le confronte à cnaf_allocataire_genre, stocké sous
+    # cette même forme. Colonne `match-*` et non charpente : elle doit survivre à
+    # drop_intermediate_columns jusqu'à build_match_candidates.
+    df['match-allocataire_genre'] = gender
 
     # Le JSON allocataire décrit le PARENT, y compris sur une ligne 'self' où il est aussi le
     # bénéficiaire : c'est ce que fait déjà chaque fichier partenaire.

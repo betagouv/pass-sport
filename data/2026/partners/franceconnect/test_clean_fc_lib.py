@@ -36,7 +36,6 @@ def enfant_row(**overrides):
         'qf_fournisseur': 'CNAF',
         'qf_enfants': None,
         'qf_allocataires': None,
-        'qf_adresse': None,
         'aah_est_beneficiaire': None,
         'crous_est_boursier': None,
         'crous_ine': None,
@@ -345,6 +344,10 @@ def test_il_ne_reste_que_le_schema_psp_et_la_cle_du_write_back():
     df = partners.add_allocataire_json_column(df)
     df = partners.add_adresse_allocataire_json_column(df)
     df = lib.drop_intermediate_columns(df)
+    # Les colonnes `match-*` survivent volontairement à drop_intermediate_columns — les
+    # candidats au rapprochement sont tirés du DataFrame final — et c'est fc_pipeline.clean
+    # qui les retire ensuite, comme ici.
+    df = df.drop(columns=[c for c in df.columns if c.startswith('match-')])
 
     assert sorted(df.columns) == sorted([
         'eligibility_result_id', 'nom', 'prenom', 'date_naissance', 'genre',
@@ -437,13 +440,6 @@ def test_deux_allocataires_sans_date_concordante_ne_designent_personne():
     assert df.loc[0, 'match-allocataire_nom_naissance'] == 'MARTIN'
 
 
-def test_le_code_postal_du_foyer_est_extrait_de_la_reponse_quotient_familial():
-    df = pd.DataFrame([enfant_row(qf_adresse=json.dumps({'code_postal': '88180',
-                                                         'commune': 'PLUNDARIS'}))])
-    df = lib.resolve_adresse_qf(df)
-    assert df.loc[0, 'match-code_postal'] == '88180'
-
-
 def test_l_ine_du_boursier_devient_le_matricule_de_l_allocataire():
     df = pd.DataFrame([self_row(crous_est_boursier='true', crous_ine='INE7788')])
     df, _ = lib.resolve_enfant_genre(df)
@@ -457,14 +453,19 @@ def test_les_candidats_au_rapprochement_portent_les_colonnes_attendues():
     df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
     df, _ = lib.resolve_enfant_genre(df)
     df, _ = lib.resolve_allocataire_caf(df)
-    df = lib.resolve_adresse_qf(df)
     df = lib.build_psp_columns(df)
+    df, _ = lib.resolve_situation(df)
+    df = lib.resolve_organisme(df)
     df = partners.add_allocataire_json_column(df)
 
     candidats = lib.build_match_candidates(df)
 
     assert list(candidats.columns) == lib.MATCH_COLUMNS
+    # Le couple qui choisit la stratégie côté match_beneficiaires.sql.
+    assert candidats.loc[0, 'situation'] == 'jeune'
+    assert candidats.loc[0, 'organisme'] == 'CAF'
     assert candidats.loc[0, 'allocataire_nom'] == 'BOLIMEK'
+    assert candidats.loc[0, 'allocataire_genre'] == 'female'
     assert candidats.loc[0, 'beneficiaire_nom'] == 'MARTIN'
     assert candidats.loc[0, 'beneficiaire_prenom'] == 'Lea'
     assert candidats.loc[0, 'beneficiaire_date_naissance'] == '2015-06-01'
@@ -538,9 +539,10 @@ def test_les_candidats_portent_le_genre_la_qualite_et_les_noms_d_usage():
                                   **{'allocataire-nom_usage': 'Vorsalde'})])
     df, _ = lib.resolve_enfant_genre(df)
     df, _ = lib.resolve_allocataire_caf(df)
-    df = lib.resolve_adresse_qf(df)
     df = lib.resolve_beneficiaire_nom_usage(df)
     df = lib.build_psp_columns(df)
+    df, _ = lib.resolve_situation(df)
+    df = lib.resolve_organisme(df)
     df = partners.add_allocataire_json_column(df)
 
     candidats = lib.build_match_candidates(df)
