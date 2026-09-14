@@ -117,8 +117,8 @@ C'est une garantie du playbook, pas un oubli à corriger :
     --extra-vars pass_sport_fc_cron_enabled=true
   ```
   Ne l'activer qu'une fois les deux prérequis suivants validés : l'empreinte SSH Scalingo
-  amorcée (ci-dessous) et un essai à blanc réussi
-  (`FC_PROD_DROP_DIR=/tmp/fc-drop FC_CODE_EMAILS_DRY_RUN=1 ./run_fc_pipeline.sh`, son journal
+  amorcée (ci-dessous) et un passage à blanc réussi
+  (`./run_fc_pipeline.sh --dry-run`, son journal
   dans `data/2026/partners/franceconnect/run/latest/run.log`, voir le
   [README de franceconnect/](../../data/2026/partners/franceconnect/README.md)). Le passage
   dépose son CSV en production, marque `eligibility_results` puis pose, à travers un tunnel

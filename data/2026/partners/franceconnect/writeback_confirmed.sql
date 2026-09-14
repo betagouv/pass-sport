@@ -80,4 +80,16 @@ select
     where not exists (select 1 from eligibility_results r
                        where r.id = c.eligibility_result_id)) as ids_introuvables;
 
+-- Passage à blanc (`psql … -v dry_run=1 -f writeback_confirmed.sql`) : le contrôle d'après
+-- write-back est joué ICI, sur l'état que le passage réel aurait validé, puis tout est annulé —
+-- lancé après coup, il ne verrait qu'une base intacte. Mode silencieux et sortie nue : le
+-- compte est la dernière ligne, comme en sortie de `psql -Atq -f check_confirmed.sql`.
+\if :{?dry_run}
+\set QUIET on
+\pset tuples_only on
+\pset format unaligned
+\ir check_confirmed.sql
+rollback;
+\else
 commit;
+\endif

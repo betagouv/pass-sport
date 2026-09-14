@@ -27,7 +27,7 @@
 # - l'entrée crontab de FranceConnect est posée DÉSACTIVÉE (commentée) par défaut : le
 #   premier passage automatique n'a lieu qu'après l'avoir explicitement activée, une fois que
 #   l'empreinte SSH Scalingo a été amorcée à la main (voir deploy/ansible/README.md) et qu'un
-#   essai à blanc (FC_PROD_DROP_DIR détourné, FC_CODE_EMAILS_DRY_RUN=1) a été validé.
+#   passage à blanc (run_fc_pipeline.sh --dry-run) a été validé.
 #
 # Cette entrée crontab peut elle-même être sautée en entier (pas seulement posée désactivée)
 # avec `--skip-tags fc-cron` — pour rejouer le reste du provisioning, CLI Scalingo comprise,

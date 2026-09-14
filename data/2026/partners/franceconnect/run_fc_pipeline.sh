@@ -33,6 +33,13 @@
 #
 # Un dossier sans STATUT est celui d'un passage tué sans pouvoir se clore (kill -9, coupure).
 #
+# PASSAGE À BLANC : `run_fc_pipeline.sh --dry-run` joue le passage entier sans rien laisser hors
+# de son dossier, suffixé -dry-run. L'extraction et le rapprochement, qui ne font que lire,
+# tournent pour de vrai ; les deux write-backs Scalingo et le report dans la base bénéficiaires
+# vont au bout de leur transaction, contrôles compris, puis l'annulent ; les codes sont tirés sur
+# une copie de EXISTING_CODES_PATHFILE_2026 ; rien n'est déposé et aucun job n'est posé dans
+# Redis. De quoi juger l'appariement sur les données réelles avant d'activer la cron.
+#
 # Variables lues (data/.env, puis /etc/default/pass-sport-fc s'il existe) :
 #   SCALINGO_APP                  application Scalingo hébergeant la base      (obligatoire)
 #   SCALINGO_API_TOKEN            jeton d'API, pour un `scalingo` non interactif
@@ -44,6 +51,7 @@
 #   FC_TUNNEL_PORT                port local du tunnel Postgres (défaut 10000)
 #   FC_REDIS_TUNNEL_PORT          port local du tunnel Redis    (défaut 10001)
 #   FC_CODE_EMAILS_DRY_RUN        1 : job courriel posé en dry-run, pour un passage d'essai
+#                                 (sans objet avec --dry-run, qui ne pose aucun job)
 #   FC_RUN_DIR                    dossiers de passage       (défaut <ce dossier>/run)
 #   FC_LOCK_FILE                  verrou anti-chevauchement (défaut /tmp/pass-sport-fc.lock)
 #   SCALINGO_SSH_IDENTITY         clé privée SSH pour db-tunnel (optionnel, voir plus bas)
@@ -72,6 +80,14 @@ LAMP_INJECT="$(dirname "$DATA_DIR")/lamp01/inject_csv.sh"
 
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { RUN_ERROR="$*"; log "ERREUR : $*" >&2; exit 1; }
+
+DRY_RUN=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    *) die "argument inconnu : $arg — usage : $0 [--dry-run]" ;;
+  esac
+done
 
 # Un chemin relatif de data/.env est relatif à data/, jamais au dossier d'où cron nous lance.
 resolve_path() {
@@ -136,6 +152,11 @@ FC_LOCK_FILE="${FC_LOCK_FILE:-/tmp/pass-sport-fc.lock}"
 TS_ISO="$(date '+%Y-%m-%dT%H:%M:%S')"
 TS_COMPACT="${TS_ISO//:/-}"
 
+# Le nom du dossier du passage, et la première colonne de passages.log : un passage à blanc s'y
+# distingue au premier coup d'œil.
+RUN_NAME="$TS_COMPACT"
+if (( DRY_RUN )); then RUN_NAME+="-dry-run"; fi
+
 RUNS_INDEX="$FC_RUN_DIR/passages.log"
 mkdir -p "$FC_RUN_DIR"
 
@@ -143,7 +164,7 @@ mkdir -p "$FC_RUN_DIR"
 # s'entremêle pas avec celle d'un passage concurrent.
 record_run() {
   local status="$1" exit_code="$2" summary="${3//$'\n'/ }" line
-  printf -v line '%s  %-13s  %3s  %s' "$TS_COMPACT" "$status" "$exit_code" "$summary"
+  printf -v line '%s  %-13s  %3s  %s' "$RUN_NAME" "$status" "$exit_code" "$summary"
   printf '%s\n' "$line" >>"$RUNS_INDEX"
   if [[ -n "${RUN_DIR:-}" ]]; then printf '%s\n' "$line" >"$RUN_DIR/STATUT"; fi
 }
@@ -162,10 +183,10 @@ fi
 
 # --- Dossier du passage ------------------------------------------------------------
 
-RUN_DIR="$FC_RUN_DIR/$TS_COMPACT"
+RUN_DIR="$FC_RUN_DIR/$RUN_NAME"
 # Sans -p : deux passages dans la même seconde ne doivent pas mêler leurs fichiers.
 mkdir "$RUN_DIR"
-ln -sfn "$TS_COMPACT" "$FC_RUN_DIR/latest"
+ln -sfn "$RUN_NAME" "$FC_RUN_DIR/latest"
 
 LOG_FILE="$RUN_DIR/run.log"
 # 9>&- : tee survit un instant au script, il ne doit pas emporter le verrou avec lui.
@@ -181,6 +202,7 @@ RUN_STEP="préparation"
 RUN_ERROR=""
 CODES_DRAWN=0
 TUNNEL_PIDS=()
+DRY_RUN_CODES_COPY=""
 
 step() {
   RUN_STEP="$1"
@@ -201,6 +223,8 @@ close_tunnels() {
 on_exit() {
   local exit_code=$?
   close_tunnels
+  # La liste de tous les codes de la campagne n'a pas à être dupliquée dans chaque essai.
+  if [[ -n "$DRY_RUN_CODES_COPY" ]]; then rm -f "$DRY_RUN_CODES_COPY"; fi
 
   if (( exit_code == 0 )); then
     record_run "$RUN_STATUS" 0 "$RUN_DETAIL"
@@ -212,7 +236,7 @@ on_exit() {
   if (( CODES_DRAWN )); then summary+=" — codes fabriqués"; fi
   summary+=" — ${RUN_ERROR:-sortie en erreur}"
   record_run echec "$exit_code" "$summary"
-  ln -sfn "$TS_COMPACT" "$FC_RUN_DIR/derniere-erreur"
+  ln -sfn "$RUN_NAME" "$FC_RUN_DIR/derniere-erreur"
   log "=== statut : echec — $RUNS_INDEX"
 }
 
@@ -222,6 +246,9 @@ trap 'RUN_ERROR="${RUN_ERROR:-échec (code $?) ligne $LINENO : $BASH_COMMAND}"' 
 trap on_exit EXIT
 
 log "=== passage FranceConnect, dossier $RUN_DIR"
+if (( DRY_RUN )); then
+  log "=== DRY-RUN : write-backs et report annulés, codes tirés sur une copie, aucun dépôt, aucun job"
+fi
 
 for var in SCALINGO_APP EXISTING_CODES_PATHFILE_2026; do
   [[ -n "${!var:-}" ]] || die "variable d'environnement manquante : $var"
@@ -277,7 +304,13 @@ backlog=("$FC_PROD_DROP_DIR"/beneficiaires-insertion-*.csv "$FC_PROD_DROP_DIR"/.
 shopt -u nullglob
 
 if (( ${#backlog[@]} > 0 )); then
-  die "dépôt précédent non consommé dans $FC_PROD_DROP_DIR : ${backlog[*]} — traitement suspendu tant qu'il n'a pas été retiré"
+  message="dépôt précédent non consommé dans $FC_PROD_DROP_DIR : ${backlog[*]}"
+  # Un passage à blanc ne marque personne : il n'a pas à s'arrêter, seulement à prévenir.
+  if (( DRY_RUN )); then
+    log "ATTENTION : $message — un passage réel s'arrêterait ici"
+  else
+    die "$message — traitement suspendu tant qu'il n'a pas été retiré"
+  fi
 fi
 
 # --- Tunnels Scalingo --------------------------------------------------------------
@@ -320,6 +353,26 @@ FC_DATABASE_URL="$(printf '%s' "$REMOTE_URL" \
 
 run_psql() { psql "$FC_DATABASE_URL" -v ON_ERROR_STOP=1 "$@"; }
 
+# Joue un write-back puis son contrôle, et laisse dans REMAINING le nombre de bénéficiaires du
+# passage restés non marqués — 0 attendu.
+#
+# Le contrôle est lu en -Atq : une valeur nue, sans en-tête ni étiquettes de commande, et
+# `tail -n 1` par prudence, pour ne dépendre de rien d'autre que de la dernière ligne. En
+# passage à blanc, c'est le write-back lui-même qui joue le contrôle avant d'annuler sa
+# transaction, et qui en sort le compte en dernière ligne.
+mark_and_check() {
+  local writeback_sql="$1" check_sql="$2" output
+  if (( DRY_RUN )); then
+    output="$(run_psql -v dry_run=1 -f "$writeback_sql")"
+    printf '%s\n' "$output"
+    REMAINING="$(printf '%s\n' "$output" | tail -n 1 | tr -d '[:space:]')"
+    log "dry-run : marquage annulé, la base Scalingo n'a pas bougé"
+  else
+    run_psql -f "$writeback_sql"
+    REMAINING="$(run_psql -Atq -f "$check_sql" | tail -n 1 | tr -d '[:space:]')"
+  fi
+}
+
 # --- Mise en file du job courriel --------------------------------------------------
 # Le worker Scalingo envoie leur code aux lignes FranceConnect confirmées et pas encore
 # prévenues (worker/src/jobs/fc-code-emails.ts) : ce passage-ci ne fait que poser le job. Posé à
@@ -327,6 +380,11 @@ run_psql() { psql "$FC_DATABASE_URL" -v ON_ERROR_STOP=1 "$@"; }
 # échoués. Ni sur une erreur, ni quand le verrou est pris : le passage suivant s'en charge.
 
 enqueue_code_emails() {
+  if (( DRY_RUN )); then
+    log "dry-run : job fc_code_emails non posé, rien n'est écrit dans Redis"
+    return
+  fi
+
   open_tunnel SCALINGO_REDIS_URL "$FC_REDIS_TUNNEL_PORT"
 
   # Jamais journalisée : elle porte le mot de passe. rediss:// -> redis:// : le certificat de
@@ -399,11 +457,9 @@ log "$nb_apparies bénéficiaire(s) déjà connu(s) de la base — aucun code ne
 
 if (( nb_apparies > 0 )); then
   step 4/6 "marquage des appariés (verdict eligible_confirmed)"
-  run_psql -f "$FC_DIR/writeback_confirmed.sql"
-
-  restants_confirmes="$(run_psql -Atq -f "$FC_DIR/check_confirmed.sql" | tail -n 1 | tr -d '[:space:]')"
-  [[ "$restants_confirmes" == "0" ]] \
-    || die "$restants_confirmes bénéficiaire(s) apparié(s) mais non marqué(s) — passage interrompu"
+  mark_and_check "$FC_DIR/writeback_confirmed.sql" "$FC_DIR/check_confirmed.sql"
+  [[ "$REMAINING" == "0" ]] \
+    || die "$REMAINING bénéficiaire(s) apparié(s) mais non marqué(s) — passage interrompu"
   log "contrôle du marquage des appariés : 0 restant"
 else
   step 4/6 "aucun apparié, rien à marquer"
@@ -427,9 +483,17 @@ fi
 step 5/6 "génération des codes -> $WITH_CODES_CSV"
 # Dès cet appel, même interrompu, des codes peuvent être comptabilisés dans
 # EXISTING_CODES_PATHFILE_2026 : un échec ne se rejoue plus depuis le rapprochement.
-CODES_DRAWN=1
+codes_memory="$CODES_CSV"
+if (( DRY_RUN )); then
+  # Un passage à blanc ne distribue rien : la mémoire commune des codes n'a rien à en retenir.
+  DRY_RUN_CODES_COPY="$RUN_DIR/existing-codes-dry-run.csv"
+  if [[ -f "$CODES_CSV" ]]; then cp "$CODES_CSV" "$DRY_RUN_CODES_COPY"; fi
+  codes_memory="$DRY_RUN_CODES_COPY"
+else
+  CODES_DRAWN=1
+fi
 "$PYTHON" "$FC_DIR/fc_pipeline.py" codes \
-  --input "$UNMATCHED_CSV" --output "$WITH_CODES_CSV" --existing-codes "$CODES_CSV"
+  --input "$UNMATCHED_CSV" --output "$WITH_CODES_CSV" --existing-codes "$codes_memory"
 
 # --- Étape 6 : write-back ----------------------------------------------------------
 # À partir d'ici des codes existent sans que personne ne le sache en base : c'est la fenêtre
@@ -443,37 +507,40 @@ step 6/6 "découpage du fichier du passage"
 # y lisent fc_2026_writeback.csv.
 
 log "marquage en base (verdict eligible_confirmed)"
-run_psql -f "$FC_DIR/writeback_verdict.sql"
-
-# -Atq : une valeur nue, sans en-tête ni étiquettes de commande. `tail -n 1` par prudence,
-# pour ne dépendre de rien d'autre que de la dernière ligne — le compte cherché.
-restants="$(run_psql -Atq -f "$FC_DIR/check_writeback.sql" | tail -n 1 | tr -d '[:space:]')"
-[[ "$restants" == "0" ]] \
-  || die "$restants bénéficiaire(s) encore en eligible_pending après le write-back — $PROD_CSV n'est PAS déposé"
+mark_and_check "$FC_DIR/writeback_verdict.sql" "$FC_DIR/check_writeback.sql"
+[[ "$REMAINING" == "0" ]] \
+  || die "$REMAINING bénéficiaire(s) encore en eligible_pending après le write-back — $PROD_CSV n'est PAS déposé"
 log "contrôle du marquage : 0 bénéficiaire restant"
 
 # --- Dépôt du CSV de production ----------------------------------------------------
-
-mkdir -p "$FC_PROD_DROP_DIR"
-[[ -w "$FC_PROD_DROP_DIR" ]] || die "dossier de dépôt non inscriptible : $FC_PROD_DROP_DIR"
 
 # Le nombre de lignes n'est connu qu'une fois le CSV de prod écrit par l'étape 6 : le nom
 # déposé ne peut donc être construit qu'ici, pas en même temps que PROD_CSV plus haut.
 nb_lignes="$(($(wc -l < "$PROD_CSV") - 1))"
 nom_depose="beneficiaires-insertion-$nb_lignes-$TS_COMPACT.csv"
-
-# Copie sous un nom temporaire puis renommage : le renommage est atomique sur un même système
-# de fichiers, un consommateur du dossier ne voit donc jamais un fichier à moitié écrit.
 depose="$FC_PROD_DROP_DIR/$nom_depose"
-temporaire="$FC_PROD_DROP_DIR/.$nom_depose.partiel"
-cp "$PROD_CSV" "$temporaire"
-chmod 640 "$temporaire"
-mv "$temporaire" "$depose"
 
-[[ "$(wc -c < "$depose")" == "$(wc -c < "$PROD_CSV")" ]] \
-  || die "le fichier déposé n'a pas la taille attendue : $depose"
+if (( DRY_RUN )); then
+  if [[ -d "$FC_PROD_DROP_DIR" && ! -w "$FC_PROD_DROP_DIR" ]]; then
+    log "ATTENTION : dossier de dépôt non inscriptible : $FC_PROD_DROP_DIR — un passage réel échouerait ici"
+  fi
+  log "dry-run : rien n'est déposé — un passage réel déposerait $depose ($nb_lignes bénéficiaire(s)), copie de $PROD_CSV"
+else
+  mkdir -p "$FC_PROD_DROP_DIR"
+  [[ -w "$FC_PROD_DROP_DIR" ]] || die "dossier de dépôt non inscriptible : $FC_PROD_DROP_DIR"
 
-log "déposé -> $depose ($nb_lignes bénéficiaire(s))"
+  # Copie sous un nom temporaire puis renommage : le renommage est atomique sur un même système
+  # de fichiers, un consommateur du dossier ne voit donc jamais un fichier à moitié écrit.
+  temporaire="$FC_PROD_DROP_DIR/.$nom_depose.partiel"
+  cp "$PROD_CSV" "$temporaire"
+  chmod 640 "$temporaire"
+  mv "$temporaire" "$depose"
+
+  [[ "$(wc -c < "$depose")" == "$(wc -c < "$PROD_CSV")" ]] \
+    || die "le fichier déposé n'a pas la taille attendue : $depose"
+
+  log "déposé -> $depose ($nb_lignes bénéficiaire(s))"
+fi
 
 # --- Report dans la base bénéficiaires -----------------------------------------------
 # Les bénéficiaires qui viennent de recevoir un code entrent aussi dans la base que l'étape 3
@@ -487,15 +554,25 @@ log "déposé -> $depose ($nb_lignes bénéficiaire(s))"
 # gardé pour être rejoué à la main, et l'injection étant tout ou rien, rien n'est à défaire.
 #
 # --port et les LAMP_DB_* explicites : la base même que le rapprochement vient d'interroger,
-# quoi que dise lamp01/.env.
+# quoi que dise lamp01/.env. En passage à blanc, --dry-run va jusqu'aux INSERT puis annule.
+inject_args=(--port "$LAMP_DB_PORT")
+if (( DRY_RUN )); then inject_args+=(--dry-run); fi
+
 log "report dans la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
 if ! LAMP_DB_HOST="$LAMP_DB_HOST" LAMP_DB_USER="$LAMP_DB_USER" LAMP_DB_NAME="$LAMP_DB_NAME" \
      LAMP_DB_PASSWORD="$LAMP_DB_PASSWORD" \
-     "$LAMP_INJECT" --port "$LAMP_DB_PORT" "$PROD_CSV"; then
+     "$LAMP_INJECT" "${inject_args[@]}" "$PROD_CSV"; then
+  if (( DRY_RUN )); then
+    die "dry-run : le report dans la base bénéficiaires serait refusé — voir le journal"
+  fi
   # Les codes sont en route vers la production : leur courriel peut partir.
   enqueue_code_emails
   die "bénéficiaires déposés mais NON reportés dans la base bénéficiaires — à rejouer : $LAMP_INJECT --port $LAMP_DB_PORT $PROD_CSV"
 fi
 
-RUN_DETAIL="$nb_lignes déposé(s) ($nom_depose), $nb_apparies apparié(s)"
+if (( DRY_RUN )); then
+  RUN_DETAIL="$nb_lignes à déposer ($nom_depose), $nb_apparies apparié(s) — rien d'écrit"
+else
+  RUN_DETAIL="$nb_lignes déposé(s) ($nom_depose), $nb_apparies apparié(s)"
+fi
 finish

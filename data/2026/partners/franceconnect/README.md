@@ -127,7 +127,7 @@ L'entrée de crontab n'est plus posée à la main : elle l'est par
 
 ⚠️ **Elle est posée désactivée (commentée) par défaut.** Le passage dépose un CSV en
 production et marque `eligibility_results` : il ne part seul qu'une fois l'empreinte SSH
-Scalingo amorcée à la main et un essai à blanc validé (`FC_PROD_DROP_DIR=/tmp/fc-drop`). Pour
+Scalingo amorcée à la main et un [passage à blanc](#passage-à-blanc) validé. Pour
 l'activer, rejouer le playbook avec `--extra-vars pass_sport_fc_cron_enabled=true` — voir
 [deploy/ansible/README.md](../../../../deploy/ansible/README.md).
 
@@ -144,6 +144,35 @@ Ce que le script garantit, et qu'un passage à la main doit respecter aussi :
 - **le job courriel est posé à chaque sortie réussie**, même sans nouveau bénéficiaire : il
   retente les courriels échoués et sert les appariés d'un passage précédent. Il ne l'est ni
   sur une erreur ni quand le verrou est déjà pris — le passage suivant s'en charge.
+
+### Passage à blanc
+
+Avant d'activer la cron, ou pour juger l'appariement sur les données du moment :
+
+```bash
+./run_fc_pipeline.sh --dry-run
+cat run/latest/run.log
+```
+
+Le passage est joué en entier, sur les vraies bases, mais n'écrit rien hors de son dossier
+(`run/<AAAA-MM-JJTHH-MM-SS>-dry-run/`) :
+
+| Étape | En passage à blanc |
+| --- | --- |
+| extraction, nettoyage, rapprochement | réels — ils ne font que lire |
+| write-backs Scalingo (étapes 4 et 6) | joués avec leur contrôle dans la transaction, puis annulés (`psql -v dry_run=1`) |
+| génération des codes | sur une copie de `EXISTING_CODES_PATHFILE_2026`, effacée en sortie |
+| dépôt dans `FC_PROD_DROP_DIR` | aucun ; `fc-prod.csv` reste dans le dossier, et un dépôt non consommé n'est qu'un avertissement |
+| report dans la base bénéficiaires | `inject_csv.sh --dry-run` : chargement, contrôles et INSERT, puis annulation |
+| job `fc_code_emails` | non posé, rien n'est écrit dans Redis |
+
+Ce qui ferait échouer un passage réel le fait échouer aussi : un code apparié à deux candidats,
+un marquage incomplet, une colonne refusée par l'injection. Les comptes par stratégie du
+rapprochement et ceux des deux write-backs se lisent dans le journal.
+
+Annuler n'est pas tout à fait ne rien toucher : le temps de leur transaction, les write-backs
+verrouillent les lignes `eligibility_results` du passage, et un identifiant tiré d'une séquence
+n'est pas rendu.
 
 ### Un dossier par passage
 

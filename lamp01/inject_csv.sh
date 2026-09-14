@@ -2,7 +2,7 @@
 #
 # Injection transactionnelle d'un CSV de bénéficiaires, désigné par son chemin.
 #
-#   ./inject_csv.sh [--env integration|prod | --port <port>] <chemin-du-csv>
+#   ./inject_csv.sh [--dry-run] [--env integration|prod | --port <port>] <chemin-du-csv>
 #
 # C'est l'outil d'injection des sorties de notebooks CNAF, MSA et CNOUS, qu'on injecte une
 # fois, en connaissant leur chemin. La cron FranceConnect l'appelle aussi, avec --port, pour
@@ -12,6 +12,9 @@
 #
 # --port vise un port explicite plutôt que celui d'un environnement nommé : celui de
 # LAMP_DB_PORT, que la cron a déjà interrogé pour son rapprochement. Il exclut --env.
+#
+# --dry-run joue la transaction entière — chargement, contrôles, INSERT et leurs contraintes —
+# puis l'annule : ce que l'injection refuserait se voit, et la base n'a pas bougé.
 #
 # Les colonnes JSON `allocataire` et `adresse_allocataire` des CSV sont APLATIES : chaque
 # clé va dans la colonne allocataire_<clé> / adresse_allocataire_<clé> de beneficiaires. Une
@@ -44,9 +47,14 @@ die() { printf 'ERREUR : %s\n' "$*" >&2; exit 1; }
 TARGET_ENV=""
 EXPLICIT_PORT=""
 CSV_FILE=""
+DRY_RUN=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --dry-run)
+            DRY_RUN=1
+            shift
+            ;;
         --env)
             [ $# -ge 2 ] || die "--env attend une valeur"
             TARGET_ENV="$2"
@@ -66,7 +74,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -h|--help)
-            sed -n '2,34p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            sed -n '2,37p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         -*)
@@ -80,7 +88,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-[ -n "$CSV_FILE" ] || die "aucun CSV indiqué — usage : $0 [--env integration|prod | --port <port>] <chemin-du-csv>"
+[ -n "$CSV_FILE" ] || die "aucun CSV indiqué — usage : $0 [--dry-run] [--env integration|prod | --port <port>] <chemin-du-csv>"
 [ -f "$CSV_FILE" ] || die "fichier introuvable : $CSV_FILE"
 [ -r "$CSV_FILE" ] || die "fichier illisible : $CSV_FILE"
 
@@ -164,6 +172,13 @@ CSV_COLUMNS=$(head -n 1 "$CSV_FILE" | tr -d '"\r' | tr ';' ',')
 # rend toute injection impossible.
 if [[ ! "$CSV_COLUMNS" =~ ^[a-z_][a-z0-9_]*(,[a-z_][a-z0-9_]*)*$ ]]; then
     die "en-tête CSV inexploitable : $CSV_COLUMNS"
+fi
+
+if [ "$DRY_RUN" = 1 ]; then
+    END_OF_TRANSACTION=ROLLBACK
+    echo "=== DRY-RUN : la transaction sera annulée"
+else
+    END_OF_TRANSACTION=COMMIT
 fi
 
 echo "=== $(basename "$CSV_FILE") -> [$TARGET_LABEL] ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
@@ -370,7 +385,11 @@ INSERT INTO $TARGET_TABLE ($INSERT_COLUMNS) SELECT $INSERT_VALUES FROM tmp_benef
 -- Après les bénéficiaires : la clé étrangère sur id_psp exige qu'ils existent déjà.
 $EXTRA_INSERT
 
-COMMIT;
+$END_OF_TRANSACTION;
 EOF
 
-echo "=== $EXPECTED_ROWS ligne(s) injectée(s) dans [$TARGET_LABEL]"
+if [ "$DRY_RUN" = 1 ]; then
+    echo "=== DRY-RUN : $EXPECTED_ROWS ligne(s) injectable(s) dans [$TARGET_LABEL], transaction annulée"
+else
+    echo "=== $EXPECTED_ROWS ligne(s) injectée(s) dans [$TARGET_LABEL]"
+fi

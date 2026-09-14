@@ -90,4 +90,16 @@ select
      join fc_codes c on c.eligibility_result_id = (h.response_payload ->> 'eligibility_result_id')::uuid
     where h.action = 'psp.code_writeback') as lignes_historisees;
 
+-- Passage à blanc (`psql … -v dry_run=1 -f writeback_verdict.sql`) : le contrôle d'après
+-- write-back est joué ICI, sur l'état que le passage réel aurait validé, puis tout est annulé —
+-- lancé après coup, il ne verrait qu'une base intacte. Mode silencieux et sortie nue : le
+-- compte est la dernière ligne, comme en sortie de `psql -Atq -f check_writeback.sql`.
+\if :{?dry_run}
+\set QUIET on
+\pset tuples_only on
+\pset format unaligned
+\ir check_writeback.sql
+rollback;
+\else
 commit;
+\endif
