@@ -1,5 +1,6 @@
 import type { Job, Queue } from "bullmq";
 import { type ApiParticulierClient } from "../eligibility/client";
+import type { ApiParticulierRateGate } from "../eligibility/rate-gate";
 import { runEligibilitySequence } from "../eligibility/sequence";
 import { readCaisse, readQuotientFamilial } from "../eligibility/verdicts";
 import {
@@ -20,6 +21,7 @@ export type FranceConnectDeps = {
   apiClient: ApiParticulierClient;
   db: Database;
   queue: Queue<EligibilityJobData>;
+  rateGate: ApiParticulierRateGate;
   // Decides which campaign months the quotient_familial sweep covers. Read per job rather than
   // captured once: a job requeued by a rate-limit pause can resume in a later month.
   now?: () => Date;
@@ -79,7 +81,7 @@ export async function processEligibilityJob(
   apCalls: number;
   processedAt: string;
 }> {
-  const { apiClient, db: database, queue, now } = deps;
+  const { apiClient, db: database, queue, rateGate, now } = deps;
 
   console.log(`[pass-sport-worker] job ${job.id}: eligibility chain`);
 
@@ -88,7 +90,15 @@ export async function processEligibilityJob(
   // Sent before the asynchronous treatment, and the only mail this path ever sends.
   await acknowledgeReception(job, database, history, data);
 
-  const results = await runEligibilitySequence(job, data, apiClient, queue, history, now?.());
+  const results = await runEligibilitySequence(
+    job,
+    data,
+    apiClient,
+    queue,
+    history,
+    rateGate,
+    now?.(),
+  );
 
   const { identity, isFranceConnected } = data;
   const candidates = listBeneficiaryCandidates(identity, results);

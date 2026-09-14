@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Job } from "bullmq";
 import { createCheckpointRunner } from "../../src/eligibility/checkpoint";
 import type { HistoryRecorder } from "../../src/db/history";
+import type { ApiParticulierRateGate, RateSlot } from "../../src/eligibility/rate-gate";
 import type { EligibilityCheckpoint, ResourceResult } from "../../src/eligibility/types";
 
 type CheckpointedJob = { checkpoint?: EligibilityCheckpoint };
@@ -17,6 +18,17 @@ const qfRow = (valeur: number, checkpointKey: string): ResourceResult => ({
   checkpointKey,
 });
 
+const openGate = (): ApiParticulierRateGate & { take: ReturnType<typeof vi.fn> } => ({
+  take: vi.fn(
+    async (): Promise<RateSlot> => ({
+      allowed: true,
+      perSecond: 20,
+      perMinute: 300,
+      isNight: false,
+    }),
+  ),
+});
+
 // Stands in for the BullMQ job: the runner only reads `id`, `data.checkpoint` and `updateData`.
 const runner = (checkpoint?: EligibilityCheckpoint) => {
   const job = {
@@ -28,8 +40,9 @@ const runner = (checkpoint?: EligibilityCheckpoint) => {
   } as unknown as Job<CheckpointedJob>;
 
   const history: HistoryRecorder = { record: vi.fn(async () => {}) };
+  const rateGate = openGate();
 
-  return createCheckpointRunner(job, { rateLimit: async () => {} }, history);
+  return { ...createCheckpointRunner(job, { rateLimit: async () => {} }, history, rateGate), rateGate };
 };
 
 describe("createCheckpointRunner", () => {
@@ -41,13 +54,15 @@ describe("createCheckpointRunner", () => {
       results: [qfRow(900, "qf:8"), qfRow(650, "qf:9")],
     };
 
-    const { run } = runner(resumed);
+    const { run, rateGate } = runner(resumed);
     const invoke = vi.fn();
 
     const aout = await run({ key: "qf:8", resource: QF_RESOURCE, subject: "self", invoke });
     const septembre = await run({ key: "qf:9", resource: QF_RESOURCE, subject: "self", invoke });
 
     expect(invoke).not.toHaveBeenCalled();
+    // A replayed row makes no API call, so it must spend no quota.
+    expect(rateGate.take).not.toHaveBeenCalled();
     expect((aout?.data as { quotient_familial: { valeur: number } }).quotient_familial.valeur).toBe(
       900,
     );
@@ -57,12 +72,13 @@ describe("createCheckpointRunner", () => {
   });
 
   it("calls a key the checkpoint has never seen", async () => {
-    const { run } = runner({ results: [qfRow(900, "qf:8")] });
+    const { run, rateGate } = runner({ results: [qfRow(900, "qf:8")] });
     const invoke = vi.fn(async () => qfRow(1000, "ignored"));
 
     await run({ key: "qf:9", resource: QF_RESOURCE, subject: "self", invoke });
 
     expect(invoke).toHaveBeenCalledTimes(1);
+    expect(rateGate.take).toHaveBeenCalledTimes(1);
   });
 
   // What makes the replay above possible at all: the key is stamped by the runner from the call

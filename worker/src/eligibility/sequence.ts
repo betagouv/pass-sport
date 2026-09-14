@@ -7,6 +7,7 @@ import {
   toQfParams,
 } from "./client";
 import { createCheckpointRunner } from "./checkpoint";
+import type { ApiParticulierRateGate } from "./rate-gate";
 import type { HistoryRecorder } from "../db/history";
 import {
   AAH_BIRTHDATE_MAX,
@@ -96,9 +97,10 @@ export async function runEligibilitySequence(
   client: ApiParticulierClient,
   queue: Queue<EligibilityJobData>,
   history: HistoryRecorder,
+  rateGate: ApiParticulierRateGate,
   now: Date = new Date(),
 ): Promise<ResourceResult[]> {
-  const checkpoint = createCheckpointRunner(job, queue, history);
+  const checkpoint = createCheckpointRunner(job, queue, history, rateGate);
   const { identity } = data;
 
   // Always first: quotient_familial is the only source of the household's children. Swept over

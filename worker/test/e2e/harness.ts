@@ -5,6 +5,7 @@ import { Redis } from "ioredis";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { RedisContainer, type StartedRedisContainer } from "@testcontainers/redis";
+import { createRedisRateGate } from "../../src/eligibility/rate-gate";
 import {
   PostgreSqlContainer,
   type StartedPostgreSqlContainer,
@@ -335,6 +336,8 @@ export type Stack = {
   // Moves the clock the quotient sweep reads, so a test can cover more campaign months than the
   // two STACK_NOW gives.
   setNow: (now: Date) => void;
+  // Moves the clock the rate gate reads, to park it just under a window boundary.
+  setGateNow: (ms: number) => void;
   // Last name of the fake children, so a test can tell one run's beneficiaries from another's.
   setChildrenLastname: (lastname: string) => void;
   // Strips the fake children from the QF answer, leaving a child-aide demande with no
@@ -351,11 +354,16 @@ export type Stack = {
 // `first429RetryAfter`: make one API Particulier call return a 429 with that Retry-After, to
 // exercise the worker's pause-and-retry-from-header behaviour. `apiRateLimitOnCall` chooses
 // which call that is (1-based, defaults to the first).
+// `apiCallsPerSecond`/`apiCallsPerMinute` lower the rate gate's fallback ceilings so a test can
+// saturate a window in a couple of calls; `gateNow` seeds its clock.
 export async function startStack(
   opts: {
     first429RetryAfter?: number;
     apiFailOnCall?: number;
     apiRateLimitOnCall?: number;
+    apiCallsPerSecond?: number;
+    apiCallsPerMinute?: number;
+    gateNow?: number;
   } = {},
 ): Promise<Stack> {
   const redisC: StartedRedisContainer = await new RedisContainer("redis:8-alpine").start();
@@ -437,7 +445,20 @@ export async function startStack(
 
   // Read per job rather than captured, so setNow can move the campaign month a test sweeps over.
   let stackNow = STACK_NOW;
-  const deps: FranceConnectDeps = { apiClient, db, queue, now: () => stackNow };
+
+  // Just under a minute boundary, then advancing in real time: a refusal pauses the queue for
+  // ~1 s instead of a minute, and the window it waits for actually rolls over — a frozen clock
+  // would replay the same full window forever.
+  let gateBaseMs = opts.gateNow ?? Math.floor(Date.now() / 60_000) * 60_000 + 59_000;
+  let gateBaseSetAtMs = Date.now();
+  const rateGate = createRedisRateGate(guardConn, {
+    fallbackCallsPerSecond: opts.apiCallsPerSecond ?? 1_000,
+    fallbackDayCallsPerMinute: opts.apiCallsPerMinute ?? 1_000,
+    fallbackNightCallsPerMinute: opts.apiCallsPerMinute ?? 1_000,
+    now: () => gateBaseMs + (Date.now() - gateBaseSetAtMs),
+  });
+
+  const deps: FranceConnectDeps = { apiClient, db, queue, rateGate, now: () => stackNow };
 
   const worker = new Worker<EligibilityJobData>(
     FRANCE_CONNECT_QUEUE_NAME,
@@ -634,6 +655,10 @@ export async function startStack(
     },
     setNow: (now: Date) => {
       stackNow = now;
+    },
+    setGateNow: (ms: number) => {
+      gateBaseMs = ms;
+      gateBaseSetAtMs = Date.now();
     },
     setAahBeneficiaire: (value: boolean) => {
       apiClient.aahBeneficiaire = value;

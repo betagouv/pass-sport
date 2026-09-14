@@ -29,6 +29,52 @@ pnpm db:reset     # empty the local dev tables (schema and migrations untouched)
 
 `db:reset` truncates `audit`, `eligibility_history`, `eligibility_results` and `email_verifications` in the compose `db` service. Prefer it over `docker compose down -v`, which also removes the `node_modules` and pnpm store volumes and turns a data wipe into a full dependency reinstall.
 
+## Cadence API Particulier
+
+Every online API Particulier call — the `france-connect` chain, and only it — passes through a
+fixed-window rate gate before it goes out
+([src/eligibility/rate-gate.ts](src/eligibility/rate-gate.ts)). Two windows, both aligned on the
+wall clock, both enforced in Redis so the ceiling holds across processes rather than per worker
+instance:
+
+- **20 appels/seconde**, day and night;
+- **300 appels/minute** between 8h and 21h Paris, **500** from 21h to 8h.
+
+When a window is full, the queue is paused until it rolls over and the job is requeued **without**
+consuming an attempt — the same mechanism the 429 path uses, so the chain resumes at its checkpoint
+and no answered call is billed twice. The pause is journalled in `eligibility_history` as a
+`rate_gate` / `rate_limited` row naming the window that blocked. A gate that cannot reach Redis
+pauses too: a burst sent blind is exactly what the ceiling exists to prevent.
+
+Redis keys — the counters expire on their own, the ceilings do not:
+
+| Clé | Rôle |
+|---|---|
+| `apip:rate:s:<seconde>` | compteur de la seconde en cours (TTL 2 s) |
+| `apip:rate:m:<minute>` | compteur de la minute en cours (TTL 120 s) |
+| `apip:rate:config:per_second` | plafond appels/seconde |
+| `apip:rate:config:per_minute_day` | plafond appels/minute, 8h-21h Paris |
+| `apip:rate:config:per_minute_night` | plafond appels/minute, 21h-8h Paris |
+
+The ceilings are re-read on **every** call, so they are retuned on a running worker with no
+redeploy and no restart:
+
+```bash
+pnpm apip:rate                                        # état des 3 plafonds, * = appliqué maintenant
+pnpm apip:rate --per-second 10
+pnpm apip:rate --per-minute-day 250 --per-minute-night 450
+pnpm apip:rate --reset                                # retour aux replis
+```
+
+`API_PARTICULIER_MAX_CALLS_PER_SECOND`, `API_PARTICULIER_MAX_CALLS_PER_MINUTE` and
+`API_PARTICULIER_MAX_CALLS_PER_MINUTE_NIGHT` are **fallbacks only**, used when the matching Redis
+key is absent or carries an unusable value (non-numeric, or below 1). A typo in a ceiling therefore
+can neither stop the chain nor lift the ceiling. Every change of the applied ceilings is logged by
+the worker.
+
+The offline `qf:batch` runs on the processing machine with its own in-memory pacer
+([src/scripts/rate-pacer.ts](src/scripts/rate-pacer.ts)) and does **not** consume these counters.
+
 ## Scripts
 
 ### QF batch (`qf:batch`)

@@ -12,6 +12,7 @@ import {
   rowToEmailVariables,
 } from "./fc-code-emails-rows";
 import { startJob } from "./shared";
+import { positiveNumberFromEnv } from "../env";
 
 export type FcCodeEmailsJobData = {
   enqueuedAt: string;
@@ -21,11 +22,6 @@ export type FcCodeEmailsJobData = {
 };
 
 export type FcCodeEmailsDeps = { db: Database };
-
-const positiveNumberFromEnv = (name: string, fallback: number): number => {
-  const parsed = Number(process.env[name]);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
 
 // Kept under the interval between two FranceConnect pipeline runs, which enqueue this job.
 const maxDurationMs = (): number =>

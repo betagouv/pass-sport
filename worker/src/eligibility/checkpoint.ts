@@ -1,5 +1,6 @@
 import type { Job } from "bullmq";
 import { callResource, type RateLimitable } from "./calls";
+import type { ApiParticulierRateGate } from "./rate-gate";
 import type { HistoryRecorder } from "../db/history";
 import type { EligibilityCheckpoint, ResourceResult } from "./types";
 
@@ -21,6 +22,7 @@ export function createCheckpointRunner<TData extends CheckpointedJob>(
   job: Job<TData>,
   queue: RateLimitable,
   history: HistoryRecorder,
+  rateGate: ApiParticulierRateGate,
 ): {
   results: ResourceResult[];
   run: (call: CheckpointedCall) => Promise<ResourceResult | undefined>;
@@ -48,6 +50,7 @@ export function createCheckpointRunner<TData extends CheckpointedJob>(
       jobId: job.id,
       queue,
       history,
+      rateGate,
       resource: call.resource,
       subject: call.subject,
       logSuffix: call.childIndex != null ? ` (child ${call.childIndex})` : undefined,

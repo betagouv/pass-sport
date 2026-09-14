@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/node";
 import { db, pool } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { getClient } from "./eligibility/client";
+import { createRedisRateGate } from "./eligibility/rate-gate";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
@@ -23,6 +24,12 @@ const SCALINGO_REDIS_URL = process.env.SCALINGO_REDIS_URL ?? "redis://localhost:
 // BullMQ requires maxRetriesPerRequest: null on blocking connections.
 function createRedisConnection(): Redis {
   return new Redis(SCALINGO_REDIS_URL, { maxRetriesPerRequest: null });
+}
+
+// NOT a blocking connection: the gate must fail fast and let the caller pause, where
+// maxRetriesPerRequest: null would have it wait indefinitely while holding the job.
+function createRateGateConnection(): Redis {
+  return new Redis(SCALINGO_REDIS_URL);
 }
 
 async function startFlow<TData extends object>(opts: {
@@ -95,10 +102,20 @@ async function main(): Promise<void> {
 
   const apiClient = await getClient();
 
+  // The ceilings live in Redis and are re-read on every call, so `pnpm apip:rate` retunes a
+  // running worker.
+  const rateGateConnection = createRateGateConnection();
+  const rateGate = createRedisRateGate(rateGateConnection, {
+    onLimitsChange: ({ perSecond, perMinute, isNight }) =>
+      console.log(
+        `[pass-sport-worker] API Particulier cadence: ${perSecond}/s, ${perMinute}/min (${isNight ? "night" : "day"})`,
+      ),
+  });
+
   const franceConnect = await startFlow<EligibilityJobData>({
     queueName: FRANCE_CONNECT_QUEUE_NAME,
     process: (job, queue) => {
-      const deps: FranceConnectDeps = { apiClient, db, queue };
+      const deps: FranceConnectDeps = { apiClient, db, queue, rateGate };
       return processEligibilityJob(job, job.data, deps);
     },
   });
@@ -126,6 +143,7 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`[pass-sport-worker] ${signal} received, closing...`);
     await Promise.all(flows.map((f) => f.close()));
+    await rateGateConnection.quit();
     await pool.end();
     process.exit(0);
   };
