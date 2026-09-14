@@ -23,11 +23,19 @@
 #      vérifié. Un fichier déposé sans marquage ferait fabriquer un second code aux mêmes
 #      personnes au passage suivant : le fichier est donc la dernière chose qui bouge.
 #
+# UN PASSAGE, UN DOSSIER : tout ce qu'un passage produit — CSV intermédiaires, CSV de prod,
+# journal — est rangé dans FC_RUN_DIR/<AAAA-MM-JJTHH-MM-SS>/, et rien n'y est effacé. Chaque
+# passage ajoute aussi une ligne à FC_RUN_DIR/passages.log et écrit la même dans son STATUT :
+#
+#   grep echec run/passages.log        les passages en erreur, dossier en première colonne
+#   cat run/latest/run.log             le journal du dernier passage
+#   cat run/derniere-erreur/run.log    celui du dernier échec
+#
+# Un dossier sans STATUT est celui d'un passage tué sans pouvoir se clore (kill -9, coupure).
+#
 # Variables lues (data/.env, puis /etc/default/pass-sport-fc s'il existe) :
 #   SCALINGO_APP                  application Scalingo hébergeant la base      (obligatoire)
 #   SCALINGO_API_TOKEN            jeton d'API, pour un `scalingo` non interactif
-#   FC_EXPORT_PATHFILE_2026       sortie brute de export_eligible_pending.sql  (obligatoire)
-#   DB_FC_EXPORT_2026             CSV nettoyé au schéma PSP                    (obligatoire)
 #   EXISTING_CODES_PATHFILE_2026  liste des codes déjà distribués              (obligatoire)
 #   LAMP_DB_PASSWORD              base bénéficiaires locale                   (obligatoire)
 #   LAMP_DB_HOST/PORT/USER/NAME   (défauts 127.0.0.1 / 55432 / u_passsport / passsport)
@@ -36,7 +44,7 @@
 #   FC_TUNNEL_PORT                port local du tunnel Postgres (défaut 10000)
 #   FC_REDIS_TUNNEL_PORT          port local du tunnel Redis    (défaut 10001)
 #   FC_CODE_EMAILS_DRY_RUN        1 : job courriel posé en dry-run, pour un passage d'essai
-#   FC_LOG_DIR                    journaux                  (défaut <ce dossier>/logs)
+#   FC_RUN_DIR                    dossiers de passage       (défaut <ce dossier>/run)
 #   FC_LOCK_FILE                  verrou anti-chevauchement (défaut /tmp/pass-sport-fc.lock)
 #   SCALINGO_SSH_IDENTITY         clé privée SSH pour db-tunnel (optionnel, voir plus bas)
 #
@@ -51,7 +59,7 @@
 # Sans SCALINGO_SSH_IDENTITY, db-tunnel retombe sur l'agent SSH puis sur ~/.ssh/id_rsa — à
 # renseigner si la clé à utiliser porte un autre nom.
 
-set -euo pipefail
+set -Eeuo pipefail
 # Le CSV déposé porte des identités et des courriels : il ne doit jamais naître lisible par
 # tout le monde.
 umask 027
@@ -63,7 +71,7 @@ WORKER_DIR="$(dirname "$DATA_DIR")/worker"
 LAMP_INJECT="$(dirname "$DATA_DIR")/lamp01/inject_csv.sh"
 
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
-die() { log "ERREUR : $*" >&2; exit 1; }
+die() { RUN_ERROR="$*"; log "ERREUR : $*" >&2; exit 1; }
 
 # Un chemin relatif de data/.env est relatif à data/, jamais au dossier d'où cron nous lance.
 resolve_path() {
@@ -77,9 +85,9 @@ resolve_path() {
 
 CONFIG_VARS=(
   SCALINGO_APP SCALINGO_API_TOKEN SCALINGO_SSH_IDENTITY
-  FC_EXPORT_PATHFILE_2026 DB_FC_EXPORT_2026 EXISTING_CODES_PATHFILE_2026
+  EXISTING_CODES_PATHFILE_2026
   FC_PROD_DROP_DIR FC_TUNNEL_PORT FC_REDIS_TUNNEL_PORT FC_CODE_EMAILS_DRY_RUN
-  FC_LOG_DIR FC_LOCK_FILE FC_EXERCICE_ID
+  FC_RUN_DIR FC_LOCK_FILE FC_EXERCICE_ID
   LAMP_DB_HOST LAMP_DB_PORT LAMP_DB_USER LAMP_DB_NAME LAMP_DB_PASSWORD
 )
 
@@ -113,16 +121,109 @@ done
 FC_PROD_DROP_DIR="${FC_PROD_DROP_DIR:-/nfs/run}"
 FC_TUNNEL_PORT="${FC_TUNNEL_PORT:-10000}"
 FC_REDIS_TUNNEL_PORT="${FC_REDIS_TUNNEL_PORT:-10001}"
-FC_LOG_DIR="${FC_LOG_DIR:-$FC_DIR/logs}"
+FC_RUN_DIR="$(resolve_path "${FC_RUN_DIR:-$FC_DIR/run}")"
 FC_LOCK_FILE="${FC_LOCK_FILE:-/tmp/pass-sport-fc.lock}"
 
-mkdir -p "$FC_LOG_DIR"
-LOG_FILE="$FC_LOG_DIR/fc-$(date '+%Y-%m-%d').log"
-exec > >(tee -a "$LOG_FILE") 2>&1
+# L'instant du passage : il nomme son dossier et le CSV déposé en production.
+#
+# À la seconde, et non à la journée comme generate_codes_lib.dated_output_path : une cron peut
+# passer plusieurs fois par jour, et deux passages du même jour partageraient sinon leur dossier
+# — et le nom du CSV déposé dans FC_PROD_DROP_DIR, qui n'a peut-être pas encore été injecté. Les
+# notebooks gardent la granularité du jour : ils traitent des exports figés, une fois.
+#
+# TS_COMPACT évite les ":" dans les noms de fichiers ; il est dérivé de TS_ISO plutôt que d'un
+# second appel à `date`, pour que les deux partagent exactement le même instant.
+TS_ISO="$(date '+%Y-%m-%dT%H:%M:%S')"
+TS_COMPACT="${TS_ISO//:/-}"
 
-log "=== passage FranceConnect, journal $LOG_FILE"
+RUNS_INDEX="$FC_RUN_DIR/passages.log"
+mkdir -p "$FC_RUN_DIR"
 
-for var in SCALINGO_APP FC_EXPORT_PATHFILE_2026 DB_FC_EXPORT_2026 EXISTING_CODES_PATHFILE_2026; do
+# Une ligne par passage, quelle qu'en soit l'issue. Écrite d'un seul coup et en ajout, elle ne
+# s'entremêle pas avec celle d'un passage concurrent.
+record_run() {
+  local status="$1" exit_code="$2" summary="${3//$'\n'/ }" line
+  printf -v line '%s  %-13s  %3s  %s' "$TS_COMPACT" "$status" "$exit_code" "$summary"
+  printf '%s\n' "$line" >>"$RUNS_INDEX"
+  if [[ -n "${RUN_DIR:-}" ]]; then printf '%s\n' "$line" >"$RUN_DIR/STATUT"; fi
+}
+
+# --- Verrou ------------------------------------------------------------------------
+# Deux passages simultanés fabriqueraient deux codes aux mêmes personnes : le second attend
+# le prochain créneau plutôt que de démarrer. Pris avant de créer le dossier du passage : un
+# passage écarté ne laisse que sa ligne dans l'index.
+
+exec 9>"$FC_LOCK_FILE"
+if ! flock -n 9; then
+  log "un autre passage est déjà en cours ($FC_LOCK_FILE) — abandon"
+  record_run ignore-verrou 0 "un autre passage est déjà en cours"
+  exit 0
+fi
+
+# --- Dossier du passage ------------------------------------------------------------
+
+RUN_DIR="$FC_RUN_DIR/$TS_COMPACT"
+# Sans -p : deux passages dans la même seconde ne doivent pas mêler leurs fichiers.
+mkdir "$RUN_DIR"
+ln -sfn "$TS_COMPACT" "$FC_RUN_DIR/latest"
+
+LOG_FILE="$RUN_DIR/run.log"
+# 9>&- : tee survit un instant au script, il ne doit pas emporter le verrou avec lui.
+exec > >(tee -a "$LOG_FILE" 9>&-) 2>&1
+
+# --- Suivi du passage --------------------------------------------------------------
+# Ce que la ligne de passages.log dira du passage. RUN_STATUS n'est retenu que sur une sortie
+# en 0 : toute autre sortie est un échec.
+
+RUN_STATUS="succes"
+RUN_DETAIL=""
+RUN_STEP="préparation"
+RUN_ERROR=""
+CODES_DRAWN=0
+TUNNEL_PIDS=()
+
+step() {
+  RUN_STEP="$1"
+  log "étape $1 — $2"
+}
+
+close_tunnels() {
+  local pid
+  for pid in "${TUNNEL_PIDS[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      log "tunnel refermé"
+    fi
+  done
+}
+
+on_exit() {
+  local exit_code=$?
+  close_tunnels
+
+  if (( exit_code == 0 )); then
+    record_run "$RUN_STATUS" 0 "$RUN_DETAIL"
+    log "=== statut : $RUN_STATUS"
+    return
+  fi
+
+  local summary="étape $RUN_STEP"
+  if (( CODES_DRAWN )); then summary+=" — codes fabriqués"; fi
+  summary+=" — ${RUN_ERROR:-sortie en erreur}"
+  record_run echec "$exit_code" "$summary"
+  ln -sfn "$TS_COMPACT" "$FC_RUN_DIR/derniere-erreur"
+  log "=== statut : echec — $RUNS_INDEX"
+}
+
+# Une commande qui échoue sans passer par die (set -e) laisse au moins sa trace ; set -E étend
+# ce piège aux fonctions.
+trap 'RUN_ERROR="${RUN_ERROR:-échec (code $?) ligne $LINENO : $BASH_COMMAND}"' ERR
+trap on_exit EXIT
+
+log "=== passage FranceConnect, dossier $RUN_DIR"
+
+for var in SCALINGO_APP EXISTING_CODES_PATHFILE_2026; do
   [[ -n "${!var:-}" ]] || die "variable d'environnement manquante : $var"
 done
 command -v psql >/dev/null     || die "psql introuvable"
@@ -132,34 +233,22 @@ command -v pnpm >/dev/null     || die "pnpm introuvable"
 [[ -d "$WORKER_DIR/node_modules" ]] || die "dépendances du worker absentes : pnpm install dans $WORKER_DIR"
 [[ -x "$LAMP_INJECT" ]]        || die "injecteur de la base bénéficiaires absent : $LAMP_INJECT"
 
-EXPORT_CSV="$(resolve_path "$FC_EXPORT_PATHFILE_2026")"
-CLEANED_CSV="$(resolve_path "$DB_FC_EXPORT_2026")"
+# La mémoire des codes, commune à tous les passages : la seule entrée qui vit hors du dossier.
 CODES_CSV="$(resolve_path "$EXISTING_CODES_PATHFILE_2026")"
-# Le nom du fichier daté, calculé ici pour que les étapes 5 et 6 se le passent sans qu'une
-# variable soit éditée à la main.
-#
-# Horodaté à la seconde, et non à la journée comme generate_codes_lib.dated_output_path : une
-# cron peut passer plusieurs fois par jour, et deux passages du même jour écraseraient sinon
-# le fichier du précédent — y compris le CSV déposé dans FC_PROD_DROP_DIR, qui en dérive et
-# n'a peut-être pas encore été injecté. Les notebooks gardent la granularité du jour : ils
-# traitent des exports figés, une fois.
-#
-# TS_COMPACT sert aussi au nom du CSV déposé en production (beneficiaires-insertion-*), pour éviter
-# les ":" dans un nom de fichier ; il est dérivé de TS_ISO plutôt que d'un second appel à `date`,
-# pour que les deux noms partagent exactement le même instant.
-TS_ISO="$(date '+%Y-%m-%dT%H:%M:%S')"
-TS_COMPACT="${TS_ISO//:/-}"
-WITH_CODES_CSV="$(dirname "$CLEANED_CSV")/$TS_COMPACT-fc-with-codes.csv"
-PROD_CSV="${WITH_CODES_CSV/-with-codes.csv/-prod.csv}"
-UNMATCHED_CSV="$(dirname "$CLEANED_CSV")/$TS_COMPACT-fc-non-apparies.csv"
 
-# Noms FIGÉS, dans CE dossier : \copy est la seule commande psql qui n'interpole aucune
-# variable dans ses arguments, les .sql qui les lisent ne peuvent donc pas les recevoir en
-# paramètre. Ils sont réécrits à chaque passage.
-MATCH_CANDIDATES_CSV="$FC_DIR/fc_2026_match_candidates.csv"
-CONFIRMED_CSV="$FC_DIR/fc_2026_confirmed.csv"
-# Celui-ci n'est lu que par pandas, qui accepte un chemin : il peut être horodaté.
-UNMATCHED_IDS_CSV="$(dirname "$CLEANED_CSV")/$TS_COMPACT-fc-non-apparies-ids.csv"
+# Tout le reste naît dans le dossier du passage. Trois noms y sont FIGÉS —
+# fc_2026_match_candidates.csv, fc_2026_confirmed.csv, fc_2026_writeback.csv : \copy est la
+# seule commande psql qui n'interpole aucune variable dans ses arguments, les .sql qui les lisent
+# ne peuvent donc pas les recevoir en paramètre et les cherchent dans le dossier courant.
+EXPORT_CSV="$RUN_DIR/fc_2026_eligible_pending.csv"
+CLEANED_CSV="$RUN_DIR/fc_2026_clean.csv"
+MATCH_CANDIDATES_CSV="$RUN_DIR/fc_2026_match_candidates.csv"
+CONFIRMED_CSV="$RUN_DIR/fc_2026_confirmed.csv"
+UNMATCHED_IDS_CSV="$RUN_DIR/fc_2026_non_apparies_ids.csv"
+UNMATCHED_CSV="$RUN_DIR/fc_2026_non_apparies.csv"
+WITH_CODES_CSV="$RUN_DIR/fc-with-codes.csv"
+WRITEBACK_CSV="$RUN_DIR/fc_2026_writeback.csv"
+PROD_CSV="$RUN_DIR/fc-prod.csv"
 
 # La base bénéficiaires du lamp, sur cette même machine (lamp01/compose.yml). Rien ne
 # transite par le réseau : le service n'écoute que sur la boucle locale.
@@ -175,16 +264,6 @@ LAMP_DATABASE_URL="postgresql://${LAMP_DB_USER}:${LAMP_DB_PASSWORD}@${LAMP_DB_HO
 # L'exercice de la campagne : un code d'une campagne précédente n'ouvre plus aucun droit, le
 # rapprochement ne doit donc jamais le rendre.
 FC_EXERCICE_ID="${FC_EXERCICE_ID:-5}"
-
-# --- Verrou ------------------------------------------------------------------------
-# Deux passages simultanés fabriqueraient deux codes aux mêmes personnes : le second attend
-# le prochain créneau plutôt que de démarrer.
-
-exec 9>"$FC_LOCK_FILE"
-if ! flock -n 9; then
-  log "un autre passage est déjà en cours ($FC_LOCK_FILE) — abandon"
-  exit 0
-fi
 
 # --- Garde-fou : backlog de dépôt --------------------------------------------------
 # Chaque nom déposé est unique (timestampé à la seconde) : un consommateur en panne ou en
@@ -203,20 +282,7 @@ fi
 
 # --- Tunnels Scalingo --------------------------------------------------------------
 # Deux tunnels, sur deux ports : Postgres pour les étapes 1, 4 et 6, Redis pour la mise en file
-# du job courriel en fin de passage.
-
-TUNNEL_PIDS=()
-cleanup() {
-  local pid
-  for pid in "${TUNNEL_PIDS[@]}"; do
-    if kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-      wait "$pid" 2>/dev/null || true
-      log "tunnel refermé"
-    fi
-  done
-}
-trap cleanup EXIT
+# du job courriel en fin de passage. on_exit les referme.
 
 # db-tunnel monte sa propre connexion SSH, indépendante de `scalingo login` : sans -i, elle
 # retombe sur l'agent SSH puis sur ~/.ssh/id_rsa, qui peut ne pas exister sur cette machine.
@@ -289,7 +355,7 @@ finish() {
 
 # --- Étape 1 : extraction ----------------------------------------------------------
 
-log "étape 1/6 — extraction des eligible_pending -> $EXPORT_CSV"
+step 1/6 "extraction des eligible_pending -> $EXPORT_CSV"
 run_psql -v out="$EXPORT_CSV" -f "$FC_DIR/export_eligible_pending.sql"
 
 # En-tête seul : personne à servir. C'est le cas nominal d'une cron fréquente, pas une
@@ -297,12 +363,14 @@ run_psql -v out="$EXPORT_CSV" -f "$FC_DIR/export_eligible_pending.sql"
 # s'est refermée.
 if [[ "$(wc -l < "$EXPORT_CSV")" -le 1 ]]; then
   log "aucun bénéficiaire à traiter — rien à déposer"
+  RUN_STATUS="rien-a-faire"
+  RUN_DETAIL="aucun eligible_pending"
   finish
 fi
 
 # --- Étape 2 : nettoyage -----------------------------------------------------------
 
-log "étape 2/6 — nettoyage vers le schéma PSP -> $CLEANED_CSV"
+step 2/6 "nettoyage vers le schéma PSP -> $CLEANED_CSV"
 "$PYTHON" "$FC_DIR/fc_pipeline.py" clean \
   --input "$EXPORT_CSV" --output "$CLEANED_CSV" --match-out "$MATCH_CANDIDATES_CSV"
 
@@ -311,11 +379,12 @@ log "étape 2/6 — nettoyage vers le schéma PSP -> $CLEANED_CSV"
 # est-elle déjà en base avec un code ? AVANT la génération de codes, impérativement — un
 # code tiré est comptabilisé dans EXISTING_CODES_PATHFILE_2026 et ne se reprend pas.
 #
-# `cd` obligatoire : \copy s'exécute côté client et lit fc_2026_match_candidates.csv
-# relativement au dossier d'où psql est lancé.
-cd "$FC_DIR"
+# `cd` obligatoire : \copy s'exécute côté client et lit ses CSV à noms figés relativement au
+# dossier d'où psql est lancé — celui du passage. D'ici à la fin, les .sql sont donc désignés
+# par leur chemin complet.
+cd "$RUN_DIR"
 
-log "étape 3/6 — rapprochement avec la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
+step 3/6 "rapprochement avec la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
 psql "$LAMP_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -v apparies="$CONFIRMED_CSV" -v non_apparies="$UNMATCHED_IDS_CSV" \
   -v exercice="$FC_EXERCICE_ID" \
@@ -329,15 +398,15 @@ log "$nb_apparies bénéficiaire(s) déjà connu(s) de la base — aucun code ne
 # ne les concerne. Un échec ici laisse simplement le passage suivant les retrouver.
 
 if (( nb_apparies > 0 )); then
-  log "étape 4/6 — marquage des appariés (verdict eligible_confirmed)"
-  run_psql -f writeback_confirmed.sql
+  step 4/6 "marquage des appariés (verdict eligible_confirmed)"
+  run_psql -f "$FC_DIR/writeback_confirmed.sql"
 
-  restants_confirmes="$(run_psql -Atq -f check_confirmed.sql | tail -n 1 | tr -d '[:space:]')"
+  restants_confirmes="$(run_psql -Atq -f "$FC_DIR/check_confirmed.sql" | tail -n 1 | tr -d '[:space:]')"
   [[ "$restants_confirmes" == "0" ]] \
     || die "$restants_confirmes bénéficiaire(s) apparié(s) mais non marqué(s) — passage interrompu"
   log "contrôle du marquage des appariés : 0 restant"
 else
-  log "étape 4/6 — aucun apparié, rien à marquer"
+  step 4/6 "aucun apparié, rien à marquer"
 fi
 
 # Les non-appariés seuls continuent : eux n'ont pas de code, il faut leur en fabriquer un.
@@ -349,12 +418,16 @@ log "mise à l'écart des appariés -> $UNMATCHED_CSV"
 # à déposer. Ce n'est pas une erreur — c'est même l'issue souhaitable.
 if [[ "$(wc -l < "$UNMATCHED_CSV")" -le 1 ]]; then
   log "tous les bénéficiaires étaient déjà en base — rien à déposer"
+  RUN_DETAIL="0 déposé, $nb_apparies apparié(s)"
   finish
 fi
 
 # --- Étape 5 : codes ---------------------------------------------------------------
 
-log "étape 5/6 — génération des codes -> $WITH_CODES_CSV"
+step 5/6 "génération des codes -> $WITH_CODES_CSV"
+# Dès cet appel, même interrompu, des codes peuvent être comptabilisés dans
+# EXISTING_CODES_PATHFILE_2026 : un échec ne se rejoue plus depuis le rapprochement.
+CODES_DRAWN=1
 "$PYTHON" "$FC_DIR/fc_pipeline.py" codes \
   --input "$UNMATCHED_CSV" --output "$WITH_CODES_CSV" --existing-codes "$CODES_CSV"
 
@@ -362,19 +435,19 @@ log "étape 5/6 — génération des codes -> $WITH_CODES_CSV"
 # À partir d'ici des codes existent sans que personne ne le sache en base : c'est la fenêtre
 # que le marquage referme, et rien ne doit être déposé avant qu'elle le soit.
 
-log "étape 6/6 — découpage du fichier daté"
+step 6/6 "découpage du fichier du passage"
 "$PYTHON" "$FC_DIR/fc_pipeline.py" writeback \
-  --with-codes "$WITH_CODES_CSV" --prod-out "$PROD_CSV"
+  --with-codes "$WITH_CODES_CSV" --writeback-out "$WRITEBACK_CSV" --prod-out "$PROD_CSV"
 
-# Le `cd "$FC_DIR"` de l'étape 3 tient toujours : \copy s'exécute côté client et lit
-# fc_2026_writeback.csv relativement au dossier d'où psql est lancé.
+# Le `cd "$RUN_DIR"` de l'étape 3 tient toujours : writeback_verdict.sql et check_writeback.sql
+# y lisent fc_2026_writeback.csv.
 
 log "marquage en base (verdict eligible_confirmed)"
-run_psql -f writeback_verdict.sql
+run_psql -f "$FC_DIR/writeback_verdict.sql"
 
 # -Atq : une valeur nue, sans en-tête ni étiquettes de commande. `tail -n 1` par prudence,
 # pour ne dépendre de rien d'autre que de la dernière ligne — le compte cherché.
-restants="$(run_psql -Atq -f check_writeback.sql | tail -n 1 | tr -d '[:space:]')"
+restants="$(run_psql -Atq -f "$FC_DIR/check_writeback.sql" | tail -n 1 | tr -d '[:space:]')"
 [[ "$restants" == "0" ]] \
   || die "$restants bénéficiaire(s) encore en eligible_pending après le write-back — $PROD_CSV n'est PAS déposé"
 log "contrôle du marquage : 0 bénéficiaire restant"
@@ -423,6 +496,6 @@ if ! LAMP_DB_HOST="$LAMP_DB_HOST" LAMP_DB_USER="$LAMP_DB_USER" LAMP_DB_NAME="$LA
   enqueue_code_emails
   die "bénéficiaires déposés mais NON reportés dans la base bénéficiaires — à rejouer : $LAMP_INJECT --port $LAMP_DB_PORT $PROD_CSV"
 fi
-rm -f "$PROD_CSV"
 
+RUN_DETAIL="$nb_lignes déposé(s) ($nom_depose), $nb_apparies apparié(s)"
 finish

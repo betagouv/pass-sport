@@ -47,7 +47,7 @@ flowchart TD
 
     F2 --> SPLIT{"fc_pipeline.py<br/>split-matched"}
     M3 --> SPLIT
-    SPLIT -->|"non-appariés seuls"| F2B["AAAA-MM-JJTHH-MM-SS-fc-non-apparies.csv"]
+    SPLIT -->|"non-appariés seuls"| F2B["fc_2026_non_apparies.csv"]
 
     F2B -->|"5 · fc_pipeline.py codes"| F3["AAAA-MM-JJ-fc-with-codes.csv<br/>+ pass_sport_code, + eligibility_result_id"]
     F3 -. met à jour .-> CODES[("EXISTING_CODES_PATHFILE_2026<br/>codes déjà distribués")]
@@ -93,11 +93,10 @@ même de la caisse), du pivot FranceConnect en repli : nom de naissance =
 celui que le worker stocke dans `enfant_identite`, à défaut `qf_enfants[].nom_usage` ; sur
 une ligne `self`, c'est celui de l'allocataire.
 
-`fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage ; les
-fichiers horodatés (`AAAA-MM-JJ-fc-with-codes.csv`, `fc_2026_writeback.csv`,
-`AAAA-MM-JJ-fc-prod.csv`, le fichier déposé) sont propres à un passage et ne sont jamais
-réécrits. `EXISTING_CODES_PATHFILE_2026` seul survit à travers les passages : c'est la
-mémoire des codes déjà distribués, toutes sources confondues.
+À la main, `fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage.
+La cron, elle, range tout ce qu'un passage produit dans son propre dossier horodaté — voir
+[Un dossier par passage](#un-dossier-par-passage). `EXISTING_CODES_PATHFILE_2026` seul survit à
+travers les passages : c'est la mémoire des codes déjà distribués, toutes sources confondues.
 
 Les notebooks et la ligne de commande appellent les **mêmes fonctions**, dans
 [fc_pipeline.py](fc_pipeline.py) : passer à la main et passer automatiquement ne peuvent pas
@@ -146,18 +145,60 @@ Ce que le script garantit, et qu'un passage à la main doit respecter aussi :
   retente les courriels échoués et sert les appariés d'un passage précédent. Il ne l'est ni
   sur une erreur ni quand le verrou est déjà pris — le passage suivant s'en charge.
 
-Les fichiers que la cron produit sont horodatés à la seconde
-(`AAAA-MM-JJTHH-MM-SS-fc-with-codes.csv`, et le `-prod.csv` qui en dérive), là où les notebooks
-s'en tiennent au jour : une cron peut passer plusieurs fois par jour, et deux passages
-écraseraient sinon le fichier du précédent — y compris dans `FC_PROD_DROP_DIR`, où il n'a
-peut-être pas encore été injecté.
+### Un dossier par passage
 
-Le journal du jour est écrit dans `FC_LOG_DIR` (`logs/` de ce dossier par défaut) ; toute
-sortie non nulle est une anomalie, que cron enverra par courriel. En cas d'échec après
-l'étape 3, les fichiers intermédiaires sont restés en place : reprendre à la main à partir de
-`writeback_codes.ipynb` avec le `*-fc-with-codes.csv` le plus récent, **sans jamais rejouer
-l'étape 3** — les codes sont déjà fabriqués et comptabilisés dans
-`EXISTING_CODES_PATHFILE_2026`, y compris lorsque le passage a échoué après les avoir tirés.
+Tout ce qu'un passage produit est rangé dans `FC_RUN_DIR/<AAAA-MM-JJTHH-MM-SS>/` (`run/` de ce
+dossier par défaut), et rien n'y est effacé :
+
+```text
+run/
+├── passages.log                        une ligne par passage, quelle qu'en soit l'issue
+├── latest -> …                         le dernier passage
+├── derniere-erreur -> …                le dernier passage en échec
+└── 2026-09-14T04-30-00/
+    ├── STATUT                          la ligne de passages.log de ce passage
+    ├── run.log                         son journal complet
+    ├── fc_2026_eligible_pending.csv    étape 1, export brut
+    ├── fc_2026_clean.csv               étape 2, schéma PSP
+    ├── fc_2026_match_candidates.csv    étape 2, candidats au rapprochement
+    ├── fc_2026_confirmed.csv           étape 3, appariés
+    ├── fc_2026_non_apparies_ids.csv    étape 3
+    ├── fc_2026_non_apparies.csv        étape 4
+    ├── fc-with-codes.csv               étape 5
+    ├── fc_2026_writeback.csv           étape 6
+    └── fc-prod.csv                     étape 6, copie exacte du fichier déposé
+```
+
+Horodaté à la seconde, là où les notebooks s'en tiennent au jour : une cron peut passer plusieurs
+fois par jour. Seuls restent hors du dossier `EXISTING_CODES_PATHFILE_2026`, mémoire commune à
+tous les passages, et le fichier déposé dans `FC_PROD_DROP_DIR`.
+
+Pour retrouver un échec, l'index suffit — le nom du dossier est en première colonne :
+
+```bash
+grep echec run/passages.log        # tous les passages en erreur
+cat run/derniere-erreur/run.log    # le journal du dernier
+```
+
+```text
+2026-09-14T04-30-00  succes           0  1 déposé(s) (beneficiaires-insertion-1-2026-09-14T04-30-00.csv), 1 apparié(s)
+2026-09-14T10-30-00  rien-a-faire     0  aucun eligible_pending
+2026-09-14T12-30-00  succes           0  0 déposé, 1 apparié(s)
+2026-09-14T16-30-00  echec            3  étape 6/6 — codes fabriqués — échec (code 3) ligne <n> : psql "$FC_DATABASE_URL" -v ON_ERROR_STOP=1 "$@"
+2026-09-14T16-30-02  ignore-verrou    0  un autre passage est déjà en cours
+```
+
+Un passage écarté par le verrou n'a pas de dossier, seulement sa ligne. Un dossier sans `STATUT`
+est celui d'un passage tué sans avoir pu se clore (`kill -9`, coupure). Toute sortie non nulle
+reste une anomalie, que cron envoie par courriel.
+
+**Après un échec marqué « codes fabriqués »**, reprendre à la main à partir de
+`writeback_codes.ipynb` avec le `fc-with-codes.csv` **du dossier de ce passage**, jamais celui
+d'un autre, et **sans jamais rejouer le rapprochement ni la génération** — les codes sont déjà
+comptabilisés dans `EXISTING_CODES_PATHFILE_2026`, y compris lorsque le passage a échoué après
+les avoir tirés.
+
+### Prérequis de la machine
 
 La machine doit porter : `psql`, un `scalingo` authentifié sans interaction
 (`SCALINGO_API_TOKEN`) avec une clé SSH sans phrase de passe, et le virtualenv `data/.venv`.
@@ -253,7 +294,8 @@ write-back, et l'étape 4 la retire avant l'injection en production.
 `writeback_codes.ipynb` — ou `python fc_pipeline.py writeback` — découpe le fichier daté en
 deux :
 
-- `fc_2026_writeback.csv` — deux colonnes `eligibility_result_id;id_psp`, dans ce dossier ;
+- `fc_2026_writeback.csv` — deux colonnes `eligibility_result_id;id_psp`, dans ce dossier (dans
+  celui du passage pour la cron) ;
 - `AAAA-MM-JJ-fc-prod.csv` — le CSV final sans la colonne technique, prêt pour l'injection en
   base de production.
 
@@ -267,7 +309,9 @@ psql "$FC_DATABASE_URL" -At -f check_writeback.sql   # doit afficher 0
 
 Le nom `fc_2026_writeback.csv` est figé et le `cd` obligatoire : `\copy` est la seule commande
 psql qui n'interpole aucune variable dans ses arguments, le chemin ne peut donc pas lui être
-passé, et comme elle s'exécute côté client il est relatif au dossier d'où psql est lancé.
+passé, et comme elle s'exécute côté client il est relatif au dossier d'où psql est lancé. La
+cron lance donc ses `psql` depuis le dossier du passage, en désignant les `.sql` par leur chemin
+complet.
 
 `writeback_verdict.sql` écrit deux tables dans la même transaction : le verdict et le code dans
 `eligibility_results`, et une ligne `actor = 'cron'`, `action = 'psp.code_writeback'` dans
@@ -290,8 +334,8 @@ entre-temps y apparaîtra légitimement. C'est pour cela que la cron s'appuie su
 
 ## Variables d'environnement
 
-À ajouter dans `data/.env` (elles ne sont pas dans `.env.example`, qui n'est pas versionné
-ici) :
+À ajouter dans `data/.env` pour les notebooks (elles ne sont pas dans `.env.example`, qui n'est
+pas versionné ici) — la cron n'en lit aucune, ses fichiers naissent dans le dossier du passage :
 
 ```bash
 # Sortie brute de export_eligible_pending.sql
@@ -317,7 +361,7 @@ FC_PROD_DROP_DIR="/nfs/run"                       # où le CSV final est dépos�
 FC_TUNNEL_PORT="10000"                            # port local du tunnel Postgres
 FC_REDIS_TUNNEL_PORT="10001"                      # port local du tunnel Redis (job courriel)
 FC_CODE_EMAILS_DRY_RUN="1"                        # essai : job courriel posé en dry-run
-FC_LOG_DIR="./2026/partners/franceconnect/logs"   # journaux, un par jour
+FC_RUN_DIR="./2026/partners/franceconnect/run"    # un dossier par passage, journal compris
 FC_LOCK_FILE="/tmp/pass-sport-fc.lock"            # verrou anti-chevauchement
 ```
 

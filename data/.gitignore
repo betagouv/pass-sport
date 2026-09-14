@@ -26,3 +26,6 @@ __pycache__
 
 *.log
 logs/
+
+# Un dossier par passage de run_fc_pipeline.sh : CSV nominatifs et journaux.
+2026/partners/franceconnect/run/
