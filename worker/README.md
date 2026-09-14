@@ -72,6 +72,26 @@ key is absent or carries an unusable value (non-numeric, or below 1). A typo in 
 can neither stop the chain nor lift the ceiling. Every change of the applied ceilings is logged by
 the worker.
 
+### Sonde (`apip:rate:probe`)
+
+Rejoue un appel API Particulier déjà passé — la ligne la plus récente d'`eligibility_history` qui
+porte son `body_payload`, ou celle que `--id` désigne — autant de fois que demandé, à travers le
+cadenceur. C'est le seul moyen de voir la cadence tenir sur du trafic réel : les tests e2e tournent
+contre un client factice, aucun octet ne part sur le réseau.
+
+```bash
+pnpm apip:rate:probe --calls 20
+```
+
+L'identité pivot est reconstruite depuis le payload enregistré puis **recomparée** à celui-ci avant
+le premier appel : si les deux diffèrent, la sonde s'arrête sans rien appeler plutôt que de mesurer
+la cadence d'un autre appel que celui qu'on croit rejouer. Rien n'est écrit en base, aucune clé
+`apip:rate:config:*` n'est touchée — seuls les compteurs bougent, et ils sont partagés avec le
+worker : une sonde lancée pendant qu'il tourne lui prend du quota.
+
+Sur un refus, la sonde dort jusqu'à la fin de la fenêtre bloquante ; le worker, lui, met la queue en
+pause et requeue le job. Même plafond, deux façons d'attendre.
+
 The offline `qf:batch` runs on the processing machine with its own in-memory pacer
 ([src/scripts/rate-pacer.ts](src/scripts/rate-pacer.ts)) and does **not** consume these counters.
 
