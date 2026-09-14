@@ -53,21 +53,21 @@ type EmailTemplate = {
 
 export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
   code_direct_aah: {
-    templateId: 1192621,
+    templateId: 1197029,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_AAH",
     campaign: "pass-sport-code-direct-aah",
     subject: () => "Voici votre code pass Sport",
     historyAction: "email.code_direct_aah",
   },
   code_direct_boursier: {
-    templateId: 1192620,
+    templateId: 1197027,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_BOURSIER",
     campaign: "pass-sport-code-direct-boursier",
     subject: () => "Voici votre code pass Sport",
     historyAction: "email.code_direct_boursier",
   },
   code_indirect: {
-    templateId: 1192617,
+    templateId: 1197017,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_INDIRECT",
     campaign: "pass-sport-code-indirect",
     subject: (vars) =>
