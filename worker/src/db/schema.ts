@@ -147,8 +147,9 @@ export const eligibilityResults = pgTable(
     emailAttempts: integer("email_attempts").notNull().default(0),
 
     // Where the recapitulative email went. Kept so a usager coming back can be told which
-    // mailbox to look in — never handed out whole: the site only ever reads the masked
-    // projection in application_results_by_job_id.
+    // mailbox to look in. No view projects it any more — the masked projection that used to
+    // do so went away with application_results_by_job_id (drizzle/0015) — so site_readonly
+    // cannot reach this column at all.
     email: text("email"),
 
     // Which aide opened the right, and therefore which of the three code templates goes out.
@@ -254,73 +255,6 @@ export const applicationResultsBySub = pgView("application_results_by_sub").as((
           select max(latest.created_at)
           from eligibility_results latest
           where latest.allocataire_fc_sub = ${eligibilityResults.allocataireFcSub}
-        )`,
-    ),
-);
-
-// The no-FranceConnect counterpart of applications_by_sub. That one keys on the pairwise
-// pseudonym, which is null on this path; here the key is job_id, the identity hash the
-// site derives before enqueuing (site/src/app/services/eligibility-job.ts).
-//
-// It exists so a completed job can still be recognised once BullMQ has dropped it: without
-// it, resubmitting the same request re-runs the whole chain and re-burns API Particulier
-// quota. Narrow on purpose — a hash and two timestamps, no identity, no code — which is
-// what makes it grantable to site_readonly.
-export const applicationsByJobId = pgView("applications_by_job_id").as((qb) =>
-  qb
-    .select({
-      jobId: sql<string>`${eligibilityResults.jobId}`.as("job_id"),
-      firstApplication: sql<Date>`min(${eligibilityResults.createdAt})`.as("first_application"),
-      lastApplication: sql<Date>`max(${eligibilityResults.createdAt})`.as("last_application"),
-    })
-    .from(eligibilityResults)
-    .where(
-      sql`${eligibilityResults.allocataireFcSub} is null and ${eligibilityResults.jobId} is not null`,
-    )
-    .groupBy(eligibilityResults.jobId),
-);
-
-// Masked in SQL rather than on the site: site_readonly must never receive the address at
-// all, so no bug downstream can leak it. Fixed-width stars, so the length of the local part
-// is not leaked either. "patrick.nguyen@beta.gouv.fr" -> "p***n@beta.gouv.fr".
-const maskedEmail = sql<string | null>`
-  case
-    when ${eligibilityResults.email} is null then null
-    else left(split_part(${eligibilityResults.email}, '@', 1), 1)
-      || '***'
-      || case
-           when length(split_part(${eligibilityResults.email}, '@', 1)) > 1
-           then right(split_part(${eligibilityResults.email}, '@', 1), 1)
-           else ''
-         end
-      || '@'
-      || split_part(${eligibilityResults.email}, '@', 2)
-  end`;
-
-// What the combined form shows a usager coming back with a request already processed:
-// which mailbox to look in, and nothing else.
-//
-// Deliberately NOT the shape of application_results_by_sub. That view is keyed on the
-// FranceConnect `sub`, which nobody can produce without authenticating; this one is keyed on
-// job_id, an identity hash ANY visitor can recompute by typing someone's name, birthdate and
-// commune de naissance into the form. Exposing verdict or pass_sport_code here would turn
-// the form into a lookup oracle for other people's codes.
-export const applicationResultsByJobId = pgView("application_results_by_job_id").as((qb) =>
-  qb
-    .select({
-      jobId: sql<string>`${eligibilityResults.jobId}`.as("job_id"),
-      emailMask: maskedEmail.as("email_mask"),
-      emailSent: eligibilityResults.emailSent,
-      createdAt: eligibilityResults.createdAt,
-    })
-    .from(eligibilityResults)
-    .where(
-      sql`${eligibilityResults.allocataireFcSub} is null
-        and ${eligibilityResults.jobId} is not null
-        and ${eligibilityResults.createdAt} = (
-          select max(latest.created_at)
-          from eligibility_results latest
-          where latest.job_id = ${eligibilityResults.jobId}
         )`,
     ),
 );
