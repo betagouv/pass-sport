@@ -63,9 +63,10 @@ def prepare_qf_identity_columns(
 
     clean_cnaf_1_before_qf_batch.ipynb only does this for the ARS-origin allocataires the
     qf-batch input needs (partners.select_qf_route_allocataires). This notebook carries every
-    beneficiary, ARS or not, so the same shaping is applied broadly: a row CNAF never sent
-    this pivot identity for (AAH/AEEH - see the CNAF_COLUMN_MAPPING comment in clean_cnaf_lib)
-    simply keeps blank pivot columns, exactly like the qf-batch input would.
+    beneficiary, ARS or not, so the same shaping is applied broadly: an AAH/AEEH row, for which
+    CNAF sends the birth name but no birth details (see the CNAF_COLUMN_MAPPING comment in
+    clean_cnaf_lib), simply keeps those detail columns blank, exactly like the qf-batch input
+    would.
 
     Returns (df, unmapped_labels, born_abroad_count) - see partners.map_birth_country_to_cog
     and partners.clear_foreign_birthplace_insee.

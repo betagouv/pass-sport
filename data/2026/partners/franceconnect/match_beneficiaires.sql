@@ -26,11 +26,13 @@
 -- champs en base, ni la même nature de nom :
 --
 --   boursier   INE exact (beneficiaires.allocataire_matricule)
---   AAH        bénéficiaire seul ; nom de NAISSANCE côté MSA, nom d'USAGE côté CAF —
---              et la caisse est indéterminable depuis l'API (aucun appel quotient_familial
---              sur cette route), donc les DEUX stratégies sont essayées
+--   AAH        bénéficiaire seul ; nom de NAISSANCE côté MSA, côté CAF le nom d'USAGE ou le
+--              nom de naissance de beneficiaire_cnaf_extra_field — et la caisse est
+--              indéterminable depuis l'API (aucun appel quotient_familial sur cette route),
+--              donc les DEUX stratégies sont essayées
 --   AEEH       allocataire + bénéficiaire ; côté MSA le nom de naissance et la date de
---              naissance de l'allocataire, côté CAF le nom d'usage (RESPDOS) sans date
+--              naissance de l'allocataire, côté CAF le nom d'usage (RESPDOS) ou le nom de
+--              naissance de beneficiaire_cnaf_extra_field, sans date
 --   jeune (QF) allocataire + bénéficiaire, sur le nom de NAISSANCE de l'allocataire des
 --              deux côtés — la CNAF le porte dans beneficiaire_cnaf_extra_field, rempli
 --              pour les lignes d'origine ARS uniquement
@@ -177,24 +179,29 @@ where n.situation = 'AAH'
   and n.benef_genre is not null
   and n.benef_prenoms is not null;
 
--- --- AAH, stratégie CAF : le nom d'usage du bénéficiaire --------------------------------
+-- --- AAH, stratégie CAF : le nom d'usage ou le nom de naissance CNAF du bénéficiaire -----
 -- La CNAF range un nom d'usage dans beneficiaires.nom ; côté FranceConnect le seul nom
 -- d'usage disponible sur cette route est le preferred_username du pivot (aucun appel
--- quotient_familial). Sans lui, la stratégie ne retourne rien.
+-- quotient_familial). Le nom de naissance est dans beneficiaire_cnaf_extra_field : sur une
+-- ligne AAH la CNAF répète le bénéficiaire dans les colonnes allocataire, et reconcile_cnaf
+-- en garde le nom de naissance — il se compare au family_name du pivot, ce qui laisse la
+-- stratégie conclure sans preferred_username.
 insert into fc_essais (eligibility_result_id, id_psp, strategie)
 select distinct n.eligibility_result_id, b.id_psp, 'aah_caf'
 from fc_norm n
 join public.beneficiaires b
-  on public.normalise_recherche(b.nom) = n.benef_nom_usage
- and b.organisme = 'CAF'
+  on b.organisme = 'CAF'
  and b.situation = 'AAH'
  and b.exercice_id = :exercice
  and b.id_psp is not null
  and b.date_naissance::date = n.benef_naissance
  and b.genre::text = n.benef_genre
  and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
+left join public.beneficiaire_cnaf_extra_field x
+  on x.id_psp = b.id_psp
 where n.situation = 'AAH'
-  and n.benef_nom_usage is not null
+  and (public.normalise_recherche(b.nom) = n.benef_nom_usage
+       or public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = n.benef_nom_naissance)
   and n.benef_naissance is not null
   and n.benef_genre is not null
   and n.benef_prenoms is not null;
@@ -231,28 +238,32 @@ where n.situation = 'AEEH'
   and n.benef_naissance is not null;
 
 -- --- AEEH, caisse CAF -------------------------------------------------------------------
--- Allocataire : nom d'USAGE (RESPDOS) et pas de date de naissance — la CNAF ne sérialise ni
--- l'un ni l'autre pour l'AEEH, et beneficiaire_cnaf_extra_field n'est rempli que pour les
--- lignes d'origine ARS. Bénéficiaire : NOMENF ne porte pas le suffixe NAI des noms de
--- naissance CNAF, le nom du candidat est donc accepté sous ses deux formes.
+-- Allocataire : nom d'USAGE (RESPDOS), ou nom de NAISSANCE confronté au family_name du pivot,
+-- et pas de date de naissance. La CNAF ne sérialise ni le nom de naissance ni la date pour
+-- l'AEEH ; reconcile_cnaf en retrouve le nom de naissance dans beneficiaire_cnaf_extra_field,
+-- les détails de naissance n'y étant remplis que pour les lignes d'origine ARS. Bénéficiaire :
+-- NOMENF ne porte pas le suffixe NAI des noms de naissance CNAF, le nom du candidat est donc
+-- accepté sous ses deux formes.
 insert into fc_essais (eligibility_result_id, id_psp, strategie)
 select distinct n.eligibility_result_id, b.id_psp, 'aeeh_caf'
 from fc_norm n
 join public.beneficiaires b
-  on public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_usage
+  on public.normalise_recherche(b.nom) in (n.benef_nom_naissance, n.benef_nom_usage)
  and b.organisme = 'CAF'
  and b.situation = 'AEEH'
  and b.exercice_id = :exercice
  and b.id_psp is not null
  and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
  and b.allocataire_qualite = n.alloc_qualite
- and public.normalise_recherche(b.nom) in (n.benef_nom_naissance, n.benef_nom_usage)
  and public.normalise_recherche(b.prenom) = n.benef_prenoms_texte
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
+left join public.beneficiaire_cnaf_extra_field x
+  on x.id_psp = b.id_psp
 where n.situation = 'AEEH'
   and n.organisme = 'CAF'
-  and n.alloc_nom_usage is not null
+  and (public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_usage
+       or public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = n.alloc_nom_naissance)
   and n.alloc_prenoms is not null
   and n.alloc_qualite is not null
   and n.benef_nom_naissance is not null

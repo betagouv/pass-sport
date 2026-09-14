@@ -383,9 +383,9 @@ def resolve_allocataire_caf(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
 
     df['match-allocataire_nom_naissance'] = caf_nom.where(caf_nom != '', pivot_nom)
     # Nom d'usage : celui de la caisse d'abord, à défaut celui que FranceConnect a servi. Sans
-    # l'un ni l'autre la colonne reste vide et les stratégies CAF, qui comparent ce nom-là,
-    # ne retournent rien — le fabriquer depuis l'état civil ne donnerait que le nom de
-    # naissance sous une étiquette mensongère.
+    # l'un ni l'autre la colonne reste vide et les stratégies CAF ne peuvent plus apparier que
+    # par le nom de naissance de beneficiaire_cnaf_extra_field — le fabriquer depuis l'état
+    # civil ne donnerait que le nom de naissance sous une étiquette mensongère.
     df['match-allocataire_nom_usage'] = caf_nom_usage.where(caf_nom_usage != '', pivot_nom_usage)
     df['match-allocataire_prenom'] = caf_prenom.where(caf_prenom != '', pivot_prenom)
 

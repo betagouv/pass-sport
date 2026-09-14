@@ -43,8 +43,9 @@ CNAF_COLUMN_MAPPING = {
     'ADRMAIL': 'allocataire-courriel',
     'NUMTEL': 'allocataire-telephone',
 
-    # allocataire pivot identity for the quotient_familial API call - filled by CNAF only
-    # on ARS-origin rows, kept out of the site-facing 'allocataire-nom'/'allocataire-prenom'
+    # allocataire pivot identity for the quotient_familial API call, kept out of the
+    # site-facing 'allocataire-nom'/'allocataire-prenom' - CNAF fills NOMNAIDOS on every row,
+    # AAH and AEEH included, but the birth details below on ARS-origin rows only
     'NOMNAIDOS': 'allocataire-nom_naissance',
     'DTNAIDOS': 'allocataire-date_naissance',
     'SEXDOS': 'allocataire-genre',

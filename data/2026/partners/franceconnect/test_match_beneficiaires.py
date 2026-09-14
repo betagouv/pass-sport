@@ -249,9 +249,23 @@ def test_aah_caf_apparie_sur_le_nom_d_usage(pg):
     assert recap['par_aah_caf'] == 1
 
 
+def test_aah_caf_apparie_sur_le_nom_de_naissance_cnaf(pg):
+    # No preferred_username on the candidate: the FranceConnect family_name still meets the
+    # CNAF birth name, which reconcile_cnaf stores for AAH rows without any birth details.
+    base = ligne_base(**{**BASE_AAH_MSA, 'organisme': 'CAF', 'nom': 'VORSALDE',
+                         'allocataire_nom': 'VORSALDE'})
+    extra = ligne_extra(id_psp='PSP-A1', cnaf_allocataire_nom_naissance='DURAND',
+                        cnaf_allocataire_date_naissance=None, cnaf_allocataire_genre=None)
+    apparies, _, recap = rapprocher(
+        pg, base=[base], extra=[extra], candidats=[candidat(**CANDIDAT_AAH)])
+    assert apparies == {'c1': 'PSP-A1'}
+    assert recap['par_aah_caf'] == 1
+
+
 def test_aah_sans_nom_d_usage_seule_la_strategie_msa_peut_conclure(pg):
-    # No preferred_username on the candidate: the CAF strategy returns nothing, which is
-    # exactly what lets the MSA hit stand alone and conclude.
+    # No preferred_username on the candidate and no CNAF birth name on the base row: the CAF
+    # strategy returns nothing, which is exactly what lets the MSA hit stand alone and
+    # conclude.
     base_caf = ligne_base(**{**BASE_AAH_MSA, 'id_psp': 'PSP-A2', 'organisme': 'CAF'})
     apparies, _, recap = rapprocher(
         pg, base=[ligne_base(**BASE_AAH_MSA), base_caf], candidats=[candidat(**CANDIDAT_AAH)])
@@ -332,6 +346,28 @@ def test_aeeh_caf_apparie_sur_le_nom_d_usage_sans_date_allocataire(pg):
         pg, base=[ligne_base(**BASE_AEEH_CAF)], candidats=[candidat(**CANDIDAT_AEEH_CAF)])
     assert apparies == {'c1': 'PSP-E2'}
     assert recap['par_aeeh_caf'] == 1
+
+
+def test_aeeh_caf_apparie_sur_le_nom_de_naissance_cnaf_sans_nom_d_usage(pg):
+    # No preferred_username for the allocataire: the FranceConnect family_name meets the
+    # CNAF birth name reconcile_cnaf recovered, the only birth detail AEEH rows carry.
+    cand = candidat(**{**CANDIDAT_AEEH_CAF, 'allocataire_nom_usage': ''})
+    extra = ligne_extra(id_psp='PSP-E2', cnaf_allocataire_nom_naissance='AUTRENOM',
+                        cnaf_allocataire_date_naissance=None, cnaf_allocataire_genre=None)
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_AEEH_CAF)], extra=[extra], candidats=[cand])
+    assert apparies == {'c1': 'PSP-E2'}
+    assert recap['par_aeeh_caf'] == 1
+
+
+def test_aeeh_caf_nom_de_naissance_cnaf_different_reste_non_apparie(pg):
+    cand = candidat(**{**CANDIDAT_AEEH_CAF, 'allocataire_nom_usage': ''})
+    extra = ligne_extra(id_psp='PSP-E2', cnaf_allocataire_nom_naissance='TORVELIN',
+                        cnaf_allocataire_date_naissance=None, cnaf_allocataire_genre=None)
+    apparies, non_apparies, _ = rapprocher(
+        pg, base=[ligne_base(**BASE_AEEH_CAF)], extra=[extra], candidats=[cand])
+    assert apparies == {}
+    assert non_apparies == ['c1']
 
 
 def test_aeeh_caf_accepte_le_nomenf_via_le_nom_d_usage_de_l_enfant(pg):
