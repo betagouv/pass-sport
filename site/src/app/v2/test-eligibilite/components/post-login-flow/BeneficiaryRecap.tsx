@@ -6,7 +6,7 @@ import type { PivotIdentity } from '@/app/services/eligibility-job';
 import Card from '@codegouvfr/react-dsfr/Card';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import type { AlertProps } from '@codegouvfr/react-dsfr/Alert';
-import { DownloadLink } from '@/app/components/download-link/DownloadLink';
+import CodePdfDownloadLink from './CodePdfDownloadLink';
 
 const BIRTHDATE_INPUT_FORMAT = 'yyyy-MM-dd';
 const BIRTHDATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
@@ -83,10 +83,6 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
   }
 };
 
-// Rendered into the Card's `end` slot, which DSFR orders directly after `desc` inside
-// fr-card__content — so the link reads as the last line of the description. It cannot go into
-// `desc` itself: that slot is wrapped in a <p>, which cannot contain the <div> DownloadLink
-// renders.
 // /api/france-connect/pdf re-derives the allocataire's own identity from the FranceConnect
 // session; for an 'enfant' it instead re-derives it from application_results_by_sub, keyed by
 // the code so the route knows which of the caller's own children to serve — hence the `code`
@@ -97,14 +93,7 @@ const downloadLink = (b: BeneficiaryResult): ReactNode | undefined => {
   }
   const href =
     b.source === 'self' ? '/api/france-connect/pdf' : `/api/france-connect/pdf?code=${b.code}`;
-  return (
-    <DownloadLink
-      details="PDF ~ 582 kB"
-      label="Télécharger le code"
-      href={href}
-      filename={`Pass Sport ${b.givenName}.pdf`}
-    />
-  );
+  return <CodePdfDownloadLink href={href} filename={`Pass Sport ${b.givenName}.pdf`} />;
 };
 
 const StatusBadgeFor = ({ severity, label }: StatusDisplay) => (
