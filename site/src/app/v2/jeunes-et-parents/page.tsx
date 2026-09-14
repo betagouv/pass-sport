@@ -12,7 +12,6 @@ import ObtainCodeButton from '@/app/v2/jeunes-et-parents/components/ObtainCodeBu
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
 import { AccordionsFaq } from '@/app/v2/jeunes-et-parents/components/AccordionsFaq';
-import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import GuidingBlock from '@/app/components/guided-block/GuidingBlock';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -113,11 +112,27 @@ export default function Page() {
         >
           <h2 className="fr-h1 fr-mb-0">Recevez votre pass Sport</h2>
           <div>
-            <p>
-              Les bénéficiaires recevront leur code pass Sport directement par e-mail mi-septembre
-              2026, à l’adresse transmise par les organismes partenaires (<CAF />, <MSA />,{' '}
-              <CROUS />
-              ). Pensez à vérifier vos courriers indésirables ou spams.
+            <p className="fr-mb-2w">
+              Les codes pass Sport ont été envoyés par courrier électronique entre le 9 et le 13
+              septembre 2026 aux personnes éligibles. Pensez à vérifier votre boîte de réception
+              ainsi que vos courriers indésirables.
+            </p>
+
+            <p className="fr-mb-2w">
+              Vous n&apos;avez pas reçu ou retrouvé votre code ? Testez votre éligibilité au pass
+              Sport. Si vous êtes éligible, vous pouvez demander votre code directement en ligne, en
+              vous connectant de préférence avec FranceConnect.
+            </p>
+
+            <p className="fr-mb-2w">
+              Après confirmation de votre éligibilité, votre code vous sera envoyé automatiquement
+              par courrier électronique dans un délai pouvant aller jusqu&apos;à 72 heures.
+            </p>
+
+            <p className="fr-mb-1w">
+              Besoin d&apos;aide pour effectuer votre demande ? Vous pouvez être accompagné
+              gratuitement dans vos démarches en ligne par une structure France Services ou vous
+              rapprocher du Centre communal d&apos;action sociale (CCAS) de votre mairie.
             </p>
             <ObtainCodeButton />
           </div>

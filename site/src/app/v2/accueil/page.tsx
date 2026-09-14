@@ -108,18 +108,24 @@ export default async function Accueil() {
             </section>
 
             <section>
-              <h2 className="fr-mb-2w fr-h1">Quand vais-je recevoir mon pass Sport ?</h2>
+              <h2 className="fr-mb-2w fr-h1">Comment recevoir mon pass Sport ?</h2>
               <p className="fr-mb-2w">
-                Les bénéficiaires recevront leur code pass Sport directement par courrier
-                électronique mi-septembre 2026, à l’adresse transmise par les organismes partenaires
-                (<CAF />, <MSA />, <CROUS />
-                ). Pensez à vérifier vos courriers indésirables et conservez bien le message.
+                Les codes pass Sport ont été envoyés par courrier électronique entre le 9 et le 13
+                septembre 2026 aux personnes éligibles, à l&apos;adresse e-mail transmise par les
+                organismes partenaires (<CAF />, <MSA />, <CROUS />
+                ).
               </p>
 
               <p className="fr-mb-2w">
-                Si plusieurs de vos enfants mineurs sont éligibles au pass Sport, vous recevrez un
-                courrier électronique distinct pour chacun d&apos;eux, contenant leur code pass
-                Sport personnel.
+                Si plusieurs de vos enfants mineurs sont éligibles au pass Sport, vous avez reçu un
+                courrier électronique distinct pour chacun d&apos;eux, avec leur code personnel.
+              </p>
+
+              <p className="fr-mb-2w">
+                Vous n&apos;avez pas reçu ou retrouvé votre code ? Vous pouvez faire une demande
+                directement en ligne depuis le test d&apos;éligibilité, accessible en haut de cette
+                page. Si votre éligibilité est confirmée, votre code vous sera envoyé par e-mail
+                dans un délai pouvant aller jusqu&apos;à 72 heures.
               </p>
             </section>
 
