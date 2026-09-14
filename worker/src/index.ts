@@ -5,6 +5,7 @@ import { Redis } from "ioredis";
 import * as Sentry from "@sentry/node";
 import { db, pool } from "./db/client";
 import { runMigrations } from "./db/migrate";
+import { assertEmailTemplatesConfigured } from "./email/notify";
 import { getClient } from "./eligibility/client";
 import { createRedisRateGate } from "./eligibility/rate-gate";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
@@ -98,6 +99,10 @@ async function startFlow<TData extends object>(opts: {
 }
 
 async function main(): Promise<void> {
+  // Before anything binds Redis or the database: a missing template id is a configuration
+  // mistake, and the only harmless moment to discover it is before the first job is picked up.
+  assertEmailTemplatesConfigured();
+
   await runMigrations(pool);
 
   const apiClient = await getClient();

@@ -44,7 +44,6 @@ type IndirectCodeVariables = CodeVariables & {
 };
 
 type EmailTemplate = {
-  templateId: number;
   templateEnv: string;
   campaign: string;
   subject: (vars?: CodeVariables) => string;
@@ -53,21 +52,18 @@ type EmailTemplate = {
 
 export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
   code_direct_aah: {
-    templateId: 1197029,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_AAH",
     campaign: "pass-sport-code-direct-aah",
     subject: () => "Voici votre code pass Sport",
     historyAction: "email.code_direct_aah",
   },
   code_direct_boursier: {
-    templateId: 1197027,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_BOURSIER",
     campaign: "pass-sport-code-direct-boursier",
     subject: () => "Voici votre code pass Sport",
     historyAction: "email.code_direct_boursier",
   },
   code_indirect: {
-    templateId: 1197017,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_INDIRECT",
     campaign: "pass-sport-code-indirect",
     subject: (vars) =>
@@ -77,14 +73,12 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
     historyAction: "email.code_indirect",
   },
   not_eligible_hors_fc: {
-    templateId: 1192478,
     templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC",
     campaign: "pass-sport-not-eligible-hors-fc",
     subject: () => "Information concernant votre demande Pass Sport",
     historyAction: "email.not_eligible_hors_fc",
   },
   acknowledgment: {
-    templateId: 1192462,
     templateEnv: "LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT",
     campaign: "pass-sport-acknowledgment",
     subject: () => "Votre demande de pass Sport a bien été prise en compte",
@@ -92,20 +86,39 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
   },
 };
 
+// The template ids are deployment configuration, not code: a template rotated in the Link
+// Mobility console must not need a release. There is deliberately no built-in fallback — a
+// wrong id sends the wrong mail to a real person, which is worse than not sending at all.
 const templateIdFor = (kind: EmailKind): number => {
-  const { templateId, templateEnv } = EMAIL_TEMPLATES[kind];
+  const { templateEnv } = EMAIL_TEMPLATES[kind];
   const raw = process.env[templateEnv];
-  if (!raw?.trim()) return templateId;
+
+  if (!raw?.trim()) throw new Error(`Error: ${templateEnv} is not set`);
 
   // `> 0` rejects NaN and 0 alike: `message=0` is answered with error 2, "le message est vide".
-  const override = Number(raw);
-  if (override > 0) return override;
+  const templateId = Number(raw);
+  if (!(templateId > 0)) {
+    throw new Error(`Error: ${templateEnv}="${raw}" is not a template id`);
+  }
 
-  // A typo in an override must not cost the mails.
-  console.warn(
-    `[pass-sport-worker] ${templateEnv}="${raw}" is not a template id, using ${templateId}`,
-  );
   return templateId;
+};
+
+// Called at boot so a missing id is a worker that refuses to start, not a job that dies once
+// the first mail is due — by then the usager is already waiting for a code.
+export const assertEmailTemplatesConfigured = (): void => {
+  const missing = (Object.keys(EMAIL_TEMPLATES) as EmailKind[]).flatMap((kind) => {
+    try {
+      templateIdFor(kind);
+      return [];
+    } catch (err) {
+      return [(err as Error).message];
+    }
+  });
+
+  if (missing.length > 0) {
+    throw new Error(`Email templates are not configured:\n${missing.join("\n")}`);
+  }
 };
 
 // The aide alone decides which of the three code templates goes out. Shared by both paths: the
