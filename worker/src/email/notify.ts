@@ -56,14 +56,14 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
     templateId: 1192621,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_AAH",
     campaign: "pass-sport-code-direct-aah",
-    subject: () => "Votre code pass Sport",
+    subject: () => "Voici votre code pass Sport",
     historyAction: "email.code_direct_aah",
   },
   code_direct_boursier: {
     templateId: 1192620,
     templateEnv: "LINK_MOBILITY_TEMPLATE_CODE_DIRECT_BOURSIER",
     campaign: "pass-sport-code-direct-boursier",
-    subject: () => "Votre code pass Sport",
+    subject: () => "Voici votre code pass Sport",
     historyAction: "email.code_direct_boursier",
   },
   code_indirect: {
@@ -72,7 +72,7 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
     campaign: "pass-sport-code-indirect",
     subject: (vars) =>
       vars?.BENEFICIAIRE_PRENOM
-        ? `Le code pass Sport de ${vars.BENEFICIAIRE_PRENOM}`
+        ? `Voici le code pass Sport de ${vars.BENEFICIAIRE_PRENOM}`
         : "Votre code pass Sport",
     historyAction: "email.code_indirect",
   },
@@ -80,14 +80,14 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
     templateId: 1192478,
     templateEnv: "LINK_MOBILITY_TEMPLATE_NOT_ELIGIBLE_HORS_FC",
     campaign: "pass-sport-not-eligible-hors-fc",
-    subject: () => "Votre demande pass Sport",
+    subject: () => "Information concernant votre demande Pass Sport",
     historyAction: "email.not_eligible_hors_fc",
   },
   acknowledgment: {
     templateId: 1192462,
     templateEnv: "LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT",
     campaign: "pass-sport-acknowledgment",
-    subject: () => "Votre demande pass Sport a bien été reçue",
+    subject: () => "Votre demande de pass Sport a bien été prise en compte",
     historyAction: "email.acknowledgment",
   },
 };
