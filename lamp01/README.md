@@ -115,43 +115,25 @@ et le lieu de naissance : la CNAF ne les remplit pas pour l'AAH et l'AEEH.
 
 ## Les index de rapprochement
 
-`match_beneficiaires.sql` interroge la table par **stratégie** : une requête par
-(situation, caisse), chacune ancrée sur l'égalité d'un nom normalisé plus le filtre
-`exercice_id` / `organisme` / `situation`. Deux index d'expression la servent —
-`normalise_recherche` est IMMUTABLE, ce qui les rend possibles :
+`match_beneficiaires.sql` est le seul lecteur de cette base : les index de production qu'il
+n'utilise pas ont été retirés. Il interroge la table par **stratégie** : une requête par
+(situation, caisse), chacune ancrée sur une égalité. Trois index la servent — les deux
+index d'expression reposent sur `normalise_recherche`, IMMUTABLE, ce qui les rend possibles :
 
 ```sql
+beneficiaires_allocataire_matricule_idx (allocataire_matricule)
 beneficiaires_match_nom_idx             (exercice_id, organisme, situation, normalise_recherche(nom))
 beneficiaires_match_allocataire_nom_idx (exercice_id, organisme, situation, normalise_recherche(allocataire_nom))
 ```
 
-Le premier ancre les stratégies qui cherchent le bénéficiaire (AAH, et les stratégies CAF
-qui joignent ensuite `beneficiaire_cnaf_extra_field` par `id_psp`) ; le second, celles qui
-cherchent l'allocataire (AEEH/QF côté MSA). La route boursier passe par l'index existant sur
-`allocataire_matricule` (l'INE).
-
-## La colonne de recherche (héritée)
-
-`beneficiaires.cle_recherche` est une colonne **générée** (`allocataire_nom |
-allocataire_prenom | date_naissance | nom | prénoms + ' '`, normalisés) qui servait la
-recherche par préfixe de l'ancien rapprochement en cascade. Le rapprochement par stratégies
-ne l'utilise **plus** ; la colonne, sa fonction et son index sont conservés en attendant une
-suppression dédiée (le DDL de production les porte aussi).
-
-Pour la reconstruire malgré tout — une colonne générée n'est pas recalculée quand la
-fonction derrière elle change, et cette fonction ne peut pas être remplacée tant qu'une
-colonne en dépend :
-
-```sql
-DROP INDEX public.beneficiaires_cle_recherche_idx;
-ALTER TABLE public.beneficiaires DROP COLUMN cle_recherche;
--- puis rejouer CREATE OR REPLACE FUNCTION, ALTER TABLE ... ADD COLUMN et CREATE INDEX
--- depuis db-init/00-schema.sql
-```
+Le premier sert la route boursier (l'INE) ; le deuxième, les stratégies qui cherchent le
+bénéficiaire (AAH, et QF côté CAF, qui joint ensuite `beneficiaire_cnaf_extra_field` par sa
+clé primaire) ; le troisième, celles qui cherchent l'allocataire (AEEH, et QF côté MSA).
 
 ## Le schéma de production
 
-`db-init/` n'est plus le DDL de production : il en diffère par l'aplatissement du JSON. Le
+`db-init/` n'est plus le DDL de production : il en diffère par l'aplatissement du JSON et
+par ses index, réduits à ceux du rapprochement. Le
 banc de test de l'injecteur automatique (`untracked_scripts/test/`), qui écrit dans les vraies
 bases où le JSON reste, charge donc sa propre copie figée du DDL de production, et non ce
 dossier. Les valeurs d'énumération des deux sont déduites du code des pipelines partenaires,
