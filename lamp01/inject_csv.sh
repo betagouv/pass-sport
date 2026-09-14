@@ -2,12 +2,16 @@
 #
 # Injection transactionnelle d'un CSV de bénéficiaires, désigné par son chemin.
 #
-#   ./inject_csv.sh [--env integration|prod] <chemin-du-csv>
+#   ./inject_csv.sh [--env integration|prod | --port <port>] <chemin-du-csv>
 #
-# C'est l'outil d'injection MANUELLE : les sorties des notebooks CNAF, MSA et CNOUS, qu'on
-# injecte une fois, en connaissant leur chemin. Le dépôt automatique de la cron FranceConnect
-# passe, lui, par /nfs/run et par l'injecteur qui scanne ce répertoire tout seul — ce script
-# ne scanne rien, ne déplace rien et ne met rien en quarantaine.
+# C'est l'outil d'injection des sorties de notebooks CNAF, MSA et CNOUS, qu'on injecte une
+# fois, en connaissant leur chemin. La cron FranceConnect l'appelle aussi, avec --port, pour
+# reporter ici les bénéficiaires à qui elle vient de fabriquer un code ; le CSV qu'elle dépose
+# dans /nfs/run pour la production est, lui, repris par l'injecteur qui scanne ce répertoire
+# tout seul — ce script ne scanne rien, ne déplace rien et ne met rien en quarantaine.
+#
+# --port vise un port explicite plutôt que celui d'un environnement nommé : celui de
+# LAMP_DB_PORT, que la cron a déjà interrogé pour son rapprochement. Il exclut --env.
 #
 # Les colonnes JSON `allocataire` et `adresse_allocataire` des CSV sont APLATIES : chaque
 # clé va dans la colonne allocataire_<clé> / adresse_allocataire_<clé> de beneficiaires. Une
@@ -37,7 +41,8 @@ die() { printf 'ERREUR : %s\n' "$*" >&2; exit 1; }
 
 # --- Arguments ----------------------------------------------------------------------
 
-TARGET_ENV=integration
+TARGET_ENV=""
+EXPLICIT_PORT=""
 CSV_FILE=""
 
 while [ $# -gt 0 ]; do
@@ -51,8 +56,17 @@ while [ $# -gt 0 ]; do
             TARGET_ENV="${1#--env=}"
             shift
             ;;
+        --port)
+            [ $# -ge 2 ] || die "--port attend une valeur"
+            EXPLICIT_PORT="$2"
+            shift 2
+            ;;
+        --port=*)
+            EXPLICIT_PORT="${1#--port=}"
+            shift
+            ;;
         -h|--help)
-            sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            sed -n '2,34p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         -*)
@@ -66,14 +80,20 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-[ -n "$CSV_FILE" ] || die "aucun CSV indiqué — usage : $0 [--env integration|prod] <chemin-du-csv>"
+[ -n "$CSV_FILE" ] || die "aucun CSV indiqué — usage : $0 [--env integration|prod | --port <port>] <chemin-du-csv>"
 [ -f "$CSV_FILE" ] || die "fichier introuvable : $CSV_FILE"
 [ -r "$CSV_FILE" ] || die "fichier illisible : $CSV_FILE"
 
-case "$TARGET_ENV" in
-    integration|prod) ;;
-    *) die "environnement inconnu : $TARGET_ENV (integration ou prod)" ;;
-esac
+if [ -n "$EXPLICIT_PORT" ]; then
+    [ -z "$TARGET_ENV" ] || die "--env et --port s'excluent : un seul moyen de désigner la base"
+    [[ "$EXPLICIT_PORT" =~ ^[0-9]+$ ]] || die "port invalide : $EXPLICIT_PORT"
+else
+    TARGET_ENV="${TARGET_ENV:-integration}"
+    case "$TARGET_ENV" in
+        integration|prod) ;;
+        *) die "environnement inconnu : $TARGET_ENV (integration ou prod)" ;;
+    esac
+fi
 
 CSV_FILE=$(realpath "$CSV_FILE")
 
@@ -101,10 +121,15 @@ fi
 DB_HOST="${LAMP_DB_HOST:-127.0.0.1}"
 DB_USER="${LAMP_DB_USER:-u_passsport}"
 DB_NAME="${LAMP_DB_NAME:-passsport}"
-if [ "$TARGET_ENV" = prod ]; then
+if [ -n "$EXPLICIT_PORT" ]; then
+    DB_PORT="$EXPLICIT_PORT"
+    TARGET_LABEL="port $EXPLICIT_PORT"
+elif [ "$TARGET_ENV" = prod ]; then
     DB_PORT="${LAMP_PROD_PORT:-55433}"
+    TARGET_LABEL="$TARGET_ENV"
 else
     DB_PORT="${LAMP_INTEGRATION_PORT:-55432}"
+    TARGET_LABEL="$TARGET_ENV"
 fi
 
 [ -n "${LAMP_DB_PASSWORD:-}" ] || die "LAMP_DB_PASSWORD absent — voir lamp01/README.md"
@@ -141,7 +166,7 @@ if [[ ! "$CSV_COLUMNS" =~ ^[a-z_][a-z0-9_]*(,[a-z_][a-z0-9_]*)*$ ]]; then
     die "en-tête CSV inexploitable : $CSV_COLUMNS"
 fi
 
-echo "=== $(basename "$CSV_FILE") -> [$TARGET_ENV] ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+echo "=== $(basename "$CSV_FILE") -> [$TARGET_LABEL] ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 echo "Lignes attendues (hors en-tête) : $EXPECTED_ROWS"
 echo "Colonnes : $CSV_COLUMNS"
 
@@ -348,4 +373,4 @@ $EXTRA_INSERT
 COMMIT;
 EOF
 
-echo "=== $EXPECTED_ROWS ligne(s) injectée(s) dans [$TARGET_ENV]"
+echo "=== $EXPECTED_ROWS ligne(s) injectée(s) dans [$TARGET_LABEL]"

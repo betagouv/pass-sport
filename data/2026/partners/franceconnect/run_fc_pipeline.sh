@@ -60,6 +60,7 @@ FC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="$(cd "$FC_DIR/../../.." && pwd)"
 PYTHON="$DATA_DIR/.venv/bin/python"
 WORKER_DIR="$(dirname "$DATA_DIR")/worker"
+LAMP_INJECT="$(dirname "$DATA_DIR")/lamp01/inject_csv.sh"
 
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { log "ERREUR : $*" >&2; exit 1; }
@@ -129,6 +130,7 @@ command -v scalingo >/dev/null || die "scalingo introuvable"
 command -v pnpm >/dev/null     || die "pnpm introuvable"
 [[ -x "$PYTHON" ]]             || die "virtualenv absent : $PYTHON"
 [[ -d "$WORKER_DIR/node_modules" ]] || die "dépendances du worker absentes : pnpm install dans $WORKER_DIR"
+[[ -x "$LAMP_INJECT" ]]        || die "injecteur de la base bénéficiaires absent : $LAMP_INJECT"
 
 EXPORT_CSV="$(resolve_path "$FC_EXPORT_PATHFILE_2026")"
 CLEANED_CSV="$(resolve_path "$DB_FC_EXPORT_2026")"
@@ -397,7 +399,30 @@ mv "$temporaire" "$depose"
 
 [[ "$(wc -c < "$depose")" == "$(wc -c < "$PROD_CSV")" ]] \
   || die "le fichier déposé n'a pas la taille attendue : $depose"
-rm -f "$PROD_CSV"
 
 log "déposé -> $depose ($nb_lignes bénéficiaire(s))"
+
+# --- Report dans la base bénéficiaires -----------------------------------------------
+# Les bénéficiaires qui viennent de recevoir un code entrent aussi dans la base que l'étape 3
+# interroge : le même enfant remonté plus tard par son autre parent y sera retrouvé, avec ce
+# code-ci, au lieu d'en recevoir un second.
+#
+# APRÈS le dépôt, jamais avant : la base bénéficiaires ne doit porter aucun code que la
+# production n'a pas reçu, sinon un rapprochement ultérieur confirmerait quelqu'un avec un
+# code qui n'ouvre rien. Un échec ici laisse donc la production juste et la base
+# bénéficiaires incomplète — le passage échoue pour que cron le signale, le CSV de prod est
+# gardé pour être rejoué à la main, et l'injection étant tout ou rien, rien n'est à défaire.
+#
+# --port et les LAMP_DB_* explicites : la base même que le rapprochement vient d'interroger,
+# quoi que dise lamp01/.env.
+log "report dans la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
+if ! LAMP_DB_HOST="$LAMP_DB_HOST" LAMP_DB_USER="$LAMP_DB_USER" LAMP_DB_NAME="$LAMP_DB_NAME" \
+     LAMP_DB_PASSWORD="$LAMP_DB_PASSWORD" \
+     "$LAMP_INJECT" --port "$LAMP_DB_PORT" "$PROD_CSV"; then
+  # Les codes sont en route vers la production : leur courriel peut partir.
+  enqueue_code_emails
+  die "bénéficiaires déposés mais NON reportés dans la base bénéficiaires — à rejouer : $LAMP_INJECT --port $LAMP_DB_PORT $PROD_CSV"
+fi
+rm -f "$PROD_CSV"
+
 finish
