@@ -99,8 +99,6 @@ async function startFlow<TData extends object>(opts: {
 }
 
 async function main(): Promise<void> {
-  // Before anything binds Redis or the database: a missing template id is a configuration
-  // mistake, and the only harmless moment to discover it is before the first job is picked up.
   assertEmailTemplatesConfigured();
 
   await runMigrations(pool);

@@ -613,6 +613,39 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       expect((await selfRows()).filter((x) => x.allocataire_fc_sub === sub)).toHaveLength(1);
     });
 
+    it("ne part pas tant que la file n'est pas chargée", async () => {
+      const prev = process.env.ACKNOWLEDGMENT_QUEUE_THRESHOLD;
+      // The harness enqueues one job at a time, so any ceiling above 0 is out of reach.
+      process.env.ACKNOWLEDGMENT_QUEUE_THRESHOLD = "1000";
+      const sub = "sub-file-non-chargee";
+      const before = stack.sentEmails().length;
+
+      try {
+        await stack.enqueueAndWait({
+          ...allocataire(),
+          identity: { ...allocataire().identity, sub },
+        });
+      } finally {
+        process.env.ACKNOWLEDGMENT_QUEUE_THRESHOLD = prev;
+      }
+
+      expect(stack.sentEmails().slice(before)).toHaveLength(0);
+
+      const skipped = (
+        await stack.pool.query(
+          "select action, status, response_payload from eligibility_history where allocataire_fc_sub = $1 and action = 'email.acknowledgment'",
+          [sub],
+        )
+      ).rows;
+      expect(skipped.map((e) => [e.status, e.response_payload.reason])).toEqual([
+        ["skipped", "queue_below_threshold"],
+      ]);
+      expect(skipped[0].response_payload.threshold).toBe(1000);
+
+      // The mail is a courtesy, not a step of the chain.
+      expect((await selfRows()).filter((x) => x.allocataire_fc_sub === sub)).toHaveLength(1);
+    });
+
     it("refuses to send when no env carries the template id", async () => {
       const prev = process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT;
       delete process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT;
@@ -623,8 +656,6 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
         process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT = prev;
       }
 
-      // No built-in id to fall back on: nothing is sent rather than a mail carrying whichever
-      // template a stale literal in the source happened to name.
       expect(stack.sentEmails()).toHaveLength(before);
     });
   });

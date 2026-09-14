@@ -27,11 +27,44 @@ export type FranceConnectDeps = {
   now?: () => Date;
 };
 
+// Below the threshold the job is answered while the mail would still be in flight. The ceiling
+// is configuration: what counts as a loaded queue depends on the cadence the rate gate is tuned
+// to, not on anything here.
+const DEFAULT_ACKNOWLEDGMENT_QUEUE_THRESHOLD = 12_000;
+
+const acknowledgmentQueueThreshold = (): number => {
+  const raw = process.env.ACKNOWLEDGMENT_QUEUE_THRESHOLD;
+
+  if (!raw?.trim()) return DEFAULT_ACKNOWLEDGMENT_QUEUE_THRESHOLD;
+
+  const threshold = Number(raw);
+
+  if (!Number.isFinite(threshold) || threshold < 0) {
+    console.warn(
+      `[pass-sport-worker] ACKNOWLEDGMENT_QUEUE_THRESHOLD="${raw}" is not a job count, using ${DEFAULT_ACKNOWLEDGMENT_QUEUE_THRESHOLD}`,
+    );
+    return DEFAULT_ACKNOWLEDGMENT_QUEUE_THRESHOLD;
+  }
+
+  return threshold;
+};
+
+const pendingJobCount = async (queue: Queue<EligibilityJobData>): Promise<number> => {
+  try {
+    const counts = await queue.getJobCounts("wait", "delayed", "prioritized");
+    return (counts.wait ?? 0) + (counts.delayed ?? 0) + (counts.prioritized ?? 0);
+  } catch (err) {
+    console.warn(`[pass-sport-worker] queue depth unreadable: ${(err as Error).message}`);
+    return Number.POSITIVE_INFINITY;
+  }
+};
+
 async function acknowledgeReception(
   job: Job<EligibilityJobData>,
   database: Database,
   history: HistoryRecorder,
   data: EligibilityJobData,
+  queue: Queue<EligibilityJobData>,
 ): Promise<void> {
   if (data.acknowledged) return;
 
@@ -43,6 +76,19 @@ async function acknowledgeReception(
       action: "email.acknowledgment",
       status: "skipped",
       responsePayload: { reason: "no_recipient" },
+    });
+    return;
+  }
+
+  const pending = await pendingJobCount(queue);
+  const threshold = acknowledgmentQueueThreshold();
+
+  if (pending < threshold) {
+    await history.record({
+      actor: "worker",
+      action: "email.acknowledgment",
+      status: "skipped",
+      responsePayload: { reason: "queue_below_threshold", pending, threshold },
     });
     return;
   }
@@ -88,7 +134,7 @@ export async function processEligibilityJob(
   const history = await startJob(job, database, data.identity.sub ?? null, data);
 
   // Sent before the asynchronous treatment, and the only mail this path ever sends.
-  await acknowledgeReception(job, database, history, data);
+  await acknowledgeReception(job, database, history, data, queue);
 
   const results = await runEligibilitySequence(
     job,

@@ -417,6 +417,8 @@ export async function startStack(
   );
   process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT = String(TEMPLATE_IDS.acknowledgment);
 
+  process.env.ACKNOWLEDGMENT_QUEUE_THRESHOLD = "0";
+
   const pool = new pg.Pool({ connectionString: pgC.getConnectionUri() });
   await runMigrations(pool);
   const db = drizzle(pool) as FranceConnectDeps["db"];

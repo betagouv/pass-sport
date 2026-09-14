@@ -86,9 +86,6 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
   },
 };
 
-// The template ids are deployment configuration, not code: a template rotated in the Link
-// Mobility console must not need a release. There is deliberately no built-in fallback — a
-// wrong id sends the wrong mail to a real person, which is worse than not sending at all.
 const templateIdFor = (kind: EmailKind): number => {
   const { templateEnv } = EMAIL_TEMPLATES[kind];
   const raw = process.env[templateEnv];
@@ -97,6 +94,7 @@ const templateIdFor = (kind: EmailKind): number => {
 
   // `> 0` rejects NaN and 0 alike: `message=0` is answered with error 2, "le message est vide".
   const templateId = Number(raw);
+
   if (!(templateId > 0)) {
     throw new Error(`Error: ${templateEnv}="${raw}" is not a template id`);
   }
@@ -104,8 +102,6 @@ const templateIdFor = (kind: EmailKind): number => {
   return templateId;
 };
 
-// Called at boot so a missing id is a worker that refuses to start, not a job that dies once
-// the first mail is due — by then the usager is already waiting for a code.
 export const assertEmailTemplatesConfigured = (): void => {
   const missing = (Object.keys(EMAIL_TEMPLATES) as EmailKind[]).flatMap((kind) => {
     try {
