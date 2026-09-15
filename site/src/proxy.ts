@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isPasSportClosed } from '@/utils/date';
-import { CODES_OBTAINABLE } from '@/app/constants/env';
+import { CODES_OBTAINABLE, FC_ENABLED_FOR_DEBUGGING } from '@/app/constants/env';
 
 // /api/eligibility-test/ used to sit behind a shared secret. It bought nothing: the form
 // is a public page, so whatever calls that route on its behalf is reachable by anyone too —
@@ -54,12 +54,13 @@ export function proxy(request: NextRequest) {
 
   response.headers.set('Content-Security-Policy', contentSecurityPolicyHeaderValue);
 
+  const franceConnectPageReachable = CODES_OBTAINABLE || FC_ENABLED_FOR_DEBUGGING;
+
   const disabledRoutes = [
     '/v2/budget',
     '/v2/partenaires',
-    ...(CODES_OBTAINABLE
-      ? []
-      : ['/v2/test-eligibilite', '/v2/test-eligibilite/hors-france-connect']),
+    ...(franceConnectPageReachable ? [] : ['/v2/test-eligibilite']),
+    ...(CODES_OBTAINABLE ? [] : ['/v2/test-eligibilite/hors-france-connect']),
   ];
 
   if (disabledRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
@@ -74,7 +75,7 @@ export function proxy(request: NextRequest) {
           '/v2/structures',
           '/v2/partenaires',
           '/v2/trouver-un-club',
-          '/v2/test-eligibilite',
+          ...(FC_ENABLED_FOR_DEBUGGING ? [] : ['/v2/test-eligibilite']),
           '/v2/test-eligibilite/hors-france-connect',
         ]
       : []),
