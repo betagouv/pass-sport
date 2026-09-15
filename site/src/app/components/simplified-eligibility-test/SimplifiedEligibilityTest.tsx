@@ -131,8 +131,7 @@ export default function SimplifiedEligibilityTest({
         })}
       >
         <p className="fr-h5 fr-mb-0 text-align--center">
-          Vérifiez votre éligibilité ou celle de l&apos;un de vos enfants <br />
-          en quelques secondes
+          Vérifiez votre éligibilité et demandez votre code pass Sport
         </p>
 
         <form
