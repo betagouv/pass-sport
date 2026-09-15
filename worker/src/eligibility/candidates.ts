@@ -73,7 +73,7 @@ export const toIsoDate = (date?: string): string | null => {
 // (zero or two pivot-birthdate matches), and without a usable QF answer. Same identification
 // rule as data/'s clean_fc_lib.resolve_allocataire_caf.
 export const readConjointIdentite = (
-  qf: Pick<QuotientFamilialData, "allocataires"> | null,
+  qf: QuotientFamilialData | null,
   pivotBirthdate: string | undefined,
 ): AllocataireConjointIdentite | null => {
   const allocataires = qf?.allocataires;

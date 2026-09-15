@@ -14,7 +14,6 @@
     "db:reset": "./scripts/db-reset.sh",
     "test": "tsc --noEmit && vitest run",
     "qf:batch": "tsx src/scripts/qf-batch.ts",
-    "conjoint:backfill": "tsx src/scripts/backfill-conjoint.ts",
     "fc:code-emails:enqueue": "tsx src/scripts/enqueue-fc-code-emails.ts",
     "email:test": "tsx src/scripts/send-test-email.ts",
     "redis:decode": "tsx src/scripts/redis-decode.ts",

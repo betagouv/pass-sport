@@ -60,10 +60,6 @@
     pass_sport_qf_partners:
       - cnaf
       - msa
-      # Rattrapage du conjoint des foyers FranceConnect dont l'appel quotient_familial du
-      # worker n'avait rien rendu — même script, même workdir, entrée produite par
-      # `fc_pipeline.py clean --conjoints-manquants`.
-      - fc_conjoint
     # Self-imposed ceilings for the qf-batch rate pacer (worker/src/scripts/rate-pacer.ts),
     # kept below API Particulier's own quota — see the defaults in
     # templates/pass-sport-qf-batch@.service.j2. Raise one step at a time and redeploy;
