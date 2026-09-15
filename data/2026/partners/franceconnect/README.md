@@ -34,11 +34,12 @@ Scalingo, à travers un tunnel. L'étape 3 vise la base bénéficiaires locale d
 ```mermaid
 flowchart TD
     DB[("eligibility_results<br/>verdict = eligible_pending")]
-    LAMP[("base bénéficiaires du lamp<br/>CNAF + MSA + CNOUS")]
+    LAMP[("base bénéficiaires du lamp<br/>CNAF + MSA + CNOUS + codes FC")]
 
     DB -->|"1 · export_eligible_pending.sql"| F1["fc_2026_eligible_pending.csv<br/>export brut"]
     F1 -->|"2 · fc_pipeline.py clean"| F2["DB_FC_EXPORT_2026<br/>schéma PSP"]
     F1 -->|"2 · fc_pipeline.py clean --match-out"| M1["fc_2026_match_candidates.csv<br/>colonnes de rapprochement"]
+    F1 -->|"2 · fc_pipeline.py clean --cnaf-extra-out"| C1["fc_2026_cnaf_extra_field.csv<br/>champs CNAF des codes CAF"]
 
     M1 -->|"3 · match_beneficiaires.sql"| LAMP
     LAMP -->|"retrouvés"| M2["fc_2026_confirmed.csv<br/>eligibility_result_id;id_psp"]
@@ -53,8 +54,11 @@ flowchart TD
     F3 -. met à jour .-> CODES[("EXISTING_CODES_PATHFILE_2026<br/>codes déjà distribués")]
     F3 -->|"6 · fc_pipeline.py writeback"| F4A["fc_2026_writeback.csv<br/>eligibility_result_id;id_psp"]
     F3 -->|"6 · fc_pipeline.py writeback"| F4B["AAAA-MM-JJ-fc-prod.csv<br/>sans colonne technique"]
+    F3 -->|"6 · fc_pipeline.py writeback --lamp-out"| F4C["fc-lamp01.csv<br/>CSV de prod + colonnes cnaf_*"]
+    C1 --> F4C
     F4A -->|"writeback_verdict.sql"| DB
     F4B -->|"copie + renommage atomique"| DEPOT["beneficiaires-insertion-N-TS.csv<br/>déposé dans FC_PROD_DROP_DIR"]
+    F4C -->|"inject_csv.sh"| LAMP
 ```
 
 ### Comment le rapprochement identifie quelqu'un
@@ -70,16 +74,27 @@ deux. Aucun départageur.
 |---|---|---|
 | **boursier** | `allocataire_matricule` = INE, exact — le CNOUS y range l'INE du boursier ; rien d'équivalent CNAF/MSA | — |
 | **AAH MSA** | — | nom de **naissance** (`family_name`) · prénoms ⊆ · genre · naissance |
-| **AAH CAF** | — | nom d'**usage** (`preferred_username`, seul disponible : la route AAH n'appelle pas QF) · prénoms ⊆ · genre · naissance |
+| **AAH CAF** | — | nom d'**usage** (`preferred_username`), ou nom de **naissance** (`family_name`) confronté à `beneficiaire_cnaf_extra_field` · prénoms ⊆ · genre · naissance |
 | **AEEH MSA** | nom de naissance · prénoms ⊆ · qualité (M/Mme) · naissance | nom · prénoms stricts · genre · naissance |
-| **AEEH CAF** | nom d'usage (`RESPDOS`) · prénoms ⊆ · qualité · *pas* de naissance (la CNAF ne la sérialise pas) | nom (`NOMENF`, accepté sous ses deux formes candidat) · prénoms stricts · genre · naissance |
+| **AEEH CAF** | nom d'usage (`RESPDOS`), ou nom de naissance confronté à `beneficiaire_cnaf_extra_field` · prénoms ⊆ · qualité · *pas* de naissance (la CNAF ne la sérialise pas) | nom (`NOMENF`, accepté sous ses deux formes candidat) · prénoms stricts · genre · naissance |
 | **jeune MSA** | nom de naissance · prénoms ⊆ · qualité · naissance | nom · prénoms ⊆ · genre · naissance |
-| **jeune CAF** | nom de **naissance**, genre et naissance depuis `beneficiaire_cnaf_extra_field` (rempli pour l'origine ARS, la population QF) · prénoms ⊆ | nom (deux formes) · prénoms ⊆ · genre · naissance |
+| **jeune CAF** | nom de **naissance**, genre et naissance depuis `beneficiaire_cnaf_extra_field` (rempli pour l'origine ARS, la population QF, et pour les codes CAF de ce dossier) · prénoms ⊆ | nom (deux formes) · prénoms ⊆ · genre · naissance |
 
 **⊆ — le containment des prénoms** : les prénoms venus de la base LAMP doivent être
 **contenus** dans les prénoms FranceConnect — sous-ensemble de mots, ordre libre, après
 normalisation des deux côtés. La CNAF ne stocke qu'un prénom (`PRENOMDOS`, `NOMENF`),
 FranceConnect les porte tous.
+
+**Les codes fabriqués ici, eux aussi, doivent être retrouvés** — un bénéficiaire remis en
+`eligible_pending` côté worker repasse par le rapprochement. Une ligne que la cron injecte sous
+l'organisme `CAF` porte le nom de naissance dans `nom`, là où les stratégies CAF attendent le nom
+d'usage de la CNAF, et FranceConnect ne sert pas toujours de `preferred_username` : elles ne la
+retrouvent que par `beneficiaire_cnaf_extra_field`. La cron y écrit donc la ligne de chacun de
+ses codes CAF (`fc-lamp01.csv`, voir [Étape 4](#étape-4--write-back)), avec exactement les
+valeurs que le candidat présentera au passage suivant
+(`clean_fc_lib.build_cnaf_extra_field_rows`). Limite connue : en QF et en AEEH, la base garde les
+prénoms du pivot quand le candidat présente ceux de la caisse — si le pivot en porte davantage,
+le containment échoue et un code neuf est fabriqué.
 
 **AAH, cas particulier** : la caisse est indéterminable depuis l'API (aucun appel
 `quotient_familial` sur cette route), les **deux** stratégies sont donc essayées. Concluant
@@ -163,7 +178,7 @@ Le passage est joué en entier, sur les vraies bases, mais n'écrit rien hors de
 | write-backs Scalingo (étapes 4 et 6) | joués avec leur contrôle dans la transaction, puis annulés (`psql -v dry_run=1`) |
 | génération des codes | sur une copie de `EXISTING_CODES_PATHFILE_2026`, effacée en sortie |
 | dépôt dans `FC_PROD_DROP_DIR` | aucun ; `fc-prod.csv` reste dans le dossier, et un dépôt non consommé n'est qu'un avertissement |
-| report dans la base bénéficiaires | `inject_csv.sh --dry-run` : chargement, contrôles et INSERT, puis annulation |
+| report dans la base bénéficiaires | `inject_csv.sh --dry-run` sur `fc-lamp01.csv` : chargement, contrôles et INSERT, puis annulation |
 | job `fc_code_emails` | non posé, rien n'est écrit dans Redis |
 
 Ce qui ferait échouer un passage réel le fait échouer aussi : un code apparié à deux candidats,
@@ -190,12 +205,14 @@ run/
     ├── fc_2026_eligible_pending.csv    étape 1, export brut
     ├── fc_2026_clean.csv               étape 2, schéma PSP
     ├── fc_2026_match_candidates.csv    étape 2, candidats au rapprochement
+    ├── fc_2026_cnaf_extra_field.csv    étape 2, champs CNAF des codes CAF
     ├── fc_2026_confirmed.csv           étape 3, appariés
     ├── fc_2026_non_apparies_ids.csv    étape 3
     ├── fc_2026_non_apparies.csv        étape 4
     ├── fc-with-codes.csv               étape 5
     ├── fc_2026_writeback.csv           étape 6
-    └── fc-prod.csv                     étape 6, copie exacte du fichier déposé
+    ├── fc-prod.csv                     étape 6, copie exacte du fichier déposé
+    └── fc-lamp01.csv                   étape 6, reporté dans la base bénéficiaires
 ```
 
 Horodaté à la seconde, là où les notebooks s'en tiennent au jour : une cron peut passer plusieurs
@@ -321,12 +338,17 @@ write-back, et l'étape 4 la retire avant l'injection en production.
 ## Étape 4 — write-back
 
 `writeback_codes.ipynb` — ou `python fc_pipeline.py writeback` — découpe le fichier daté en
-deux :
+deux, trois pour la cron :
 
 - `fc_2026_writeback.csv` — deux colonnes `eligibility_result_id;id_psp`, dans ce dossier (dans
   celui du passage pour la cron) ;
 - `AAAA-MM-JJ-fc-prod.csv` — le CSV final sans la colonne technique, prêt pour l'injection en
-  base de production.
+  base de production ;
+- `fc-lamp01.csv` — cron seulement (`--cnaf-extra` et `--lamp-out`, qui vont ensemble) : le CSV
+  de prod joint aux colonnes `beneficiaire_cnaf_extra_field` qu'a écrites
+  `clean --cnaf-extra-out`, reporté dans la base bénéficiaires du lamp. Il ne part jamais en
+  production, dont l'injecteur refuse ces colonnes ; un bénéficiaire codé sans sa ligne de
+  champs CNAF fait échouer l'étape avant toute écriture.
 
 Puis, tunnel ouvert, **depuis ce dossier** :
 

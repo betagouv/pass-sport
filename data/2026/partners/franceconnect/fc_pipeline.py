@@ -63,7 +63,7 @@ SOURCE = 'FC'
 
 # --- Étape 2 : nettoyage ----------------------------------------------------------
 
-def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
+def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filepath=None) -> dict:
     """Transforme l'export brut de eligibility_results en CSV au schéma de production.
 
     L'export SQL sort en CSV standard (séparateur virgule). dtype=str et
@@ -73,6 +73,10 @@ def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
     `match_filepath` reçoit, en plus, les colonnes que le rapprochement avec la base
     bénéficiaires interroge (fc.MATCH_COLUMNS) — un second fichier plutôt que des colonnes de
     plus dans le premier, pour que le CSV de production garde exactement le schéma PSP.
+
+    `cnaf_extra_filepath` receives the beneficiaire_cnaf_extra_field row of every beneficiary
+    (fc.build_cnaf_extra_field_rows), in a side file for the same reason: split_writeback joins
+    it to the coded rows to build the CSV injected into lamp01, never into production.
     """
     df = pd.read_csv(
         input_filepath, sep=',', encoding='utf-8', dtype=str, keep_default_na=False,
@@ -153,6 +157,10 @@ def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
     if match_filepath is not None:
         candidats.to_csv(match_filepath, sep=';', index=False, encoding='utf-8')
 
+    if cnaf_extra_filepath is not None:
+        fc.build_cnaf_extra_field_rows(df_final).to_csv(
+            cnaf_extra_filepath, sep=';', index=False, encoding='utf-8')
+
     df_final = df_final.drop(
         columns=[c for c in df_final.columns if c.startswith('match-')])
 
@@ -178,6 +186,7 @@ def clean(input_filepath, output_filepath, match_filepath=None) -> dict:
         'beneficiaires_avec_nom_usage': int((candidats['beneficiaire_nom_usage'] != '').sum()),
         'sortie': str(output_filepath),
         'candidats_rapprochement': str(match_filepath) if match_filepath else '(non écrit)',
+        'champs_cnaf': str(cnaf_extra_filepath) if cnaf_extra_filepath else '(non écrit)',
     }
 
 
@@ -217,7 +226,8 @@ def split_matched(cleaned_filepath, unmatched_ids_filepath, output_filepath) -> 
 
 # --- Étape 4a : découpage du fichier daté -----------------------------------------
 
-def split_writeback(with_codes_filepath, writeback_filepath, prod_filepath) -> dict:
+def split_writeback(with_codes_filepath, writeback_filepath, prod_filepath,
+                    cnaf_extra_filepath=None, lamp_filepath=None) -> dict:
     """Sépare le fichier daté en couples pour le SQL et CSV de production.
 
     L'étape 3 recopie toutes les colonnes d'entrée et ne fait qu'en ajouter : le CSV qu'elle
@@ -227,7 +237,14 @@ def split_writeback(with_codes_filepath, writeback_filepath, prod_filepath) -> d
       - `fc_2026_writeback.csv`, deux colonnes, entrée de writeback_verdict.sql ;
       - le CSV de prod, débarrassé de la colonne technique, qui n'existe que pour le
         write-back et n'a rien à faire dans la table des bénéficiaires.
+
+    With `cnaf_extra_filepath` and `lamp_filepath`, a third file for lamp01: the production CSV
+    joined to the beneficiaire_cnaf_extra_field columns clean wrote, which the production drop
+    injector would refuse. Every check runs before any file is written.
     """
+    assert (cnaf_extra_filepath is None) == (lamp_filepath is None), \
+        "le fichier des champs CNAF et le CSV lamp01 vont ensemble"
+
     df = pd.read_csv(
         with_codes_filepath, sep=';', encoding='utf-8', dtype=str, keep_default_na=False,
         quoting=csv.QUOTE_ALL,
@@ -242,18 +259,47 @@ def split_writeback(with_codes_filepath, writeback_filepath, prod_filepath) -> d
     assert df['eligibility_result_id'].is_unique
     assert df['id_psp'].is_unique
 
+    prod = df.drop(columns=['eligibility_result_id'])
+    assert not [colonne for colonne in prod.columns if colonne.startswith('cnaf_')], \
+        "colonnes cnaf_* dans le CSV de prod — l'injecteur de production les refuserait"
+
+    lamp = None if lamp_filepath is None else _join_cnaf_extra_fields(df, cnaf_extra_filepath)
+
     # Le couple que writeback_verdict.sql attend, en-tête compris, séparateur ';'.
     df[['eligibility_result_id', 'id_psp']].to_csv(
         writeback_filepath, sep=';', index=False, encoding='utf-8')
 
-    df.drop(columns=['eligibility_result_id']).to_csv(
-        prod_filepath, sep=';', index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
+    prod.to_csv(prod_filepath, sep=';', index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
 
-    return {
+    stats = {
         'beneficiaires': len(df),
         'writeback': str(writeback_filepath),
         'prod': str(prod_filepath),
     }
+
+    if lamp is not None:
+        lamp.to_csv(lamp_filepath, sep=';', index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
+        stats['lamp01'] = str(lamp_filepath)
+        stats['champs_cnaf_remplis'] = int((lamp['cnaf_allocataire_nom_naissance'] != '').sum())
+
+    return stats
+
+
+def _join_cnaf_extra_fields(with_codes: pd.DataFrame, cnaf_extra_filepath) -> pd.DataFrame:
+    """The coded rows plus their beneficiaire_cnaf_extra_field columns, without the result id.
+
+    A coded row missing from the side file would inject a CAF code no CAF strategy can match
+    again, so it fails the step instead.
+    """
+    cnaf_extra = pd.read_csv(
+        cnaf_extra_filepath, sep=';', encoding='utf-8', dtype=str, keep_default_na=False)
+
+    lamp = with_codes.merge(
+        cnaf_extra, on='eligibility_result_id', how='left', validate='1:1', indicator=True)
+    assert lamp['_merge'].eq('both').all(), \
+        "des bénéficiaires codés n'ont aucune ligne dans le fichier des champs CNAF"
+
+    return lamp.drop(columns=['eligibility_result_id', '_merge'])
 
 
 def prod_filepath_for(with_codes_filepath) -> str:
@@ -284,6 +330,7 @@ def _cmd_clean(args) -> dict:
         args.input or _required_env('FC_EXPORT_PATHFILE_2026'),
         args.output or _required_env('DB_FC_EXPORT_2026'),
         args.match_out,
+        args.cnaf_extra_out,
     )
 
 
@@ -315,6 +362,8 @@ def _cmd_writeback(args) -> dict:
         with_codes,
         args.writeback_out or str(FC_DIR / WRITEBACK_FILENAME),
         args.prod_out or prod_filepath_for(with_codes),
+        args.cnaf_extra,
+        args.lamp_out,
     )
 
 
@@ -335,6 +384,9 @@ def main(argv=None) -> int:
     clean_parser.add_argument('--output', help="défaut : $DB_FC_EXPORT_2026")
     clean_parser.add_argument(
         '--match-out', help="candidats au rapprochement ; sans lui, aucun n'est écrit")
+    clean_parser.add_argument(
+        '--cnaf-extra-out',
+        help="lignes beneficiaire_cnaf_extra_field des codes CAF ; sans lui, aucune n'est écrite")
     clean_parser.set_defaults(func=_cmd_clean)
 
     split_parser = subparsers.add_parser(
@@ -358,9 +410,15 @@ def main(argv=None) -> int:
     writeback_parser.add_argument(
         '--writeback-out', help=f"défaut : {WRITEBACK_FILENAME} dans ce dossier (nom figé)")
     writeback_parser.add_argument('--prod-out', help="défaut : <fichier daté>-fc-prod.csv")
+    writeback_parser.add_argument(
+        '--cnaf-extra', help="lignes écrites par clean --cnaf-extra-out ; exige --lamp-out")
+    writeback_parser.add_argument(
+        '--lamp-out', help="CSV de prod + colonnes cnaf_*, pour lamp01 ; exige --cnaf-extra")
     writeback_parser.set_defaults(func=_cmd_writeback)
 
     args = parser.parse_args(argv)
+    if args.command == 'writeback' and (args.cnaf_extra is None) != (args.lamp_out is None):
+        writeback_parser.error("--cnaf-extra et --lamp-out vont ensemble")
     print_stats(args.func(args))
 
     return 0

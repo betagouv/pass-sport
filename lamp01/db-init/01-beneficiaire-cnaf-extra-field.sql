@@ -2,9 +2,15 @@
 -- data/2026/partners/cnaf/reconcile_cnaf_raw_with_codes.ipynb recovers from the raw file:
 -- one row per CNAF beneficiary, keyed on its code.
 --
--- A side table rather than more beneficiaires columns: only the CNAF carries these, and
--- only in the reconciled file. inject_csv.sh fills both from that one CSV - its beneficiaires
--- columns (the allocataire JSON flattened) go to beneficiaires, the ones below here.
+-- The FranceConnect cron writes the same row for every code it issues under organisme CAF
+-- (clean_fc_lib.build_cnaf_extra_field_rows): its beneficiaires row holds the birth name in
+-- `nom`, where the CAF strategies of match_beneficiaires.sql expect the CNAF usage name, so
+-- this table is the only place they can find that code again. FranceConnect rows always
+-- carry the birth name, birthdate and genre.
+--
+-- A side table rather than more beneficiaires columns: only CAF rows carry these, and only
+-- in lamp01. inject_csv.sh fills both from one CSV - its beneficiaires columns (the
+-- allocataire JSON flattened) go to beneficiaires, the ones below here.
 --
 -- Every column is prefixed cnaf_: inject_csv.sh sends a CSV column to beneficiaires first,
 -- and beneficiaires already has allocataire_date_naissance, allocataire_pays_naissance and

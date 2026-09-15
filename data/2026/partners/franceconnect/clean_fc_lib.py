@@ -516,6 +516,43 @@ def build_match_candidates(df: pd.DataFrame) -> pd.DataFrame:
     return candidats[MATCH_COLUMNS].fillna('')
 
 
+# The beneficiaire_cnaf_extra_field columns the CAF strategies of match_beneficiaires.sql read.
+# inject_csv.sh routes a CSV column to that side table by its name alone.
+CNAF_EXTRA_FIELD_COLUMNS = [
+    'cnaf_allocataire_nom_naissance',
+    'cnaf_allocataire_date_naissance',
+    'cnaf_allocataire_genre',
+]
+
+
+def build_cnaf_extra_field_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """The beneficiaire_cnaf_extra_field row of each cleaned beneficiary, keyed on its result id.
+
+    A FranceConnect beneficiary injected under organisme CAF holds its birth name in `nom`,
+    where the CAF strategies expect the CNAF usage name: they look for the birth name in
+    beneficiaire_cnaf_extra_field instead. Without that row a code issued here is never found
+    again, and a beneficiary reset to eligible_pending receives a second one.
+
+    Every value is the one build_match_candidates presents to the CAF strategy on a later run,
+    so both must be called on the same final DataFrame: AAH compares the beneficiary's birth
+    name, AEEH and QF the allocataire's as resolve_allocataire_caf resolved it. Rows of any
+    other organisme stay empty, no strategy reads the side table for them.
+    """
+    birth_name = df['nom'].where(
+        df['situation'] == 'AAH', df['match-allocataire_nom_naissance'])
+
+    rows = pd.DataFrame({
+        'eligibility_result_id': df['eligibility_result_id'],
+        'cnaf_allocataire_nom_naissance': birth_name,
+        'cnaf_allocataire_date_naissance': df['allocataire'].map(
+            lambda v: _champ_du_json_allocataire(v, 'date_naissance')),
+        'cnaf_allocataire_genre': df['match-allocataire_genre'],
+    })
+    rows.loc[df['organisme'] != 'CAF', CNAF_EXTRA_FIELD_COLUMNS] = ''
+
+    return rows.fillna('')
+
+
 def build_psp_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Projette l'export vers le schéma PSP attendu par generate_new_codes.ipynb.
 

@@ -552,3 +552,78 @@ def test_les_candidats_portent_le_genre_la_qualite_et_les_noms_d_usage():
     assert candidats.loc[0, 'beneficiaire_nom_usage'] == 'ZALQUIN'
     assert candidats.loc[0, 'beneficiaire_genre'] == 'F'
     assert candidats.loc[0, 'allocataire_qualite'] == 'Mme'
+
+
+# --- beneficiaire_cnaf_extra_field ---------------------------------------------------
+
+def beneficiaires_nettoyes(rows):
+    """Chains the resolutions in fc_pipeline.clean's order, up to the allocataire JSON."""
+    import partners_lib as partners
+
+    df = pd.DataFrame(rows)
+    df, _ = lib.resolve_enfant_genre(df)
+    df, _ = lib.resolve_allocataire_caf(df)
+    df = lib.resolve_beneficiaire_nom_usage(df)
+    df = lib.build_psp_columns(df)
+    df, _ = lib.resolve_situation(df)
+    df = lib.resolve_organisme(df)
+    return partners.add_allocataire_json_column(
+        df, extra_fields={'date_naissance': 'allocataire-date_naissance'})
+
+
+AAH_CAF = self_row(eligibility_result_id='aah-caf', aah_est_beneficiaire='true',
+                   **{'allocataire-nom_naissance': 'VORNAKEL', 'allocataire-prenom': 'Tesim'})
+
+
+def test_une_ligne_aah_caf_porte_le_nom_de_naissance_du_beneficiaire():
+    extra = lib.build_cnaf_extra_field_rows(beneficiaires_nettoyes([AAH_CAF]))
+
+    assert list(extra.columns) == ['eligibility_result_id'] + lib.CNAF_EXTRA_FIELD_COLUMNS
+    assert extra.loc[0, 'cnaf_allocataire_nom_naissance'] == 'VORNAKEL'
+    assert extra.loc[0, 'cnaf_allocataire_date_naissance'] == '2000-05-05'
+    assert extra.loc[0, 'cnaf_allocataire_genre'] == 'male'
+
+
+def test_une_ligne_jeune_caf_porte_le_nom_de_naissance_resolu_par_la_caisse():
+    # The next run presents the birth name the CAF answer resolved, BOLIMEK: storing the
+    # pivot's MARTIN would never meet it.
+    extra = lib.build_cnaf_extra_field_rows(
+        beneficiaires_nettoyes([enfant_row(qf_allocataires=ALLOCATAIRES_QF)]))
+
+    assert extra.loc[0, 'cnaf_allocataire_nom_naissance'] == 'BOLIMEK'
+    assert extra.loc[0, 'cnaf_allocataire_date_naissance'] == '1985-03-02'
+    assert extra.loc[0, 'cnaf_allocataire_genre'] == 'female'
+
+
+def test_les_lignes_msa_et_cnous_n_ont_aucun_champ_cnaf():
+    df = beneficiaires_nettoyes([
+        enfant_row(eligibility_result_id='msa', qf_fournisseur='MSA'),
+        self_row(eligibility_result_id='cnous', crous_est_boursier='true', crous_ine='INE7788'),
+    ])
+    extra = lib.build_cnaf_extra_field_rows(df)
+
+    assert list(df['organisme']) == ['MSA', 'cnous']
+    assert (extra[lib.CNAF_EXTRA_FIELD_COLUMNS] == '').all().all()
+
+
+def test_les_champs_cnaf_sont_ceux_que_le_candidat_presentera_aux_strategies_caf():
+    # The contract the side row exists for: on a later run, build_match_candidates presents
+    # exactly these values to aah_caf, aeeh_caf and qf_caf, or the code is issued twice.
+    df = beneficiaires_nettoyes([
+        AAH_CAF,
+        enfant_row(eligibility_result_id='jeune-caf', qf_allocataires=ALLOCATAIRES_QF),
+        enfant_row(eligibility_result_id='aeeh-caf', qf_valeur='1200',
+                   enfant_prenom='Nilo', enfant_date_naissance='2011-05-05'),
+    ])
+    candidats = lib.build_match_candidates(df).set_index('eligibility_result_id')
+    extra = lib.build_cnaf_extra_field_rows(df).set_index('eligibility_result_id')
+
+    assert list(candidats['situation']) == ['AAH', 'jeune', 'AEEH']
+    assert set(candidats['organisme']) == {'CAF'}
+    for resultat, cand in candidats.iterrows():
+        nom_compare = cand['beneficiaire_nom'] if cand['situation'] == 'AAH' \
+            else cand['allocataire_nom']
+        assert extra.loc[resultat, 'cnaf_allocataire_nom_naissance'] == nom_compare != ''
+        assert extra.loc[resultat, 'cnaf_allocataire_genre'] == cand['allocataire_genre']
+        assert extra.loc[resultat, 'cnaf_allocataire_date_naissance'] == \
+            cand['allocataire_date_naissance']

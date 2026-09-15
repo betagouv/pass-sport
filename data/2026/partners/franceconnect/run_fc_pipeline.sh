@@ -276,6 +276,11 @@ UNMATCHED_CSV="$RUN_DIR/fc_2026_non_apparies.csv"
 WITH_CODES_CSV="$RUN_DIR/fc-with-codes.csv"
 WRITEBACK_CSV="$RUN_DIR/fc_2026_writeback.csv"
 PROD_CSV="$RUN_DIR/fc-prod.csv"
+# The beneficiaire_cnaf_extra_field rows clean writes, and the production CSV joined to them.
+# Only lamp01 receives the latter: without those rows its CAF strategies never find the codes
+# issued here again, and the production drop injector refuses the extra columns.
+CNAF_EXTRA_CSV="$RUN_DIR/fc_2026_cnaf_extra_field.csv"
+LAMP_CSV="$RUN_DIR/fc-lamp01.csv"
 
 # La base bénéficiaires du lamp, sur cette même machine (lamp01/compose.yml). Rien ne
 # transite par le réseau : le service n'écoute que sur la boucle locale.
@@ -430,7 +435,8 @@ fi
 
 step 2/6 "nettoyage vers le schéma PSP -> $CLEANED_CSV"
 "$PYTHON" "$FC_DIR/fc_pipeline.py" clean \
-  --input "$EXPORT_CSV" --output "$CLEANED_CSV" --match-out "$MATCH_CANDIDATES_CSV"
+  --input "$EXPORT_CSV" --output "$CLEANED_CSV" --match-out "$MATCH_CANDIDATES_CSV" \
+  --cnaf-extra-out "$CNAF_EXTRA_CSV"
 
 # --- Étape 3 : rapprochement avec la base bénéficiaires -----------------------------
 # Ce qui remplace l'appel LCA que le parcours FranceConnect ne fait plus : la personne
@@ -501,7 +507,8 @@ fi
 
 step 6/6 "découpage du fichier du passage"
 "$PYTHON" "$FC_DIR/fc_pipeline.py" writeback \
-  --with-codes "$WITH_CODES_CSV" --writeback-out "$WRITEBACK_CSV" --prod-out "$PROD_CSV"
+  --with-codes "$WITH_CODES_CSV" --writeback-out "$WRITEBACK_CSV" --prod-out "$PROD_CSV" \
+  --cnaf-extra "$CNAF_EXTRA_CSV" --lamp-out "$LAMP_CSV"
 
 # Le `cd "$RUN_DIR"` de l'étape 3 tient toujours : writeback_verdict.sql et check_writeback.sql
 # y lisent fc_2026_writeback.csv.
@@ -561,13 +568,13 @@ if (( DRY_RUN )); then inject_args+=(--dry-run); fi
 log "report dans la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
 if ! LAMP_DB_HOST="$LAMP_DB_HOST" LAMP_DB_USER="$LAMP_DB_USER" LAMP_DB_NAME="$LAMP_DB_NAME" \
      LAMP_DB_PASSWORD="$LAMP_DB_PASSWORD" \
-     "$LAMP_INJECT" "${inject_args[@]}" "$PROD_CSV"; then
+     "$LAMP_INJECT" "${inject_args[@]}" "$LAMP_CSV"; then
   if (( DRY_RUN )); then
     die "dry-run : le report dans la base bénéficiaires serait refusé — voir le journal"
   fi
   # Les codes sont en route vers la production : leur courriel peut partir.
   enqueue_code_emails
-  die "bénéficiaires déposés mais NON reportés dans la base bénéficiaires — à rejouer : $LAMP_INJECT --port $LAMP_DB_PORT $PROD_CSV"
+  die "bénéficiaires déposés mais NON reportés dans la base bénéficiaires — à rejouer : $LAMP_INJECT --port $LAMP_DB_PORT $LAMP_CSV"
 fi
 
 if (( DRY_RUN )); then

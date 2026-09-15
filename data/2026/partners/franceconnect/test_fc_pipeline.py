@@ -145,6 +145,24 @@ def test_clean_ecarte_une_ligne_sans_situation(tmp_path):
     assert stats['beneficiaires'] == 1
 
 
+def test_clean_ecrit_les_champs_cnaf_a_part_du_schema_psp(tmp_path):
+    input_filepath = write_export(tmp_path, [export_row()])
+    output_filepath = tmp_path / 'FC_2026.csv'
+    cnaf_extra_filepath = tmp_path / 'fc_2026_cnaf_extra_field.csv'
+
+    pipeline.clean(input_filepath, output_filepath, cnaf_extra_filepath=cnaf_extra_filepath)
+
+    extra = pd.read_csv(cnaf_extra_filepath, sep=';', dtype=str, keep_default_na=False)
+    assert list(extra.columns) == \
+        ['eligibility_result_id'] + pipeline.fc.CNAF_EXTRA_FIELD_COLUMNS
+    assert extra.loc[0, 'eligibility_result_id'] == '11111111-1111-1111-1111-111111111111'
+    assert extra.loc[0, 'cnaf_allocataire_nom_naissance'] == 'MARTIN'
+    assert extra.loc[0, 'cnaf_allocataire_date_naissance'] == '1985-03-02'
+    assert extra.loc[0, 'cnaf_allocataire_genre'] == 'female'
+    # The cleaned CSV is what production eventually receives: it keeps exactly the PSP schema.
+    assert set(read_psp(output_filepath).columns) == COLONNES_PSP
+
+
 # --- Étape 4a : split_writeback ---------------------------------------------------
 
 def write_with_codes(tmp_path, rows: int = 2) -> str:
@@ -204,6 +222,57 @@ def test_split_writeback_refuse_un_fichier_sans_cle(tmp_path):
         pipeline.split_writeback(filepath, tmp_path / 'w.csv', tmp_path / 'p.csv')
 
 
+def write_cnaf_extra(tmp_path, rows: int = 2) -> str:
+    """The side file clean writes: one beneficiaire_cnaf_extra_field row per result id."""
+    filepath = tmp_path / 'fc_2026_cnaf_extra_field.csv'
+    pd.DataFrame({
+        'eligibility_result_id': [f"1111111{i}-1111-1111-1111-111111111111" for i in range(rows)],
+        'cnaf_allocataire_nom_naissance': ['BOLIMEK'] * rows,
+        'cnaf_allocataire_date_naissance': ['1985-03-02'] * rows,
+        'cnaf_allocataire_genre': ['female'] * rows,
+    }).to_csv(filepath, sep=';', index=False, encoding='utf-8')
+    return str(filepath)
+
+
+def test_split_writeback_ecrit_le_csv_lamp01(tmp_path):
+    # One side row more than coded rows: the beneficiary matched at step 3 got no code.
+    with_codes = write_with_codes(tmp_path, rows=3)
+    prod_filepath = tmp_path / '2026-08-12-fc-prod.csv'
+    lamp_filepath = tmp_path / 'fc-lamp01.csv'
+
+    stats = pipeline.split_writeback(
+        with_codes, tmp_path / 'fc_2026_writeback.csv', prod_filepath,
+        write_cnaf_extra(tmp_path, rows=4), lamp_filepath)
+
+    df_prod = read_psp(prod_filepath)
+    df_lamp = read_psp(lamp_filepath)
+    # The production drop injector refuses any column beneficiaires lacks.
+    assert not [colonne for colonne in df_prod.columns if colonne.startswith('cnaf_')]
+    assert list(df_lamp.columns) == \
+        list(df_prod.columns) + pipeline.fc.CNAF_EXTRA_FIELD_COLUMNS
+    assert list(df_lamp['id_psp']) == list(df_prod['id_psp'])
+    assert (df_lamp['cnaf_allocataire_nom_naissance'] == 'BOLIMEK').all()
+    assert stats['lamp01'] == str(lamp_filepath)
+    assert stats['champs_cnaf_remplis'] == 3
+
+
+def test_split_writeback_refuse_un_code_sans_ligne_de_champs_cnaf(tmp_path):
+    """Injected without its side row, a CAF code could never be matched again."""
+    with pytest.raises(AssertionError):
+        pipeline.split_writeback(
+            write_with_codes(tmp_path, rows=3), tmp_path / 'w.csv', tmp_path / 'p.csv',
+            write_cnaf_extra(tmp_path, rows=2), tmp_path / 'l.csv')
+
+    assert not (tmp_path / 'p.csv').exists()
+
+
+def test_split_writeback_refuse_le_csv_lamp01_sans_fichier_de_champs_cnaf(tmp_path):
+    with pytest.raises(AssertionError):
+        pipeline.split_writeback(
+            write_with_codes(tmp_path), tmp_path / 'w.csv', tmp_path / 'p.csv',
+            lamp_filepath=tmp_path / 'l.csv')
+
+
 def test_prod_filepath_for():
     assert pipeline.prod_filepath_for('/tmp/2026-08-12-fc-with-codes.csv') == \
         '/tmp/2026-08-12-fc-prod.csv'
@@ -215,14 +284,22 @@ def test_les_trois_etapes_enchainees(tmp_path):
     """Ce que run_fc_pipeline.sh exécute entre les deux passages psql."""
     input_filepath = write_export(tmp_path, [export_row()])
     cleaned_filepath = tmp_path / 'FC_2026.csv'
+    cnaf_extra_filepath = tmp_path / 'fc_2026_cnaf_extra_field.csv'
     with_codes_filepath = tmp_path / '2026-08-12-fc-with-codes.csv'
     prod_filepath = tmp_path / '2026-08-12-fc-prod.csv'
+    lamp_filepath = tmp_path / 'fc-lamp01.csv'
 
-    pipeline.clean(input_filepath, cleaned_filepath)
+    pipeline.clean(input_filepath, cleaned_filepath, cnaf_extra_filepath=cnaf_extra_filepath)
     pipeline.codes.generate_codes_for_file(
         cleaned_filepath, with_codes_filepath, tmp_path / 'codes.csv')
     pipeline.split_writeback(
-        with_codes_filepath, tmp_path / 'fc_2026_writeback.csv', prod_filepath)
+        with_codes_filepath, tmp_path / 'fc_2026_writeback.csv', prod_filepath,
+        cnaf_extra_filepath, lamp_filepath)
+
+    # lamp01 receives the same code, with the side row its CAF strategies read
+    df_lamp = read_psp(lamp_filepath)
+    assert list(df_lamp['id_psp']) == list(read_psp(prod_filepath)['id_psp'])
+    assert df_lamp.loc[0, 'cnaf_allocataire_nom_naissance'] == 'MARTIN'
 
     df_prod = read_psp(prod_filepath)
     df_writeback = pd.read_csv(tmp_path / 'fc_2026_writeback.csv', sep=';', dtype=str)

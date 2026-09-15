@@ -70,6 +70,7 @@ Il accepte tel quel ce que produisent :
 | `msa/clean_msa_2_after_qf_batch.ipynb`, `msa/clean_msa_2a_aah_aeeh.ipynb` | `DB_MSA_EXPORT_2026`, `DB_MSA_EXPORT_2026_AAH_AEEH` | `beneficiaires` (sans `id_psp` : les codes viennent après, de `generate_new_codes.ipynb`) |
 | `cnous/clean_cnous.ipynb` | `DB_CNOUS_EXPORT_2026` | `beneficiaires` |
 | `cnaf/reconcile_cnaf_raw_with_codes.ipynb` | `CNAF_RECONCILED_PATHFILE_2026` | `beneficiaires` **et** `beneficiaire_cnaf_extra_field` |
+| cron `franceconnect/run_fc_pipeline.sh` | `fc-lamp01.csv` du dossier de passage | `beneficiaires` **et** `beneficiaire_cnaf_extra_field` |
 
 Les CSV portent l'allocataire et son adresse en JSON, dans les colonnes `allocataire` et
 `adresse_allocataire`, comme la production les stocke. La base lamp01, elle, n'a pas de
@@ -89,8 +90,10 @@ il **remplace** ces fichiers dans la base, il ne s'y ajoute pas. Si leurs `id_ps
 la contrainte `beneficiaires_id_psp_unique` fait échouer toute l'injection, sans rien écrire.
 
 C'est l'outil d'injection **manuelle** des sorties de notebooks. Le dépôt automatique de la
-cron FranceConnect, lui, passe par `/nfs/run` et par l'injecteur de `untracked_scripts/`, qui
-scanne ce répertoire tout seul : les deux ne se marchent pas dessus.
+cron FranceConnect vers la production, lui, passe par `/nfs/run` et par l'injecteur de
+`untracked_scripts/`, qui scanne ce répertoire tout seul : les deux ne se marchent pas dessus.
+La même cron reporte ensuite ses codes dans lamp01 avec cet outil-ci, depuis `fc-lamp01.csv` :
+le CSV déposé plus les colonnes `cnaf_*`, que l'injecteur de production refuserait.
 
 ## Les champs supplémentaires CNAF
 
@@ -108,10 +111,17 @@ FROM beneficiaires b
 LEFT JOIN beneficiaire_cnaf_extra_field e USING (id_psp);
 ```
 
-Une table à part plutôt que des colonnes de plus dans `beneficiaires` : seule la CNAF les
-porte, et seulement dans le fichier réconcilié. La suppression d'un
-bénéficiaire emporte sa ligne (`ON DELETE CASCADE`). Seules les lignes d'origine ARS ont la date
-et le lieu de naissance : la CNAF ne les remplit pas pour l'AAH et l'AEEH.
+Une table à part plutôt que des colonnes de plus dans `beneficiaires` : seules les lignes CAF
+les portent, et seulement dans lamp01. La suppression d'un
+bénéficiaire emporte sa ligne (`ON DELETE CASCADE`). Seules les lignes CNAF d'origine ARS ont la
+date et le lieu de naissance : la CNAF ne les remplit pas pour l'AAH et l'AEEH.
+
+La cron FranceConnect y écrit aussi la ligne de chaque code qu'elle fabrique sous l'organisme
+`CAF` — nom de naissance, date et genre, toujours remplis. Sa ligne `beneficiaires` porte le nom
+de naissance dans `nom`, là où les stratégies CAF de `match_beneficiaires.sql` attendent le nom
+d'usage de la CNAF : sans cette ligne, un bénéficiaire remis en `eligible_pending` ne serait
+jamais retrouvé et recevrait un second code. Les lignes MSA et CNOUS de la cron reçoivent une
+ligne vide, qu'aucune stratégie ne lit.
 
 ## Les index de rapprochement
 

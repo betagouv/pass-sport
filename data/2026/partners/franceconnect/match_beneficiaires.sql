@@ -37,6 +37,11 @@
 --              deux côtés — la CNAF le porte dans beneficiaire_cnaf_extra_field, rempli
 --              pour les lignes d'origine ARS uniquement
 --
+-- beneficiaire_cnaf_extra_field also holds a row for every code the FranceConnect pipeline
+-- itself issued under organisme CAF (clean_fc_lib.build_cnaf_extra_field_rows). That row is
+-- the only way the CAF strategies below find such a code again: its beneficiaires row holds
+-- the birth name in `nom`, where they expect the CNAF usage name.
+--
 -- Les prénoms venus de la base LAMP doivent être CONTENUS dans les prénoms FranceConnect :
 -- sous-ensemble de mots, ordre libre (opérateur <@ sur les tableaux de mots normalisés).
 -- La CNAF ne stocke qu'un prénom (PRENOMDOS, NOMENF), FranceConnect les porte tous.

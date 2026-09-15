@@ -437,6 +437,98 @@ def test_qf_caf_sans_ligne_extra_field_reste_non_apparie(pg):
     assert non_apparies == ['c1']
 
 
+# --- Codes issued by the FranceConnect pipeline itself -------------------------------
+# What run_fc_pipeline.sh injects into lamp01 for a code it issued under organisme CAF: the
+# birth name in `nom` and `allocataire_nom`, the allocataire birthdate flattened from its
+# JSON, and the beneficiaire_cnaf_extra_field row clean_fc_lib.build_cnaf_extra_field_rows
+# writes. A beneficiary reset to eligible_pending must meet that code again, whether
+# FranceConnect serves a usage name or not.
+
+BASE_AAH_FC = dict(id_psp='PSP-F1', nom='VORNAKEL', prenom='TESIM CALDOR',
+                   date_naissance='2000-03-01 04:00:00', genre='M',
+                   organisme='CAF', situation='AAH', allocataire_qualite='M',
+                   allocataire_nom='VORNAKEL', allocataire_prenom='TESIM CALDOR',
+                   allocataire_date_naissance='2000-03-01')
+
+EXTRA_AAH_FC = ligne_extra(id_psp='PSP-F1', cnaf_allocataire_nom_naissance='VORNAKEL',
+                           cnaf_allocataire_date_naissance='2000-03-01',
+                           cnaf_allocataire_genre='male')
+
+CANDIDAT_AAH_FC = dict(situation='AAH', organisme='CAF',
+                       allocataire_nom='VORNAKEL', allocataire_prenom='Tesim Caldor',
+                       allocataire_date_naissance='2000-03-01', allocataire_qualite='M',
+                       allocataire_genre='male',
+                       beneficiaire_nom='VORNAKEL', beneficiaire_prenom='Tesim Caldor',
+                       beneficiaire_date_naissance='2000-03-01', beneficiaire_genre='M')
+
+
+def test_aah_caf_ne_retrouve_pas_un_code_franceconnect_sans_ligne_extra_field(pg):
+    # The birth name sits in `nom`, where aah_caf expects a usage name, and FranceConnect
+    # served none: nothing else lets the CAF strategy reach this row.
+    apparies, non_apparies, _ = rapprocher(
+        pg, base=[ligne_base(**BASE_AAH_FC)], candidats=[candidat(**CANDIDAT_AAH_FC)])
+    assert apparies == {}
+    assert non_apparies == ['c1']
+
+
+def test_aah_caf_retrouve_un_code_franceconnect_sans_nom_d_usage(pg):
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_AAH_FC)], extra=[EXTRA_AAH_FC],
+        candidats=[candidat(**CANDIDAT_AAH_FC)])
+    assert apparies == {'c1': 'PSP-F1'}
+    assert recap['par_aah_caf'] == 1
+
+
+BASE_QF_FC = dict(id_psp='PSP-F2', nom='SELVARIN', prenom='NOA',
+                  date_naissance='2016-04-04 04:00:00', genre='M',
+                  organisme='CAF', situation='jeune', allocataire_qualite='Mme',
+                  allocataire_nom='KORVELI', allocataire_prenom='IDRA',
+                  allocataire_date_naissance='1984-02-02')
+
+CANDIDAT_QF_FC = dict(situation='jeune', organisme='CAF',
+                      allocataire_nom='KORVELI', allocataire_prenom='Idra',
+                      allocataire_date_naissance='1984-02-02', allocataire_qualite='Mme',
+                      allocataire_genre='female',
+                      beneficiaire_nom='SELVARIN', beneficiaire_prenom='Noa',
+                      beneficiaire_date_naissance='2016-04-04', beneficiaire_genre='M')
+
+
+def test_qf_caf_retrouve_un_code_franceconnect(pg):
+    extra = ligne_extra(id_psp='PSP-F2', cnaf_allocataire_nom_naissance='KORVELI',
+                        cnaf_allocataire_date_naissance='1984-02-02',
+                        cnaf_allocataire_genre='female')
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_QF_FC)], extra=[extra],
+        candidats=[candidat(**CANDIDAT_QF_FC)])
+    assert apparies == {'c1': 'PSP-F2'}
+    assert recap['par_qf_caf'] == 1
+
+
+BASE_AEEH_FC = dict(id_psp='PSP-F3', nom='TALVERIN', prenom='ISA',
+                    date_naissance='2011-05-05 04:00:00', genre='F',
+                    organisme='CAF', situation='AEEH', allocataire_qualite='M',
+                    allocataire_nom='DORMALEK', allocataire_prenom='OSKAR',
+                    allocataire_date_naissance='1978-06-06')
+
+CANDIDAT_AEEH_FC = dict(situation='AEEH', organisme='CAF',
+                        allocataire_nom='DORMALEK', allocataire_prenom='Oskar',
+                        allocataire_date_naissance='1978-06-06', allocataire_qualite='M',
+                        allocataire_genre='male',
+                        beneficiaire_nom='TALVERIN', beneficiaire_prenom='Isa',
+                        beneficiaire_date_naissance='2011-05-05', beneficiaire_genre='F')
+
+
+def test_aeeh_caf_retrouve_un_code_franceconnect_sans_nom_d_usage(pg):
+    extra = ligne_extra(id_psp='PSP-F3', cnaf_allocataire_nom_naissance='DORMALEK',
+                        cnaf_allocataire_date_naissance='1978-06-06',
+                        cnaf_allocataire_genre='male')
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_AEEH_FC)], extra=[extra],
+        candidats=[candidat(**CANDIDAT_AEEH_FC)])
+    assert apparies == {'c1': 'PSP-F3'}
+    assert recap['par_aeeh_caf'] == 1
+
+
 # --- Les règles transverses ----------------------------------------------------------
 
 def test_le_containment_ne_marche_que_de_la_base_vers_franceconnect(pg):
