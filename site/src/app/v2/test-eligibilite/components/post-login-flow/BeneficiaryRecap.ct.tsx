@@ -75,7 +75,7 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByRole('link', { name: 'Télécharger' })).toHaveCount(0);
   });
 
-  test('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their own code', async ({
+  test('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their position', async ({
     mount,
   }) => {
     const component = await mount(
@@ -98,7 +98,7 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015')).toBeVisible();
     const downloadLink = component.getByRole('link', { name: 'Télécharger' });
     await expect(downloadLink).toBeVisible();
-    await expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
+    await expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?beneficiary=0');
   });
 
   test('shows a child’s full identity on their card, the same shape as the allocataire’s', async ({

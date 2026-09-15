@@ -55,8 +55,8 @@ const result = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryResult =
   ...overrides,
 });
 
-// GET reads `code` off the request URL — every call site needs a real Request, even the ones
-// that exercise the 'self' (no `code`) path.
+// GET reads `beneficiary` off the request URL — every call site needs a real Request, even the
+// ones that exercise the 'self' (no `beneficiary`) path.
 const request = (search = ''): Request =>
   new Request(`http://localhost/api/france-connect/pdf${search}`);
 
@@ -96,7 +96,7 @@ describe('GET /api/france-connect/pdf', () => {
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
   });
 
-  it('ignores an enfant row when no code is requested, even one with a confirmed code', async () => {
+  it('ignores an enfant row when no beneficiary is requested, even one with a confirmed code', async () => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([
       result({
@@ -116,7 +116,12 @@ describe('GET /api/france-connect/pdf', () => {
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
   });
 
-  it('returns 404 when the requested code does not match any of the caller’s own enfant rows', async () => {
+  it.each([
+    ['out of range', '?beneficiary=7'],
+    ['negative', '?beneficiary=-1'],
+    ['not a number', '?beneficiary=abc'],
+    ['empty', '?beneficiary='],
+  ])('returns 404 when the requested beneficiary index is %s', async (_label, search) => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([
       result({
@@ -130,13 +135,31 @@ describe('GET /api/france-connect/pdf', () => {
       }),
     ]);
 
-    const response = await GET(request('?code=24-DOES-NOT-EXIST'));
+    const response = await GET(request(search));
 
     expect(response.status).toBe(404);
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
   });
 
-  it('builds a child’s PDF from application_results_by_sub when its code is requested', async () => {
+  it('returns 404 when the requested index lands on the allocataire’s own row', async () => {
+    authenticate();
+    mockedFindResultsForSub.mockResolvedValue([
+      result({ code: '24-ZORV-QYXA' }),
+      result({
+        source: 'enfant',
+        givenName: 'Zephyrin',
+        verdict: 'eligible_confirmed',
+        code: '24-AZUR-KLMB',
+      }),
+    ]);
+
+    const response = await GET(request('?beneficiary=0'));
+
+    expect(response.status).toBe(404);
+    expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
+  });
+
+  it('builds a child’s PDF from application_results_by_sub when its position is requested', async () => {
     authenticate();
     mockedFindResultsForSub.mockResolvedValue([
       result({ code: '24-ZORV-QYXA' }), // the allocataire's own row, must not be picked
@@ -151,7 +174,7 @@ describe('GET /api/france-connect/pdf', () => {
       }),
     ]);
 
-    const response = await GET(request('?code=24-AZUR-KLMB'));
+    const response = await GET(request('?beneficiary=1'));
 
     expect(mockedGeneratePdfBuffer).toHaveBeenCalledWith({
       firstname: 'Zephyrin',
@@ -178,7 +201,7 @@ describe('GET /api/france-connect/pdf', () => {
       }),
     ]);
 
-    const response = await GET(request('?code=24-AZUR-KLMB'));
+    const response = await GET(request('?beneficiary=0'));
 
     expect(response.status).toBe(422);
     expect(mockedGeneratePdfBuffer).not.toHaveBeenCalled();
