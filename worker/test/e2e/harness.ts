@@ -34,6 +34,7 @@ import type {
   EligibilityJobData,
   EligibilityJobPayload,
   LcaJobData,
+  PersonneQuotientFamilial,
   PivotIdentity,
   ResourceResult,
   ResultSituation,
@@ -94,6 +95,10 @@ class FakeApiClient implements ApiParticulierClient {
   // Caisse that served the quotient, as API Particulier spells it.
   qfFournisseur: string | undefined = "CNAF";
 
+  // Second allocataire of the fake QF couple. The first entry mirrors the queried identity
+  // (pivot birthdate included), so setting this describes an identifiable couple.
+  qfConjoint: PersonneQuotientFamilial | null = null;
+
   constructor(
     private readonly first429RetryAfter?: number,
     private readonly failOnCall?: number,
@@ -142,7 +147,13 @@ class FakeApiClient implements ApiParticulierClient {
       this.take429(RESOURCE_META.qf) ??
       okRow(RESOURCE_META.qf, {
         allocataires: [
-          { nom_naissance: identity.family_name, prenoms: identity.given_name ?? "" },
+          {
+            nom_naissance: identity.family_name,
+            prenoms: identity.given_name ?? "",
+            date_naissance: identity.birthdate,
+            sexe: identity.gender === "female" ? "F" : "M",
+          },
+          ...(this.qfConjoint ? [this.qfConjoint] : []),
         ],
         // Four children, one per zone of the two campaign windows, at the
         // 2026-12-31 reference date:
@@ -345,6 +356,8 @@ export type Stack = {
   setQfChildless: (childless: boolean) => void;
   // Caisse the fake QF answers with, undefined for a payload that names none.
   setQfFournisseur: (fournisseur: string | undefined) => void;
+  // Second allocataire of the fake QF couple, null for a single-allocataire household.
+  setQfConjoint: (conjoint: PersonneQuotientFamilial | null) => void;
   close: () => Promise<void>;
 };
 
@@ -676,6 +689,9 @@ export async function startStack(
     },
     setQfFournisseur: (fournisseur: string | undefined) => {
       apiClient.qfFournisseur = fournisseur;
+    },
+    setQfConjoint: (conjoint: PersonneQuotientFamilial | null) => {
+      apiClient.qfConjoint = conjoint;
     },
     close,
   };

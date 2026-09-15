@@ -139,6 +139,14 @@ export type QuotientFamilialData = {
   };
 };
 
+// The second allocataire of a QF couple, converted to the pivot vocabulary
+// (nom_naissance -> family_name, nom_usage -> preferred_username, prenoms -> given_name,
+// date_naissance -> ISO birthdate, sexe M/F -> gender male/female) so eligibility_results
+// speaks a single vocabulary across its identity columns.
+export type AllocataireConjointIdentite = Partial<
+  Pick<PivotIdentity, "family_name" | "preferred_username" | "given_name" | "birthdate" | "gender">
+>;
+
 export type StatutBeneficiaireData = {
   est_beneficiaire: boolean;
   date_debut_droit?: string;

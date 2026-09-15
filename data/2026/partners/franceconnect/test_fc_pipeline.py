@@ -51,6 +51,7 @@ def export_row(**overrides) -> dict:
             'nom_naissance': 'MARTIN', 'prenoms': 'Lea',
             'date_naissance': '2015-06-01', 'sexe': 'F',
         }]),
+        'qf_allocataires': '',
         'aah_est_beneficiaire': '',
         'crous_est_boursier': '',
     }
@@ -335,6 +336,31 @@ def test_clean_ecrit_les_noms_d_usage_dans_les_candidats_au_rapprochement(tmp_pa
     assert stats['beneficiaires_avec_nom_usage'] == 1
     # Les noms d'usage vivent dans le fichier de rapprochement, jamais dans le CSV de
     # production, qui garde exactement le schéma PSP.
+    assert set(read_psp(output_filepath).columns) == COLONNES_PSP
+
+
+def test_clean_ecrit_le_conjoint_dans_les_candidats_au_rapprochement(tmp_path):
+    couple = json.dumps([
+        {'nom_naissance': 'BOLIMEK', 'nom_usage': 'MARTIN', 'prenoms': 'Claire Ysolde',
+         'date_naissance': '02/03/1985', 'sexe': 'F'},
+        {'nom_naissance': 'VOKTARIMENDO', 'prenoms': 'Tarnu',
+         'date_naissance': '17/11/1982', 'sexe': 'M'},
+    ])
+    input_filepath = write_export(tmp_path, [export_row(qf_allocataires=couple)])
+    output_filepath = tmp_path / 'FC_2026.csv'
+    match_filepath = tmp_path / 'candidats.csv'
+
+    stats = pipeline.clean(input_filepath, output_filepath, match_filepath)
+
+    candidats = pd.read_csv(match_filepath, sep=';', dtype=str, keep_default_na=False)
+    assert list(candidats.columns) == pipeline.fc.MATCH_COLUMNS
+    assert candidats.loc[0, 'conjoint_nom'] == 'VOKTARIMENDO'
+    assert candidats.loc[0, 'conjoint_date_naissance'] == '1982-11-17'
+    assert candidats.loc[0, 'conjoint_qualite'] == 'M'
+    assert candidats.loc[0, 'conjoint_genre'] == 'male'
+    assert stats['conjoints_identifies'] == 1
+    assert stats['candidats_avec_conjoint'] == 1
+    # Le conjoint vit dans le fichier de rapprochement, jamais dans le CSV de production.
     assert set(read_psp(output_filepath).columns) == COLONNES_PSP
 
 

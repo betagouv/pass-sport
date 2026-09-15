@@ -70,15 +70,22 @@ est **strict** : un candidat est apparié ssi sa stratégie retourne **exactemen
 distinct. Zéro ou plusieurs = non apparié → code neuf, le comportement le moins risqué des
 deux. Aucun départageur.
 
+**Au moins un des deux allocataires du foyer** (AEEH et jeune) : la base partenaire porte le
+responsable dossier, qui peut être l'AUTRE parent que celui qui s'est connecté. Chaque candidat
+présente donc jusqu'à deux personas allocataire — le connecté, et le conjoint quand
+`resolve_allocataire_conjoint` en identifie un — et la stratégie apparie si l'un des deux
+atteint la ligne. Le verdict strict reste posé par candidat : deux personas sur la même
+personne comptent pour un `id_psp`, deux personnes différentes restent inconcluantes.
+
 | stratégie | allocataire | bénéficiaire |
 |---|---|---|
 | **boursier** | `allocataire_matricule` = INE, exact — le CNOUS y range l'INE du boursier ; rien d'équivalent CNAF/MSA | — |
 | **AAH MSA** | — | nom de **naissance** (`family_name`) · prénoms ⊆ · genre · naissance |
 | **AAH CAF** | — | nom d'**usage** (`preferred_username`), ou nom de **naissance** (`family_name`) confronté à `beneficiaire_cnaf_extra_field` · prénoms ⊆ · genre · naissance |
-| **AEEH MSA** | nom de naissance · prénoms ⊆ · qualité (M/Mme) · naissance | nom · prénoms stricts · genre · naissance |
-| **AEEH CAF** | nom d'usage (`RESPDOS`), ou nom de naissance confronté à `beneficiaire_cnaf_extra_field` · prénoms ⊆ · qualité · *pas* de naissance (la CNAF ne la sérialise pas) | nom (`NOMENF`, accepté sous ses deux formes candidat) · prénoms stricts · genre · naissance |
-| **jeune MSA** | nom de naissance · prénoms ⊆ · qualité · naissance | nom · prénoms ⊆ · genre · naissance |
-| **jeune CAF** | nom de **naissance**, genre et naissance depuis `beneficiaire_cnaf_extra_field` (rempli pour l'origine ARS, la population QF, et pour les codes CAF de ce dossier) · prénoms ⊆ | nom (deux formes) · prénoms ⊆ · genre · naissance |
+| **AEEH MSA** | *l'un des deux allocataires du foyer* : nom de naissance · prénoms ⊆ · qualité (M/Mme) · naissance | nom · prénoms stricts · genre · naissance |
+| **AEEH CAF** | *l'un des deux allocataires du foyer* : nom d'usage (`RESPDOS`), ou nom de naissance confronté à `beneficiaire_cnaf_extra_field` · prénoms ⊆ · qualité · *pas* de naissance (la CNAF ne la sérialise pas) | nom (`NOMENF`, accepté sous ses deux formes candidat) · prénoms stricts · genre · naissance |
+| **jeune MSA** | *l'un des deux allocataires du foyer* : nom de naissance · prénoms ⊆ · qualité · naissance | nom · prénoms ⊆ · genre · naissance |
+| **jeune CAF** | *l'un des deux allocataires du foyer* : nom de **naissance**, genre et naissance depuis `beneficiaire_cnaf_extra_field` (rempli pour l'origine ARS, la population QF, et pour les codes CAF de ce dossier) · prénoms ⊆ | nom (deux formes) · prénoms ⊆ · genre · naissance |
 
 **⊆ — le containment des prénoms** : les prénoms venus de la base LAMP doivent être
 **contenus** dans les prénoms FranceConnect — sous-ensemble de mots, ordre libre, après
@@ -107,6 +114,15 @@ même de la caisse), du pivot FranceConnect en repli : nom de naissance =
 `qf_allocataires[].nom_usage` à défaut `preferred_username`. Pour un enfant, l'usage est
 celui que le worker stocke dans `enfant_identite`, à défaut `qf_enfants[].nom_usage` ; sur
 une ligne `self`, c'est celui de l'allocataire.
+
+Le **conjoint** est l'autre entrée du couple `qf_allocataires`, une fois le connecté identifié
+par la date de naissance du pivot, à défaut par son nom de naissance ; toujours ambigu → pas de
+persona conjoint, le rapprochement se fait comme avant sur le seul connecté. Sa date, sa
+qualité et son genre sont ceux de **l'entrée elle-même** (`date_naissance`, `sexe`), pas ceux
+du pivot : c'est une autre personne. Le worker persiste la même identification dans
+`eligibility_results.allocataire_conjoint_identite` (au vocabulaire pivot), mais le pipeline
+lit toujours `qf_allocataires` depuis `eligibility_history` — ce qui couvre aussi les lignes
+antérieures à cette colonne.
 
 À la main, `fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage.
 La cron, elle, range tout ce qu'un passage produit dans son propre dossier horodaté — voir

@@ -440,6 +440,77 @@ def test_deux_allocataires_sans_date_concordante_ne_designent_personne():
     assert df.loc[0, 'match-allocataire_nom_naissance'] == 'MARTIN'
 
 
+def test_le_conjoint_est_l_autre_entree_du_couple():
+    df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
+    df, conjoints = lib.resolve_allocataire_conjoint(df)
+
+    assert conjoints == 1
+    assert df.loc[0, 'match-conjoint_nom_naissance'] == 'VOKTARIMENDO'
+    assert df.loc[0, 'match-conjoint_nom_usage'] == ''
+    assert df.loc[0, 'match-conjoint_prenom'] == 'TARNU'
+    # La date, la qualité et le genre de L'ENTRÉE elle-même, pas ceux du pivot.
+    assert df.loc[0, 'match-conjoint_date_naissance'] == '1982-11-17'
+    assert df.loc[0, 'match-conjoint_qualite'] == 'M'
+    assert df.loc[0, 'match-conjoint_genre'] == 'male'
+
+
+def test_un_seul_allocataire_n_a_pas_de_conjoint():
+    seul = json.dumps([{'nom_naissance': 'ZELVIK', 'prenoms': 'Halvi',
+                        'date_naissance': '02/03/1985'}])
+    df = pd.DataFrame([enfant_row(qf_allocataires=seul)])
+    df, conjoints = lib.resolve_allocataire_conjoint(df)
+
+    assert conjoints == 0
+    assert df.loc[0, 'match-conjoint_nom_naissance'] == ''
+
+
+def test_sans_reponse_qf_pas_de_conjoint():
+    # Route AAH : aucun appel quotient_familial, donc aucun tableau `allocataires`.
+    df = pd.DataFrame([self_row(aah_est_beneficiaire='true')])
+    df, conjoints = lib.resolve_allocataire_conjoint(df)
+
+    assert conjoints == 0
+    assert df.loc[0, 'match-conjoint_nom_naissance'] == ''
+
+
+def test_couple_ambigu_le_conjoint_est_designe_par_le_nom_de_naissance():
+    # Aucune date ne concorde avec le pivot — une coquille côté caisse — mais le nom de
+    # naissance du pivot (MARTIN) désigne le connecté, donc l'autre entrée est le conjoint.
+    couple = json.dumps([
+        {'nom_naissance': 'MARTIN', 'prenoms': 'Claire', 'date_naissance': '01/01/1900',
+         'sexe': 'F'},
+        {'nom_naissance': 'VOKTARIMENDO', 'prenoms': 'Tarnu', 'date_naissance': '17/11/1982',
+         'sexe': 'M'},
+    ])
+    df = pd.DataFrame([enfant_row(qf_allocataires=couple)])
+    df, conjoints = lib.resolve_allocataire_conjoint(df)
+
+    assert conjoints == 1
+    assert df.loc[0, 'match-conjoint_nom_naissance'] == 'VOKTARIMENDO'
+
+
+def test_couple_doublement_ambigu_n_a_pas_de_conjoint():
+    # Ni date ni nom concordants : désigner un conjoint serait une devinette, et le
+    # rapprochement retombe sur le seul allocataire connecté, comme avant.
+    ambigu = json.dumps([
+        {'nom_naissance': 'ZELVIK', 'prenoms': 'Halvi', 'date_naissance': '01/01/1900'},
+        {'nom_naissance': 'OSVAREK', 'prenoms': 'Mirsa', 'date_naissance': '02/02/1901'},
+    ])
+    df = pd.DataFrame([enfant_row(qf_allocataires=ambigu)])
+    df, conjoints = lib.resolve_allocataire_conjoint(df)
+
+    assert conjoints == 0
+    assert df.loc[0, 'match-conjoint_nom_naissance'] == ''
+
+
+def test_resolve_allocataire_conjoint_ne_mute_pas_son_entree():
+    df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
+    avant = df.copy(deep=True)
+    lib.resolve_allocataire_conjoint(df)
+
+    pd.testing.assert_frame_equal(df, avant)
+
+
 def test_l_ine_du_boursier_devient_le_matricule_de_l_allocataire():
     df = pd.DataFrame([self_row(crous_est_boursier='true', crous_ine='INE7788')])
     df, _ = lib.resolve_enfant_genre(df)
@@ -453,6 +524,7 @@ def test_les_candidats_au_rapprochement_portent_les_colonnes_attendues():
     df = pd.DataFrame([enfant_row(qf_allocataires=ALLOCATAIRES_QF)])
     df, _ = lib.resolve_enfant_genre(df)
     df, _ = lib.resolve_allocataire_caf(df)
+    df, _ = lib.resolve_allocataire_conjoint(df)
     df = lib.build_psp_columns(df)
     df, _ = lib.resolve_situation(df)
     df = lib.resolve_organisme(df)
@@ -471,6 +543,12 @@ def test_les_candidats_au_rapprochement_portent_les_colonnes_attendues():
     assert candidats.loc[0, 'beneficiaire_date_naissance'] == '2015-06-01'
     # Pas de route boursier ici : aucun INE, donc aucune jointure exacte à tenter.
     assert candidats.loc[0, 'ine'] == ''
+    # Le second allocataire du foyer, avec ses propres date, qualité et genre.
+    assert candidats.loc[0, 'conjoint_nom'] == 'VOKTARIMENDO'
+    assert candidats.loc[0, 'conjoint_prenom'] == 'TARNU'
+    assert candidats.loc[0, 'conjoint_date_naissance'] == '1982-11-17'
+    assert candidats.loc[0, 'conjoint_qualite'] == 'M'
+    assert candidats.loc[0, 'conjoint_genre'] == 'male'
 
 
 # --- Noms d'usage ------------------------------------------------------------------
@@ -488,6 +566,7 @@ def noms_d_usage(row):
     df = pd.DataFrame([row])
     df, _ = lib.resolve_enfant_genre(df)
     df, _ = lib.resolve_allocataire_caf(df)
+    df, _ = lib.resolve_allocataire_conjoint(df)
     df = lib.resolve_beneficiaire_nom_usage(df)
     return df.loc[0, 'match-allocataire_nom_usage'], df.loc[0, 'match-beneficiaire_nom_usage']
 
@@ -539,6 +618,7 @@ def test_les_candidats_portent_le_genre_la_qualite_et_les_noms_d_usage():
                                   **{'allocataire-nom_usage': 'Vorsalde'})])
     df, _ = lib.resolve_enfant_genre(df)
     df, _ = lib.resolve_allocataire_caf(df)
+    df, _ = lib.resolve_allocataire_conjoint(df)
     df = lib.resolve_beneficiaire_nom_usage(df)
     df = lib.build_psp_columns(df)
     df, _ = lib.resolve_situation(df)

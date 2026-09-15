@@ -30,6 +30,7 @@ beforeEach(async () => {
   stack.setCrousBoursier(true);
   stack.setChildrenLastname("Enfant");
   stack.setQfFournisseur("CNAF");
+  stack.setQfConjoint(null);
 });
 
 const rows = async () =>
@@ -151,6 +152,53 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     const self = await selfRows();
     expect(self[0].allocataire_identite.preferred_username).toBe("Vorsalde");
     expect(self[0].allocataire_identite.family_name).toBe("Martin");
+  });
+
+  // Like `caisse`, the conjoint is household-level: the same value on every row of the job.
+  it("le conjoint du foyer QF est persisté sur chaque ligne, au vocabulaire pivot", async () => {
+    stack.setQfConjoint({
+      nom_naissance: "Voktarimendo",
+      nom_usage: "Martin",
+      prenoms: "Tarnu",
+      date_naissance: "17/11/1982",
+      sexe: "M",
+    });
+
+    await stack.enqueueAndWait(allocataire());
+
+    const all = await rows();
+    expect(all.length).toBeGreaterThan(1);
+    expect(all.every((x) => x.allocataire_conjoint_identite !== null)).toBe(true);
+    expect(all[0].allocataire_conjoint_identite).toEqual({
+      family_name: "Voktarimendo",
+      preferred_username: "Martin",
+      given_name: "Tarnu",
+      birthdate: "1982-11-17",
+      gender: "male",
+    });
+  });
+
+  it("sans conjoint la colonne reste nulle", async () => {
+    await stack.enqueueAndWait(allocataire());
+
+    const all = await rows();
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.every((x) => x.allocataire_conjoint_identite === null)).toBe(true);
+  });
+
+  // A couple where no entry carries the pivot birthdate: nobody can be named the conjoint.
+  it("couple ambigu -> pas de conjoint persisté", async () => {
+    stack.setQfConjoint({
+      nom_naissance: "Voktarimendo",
+      prenoms: "Tarnu",
+      // Same birthdate as the connected entry: both match the pivot, none is THE other one.
+      date_naissance: "15/05/2004",
+      sexe: "M",
+    });
+
+    await stack.enqueueAndWait(allocataire());
+
+    expect((await rows()).every((x) => x.allocataire_conjoint_identite === null)).toBe(true);
   });
 
   it("QF children chain -> une ligne par enfant, une seule enveloppe", async () => {

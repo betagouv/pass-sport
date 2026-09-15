@@ -37,6 +37,14 @@
 --              deux côtés — la CNAF le porte dans beneficiaire_cnaf_extra_field, rempli
 --              pour les lignes d'origine ARS uniquement
 --
+-- AU MOINS UN DES DEUX ALLOCATAIRES : sur AEEH et jeune, la base partenaire porte le
+-- responsable dossier, qui peut être l'AUTRE parent que celui qui s'est connecté. Chaque
+-- candidat présente donc jusqu'à deux personas allocataire (fc_norm_allocataires) — le
+-- connecté, et le conjoint quand la réponse quotient_familial en identifie un — et la
+-- stratégie apparie si l'un des deux atteint la ligne. Le verdict reste posé par candidat :
+-- deux personas sur la même personne comptent pour un id_psp, deux personnes différentes
+-- restent inconcluantes.
+--
 -- beneficiaire_cnaf_extra_field also holds a row for every code the FranceConnect pipeline
 -- itself issued under organisme CAF (clean_fc_lib.build_cnaf_extra_field_rows). That row is
 -- the only way the CAF strategies below find such a code again: its beneficiaires row holds
@@ -90,13 +98,19 @@ create temp table fc_candidats (
 	beneficiaire_nom_usage text,
 	beneficiaire_prenom text,
 	beneficiaire_date_naissance text,
-	beneficiaire_genre text
+	beneficiaire_genre text,
+	conjoint_nom text,
+	conjoint_nom_usage text,
+	conjoint_prenom text,
+	conjoint_date_naissance text,
+	conjoint_qualite text,
+	conjoint_genre text
 ) on commit drop;
 
 -- `header match` : l'en-tête du fichier doit nommer exactement ces colonnes, dans cet ordre.
 -- Sans lui, COPY chargerait par position, et une colonne ajoutée à clean_fc_lib.MATCH_COLUMNS
 -- sans l'être ici décalerait silencieusement tout le fichier.
-\copy fc_candidats (eligibility_result_id, situation, organisme, ine, allocataire_nom, allocataire_nom_usage, allocataire_prenom, allocataire_date_naissance, allocataire_qualite, allocataire_genre, beneficiaire_nom, beneficiaire_nom_usage, beneficiaire_prenom, beneficiaire_date_naissance, beneficiaire_genre) from 'fc_2026_match_candidates.csv' with (format csv, header match, delimiter ';')
+\copy fc_candidats (eligibility_result_id, situation, organisme, ine, allocataire_nom, allocataire_nom_usage, allocataire_prenom, allocataire_date_naissance, allocataire_qualite, allocataire_genre, beneficiaire_nom, beneficiaire_nom_usage, beneficiaire_prenom, beneficiaire_date_naissance, beneficiaire_genre, conjoint_nom, conjoint_nom_usage, conjoint_prenom, conjoint_date_naissance, conjoint_qualite, conjoint_genre) from 'fc_2026_match_candidates.csv' with (format csv, header match, delimiter ';')
 
 -- Chaque candidat, normalisé UNE fois, par les mêmes fonctions que celles appliquées côté
 -- base dans les jointures plus bas : c'est ce qui garantit que les deux côtés de la
@@ -111,15 +125,6 @@ select
 	nullif(btrim(c.situation), '') as situation,
 	nullif(btrim(c.organisme), '') as organisme,
 	nullif(btrim(c.ine), '') as ine,
-	nullif(public.normalise_recherche(c.allocataire_nom), '') as alloc_nom_naissance,
-	nullif(public.normalise_recherche(c.allocataire_nom_usage), '') as alloc_nom_usage,
-	string_to_array(nullif(public.normalise_recherche(c.allocataire_prenom), ''), ' ')
-		as alloc_prenoms,
-	nullif(public.normalise_date_recherche(c.allocataire_date_naissance), '')
-		as alloc_naissance,
-	nullif(btrim(c.allocataire_qualite), '') as alloc_qualite,
-	-- 'male'/'female', le vocabulaire du pivot, que cnaf_allocataire_genre partage.
-	nullif(lower(btrim(c.allocataire_genre)), '') as alloc_genre,
 	nullif(public.normalise_recherche(c.beneficiaire_nom), '') as benef_nom_naissance,
 	nullif(public.normalise_recherche(c.beneficiaire_nom_usage), '') as benef_nom_usage,
 	-- Les deux formes : le texte pour l'égalité stricte (AEEH), le tableau pour le
@@ -130,6 +135,38 @@ select
 	nullif(btrim(c.beneficiaire_date_naissance), '')::date as benef_naissance,
 	nullif(upper(btrim(c.beneficiaire_genre)), '') as benef_genre
 from fc_candidats c;
+
+-- Une ligne par allocataire du foyer : le connecté toujours, le conjoint quand la réponse
+-- quotient_familial en identifie un. Les stratégies AEEH/jeune joignent cette table plutôt
+-- que fc_norm pour leurs critères allocataire : une persona à qui il manque un champ requis
+-- ne peut pas apparier, l'autre le peut encore. Le `select distinct` de chaque stratégie et
+-- le verdict « exactement un id_psp » par candidat font le reste — deux personas atteignant
+-- la même personne ne comptent qu'une fois.
+create temp table fc_norm_allocataires on commit drop as
+select
+	c.eligibility_result_id,
+	nullif(public.normalise_recherche(c.allocataire_nom), '') as alloc_nom_naissance,
+	nullif(public.normalise_recherche(c.allocataire_nom_usage), '') as alloc_nom_usage,
+	string_to_array(nullif(public.normalise_recherche(c.allocataire_prenom), ''), ' ')
+		as alloc_prenoms,
+	nullif(public.normalise_date_recherche(c.allocataire_date_naissance), '')
+		as alloc_naissance,
+	nullif(btrim(c.allocataire_qualite), '') as alloc_qualite,
+	-- 'male'/'female', le vocabulaire du pivot, que cnaf_allocataire_genre partage.
+	nullif(lower(btrim(c.allocataire_genre)), '') as alloc_genre
+from fc_candidats c
+union all
+select
+	c.eligibility_result_id,
+	nullif(public.normalise_recherche(c.conjoint_nom), ''),
+	nullif(public.normalise_recherche(c.conjoint_nom_usage), ''),
+	string_to_array(nullif(public.normalise_recherche(c.conjoint_prenom), ''), ' '),
+	nullif(public.normalise_date_recherche(c.conjoint_date_naissance), ''),
+	nullif(btrim(c.conjoint_qualite), ''),
+	nullif(lower(btrim(c.conjoint_genre)), '')
+from fc_candidats c
+where nullif(btrim(c.conjoint_nom), '') is not null
+   or nullif(btrim(c.conjoint_nom_usage), '') is not null;
 
 -- Toutes les lignes de base que chaque stratégie atteint, avant verdict : c'est sur cette
 -- table que se comptent les « exactement un id_psp » et les inconcluants du récap. `distinct`
@@ -218,25 +255,26 @@ where n.situation = 'AAH'
 insert into fc_essais (eligibility_result_id, id_psp, strategie)
 select distinct n.eligibility_result_id, b.id_psp, 'aeeh_msa'
 from fc_norm n
+join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
-  on public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_naissance
+  on public.normalise_recherche(b.allocataire_nom) = p.alloc_nom_naissance
  and b.organisme = 'MSA'
  and b.situation = 'AEEH'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
- and b.allocataire_qualite = n.alloc_qualite
- and public.normalise_date_recherche(b.allocataire_date_naissance) = n.alloc_naissance
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+ and b.allocataire_qualite = p.alloc_qualite
+ and public.normalise_date_recherche(b.allocataire_date_naissance) = p.alloc_naissance
  and public.normalise_recherche(b.nom) = n.benef_nom_naissance
  and public.normalise_recherche(b.prenom) = n.benef_prenoms_texte
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
 where n.situation = 'AEEH'
   and n.organisme = 'MSA'
-  and n.alloc_nom_naissance is not null
-  and n.alloc_prenoms is not null
-  and n.alloc_qualite is not null
-  and n.alloc_naissance is not null
+  and p.alloc_nom_naissance is not null
+  and p.alloc_prenoms is not null
+  and p.alloc_qualite is not null
+  and p.alloc_naissance is not null
   and n.benef_nom_naissance is not null
   and n.benef_prenoms_texte is not null
   and n.benef_genre is not null
@@ -252,14 +290,15 @@ where n.situation = 'AEEH'
 insert into fc_essais (eligibility_result_id, id_psp, strategie)
 select distinct n.eligibility_result_id, b.id_psp, 'aeeh_caf'
 from fc_norm n
+join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
   on public.normalise_recherche(b.nom) in (n.benef_nom_naissance, n.benef_nom_usage)
  and b.organisme = 'CAF'
  and b.situation = 'AEEH'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
- and b.allocataire_qualite = n.alloc_qualite
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+ and b.allocataire_qualite = p.alloc_qualite
  and public.normalise_recherche(b.prenom) = n.benef_prenoms_texte
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
@@ -267,10 +306,10 @@ left join public.beneficiaire_cnaf_extra_field x
   on x.id_psp = b.id_psp
 where n.situation = 'AEEH'
   and n.organisme = 'CAF'
-  and (public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_usage
-       or public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = n.alloc_nom_naissance)
-  and n.alloc_prenoms is not null
-  and n.alloc_qualite is not null
+  and (public.normalise_recherche(b.allocataire_nom) = p.alloc_nom_usage
+       or public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = p.alloc_nom_naissance)
+  and p.alloc_prenoms is not null
+  and p.alloc_qualite is not null
   and n.benef_nom_naissance is not null
   and n.benef_prenoms_texte is not null
   and n.benef_genre is not null
@@ -282,25 +321,26 @@ where n.situation = 'AEEH'
 insert into fc_essais (eligibility_result_id, id_psp, strategie)
 select distinct n.eligibility_result_id, b.id_psp, 'qf_msa'
 from fc_norm n
+join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
-  on public.normalise_recherche(b.allocataire_nom) = n.alloc_nom_naissance
+  on public.normalise_recherche(b.allocataire_nom) = p.alloc_nom_naissance
  and b.organisme = 'MSA'
  and b.situation = 'jeune'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
- and b.allocataire_qualite = n.alloc_qualite
- and public.normalise_date_recherche(b.allocataire_date_naissance) = n.alloc_naissance
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+ and b.allocataire_qualite = p.alloc_qualite
+ and public.normalise_date_recherche(b.allocataire_date_naissance) = p.alloc_naissance
  and public.normalise_recherche(b.nom) = n.benef_nom_naissance
  and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
 where n.situation = 'jeune'
   and n.organisme = 'MSA'
-  and n.alloc_nom_naissance is not null
-  and n.alloc_prenoms is not null
-  and n.alloc_qualite is not null
-  and n.alloc_naissance is not null
+  and p.alloc_nom_naissance is not null
+  and p.alloc_prenoms is not null
+  and p.alloc_qualite is not null
+  and p.alloc_naissance is not null
   and n.benef_nom_naissance is not null
   and n.benef_prenoms is not null
   and n.benef_genre is not null
@@ -315,27 +355,28 @@ where n.situation = 'jeune'
 insert into fc_essais (eligibility_result_id, id_psp, strategie)
 select distinct n.eligibility_result_id, b.id_psp, 'qf_caf'
 from fc_norm n
+join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
   on public.normalise_recherche(b.nom) in (n.benef_nom_naissance, n.benef_nom_usage)
  and b.organisme = 'CAF'
  and b.situation = 'jeune'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ n.alloc_prenoms
+ and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
  and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
 join public.beneficiaire_cnaf_extra_field x
   on x.id_psp = b.id_psp
- and public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = n.alloc_nom_naissance
- and lower(btrim(x.cnaf_allocataire_genre)) = n.alloc_genre
- and x.cnaf_allocataire_date_naissance = n.alloc_naissance::date
+ and public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = p.alloc_nom_naissance
+ and lower(btrim(x.cnaf_allocataire_genre)) = p.alloc_genre
+ and x.cnaf_allocataire_date_naissance = p.alloc_naissance::date
 where n.situation = 'jeune'
   and n.organisme = 'CAF'
-  and n.alloc_nom_naissance is not null
-  and n.alloc_prenoms is not null
-  and n.alloc_genre is not null
-  and n.alloc_naissance is not null
+  and p.alloc_nom_naissance is not null
+  and p.alloc_prenoms is not null
+  and p.alloc_genre is not null
+  and p.alloc_naissance is not null
   and n.benef_nom_naissance is not null
   and n.benef_prenoms is not null
   and n.benef_genre is not null
@@ -416,6 +457,9 @@ select
 	(select count(*) from fc_apparies where strategie = 'aeeh_caf') as par_aeeh_caf,
 	(select count(*) from fc_apparies where strategie = 'qf_msa') as par_qf_msa,
 	(select count(*) from fc_apparies where strategie = 'qf_caf') as par_qf_caf,
+	(select count(*) from fc_candidats
+	  where nullif(btrim(conjoint_nom), '') is not null
+	     or nullif(btrim(conjoint_nom_usage), '') is not null) as avec_conjoint,
 	(select count(distinct e.eligibility_result_id) from fc_essais e
 	  where not exists (select 1 from fc_apparies a
 	                     where a.eligibility_result_id = e.eligibility_result_id))

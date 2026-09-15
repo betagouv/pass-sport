@@ -9,7 +9,7 @@ import {
   toResultSituation,
   type EligibilityJobData,
 } from "../eligibility/types";
-import { listBeneficiaryCandidates } from "../eligibility/candidates";
+import { listBeneficiaryCandidates, readConjointIdentite } from "../eligibility/candidates";
 import { recordEmailDelivery, sendAcknowledgmentEmail } from "../email/notify";
 import type { HistoryRecorder } from "../db/history";
 import { startJob } from "./shared";
@@ -150,6 +150,7 @@ export async function processEligibilityJob(
   const candidates = listBeneficiaryCandidates(identity, results);
   const qfPayload = readQuotientFamilial(results);
   const householdCaisse = readCaisse(results);
+  const conjointIdentite = readConjointIdentite(qfPayload, identity.birthdate);
 
   if (qfPayload) {
     const qfValue = qfPayload.quotient_familial?.valeur;
@@ -234,6 +235,7 @@ export async function processEligibilityJob(
           jobId: job.id ?? null,
           source: candidate.source,
           allocataireIdentite,
+          allocataireConjointIdentite: conjointIdentite,
           allocataireFcSub: identity.sub ?? null,
           enfantIdentite,
           isEligible: outcomes[index].isEligible,
