@@ -3,7 +3,6 @@ import TechnicalError from '@codegouvfr/react-dsfr/dsfr/artwork/pictograms/syste
 import Ovoid from '@codegouvfr/react-dsfr/dsfr/artwork/background/ovoid.svg';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
-import NotFoundTracker from '@/app/components/not-found-tracker/NotFoundTracker';
 
 export const metadata: Metadata = {
   title: 'Page non trouvée - pass Sport',
@@ -12,7 +11,6 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <main tabIndex={-1} id={SKIP_LINKS_ID.mainContent} role="main">
-      <NotFoundTracker />
       <div className="fr-container">
         <div className="fr-my-7w fr-mt-md-12w fr-mb-md-10w fr-grid-row fr-grid-row--gutters fr-grid-row--middle fr-grid-row--center">
           <div className="fr-py-0 fr-col-12 fr-col-md-6">

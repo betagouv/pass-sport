@@ -5,7 +5,6 @@ export const MATOMO_CATEGORY = {
   clubFinder: 'Trouver un club',
   contact: 'Contact',
   faq: 'FAQ',
-  error: 'Erreur',
 } as const;
 
 export type MatomoCategory = (typeof MATOMO_CATEGORY)[keyof typeof MATOMO_CATEGORY];
