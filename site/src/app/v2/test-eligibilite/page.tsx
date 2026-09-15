@@ -10,7 +10,7 @@ import BeneficiaryRecap from './components/post-login-flow/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
-import { IS_LOCAL_ENV, PARCOURS_HORS_FC_ENABLED } from '@/app/constants/env';
+import { FC_DEBUGGING_ONLY, IS_LOCAL_ENV, PARCOURS_HORS_FC_ENABLED } from '@/app/constants/env';
 import { HORS_FRANCE_CONNECT_MAINTENANCE } from './constants/maintenance';
 import styles from './styles.module.scss';
 import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
@@ -167,7 +167,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 exactes, je n&apos;ai pas la garantie de pouvoir récupérer mon code.
               </p>
 
-              {PARCOURS_HORS_FC_ENABLED ? (
+              {PARCOURS_HORS_FC_ENABLED && !FC_DEBUGGING_ONLY ? (
                 <NoFranceConnectSection />
               ) : (
                 <Notice
