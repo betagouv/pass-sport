@@ -5,8 +5,6 @@ import cn from 'classnames';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Link from 'next/link';
-import { IS_PRODUCTION_ENV } from '@/app/constants/env';
-import MatomoOptOut from './components/MatomoOptOut';
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité - pass Sport',
@@ -480,16 +478,14 @@ export default function PolitiqueDeConfidentialite() {
               étapes des démarches afin d&apos;améliorer le site.
             </p>
             <p className="fr-mb-2w">
-              Les données recueillies sont anonymisées [À CONFIRMER : anonymisation de
-              l&apos;adresse IP], ne sont pas croisées avec d&apos;autres traitements, ne sont pas
-              utilisées à d&apos;autres fins et sont conservées [À CONFIRMER : durée de
-              conservation, 25 mois au plus].
+              Les données recueillies sont anonymisées, ne sont pas croisées avec d&apos;autres traitements, ne sont pas
+              utilisées à d&apos;autres fins et sont conservées 12 mois.
             </p>
             <p className="fr-mb-2w">
-              Cette mesure d&apos;audience est exemptée de consentement. Vous pouvez toutefois vous
-              y opposer en décochant la case ci-dessous.
+              Nous utilisons également l&apos;outil de mesure d&apos;audience Matomo, configuré en
+              mode &laquo;&nbsp;exempté&nbsp;&raquo; et ne nécessitant pas le recueil de votre
+              consentement conformément aux recommandations de la CNIL.
             </p>
-            {IS_PRODUCTION_ENV && <MatomoOptOut />}
           </section>
 
           <section className="fr-mb-6w">
