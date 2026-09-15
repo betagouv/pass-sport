@@ -26,6 +26,19 @@ log_format upstream_failure '$remote_addr "$request" $status '
                             'upstream=$upstream_addr upstream_status=$upstream_status '
                             'connect=$upstream_connect_time response=$upstream_response_time';
 
+# Both default and 5xx formats log "$request", which is the full request line, query string
+# included. The pass Sport PDF endpoint is the one place a beneficiary selector travels in a
+# query string, so it logs through these two variants instead: same fields, but the request line
+# rebuilt from $uri, which is the path alone. Defence in depth — the selector is an opaque index
+# today, and this keeps whatever replaces it out of the logs too.
+log_format no_query_string '$remote_addr - $remote_user [$time_local] '
+                           '"$request_method $uri $server_protocol" $status $body_bytes_sent '
+                           '"$http_referer" "$http_user_agent"';
+
+log_format upstream_failure_no_query '$remote_addr "$request_method $uri $server_protocol" $status '
+                                     'upstream=$upstream_addr upstream_status=$upstream_status '
+                                     'connect=$upstream_connect_time response=$upstream_response_time';
+
 map $status $is_upstream_failure {
   default 0;
   ~^5     1;
@@ -131,6 +144,16 @@ server {
   location = /api/eligibility-test/verdict {
     proxy_pass http://app_backend;
     limit_req zone=eligibility_req_limit burst=5 nodelay;
+  }
+
+  # location = matches on the path alone, so this also covers /api/france-connect/pdf?beneficiary=…
+  # Rate limit unchanged: same zone and burst the catch-all /api/ block gave it. A per-location
+  # access_log replaces every inherited one, hence both formats restated here.
+  location = /api/france-connect/pdf {
+    proxy_pass http://app_backend;
+    limit_req zone=api_req_limit burst=10 nodelay;
+    access_log /dev/stdout no_query_string;
+    access_log /dev/stdout upstream_failure_no_query if=$is_upstream_failure;
   }
 
   location /api/communes {

@@ -95,7 +95,7 @@ describe('BeneficiaryRecap', () => {
     expect(screen.queryByRole('link', { name: 'Télécharger le code' })).not.toBeInTheDocument();
   });
 
-  it('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their own code', () => {
+  it('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their position', () => {
     renderRecap([
       beneficiary({
         source: 'enfant',
@@ -112,8 +112,26 @@ describe('BeneficiaryRecap', () => {
       screen.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015', { exact: false }),
     ).toBeInTheDocument();
     const downloadLink = screen.getByRole('link', { name: 'Télécharger le code' });
-    expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
+    expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?beneficiary=0');
     expect(downloadLink).toHaveClass('matomo_ignore');
+  });
+
+  it('never puts a pass Sport code in a download URL', () => {
+    renderRecap([
+      beneficiary({ verdict: 'eligible_confirmed', code: '24-ZORV-QYXA' }),
+      beneficiary({ source: 'enfant', givenName: 'Zephyrin', code: '24-AZUR-KLMB' }),
+      beneficiary({ source: 'enfant', givenName: 'Balthazine', code: '24-VORT-XQPL' }),
+    ]);
+
+    const hrefs = screen
+      .getAllByRole('link', { name: 'Télécharger le code' })
+      .map((link) => link.getAttribute('href'));
+
+    expect(hrefs).toEqual([
+      '/api/france-connect/pdf',
+      '/api/france-connect/pdf?beneficiary=1',
+      '/api/france-connect/pdf?beneficiary=2',
+    ]);
   });
 
   it('shows a child’s full identity on their card, the same shape as the allocataire’s', () => {

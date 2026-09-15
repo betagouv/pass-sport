@@ -119,7 +119,12 @@ export const findResultsForSub = async (sub: string): Promise<BeneficiaryResult[
       verdict: Verdict;
       pass_sport_code: string | null;
     }>(
-      'SELECT source, given_name, family_name, birthdate, gender, verdict, pass_sport_code FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name',
+      // The PDF route addresses a child by its position in this result set, so the ordering has
+      // to be total across the two queries that serve one download (page render, then click).
+      // Ordering on every projected column is what makes it so: any pair of rows still free to
+      // swap is identical in all of them, code included, so neither position can hand out the
+      // wrong document. The view has no key of its own to order on — it projects no row id.
+      'SELECT source, given_name, family_name, birthdate, gender, verdict, pass_sport_code FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name, family_name, birthdate, gender, verdict, pass_sport_code',
       [sub],
     );
     return rows.map((r) => ({

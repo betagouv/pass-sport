@@ -95,14 +95,18 @@ const verdictMessage = (b: BeneficiaryResult): ReactNode => {
 
 // /api/france-connect/pdf re-derives the allocataire's own identity from the FranceConnect
 // session; for an 'enfant' it instead re-derives it from application_results_by_sub, keyed by
-// the code so the route knows which of the caller's own children to serve — hence the `code`
-// query param here for 'enfant' rows, and none for 'self'.
-const downloadLink = (b: BeneficiaryResult): ReactNode | undefined => {
+// the row's position in findResultsForSub's result set so the route knows which of the caller's
+// own children to serve — hence the `beneficiary` query param here for 'enfant' rows, and none
+// for 'self'. A position is opaque and not replayable, unlike the code it replaced, which ended
+// up verbatim in nginx access logs, browser history and any Referer header.
+const downloadLink = (b: BeneficiaryResult, index: number): ReactNode | undefined => {
   if (b.verdict !== 'eligible_confirmed' || !b.code) {
     return undefined;
   }
   const href =
-    b.source === 'self' ? '/api/france-connect/pdf' : `/api/france-connect/pdf?code=${b.code}`;
+    b.source === 'self'
+      ? '/api/france-connect/pdf'
+      : `/api/france-connect/pdf?beneficiary=${index}`;
   return <CodePdfDownloadLink href={href} filename={`Pass Sport ${b.givenName}.pdf`} />;
 };
 
@@ -179,7 +183,7 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, j
           start={<StatusBadge verdict={b.verdict} />}
           desc={verdictMessage(b)}
           classes={{ desc: 'fr-text--md' }}
-          end={downloadLink(b)}
+          end={downloadLink(b, i)}
         />
       ))}
     </section>

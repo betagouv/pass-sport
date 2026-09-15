@@ -1,7 +1,26 @@
 import * as Sentry from '@sentry/nextjs';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findResultsForSub } from '@/app/services/applications';
+import type { BeneficiaryResult } from '@/app/services/applications';
 import { generatePdfBuffer } from '@/app/api/eligibility-test/verdict/generate-pdf-buffer';
+
+// The caller names a child by its position in their own result set rather than by its code: an
+// index is opaque, not replayable, and safe to see in an access log. No position is addressable
+// that findResultsForSub did not already return for the authenticated sub.
+const selectTarget = (
+  results: BeneficiaryResult[],
+  beneficiaryIndex: string | null,
+): BeneficiaryResult | undefined => {
+  if (beneficiaryIndex === null) {
+    return results.find((r) => r.source === 'self' && r.verdict === 'eligible_confirmed' && r.code);
+  }
+
+  // Digits only: Number() would otherwise turn '', ' ' or '0x1' into a valid position.
+  const candidate = /^\d+$/.test(beneficiaryIndex) ? results[Number(beneficiaryIndex)] : undefined;
+  return candidate?.source === 'enfant' && candidate.verdict === 'eligible_confirmed'
+    ? candidate
+    : undefined;
+};
 
 export async function GET(request: Request): Promise<Response> {
   try {
@@ -11,13 +30,9 @@ export async function GET(request: Request): Promise<Response> {
       return Response.json({ error: 'Session expirée.' }, { status: 401 });
     }
 
-    const code = new URL(request.url).searchParams.get('code');
+    const beneficiaryIndex = new URL(request.url).searchParams.get('beneficiary');
     const results = await findResultsForSub(pocResult.sub);
-    const target = code
-      ? results.find(
-          (r) => r.source === 'enfant' && r.verdict === 'eligible_confirmed' && r.code === code,
-        )
-      : results.find((r) => r.source === 'self' && r.verdict === 'eligible_confirmed' && r.code);
+    const target = selectTarget(results, beneficiaryIndex);
 
     if (!target?.code) {
       return Response.json({ error: 'Aucun code disponible.' }, { status: 404 });
