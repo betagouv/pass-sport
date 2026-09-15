@@ -1,5 +1,6 @@
-// Logs carrying personal data (names, birthdates, email addresses). Off unless LOG_PII=1
-const piiEnabled = process.env.LOG_PII === "1" && !process.env.ENV;
+const LOCAL_ENV = "local";
+
+const piiEnabled = process.env.LOG_PII === "1" && process.env.ENV === LOCAL_ENV;
 
 export const logPii = (message: string): void => {
   if (piiEnabled) {

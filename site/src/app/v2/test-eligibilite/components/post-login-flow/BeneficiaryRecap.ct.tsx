@@ -75,7 +75,7 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByRole('link', { name: 'Télécharger' })).toHaveCount(0);
   });
 
-  test('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their own code', async ({
+  test('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their position', async ({
     mount,
   }) => {
     const component = await mount(
@@ -98,7 +98,7 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015')).toBeVisible();
     const downloadLink = component.getByRole('link', { name: 'Télécharger' });
     await expect(downloadLink).toBeVisible();
-    await expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
+    await expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?beneficiary=0');
   });
 
   test('shows a child’s full identity on their card, the same shape as the allocataire’s', async ({
@@ -237,32 +237,6 @@ test.describe('BeneficiaryRecap', () => {
     await expect(notEligibleBadge).toHaveClass(/fr-badge--error/);
   });
 
-  test('does not show the code for an eligible_pending_lca beneficiary even when one already exists', async ({
-    mount,
-  }) => {
-    const component = await mount(
-      <BeneficiaryRecap
-        beneficiaries={[
-          beneficiary({
-            source: 'enfant',
-            givenName: 'Balthazine',
-            verdict: 'eligible_pending_lca',
-            code: '24-WOLX-TREP',
-          }),
-        ]}
-        allocataireIdentity={ALLOCATAIRE_IDENTITY}
-      />,
-    );
-
-    await expect(component.getByText('Balthazine')).toBeVisible();
-    await expect(component.getByText('24-WOLX-TREP')).toHaveCount(0);
-
-    const badges = component.locator('.fr-badge');
-    await expect(badges).toHaveCount(1);
-    await expect(badges).toHaveClass(/fr-badge--info/);
-    await expect(badges).toHaveText('En cours de traitement');
-  });
-
   test('falls back to "Votre enfant" when a child has no given name', async ({ mount }) => {
     const component = await mount(
       <BeneficiaryRecap
@@ -274,13 +248,13 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByText('Votre enfant')).toBeVisible();
   });
 
-  test('shows a Card for a not_assessed child alongside the assessed ones, not just the assessed ones', async ({
+  test('shows a Card for every child, not just the ones already served a code', async ({
     mount,
   }) => {
     const component = await mount(
       <BeneficiaryRecap
         beneficiaries={[
-          beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'not_assessed' }),
+          beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'eligible_pending' }),
           beneficiary({ source: 'enfant', givenName: 'Astravelle', verdict: 'eligible_confirmed' }),
         ]}
         allocataireIdentity={ALLOCATAIRE_IDENTITY}
@@ -290,12 +264,12 @@ test.describe('BeneficiaryRecap', () => {
     const cards = component.locator('.fr-card');
     await expect(cards).toHaveCount(2);
 
-    const notAssessedCard = cards.nth(0);
+    const pendingCard = cards.nth(0);
     const confirmedCard = cards.nth(1);
 
-    await expect(notAssessedCard.getByText('Quorindel')).toBeVisible();
-    const notAssessedBadge = notAssessedCard.getByText('En cours de traitement');
-    await expect(notAssessedBadge).toHaveClass(/fr-badge--info/);
+    await expect(pendingCard.getByText('Quorindel')).toBeVisible();
+    const pendingBadge = pendingCard.getByText('En cours de traitement');
+    await expect(pendingBadge).toHaveClass(/fr-badge--info/);
 
     await expect(confirmedCard.getByText('Astravelle')).toBeVisible();
     const confirmedBadge = confirmedCard.getByText('Eligible');

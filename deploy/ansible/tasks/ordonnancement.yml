@@ -21,6 +21,9 @@
 # Tag `fc-cron`, distinct de ce réglage : `--skip-tags fc-cron` saute la tâche entièrement
 # (rien posé, rien à retirer), là où pass_sport_fc_cron_enabled ne fait que commenter une
 # entrée déjà posée. Sert à reporter tout le volet FC — le reste du provisioning tourne.
+#
+# Le passage finit en posant le job BullMQ fc_code_emails, que le worker Scalingo exécute
+# (worker/src/jobs/fc-code-emails.ts) : aucune autre cron n'est nécessaire pour les courriels.
 - name: Passage FranceConnect toutes les 6 heures
   become: true
   ansible.builtin.cron:
@@ -31,6 +34,17 @@
     job: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run_fc_pipeline.sh"
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]
+
+# Retire l'ancienne entrée qui appelait worker/src/scripts/run-lca-checks.sh, supprimé depuis
+# que run_fc_pipeline.sh pose lui-même le job courriel : laissée en place, elle échouerait
+# toutes les 30 minutes. Sans effet sur une machine qui ne l'a jamais eue.
+- name: Retrait de l'ancienne cron pass-sport-lca-checks
+  become: true
+  ansible.builtin.cron:
+    name: pass-sport-lca-checks
+    user: "{{ pass_sport_user }}"
+    state: absent
+  tags: [lca-checks-cron]
 
 - name: Unité systemd qf-batch (templatée par partenaire)
   become: true

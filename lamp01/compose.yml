@@ -1,0 +1,58 @@
+# The beneficiary database of the lamp machine: the table the CNAF, MSA and CNOUS pipelines
+# feed, and the one the FranceConnect pass now searches before minting a code.
+#
+# Two environments, two services, two volumes, so a rehearsal can never write into the base
+# the site depends on. `integration` is the default target everywhere -- inject_csv.sh, a dry
+# run of run_fc_pipeline.sh -- and `prod` is only ever named explicitly.
+#
+#   docker compose -f lamp01/compose.yml up -d
+#
+# Deliberately separate from the repository root compose.yml, which runs the development
+# stack (app, worker, its own throwaway `db`): these two volumes hold real identities and
+# must survive a `down -v` of the development stack.
+#
+# No password is written here. This repository is public: POSTGRES_PASSWORD comes from
+# lamp01/.env (gitignored) or the surrounding environment, and Compose refuses to start
+# without it rather than falling back to a default someone would forget to change.
+name: lamp01
+
+x-passsport-db: &passsport-db
+  image: postgres:18-alpine
+  restart: unless-stopped
+  environment:
+    POSTGRES_USER: ${LAMP_DB_USER:-u_passsport}
+    POSTGRES_PASSWORD: ${LAMP_DB_PASSWORD:?LAMP_DB_PASSWORD manquant - voir lamp01/README.md}
+    POSTGRES_DB: ${LAMP_DB_NAME:-passsport}
+  healthcheck:
+    test:
+      ['CMD-SHELL', 'pg_isready -U ${LAMP_DB_USER:-u_passsport} -d ${LAMP_DB_NAME:-passsport}']
+    interval: 10s
+    timeout: 5s
+    retries: 5
+
+services:
+  integration:
+    <<: *passsport-db
+    ports:
+      # Loopback only: the pipelines run on this same machine, nothing needs to reach the
+      # database from the network. 5432 is taken by the development stack's db service.
+      - '127.0.0.1:55432:5432'
+    volumes:
+      # Runs once, on a fresh volume, before anything else connects: a schema change needs
+      # the volumes recreated (see README.md, « Changer le schéma »).
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+      # Mounted one level above the data directory: since 18 the image stores its cluster in
+      # a version-specific subdirectory and refuses to start on a mount at the old path.
+      - pgdata-integration:/var/lib/postgresql
+
+  prod:
+    <<: *passsport-db
+    ports:
+      - '127.0.0.1:55433:5432'
+    volumes:
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+      - pgdata-prod:/var/lib/postgresql
+
+volumes:
+  pgdata-integration:
+  pgdata-prod:

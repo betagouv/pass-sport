@@ -33,7 +33,6 @@ def export_row(**overrides) -> dict:
         'source': 'enfant',
         'created_at': '2026-08-01 09:00:00+00',
         'allocataire_fc_sub': 'sub-A',
-        'residence_insee': '75056',
         'allocataire-nom_naissance': 'MARTIN',
         'allocataire-nom_usage': '',
         'allocataire-prenom': 'Claire',
@@ -45,6 +44,7 @@ def export_row(**overrides) -> dict:
         'enfant_nom': 'MARTIN',
         'enfant_prenom': 'Lea',
         'enfant_date_naissance': '2015-06-01',
+        'enfant_nom_usage': '',
         'qf_valeur': '650',
         'qf_fournisseur': 'CNAF',
         'qf_enfants': json.dumps([{
@@ -125,13 +125,14 @@ def test_clean_deduplique_un_enfant_remonte_par_ses_deux_parents(tmp_path):
 
 
 def test_clean_ecarte_une_ligne_sans_situation(tmp_path):
-    # ni quotient couvrant, ni AAH, ni AEEH, ni bourse : aucune route ne s'ouvre
+    # 21 ans au 31/12/2026 : hors fenêtre QF comme hors fenêtre AEEH, donc aucune route
+    # ne s'ouvre quel que soit le quotient.
     orphelin = export_row(
         eligibility_result_id='33333333-3333-3333-3333-333333333333',
-        qf_valeur='1200', enfant_prenom='Paul', enfant_date_naissance='2014-02-02',
+        qf_valeur='1200', enfant_prenom='Paul', enfant_date_naissance='2005-02-02',
         qf_enfants=json.dumps([{
             'nom_naissance': 'MARTIN', 'prenoms': 'Paul',
-            'date_naissance': '2014-02-02', 'sexe': 'M',
+            'date_naissance': '2005-02-02', 'sexe': 'M',
         }]),
     )
     input_filepath = write_export(tmp_path, [export_row(), orphelin])
@@ -142,6 +143,24 @@ def test_clean_ecarte_une_ligne_sans_situation(tmp_path):
     assert stats['sans_situation'] == 1
     assert stats['lignes_ecartees'] == 1
     assert stats['beneficiaires'] == 1
+
+
+def test_clean_ecrit_les_champs_cnaf_a_part_du_schema_psp(tmp_path):
+    input_filepath = write_export(tmp_path, [export_row()])
+    output_filepath = tmp_path / 'FC_2026.csv'
+    cnaf_extra_filepath = tmp_path / 'fc_2026_cnaf_extra_field.csv'
+
+    pipeline.clean(input_filepath, output_filepath, cnaf_extra_filepath=cnaf_extra_filepath)
+
+    extra = pd.read_csv(cnaf_extra_filepath, sep=';', dtype=str, keep_default_na=False)
+    assert list(extra.columns) == \
+        ['eligibility_result_id'] + pipeline.fc.CNAF_EXTRA_FIELD_COLUMNS
+    assert extra.loc[0, 'eligibility_result_id'] == '11111111-1111-1111-1111-111111111111'
+    assert extra.loc[0, 'cnaf_allocataire_nom_naissance'] == 'MARTIN'
+    assert extra.loc[0, 'cnaf_allocataire_date_naissance'] == '1985-03-02'
+    assert extra.loc[0, 'cnaf_allocataire_genre'] == 'female'
+    # The cleaned CSV is what production eventually receives: it keeps exactly the PSP schema.
+    assert set(read_psp(output_filepath).columns) == COLONNES_PSP
 
 
 # --- Étape 4a : split_writeback ---------------------------------------------------
@@ -203,6 +222,57 @@ def test_split_writeback_refuse_un_fichier_sans_cle(tmp_path):
         pipeline.split_writeback(filepath, tmp_path / 'w.csv', tmp_path / 'p.csv')
 
 
+def write_cnaf_extra(tmp_path, rows: int = 2) -> str:
+    """The side file clean writes: one beneficiaire_cnaf_extra_field row per result id."""
+    filepath = tmp_path / 'fc_2026_cnaf_extra_field.csv'
+    pd.DataFrame({
+        'eligibility_result_id': [f"1111111{i}-1111-1111-1111-111111111111" for i in range(rows)],
+        'cnaf_allocataire_nom_naissance': ['BOLIMEK'] * rows,
+        'cnaf_allocataire_date_naissance': ['1985-03-02'] * rows,
+        'cnaf_allocataire_genre': ['female'] * rows,
+    }).to_csv(filepath, sep=';', index=False, encoding='utf-8')
+    return str(filepath)
+
+
+def test_split_writeback_ecrit_le_csv_lamp01(tmp_path):
+    # One side row more than coded rows: the beneficiary matched at step 3 got no code.
+    with_codes = write_with_codes(tmp_path, rows=3)
+    prod_filepath = tmp_path / '2026-08-12-fc-prod.csv'
+    lamp_filepath = tmp_path / 'fc-lamp01.csv'
+
+    stats = pipeline.split_writeback(
+        with_codes, tmp_path / 'fc_2026_writeback.csv', prod_filepath,
+        write_cnaf_extra(tmp_path, rows=4), lamp_filepath)
+
+    df_prod = read_psp(prod_filepath)
+    df_lamp = read_psp(lamp_filepath)
+    # The production drop injector refuses any column beneficiaires lacks.
+    assert not [colonne for colonne in df_prod.columns if colonne.startswith('cnaf_')]
+    assert list(df_lamp.columns) == \
+        list(df_prod.columns) + pipeline.fc.CNAF_EXTRA_FIELD_COLUMNS
+    assert list(df_lamp['id_psp']) == list(df_prod['id_psp'])
+    assert (df_lamp['cnaf_allocataire_nom_naissance'] == 'BOLIMEK').all()
+    assert stats['lamp01'] == str(lamp_filepath)
+    assert stats['champs_cnaf_remplis'] == 3
+
+
+def test_split_writeback_refuse_un_code_sans_ligne_de_champs_cnaf(tmp_path):
+    """Injected without its side row, a CAF code could never be matched again."""
+    with pytest.raises(AssertionError):
+        pipeline.split_writeback(
+            write_with_codes(tmp_path, rows=3), tmp_path / 'w.csv', tmp_path / 'p.csv',
+            write_cnaf_extra(tmp_path, rows=2), tmp_path / 'l.csv')
+
+    assert not (tmp_path / 'p.csv').exists()
+
+
+def test_split_writeback_refuse_le_csv_lamp01_sans_fichier_de_champs_cnaf(tmp_path):
+    with pytest.raises(AssertionError):
+        pipeline.split_writeback(
+            write_with_codes(tmp_path), tmp_path / 'w.csv', tmp_path / 'p.csv',
+            lamp_filepath=tmp_path / 'l.csv')
+
+
 def test_prod_filepath_for():
     assert pipeline.prod_filepath_for('/tmp/2026-08-12-fc-with-codes.csv') == \
         '/tmp/2026-08-12-fc-prod.csv'
@@ -214,14 +284,22 @@ def test_les_trois_etapes_enchainees(tmp_path):
     """Ce que run_fc_pipeline.sh exécute entre les deux passages psql."""
     input_filepath = write_export(tmp_path, [export_row()])
     cleaned_filepath = tmp_path / 'FC_2026.csv'
+    cnaf_extra_filepath = tmp_path / 'fc_2026_cnaf_extra_field.csv'
     with_codes_filepath = tmp_path / '2026-08-12-fc-with-codes.csv'
     prod_filepath = tmp_path / '2026-08-12-fc-prod.csv'
+    lamp_filepath = tmp_path / 'fc-lamp01.csv'
 
-    pipeline.clean(input_filepath, cleaned_filepath)
+    pipeline.clean(input_filepath, cleaned_filepath, cnaf_extra_filepath=cnaf_extra_filepath)
     pipeline.codes.generate_codes_for_file(
         cleaned_filepath, with_codes_filepath, tmp_path / 'codes.csv')
     pipeline.split_writeback(
-        with_codes_filepath, tmp_path / 'fc_2026_writeback.csv', prod_filepath)
+        with_codes_filepath, tmp_path / 'fc_2026_writeback.csv', prod_filepath,
+        cnaf_extra_filepath, lamp_filepath)
+
+    # lamp01 receives the same code, with the side row its CAF strategies read
+    df_lamp = read_psp(lamp_filepath)
+    assert list(df_lamp['id_psp']) == list(read_psp(prod_filepath)['id_psp'])
+    assert df_lamp.loc[0, 'cnaf_allocataire_nom_naissance'] == 'MARTIN'
 
     df_prod = read_psp(prod_filepath)
     df_writeback = pd.read_csv(tmp_path / 'fc_2026_writeback.csv', sep=';', dtype=str)
@@ -234,3 +312,59 @@ def test_les_trois_etapes_enchainees(tmp_path):
     assert df_writeback.loc[0, 'id_psp'] == df_prod.loc[0, 'id_psp']
     assert df_writeback.loc[0, 'eligibility_result_id'] == \
         '11111111-1111-1111-1111-111111111111'
+
+
+def test_clean_ecrit_les_noms_d_usage_dans_les_candidats_au_rapprochement(tmp_path):
+    input_filepath = write_export(tmp_path, [export_row(
+        enfant_nom_usage='Bravenne', **{'allocataire-nom_usage': 'Vorsalde'})])
+    output_filepath = tmp_path / 'FC_2026.csv'
+    match_filepath = tmp_path / 'candidats.csv'
+
+    stats = pipeline.clean(input_filepath, output_filepath, match_filepath)
+
+    candidats = pd.read_csv(match_filepath, sep=';', dtype=str, keep_default_na=False)
+    # L'en-tête exact que le `header match` de match_beneficiaires.sql exige.
+    assert list(candidats.columns) == pipeline.fc.MATCH_COLUMNS
+    # Le couple qui choisit la stratégie de rapprochement.
+    assert candidats.loc[0, 'situation'] == 'jeune'
+    assert candidats.loc[0, 'organisme'] == 'CAF'
+    assert candidats.loc[0, 'allocataire_genre'] == 'female'
+    assert candidats.loc[0, 'allocataire_nom_usage'] == 'Vorsalde'
+    assert candidats.loc[0, 'beneficiaire_nom_usage'] == 'Bravenne'
+    assert stats['allocataires_avec_nom_usage'] == 1
+    assert stats['beneficiaires_avec_nom_usage'] == 1
+    # Les noms d'usage vivent dans le fichier de rapprochement, jamais dans le CSV de
+    # production, qui garde exactement le schéma PSP.
+    assert set(read_psp(output_filepath).columns) == COLONNES_PSP
+
+
+def test_split_matched_ne_garde_que_les_non_apparies(tmp_path):
+    cleaned = tmp_path / 'cleaned.csv'
+    pd.DataFrame([
+        {'eligibility_result_id': 'c1', 'nom': 'VOKTARIMENDO', 'prenom': 'ZUPRALIN'},
+        {'eligibility_result_id': 'c2', 'nom': 'KEDOSAVERIL', 'prenom': 'TARNU'},
+        {'eligibility_result_id': 'c3', 'nom': 'PLUNDARIS', 'prenom': 'OSVAREK'},
+    ]).to_csv(cleaned, sep=';', index=False, quoting=csv.QUOTE_ALL)
+
+    ids = tmp_path / 'non_apparies.csv'
+    pd.DataFrame([{'eligibility_result_id': 'c2'}]).to_csv(ids, sep=';', index=False)
+
+    sortie = tmp_path / 'restants.csv'
+    stats = pipeline.split_matched(cleaned, ids, sortie)
+
+    assert stats == {'lus': 3, 'apparies_ecartes': 2, 'restants': 1, 'sortie': str(sortie)}
+
+    restant = pd.read_csv(sortie, sep=';', dtype=str, keep_default_na=False)
+    assert list(restant['eligibility_result_id']) == ['c2']
+
+
+def test_split_matched_refuse_un_fichier_qui_ne_vient_pas_du_rapprochement(tmp_path):
+    cleaned = tmp_path / 'cleaned.csv'
+    pd.DataFrame([{'eligibility_result_id': 'c1'}]).to_csv(
+        cleaned, sep=';', index=False, quoting=csv.QUOTE_ALL)
+
+    ids = tmp_path / 'autre.csv'
+    pd.DataFrame([{'autre_colonne': 'c1'}]).to_csv(ids, sep=';', index=False)
+
+    with pytest.raises(AssertionError):
+        pipeline.split_matched(cleaned, ids, tmp_path / 'out.csv')

@@ -455,6 +455,13 @@ export default function PolitiqueDeConfidentialite() {
             <p>
               En aucun cas, ces pixels ne sont utilisés à des fins publicitaires ou commerciales.
             </p>
+
+            <h4 className="fr-mb-2w">3. Mesure d&apos;audience</h4>
+            <p className="fr-mb-2w">
+              Nous utilisons également l&apos;outil de mesure d&apos;audience Matomo, configuré en
+              mode &laquo;&nbsp;exempté&nbsp;&raquo; et ne nécessitant pas le recueil de votre
+              consentement conformément aux recommandations de la CNIL.
+            </p>
           </section>
 
           <section className="fr-mb-6w">

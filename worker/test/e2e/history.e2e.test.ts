@@ -1,14 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startStack, type Stack } from "./harness";
-import type { Allowance } from "../../src/eligibility/types";
 
 // eligibility_history is the trace of HOW an outcome was reached: one row per external
 // call, written outside the PHASE 2 transaction so it survives a job that dies partway.
 //
-// Unlike eligibility_results, the payloads here are stored RAW — pass Sport code and
-// matricule included — and rows are never purged. That is a deliberate decision, so it is
-// asserted, not guarded against; see the "keeps the raw payload" case below. The lone
-// exception is pdf_base_64, dropped for weight.
+// Unlike eligibility_results, the payloads here are stored RAW — the identité pivot the
+// endpoint was called with included — and rows are never purged. That is a deliberate
+// decision, so it is asserted, not guarded against; see the "keeps the raw payload" case
+// below.
 //
 // Two columns, two directions: body_payload is what went out on the wire, response_payload
 // is what came back.
@@ -17,6 +16,7 @@ let stack: Stack;
 
 beforeAll(async () => {
   stack = await startStack();
+  stack.setQfChildless(true);
 }, 180_000);
 
 afterAll(async () => {
@@ -31,22 +31,20 @@ const historyFor = async (sub: string) =>
     )
   ).rows;
 
-// CROUS only: one API Particulier call, one beneficiary, one LCA search + confirm.
-// The shortest job that still exercises every actor.
+// Paired with setQfChildless in beforeAll: no enfant means no per-child AEEH, which keeps
+// the expected action list short enough to read while still exercising both actors.
 const selfCrous = (sub: string) => ({
   identity: {
     family_name: "Martin",
     given_name: "Camille",
-    birthdate: "2004-05-15", // age 22 at 2026-12-31 -> CROUS eligible
+    birthdate: "2004-05-15", // age 22 at 2026-12-31 -> inside the AAH and CROUS windows
     gender: "female" as const,
     birthplace: "75056",
     birthcountry: "99100",
     email: "camille.martin@example.test",
     sub,
   },
-  aides: ["CROUS"] as Allowance[],
   isFranceConnected: true,
-  residenceInsee: "75113",
 });
 
 describe("eligibility_history", () => {
@@ -56,15 +54,18 @@ describe("eligibility_history", () => {
 
     const rows = await historyFor(sub);
 
+    // No LCA event and no outcome mail: this path calls nothing but API Particulier, and
+    // the accusé de réception is its only envelope.
     expect(rows.map((r) => [r.actor, r.action, r.status])).toEqual([
       // First, and before any external call: the accusé de réception is what the usager
       // gets while the chain below runs.
       ["worker", "email.acknowledgment", "success"],
+      // The quotient sweep: août then septembre, neither under the threshold.
+      ["api_particulier", "dss.quotient_familial_identite", "success"],
+      ["api_particulier", "dss.quotient_familial_identite", "success"],
+      ["api_particulier", "dss.allocation_adulte_handicape_identite", "success"],
       ["api_particulier", "cnous.etudiant_boursier_identite", "success"],
-      ["lca", "lca.search", "success"],
-      ["lca", "lca.confirm", "success"],
       ["worker", "results.persisted", "success"],
-      ["worker", "email.code", "success"],
     ]);
 
     // The durable correlation key. job_id is written too, but BullMQ deletes the job,
@@ -73,9 +74,9 @@ describe("eligibility_history", () => {
     expect(rows.every((r) => r.job_id !== null)).toBe(true);
     expect(rows.every((r) => r.attempt === 0)).toBe(true);
 
-    // The LCA calls name their beneficiary; the job-level worker events do not.
-    const lca = rows.filter((r) => r.actor === "lca");
-    expect(lca.every((r) => r.subject === "self")).toBe(true);
+    // The API Particulier calls name their beneficiary; the job-level worker events do not.
+    const api = rows.filter((r) => r.actor === "api_particulier");
+    expect(api.every((r) => r.subject === "self")).toBe(true);
     expect(rows.find((r) => r.action === "results.persisted")?.subject).toBeNull();
 
     // Timings are recorded for the calls that go out, not for the bookkeeping events.
@@ -86,32 +87,24 @@ describe("eligibility_history", () => {
     ).toBe(true);
 
     // Same rule for the status: every call that reached an answer records the one it got,
-    // successes included. It stayed null on the LCA rows until the client carried it out.
-    expect(lca.map((r) => r.http_status)).toEqual([200, 200]);
+    // successes included.
+    expect(api.map((r) => r.http_status)).toEqual([200, 200, 200, 200]);
   });
 
-  it("keeps the raw payload, pass Sport code and matricule included", async () => {
+  it("keeps the raw answer, exactly as the endpoint gave it", async () => {
     const sub = "fc-sub-history-raw";
     await stack.enqueueAndWait(selfCrous(sub));
 
     const rows = await historyFor(sub);
-    const confirm = rows.find((r) => r.action === "lca.confirm");
+    const cnous = rows.find((r) => r.action === "cnous.etudiant_boursier_identite");
 
-    // Deliberate, not a leak: eligibility_results still never sees these (see
-    // pipeline.e2e.test.ts "never stores the pass Sport code"), and the retention purge
-    // is what bounds them here. Without this assertion the next reader of schema.ts
-    // "fixes" a bug that is not one.
-    expect(confirm?.response_payload?.item?.id_psp).toBe("PSP-CODE-123");
-    expect(confirm?.response_payload?.item?.allocataire?.matricule).toBe("SECRET-MATRICULE");
-
-    // Same for the search: the matricule LCA returns is kept as answered.
-    const search = rows.find((r) => r.action === "lca.search");
-    expect(search?.response_payload?.result_count).toBe(1);
-    expect(search?.response_payload?.results?.[0]?.matricule).toBe("SECRET-MATRICULE");
-
-    // And the outcome email, codes and names and all.
-    const email = rows.find((r) => r.action === "email.code");
-    expect(email?.body_payload?.code).toBe("PSP-CODE-123");
+    // Deliberate, not a leak: eligibility_results keeps only the verdict, and this table is
+    // what lets a case be replayed exactly as it happened. Without this assertion the next
+    // reader of schema.ts "fixes" a bug that is not one.
+    expect(cnous?.response_payload?.data?.statut_boursier?.est_boursier).toBe(true);
+    // Rate-limit state is carried on every answer, success included — it is what the
+    // proactive pause reads back.
+    expect(cnous?.response_payload).toHaveProperty("rate_limit_remaining");
   });
 
   it("records what each endpoint was called with, not only what it answered", async () => {
@@ -120,36 +113,24 @@ describe("eligibility_history", () => {
 
     const rows = await historyFor(sub);
 
-    // LCA search: the beneficiary and the commune the search was run on.
-    const search = rows.find((r) => r.action === "lca.search");
-    expect(search?.body_payload?.beneficiaryLastname).toBe("Martin");
-    expect(search?.body_payload?.recipientResidencePlace).toBe("75113");
-
-    // LCA confirm: keyed on the search result, matricule included like every raw payload.
-    const confirm = rows.find((r) => r.action === "lca.confirm");
-    expect(confirm?.body_payload?.id).toBeDefined();
-    expect(confirm?.body_payload?.recipientIneNumber).toBe("SECRET-MATRICULE");
+    // The identité pivot as it went on the wire — the CNOUS resource uses its own
+    // camelCase params (eligibility/client.ts toCnousParams).
+    const cnous = rows.find((r) => r.action === "cnous.etudiant_boursier_identite");
+    expect(cnous?.body_payload).toBeTruthy();
+    expect(JSON.stringify(cnous?.body_payload)).toContain("Martin");
 
     // The bookkeeping events call nothing, so they have no request side.
     expect(rows.find((r) => r.action === "results.persisted")?.body_payload).toBeNull();
   });
 
-  it("drops pdf_base_64, the one field not worth its weight", async () => {
-    const sub = "fc-sub-history-nopdf";
+  it("ne journalise aucun appel LCA sur le parcours FranceConnect", async () => {
+    const sub = "fc-sub-history-no-lca";
     await stack.enqueueAndWait(selfCrous(sub));
 
     const rows = await historyFor(sub);
-    const confirm = rows.find((r) => r.action === "lca.confirm");
-
-    // The fake LCA client DOES return one, so this is a real drop, not an empty check.
-    expect(confirm?.response_payload?.item?.id_psp).toBe("PSP-CODE-123");
-    expect(confirm?.response_payload?.item?.pdf_base_64).toBeUndefined();
-
-    // Column-layout independent, like the eligibility_results guard: the attestation
-    // appears nowhere in the whole table.
-    const blobs = await stack.pool.query(
-      "select row_to_json(t)::text as blob from eligibility_history t",
+    expect(rows.some((r) => r.actor === "lca")).toBe(false);
+    expect(rows.some((r) => r.action.startsWith("email.") && r.action !== "email.acknowledgment")).toBe(
+      false,
     );
-    expect(blobs.rows.some((b) => b.blob.includes("FAKE-ATTESTATION"))).toBe(false);
   });
 });

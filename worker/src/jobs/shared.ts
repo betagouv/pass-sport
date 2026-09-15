@@ -1,7 +1,7 @@
 import type { Job } from "bullmq";
 import type { Database } from "../db/client";
 import { createHistoryRecorder, type HistoryRecorder } from "../db/history";
-import { audit, type Verdict } from "../db/schema";
+import { audit } from "../db/schema";
 
 export async function startJob(
   job: Job<unknown>,
@@ -26,8 +26,3 @@ export async function startJob(
 
   return history;
 }
-
-// A confirmed LCA beneficiary IS eligible whatever our own rules concluded: the LCA base
-// is authoritative and the person is walking away with a code.
-export const verdictFor = (hasCode: boolean, isEligible: boolean): Verdict =>
-  isEligible ? (hasCode ? "eligible_confirmed" : "eligible_pending") : "not_eligible";

@@ -1,8 +1,8 @@
-import { QF_REFERENCE_MONTH, QF_REFERENCE_YEAR } from "./types";
+import { QF_REFERENCE_MONTH_MIN, QF_REFERENCE_YEAR } from "./types";
 import type { PivotIdentity, ResourceResult } from "./types";
 
 export interface ApiParticulierClient {
-  quotientFamilial(identity: PivotIdentity): Promise<ResourceResult>;
+  quotientFamilial(identity: PivotIdentity, mois?: string): Promise<ResourceResult>;
   aah(identity: PivotIdentity): Promise<ResourceResult>;
   cnous(identity: PivotIdentity): Promise<ResourceResult>;
   cnousByIne(ine: string): Promise<ResourceResult>;
@@ -46,11 +46,16 @@ export const toDssParams = (identity: PivotIdentity) => {
   };
 };
 
-export const toQfParams = (identity: PivotIdentity) => {
+// The month defaults to the start of the campaign, which is what the offline qf-batch screening
+// asks for. The FranceConnect chain passes each month of its sweep explicitly.
+export const toQfParams = (
+  identity: PivotIdentity,
+  mois: string = String(QF_REFERENCE_MONTH_MIN),
+) => {
   return {
     ...toDssParams(identity),
     annee: QF_REFERENCE_YEAR,
-    mois: QF_REFERENCE_MONTH,
+    mois,
   };
 };
 

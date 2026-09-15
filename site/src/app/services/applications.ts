@@ -8,19 +8,20 @@ export type ExistingApplication = {
   lastApplication: Date;
 };
 
-// Mirror of the worker's Verdict (worker/src/db/schema.ts). 'not_assessed' means the person
-// was never asked about, and is filtered out before display. 'eligible_pending_lca' means a
-// code has been minted for this person but LCA does not serve it yet — BeneficiaryRecap
-// shows the code with its own caveat rather than in the confirmed bucket.
-// 'eligible_confirmed_but_email_not_matching' is written by the no-FranceConnect form only,
-// so it never reaches application_results_by_sub, which is keyed on a FranceConnect sub.
+// Mirror of the worker's Verdict (worker/src/db/schema.ts).
+//
+// On the FranceConnect path the worker only ever writes two of these: 'eligible_pending' when a
+// route is open, 'not_eligible' when none is. That path calls no LCA base any more, so it can
+// never confirm a code itself — the data/ pipeline moves its rows on to 'eligible_confirmed' with
+// a code, and every other value comes from the no-FranceConnect form.
+//
+// 'eligible_confirmed_but_email_not_matching' is written by the no-FranceConnect form only, so it
+// never reaches application_results_by_sub, which is keyed on a FranceConnect sub.
 export type Verdict =
   | 'eligible_confirmed'
   | 'eligible_confirmed_but_email_not_matching'
   | 'eligible_pending'
-  | 'eligible_pending_lca'
-  | 'not_eligible'
-  | 'not_assessed';
+  | 'not_eligible';
 
 export type BeneficiaryResult = {
   source: 'self' | 'enfant';
@@ -33,9 +34,8 @@ export type BeneficiaryResult = {
   birthdate: string | null;
   gender: 'male' | 'female' | null;
   verdict: Verdict;
-  // Set on 'eligible_confirmed' and on 'eligible_pending_lca' (a minted code LCA does not
-  // serve yet). Null elsewhere, and on rows written before the code was stored at all —
-  // those users only ever got it by email.
+  // Set on 'eligible_confirmed'. Null elsewhere, and on rows written before the code was stored
+  // at all — those users only ever got it by email.
   code: string | null;
 };
 
@@ -119,7 +119,12 @@ export const findResultsForSub = async (sub: string): Promise<BeneficiaryResult[
       verdict: Verdict;
       pass_sport_code: string | null;
     }>(
-      'SELECT source, given_name, family_name, birthdate, gender, verdict, pass_sport_code FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name',
+      // The PDF route addresses a child by its position in this result set, so the ordering has
+      // to be total across the two queries that serve one download (page render, then click).
+      // Ordering on every projected column is what makes it so: any pair of rows still free to
+      // swap is identical in all of them, code included, so neither position can hand out the
+      // wrong document. The view has no key of its own to order on — it projects no row id.
+      'SELECT source, given_name, family_name, birthdate, gender, verdict, pass_sport_code FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name, family_name, birthdate, gender, verdict, pass_sport_code',
       [sub],
     );
     return rows.map((r) => ({

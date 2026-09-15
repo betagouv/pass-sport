@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import cn from 'classnames';
 import { push } from '@socialgouv/matomo-next';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 import KnowMore from '@/app/components/know-more/KnowMore';
 import Link from 'next/link';
 import { JeDonneMonAvisBtn } from '@/app/components/je-donne-mon-avis-btn/JeDonneMonAvisBtn';
@@ -190,6 +191,11 @@ export default function SimplifiedEligibilityTest({
                 }
 
                 eligibilityTestOnClick();
+                trackEvent(
+                  MATOMO_CATEGORY.simplifiedTest,
+                  isBenefEligible ? 'éligible' : 'non éligible',
+                  allocationName,
+                );
                 markAsUsed();
                 setSuccess(isBenefEligible);
                 onCompletion?.(isBenefEligible);
@@ -362,7 +368,9 @@ export default function SimplifiedEligibilityTest({
         >
           {displaySeparator && <hr className="fr-mb-2w" />}
 
-          <JeDonneMonAvisBtn isSuccess={success} />
+          <JeDonneMonAvisBtn
+            origin={success ? 'simplified-test-eligible' : 'simplified-test-not-eligible'}
+          />
         </section>
       )}
     </>

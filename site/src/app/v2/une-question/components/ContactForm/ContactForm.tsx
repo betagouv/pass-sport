@@ -12,18 +12,15 @@ import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
 import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import { useSearchParams } from 'next/navigation';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 export const visitorReasons = {
   'benef-aije-droit': `Ai-je droit au pass Sport cette année ?`,
-  'benef-quand': `Quand vais-je recevoir mon pass Sport ?`,
   'benef-pas-recu': `Je n'ai pas reçu mon code`,
-  'benef-paiement-phase1': `Ma structure sportive me demande de payer mon inscription alors que je n'ai pas reçu mon code. Que faire ?`,
-  'benef-non-eligible': `Pourquoi n'ai-je plus droit au pass Sport ?`,
-  // 'benef-ars-non-eligible': `J'ai perçu l'allocation de rentrée scolaire et je n'ai pas reçu mon pass Sport, pourquoi ?`,
+  'benef-parcours-utilisateur': `Je n'arrive pas à obtenir mon code sur le site`,
+  'benef-supprime': `J’ai supprimé par erreur l’e-mail contenant mon code pass Sport`,
+  'benef-aeeh': `Je perçois l'AEEH pour mon enfant (6-19 ans), mais je n'ai pas reçu le code`,
   'benef-boursier': `Je suis boursier, j'ai une question`,
-  // todo : remettre plus tard
-  // 'benef-parcours-utilisateur': `Je suis éligible, mais je n’arrive pas à récupérer mon code pass Sport sur le site`,
-  'benef-other': `Autre`,
 };
 
 const proReasons = {
@@ -169,9 +166,16 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
       return;
     }
 
+    const contactReason = formData.get('reason')?.toString();
+
     try {
       setIsLoading(true);
       const response = await postContact(formData, isProVersion);
+      trackEvent(
+        MATOMO_CATEGORY.contact,
+        response.ok ? 'message envoyé' : "erreur d'envoi",
+        contactReason,
+      );
 
       if (!response.ok) {
         setApiError(true);

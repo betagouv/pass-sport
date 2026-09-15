@@ -14,12 +14,18 @@
 > npm run test
 
 ## Third party APIs used
-- https://geo.api.gouv.fr
-  - Used to get list of communes 
 - https://lecompteasso.associations.gouv.fr
   - Used for eligibility purposes 
 - https://sports-sgsocialgouv.opendatasoft.com/api/explore/v2.1/catalog/datasets/passsports-asso_volontaires/records
   - Used to fetch list of clubs that are within the pass Sport
+
+Commune/postal-code search data (used by the club finder and the eligibility test's birth-place
+field) is embedded in `site/src/data/communes.json` instead of calling an external API, built
+from La Poste's ["Base officielle des codes postaux"](https://www.data.gouv.fr/datasets/base-officielle-des-codes-postaux)
+and INSEE's ["Code officiel géographique"](https://www.insee.fr/fr/information/2560452), updated
+~1-2x/year. To refresh: download the latest CSV from each source, then from `site/` run
+`LAPOSTE_CSV_PATH=<path> COG_CSV_PATH=<path> pnpm run generate:communes` and commit the updated
+`src/data/communes.json` via a normal PR.
 
 ## Backend - Data processing
 ### Stack

@@ -101,7 +101,7 @@ refuse un dépôt appartenant à un autre compte — « detected dubious ownersh
 d'un dépôt partagé) et `core.sharedRepository=group` (pour que git crée ses objets
 group-writable sans dépendre de l'umask de la session).
 
-## Ni qf-batch ni la cron FranceConnect ne démarrent tout seuls
+## Ni qf-batch ni les crons ne démarrent tout seuls
 
 C'est une garantie du playbook, pas un oubli à corriger :
 
@@ -117,12 +117,18 @@ C'est une garantie du playbook, pas un oubli à corriger :
     --extra-vars pass_sport_fc_cron_enabled=true
   ```
   Ne l'activer qu'une fois les deux prérequis suivants validés : l'empreinte SSH Scalingo
-  amorcée (ci-dessous) et un essai à blanc réussi
-  (`FC_PROD_DROP_DIR=/tmp/fc-drop ./run_fc_pipeline.sh`, voir le
+  amorcée (ci-dessous) et un passage à blanc réussi
+  (`./run_fc_pipeline.sh --dry-run`, son journal
+  dans `data/2026/partners/franceconnect/run/latest/run.log`, voir le
   [README de franceconnect/](../../data/2026/partners/franceconnect/README.md)). Le passage
-  dépose son CSV en production et marque `eligibility_results` : le laisser partir seul avant
-  d'avoir vérifié tout le reste n'a pas d'utilité et un vrai coût si quelque chose est mal
-  configuré.
+  dépose son CSV en production, marque `eligibility_results` puis pose, à travers un tunnel
+  Redis, le job qui envoie leur code par courriel (voir le
+  [README du worker](../../worker/README.md)) : le laisser partir seul avant d'avoir vérifié tout
+  le reste n'a pas d'utilité et un vrai coût si quelque chose est mal configuré. Il demande
+  `pnpm install` fait dans `worker/`.
+
+  L'ancienne entrée `pass-sport-lca-checks` n'existe plus : le playbook la retire (tag
+  `lca-checks-cron`) là où une version précédente l'avait posée.
 
 ### Reporter tout le volet FC (crontab Scalingo/tunnel)
 
@@ -139,7 +145,7 @@ ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
 Deux tâches portent ce tag : la crontab `pass-sport-fc` et `/etc/default/pass-sport-fc`
 (`SCALINGO_APP`/`SCALINGO_API_TOKEN` n'ont souvent pas de sens tant que la cron elle-même est
 reportée). Le reste du provisioning tourne normalement, CLI Scalingo comprise — y compris la
-vérification que `fc_prod_drop_dir` (`/nfs/postgresql`) est inscriptible, qui n'est **pas**
+vérification que `fc_prod_drop_dir` (`/nfs/run`) est inscriptible, qui n'est **pas**
 taguée : si ce montage n'existe pas encore non plus, le playbook échouera quand même sur cette
 tâche-là. Un passage ultérieur sans `--skip-tags fc-cron` pose les deux fichiers, crontab
 désactivée par défaut comme toujours.
@@ -224,7 +230,7 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
   pour l'arrêter une fois l'empreinte acceptée).
 - **`data/.env` et `worker/.env.local`** — chemins de campagne et jeton API Particulier. Ils
   changent d'une campagne à l'autre, là où le playbook décrit la machine.
-- **le montage `/nfs/postgresql`** — il appartient à l'infra ; le playbook vérifie seulement
+- **le montage `/nfs/run`** — il appartient à l'infra ; le playbook vérifie seulement
   qu'il est inscriptible.
 
 ## Vérification après un provisioning
@@ -236,8 +242,9 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
 2. `scalingo --version`, `psql --version`, `data/.venv/bin/jupyter kernelspec list` (doit
    lister `python3`), `systemctl cat pass-sport-qf-batch@`,
    `stat -c '%a %U:%G' /etc/default/pass-sport-fc` → `640 passsport:passsport`.
-3. `crontab -l -u <utilisateur> | grep pass-sport-fc` : la ligne doit apparaître **commentée**
-   tant que `pass_sport_fc_cron_enabled` n'a pas été mis à `true`.
+3. `crontab -l -u <utilisateur> | grep -E 'pass-sport-fc|pass-sport-lca-checks'` : seule la ligne
+   `pass-sport-fc` doit apparaître, **commentée** tant que `pass_sport_fc_cron_enabled` n'a pas été
+   mis à `true`.
 4. `systemctl list-units 'pass-sport-qf-batch@*'` doit être vide : aucune instance active tant
    que personne n'a lancé `systemctl start pass-sport-qf-batch@<partenaire>`.
 5. Aucun secret n'est parti dans le dépôt public :

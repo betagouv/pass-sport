@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/react';
+import { push } from '@socialgouv/matomo-next';
 import BeneficiaryRecap from '@/app/v2/test-eligibilite/components/post-login-flow/BeneficiaryRecap';
 import type { BeneficiaryResult } from '@/app/services/applications';
+
+jest.mock('@socialgouv/matomo-next', () => ({ push: jest.fn() }));
 
 // Fictional syllable-based identities: pass-sport processes real beneficiary data, so test
 // fixtures must never resemble a plausible real name.
@@ -83,6 +86,7 @@ describe('BeneficiaryRecap', () => {
 
     const downloadLink = screen.getByRole('link', { name: 'Télécharger le code' });
     expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf');
+    expect(downloadLink).toHaveClass('matomo_ignore');
   });
 
   it('does not show a PDF download link for an eligible_confirmed beneficiary without a code yet', () => {
@@ -91,7 +95,7 @@ describe('BeneficiaryRecap', () => {
     expect(screen.queryByRole('link', { name: 'Télécharger le code' })).not.toBeInTheDocument();
   });
 
-  it('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their own code', () => {
+  it('shows a PDF download link for an eligible_confirmed enfant beneficiary, keyed by their position', () => {
     renderRecap([
       beneficiary({
         source: 'enfant',
@@ -108,7 +112,26 @@ describe('BeneficiaryRecap', () => {
       screen.getByText('OSTRENYA Zephyrin, né(e) le 02/06/2015', { exact: false }),
     ).toBeInTheDocument();
     const downloadLink = screen.getByRole('link', { name: 'Télécharger le code' });
-    expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
+    expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?beneficiary=0');
+    expect(downloadLink).toHaveClass('matomo_ignore');
+  });
+
+  it('never puts a pass Sport code in a download URL', () => {
+    renderRecap([
+      beneficiary({ verdict: 'eligible_confirmed', code: '24-ZORV-QYXA' }),
+      beneficiary({ source: 'enfant', givenName: 'Zephyrin', code: '24-AZUR-KLMB' }),
+      beneficiary({ source: 'enfant', givenName: 'Balthazine', code: '24-VORT-XQPL' }),
+    ]);
+
+    const hrefs = screen
+      .getAllByRole('link', { name: 'Télécharger le code' })
+      .map((link) => link.getAttribute('href'));
+
+    expect(hrefs).toEqual([
+      '/api/france-connect/pdf',
+      '/api/france-connect/pdf?beneficiary=1',
+      '/api/france-connect/pdf?beneficiary=2',
+    ]);
   });
 
   it('shows a child’s full identity on their card, the same shape as the allocataire’s', () => {
@@ -202,47 +225,64 @@ describe('BeneficiaryRecap', () => {
     expect(notEligibleBadge).toHaveClass('fr-badge--error');
   });
 
-  it('does not show the code for an eligible_pending_lca beneficiary even when one already exists', () => {
-    const { container } = renderRecap([
-      beneficiary({
-        source: 'enfant',
-        givenName: 'Balthazine',
-        verdict: 'eligible_pending_lca',
-        code: '24-WOLX-TREP',
-      }),
-    ]);
-
-    expect(screen.getByText('Balthazine')).toBeInTheDocument();
-    expect(screen.queryByText('24-WOLX-TREP')).not.toBeInTheDocument();
-    expect(screen.queryByText(/24-WOLX-TREP/)).not.toBeInTheDocument();
-
-    const badges = statusBadges(container);
-    expect(badges).toHaveLength(1);
-    expect(badges[0]).toHaveClass('fr-badge--info');
-    expect(badges[0]).toHaveTextContent('En cours de traitement');
-  });
-
   it('falls back to "Votre enfant" when a child has no given name', () => {
     renderRecap([beneficiary({ source: 'enfant', givenName: null })]);
 
     expect(screen.getByText('Votre enfant')).toBeInTheDocument();
   });
 
-  it('shows a Card for a not_assessed child alongside the assessed ones, not just the assessed ones', () => {
+  it('shows a Card for every child, not just the ones already served a code', () => {
     const { container } = renderRecap([
-      beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'not_assessed' }),
+      beneficiary({ source: 'enfant', givenName: 'Quorindel', verdict: 'eligible_pending' }),
       beneficiary({ source: 'enfant', givenName: 'Astravelle', verdict: 'eligible_confirmed' }),
     ]);
 
-    const [notAssessedCard, confirmedCard] = cards(container);
+    const [pendingCard, confirmedCard] = cards(container);
     expect(cards(container)).toHaveLength(2);
 
-    expect(within(notAssessedCard).getByText('Quorindel')).toBeInTheDocument();
-    const notAssessedBadge = within(notAssessedCard).getByText('En cours de traitement');
-    expect(notAssessedBadge).toHaveClass('fr-badge--info');
+    expect(within(pendingCard).getByText('Quorindel')).toBeInTheDocument();
+    const pendingBadge = within(pendingCard).getByText('En cours de traitement');
+    expect(pendingBadge).toHaveClass('fr-badge--info');
 
     expect(within(confirmedCard).getByText('Astravelle')).toBeInTheDocument();
     const confirmedBadge = within(confirmedCard).getByText('Eligible');
     expect(confirmedBadge).toHaveClass('fr-badge--success');
+  });
+
+  describe('Matomo', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('reports each verdict once, with the number of beneficiaries holding it', () => {
+      renderRecap([
+        beneficiary({
+          source: 'enfant',
+          givenName: 'Quorindel',
+          verdict: 'eligible_confirmed',
+          code: '24-QUIL-MPRS',
+        }),
+        beneficiary({
+          source: 'enfant',
+          givenName: 'Astravelle',
+          verdict: 'eligible_confirmed',
+          code: '24-VORT-XQPL',
+        }),
+        beneficiary({ source: 'enfant', givenName: 'Ostrelin', verdict: 'not_eligible' }),
+      ]);
+
+      expect(jest.mocked(push).mock.calls).toEqual([
+        [['trackEvent', 'Demande FC', 'résultat', 'eligible_confirmed', 2]],
+        [['trackEvent', 'Demande FC', 'résultat', 'not_eligible', 1]],
+      ]);
+    });
+
+    it('reports that no beneficiary was found', () => {
+      renderRecap([]);
+
+      expect(jest.mocked(push).mock.calls).toEqual([
+        [['trackEvent', 'Demande FC', 'résultat', 'aucun bénéficiaire trouvé', undefined]],
+      ]);
+    });
   });
 });

@@ -1,16 +1,23 @@
 import "./load-env";
 import "./instrument";
-import { type Job, Queue, Worker } from "bullmq";
+import { type Job, Queue, Worker, type WorkerOptions } from "bullmq";
 import { Redis } from "ioredis";
 import * as Sentry from "@sentry/node";
 import { db, pool } from "./db/client";
 import { runMigrations } from "./db/migrate";
+import { assertEmailTemplatesConfigured } from "./email/notify";
 import { getClient } from "./eligibility/client";
-import { getLcaClient } from "./lca/client";
+import { createRedisRateGate } from "./eligibility/rate-gate";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
-import { FRANCE_CONNECT_QUEUE_NAME, LCA_QUEUE_NAME, retryBackoff } from "./queues";
+import { processFcCodeEmailsJob, type FcCodeEmailsJobData } from "./jobs/fc-code-emails";
+import {
+  FRANCE_CONNECT_QUEUE_NAME,
+  FC_CODE_EMAILS_QUEUE_NAME,
+  LCA_QUEUE_NAME,
+  retryBackoff,
+} from "./queues";
 
 // Scalingo injects SCALINGO_REDIS_URL for the Redis addon.
 const SCALINGO_REDIS_URL = process.env.SCALINGO_REDIS_URL ?? "redis://localhost:6379";
@@ -20,9 +27,18 @@ function createRedisConnection(): Redis {
   return new Redis(SCALINGO_REDIS_URL, { maxRetriesPerRequest: null });
 }
 
+// NOT a blocking connection: the gate must fail fast and let the caller pause, where
+// maxRetriesPerRequest: null would have it wait indefinitely while holding the job.
+function createRateGateConnection(): Redis {
+  return new Redis(SCALINGO_REDIS_URL);
+}
+
 async function startFlow<TData extends object>(opts: {
   queueName: string;
   process: (job: Job<TData>, queue: Queue<TData>) => Promise<unknown>;
+  // lockDuration is the reason this exists: the default 30 s gets a long-running job declared
+  // stalled and re-delivered mid-run.
+  workerOptions?: Partial<WorkerOptions>;
 }): Promise<{ close: () => Promise<void> }> {
   const queue = new Queue<TData>(opts.queueName, { connection: createRedisConnection() });
 
@@ -33,6 +49,7 @@ async function startFlow<TData extends object>(opts: {
   const worker = new Worker<TData>(opts.queueName, async (job) => opts.process(job, queue), {
     connection: createRedisConnection(),
     settings: { backoffStrategy: retryBackoff },
+    ...opts.workerOptions,
   });
 
   worker.on("error", (err) => {
@@ -82,15 +99,26 @@ async function startFlow<TData extends object>(opts: {
 }
 
 async function main(): Promise<void> {
+  assertEmailTemplatesConfigured();
+
   await runMigrations(pool);
 
   const apiClient = await getClient();
-  const lcaClient = await getLcaClient();
+
+  // The ceilings live in Redis and are re-read on every call, so `pnpm apip:rate` retunes a
+  // running worker.
+  const rateGateConnection = createRateGateConnection();
+  const rateGate = createRedisRateGate(rateGateConnection, {
+    onLimitsChange: ({ perSecond, perMinute, isNight }) =>
+      console.log(
+        `[pass-sport-worker] API Particulier cadence: ${perSecond}/s, ${perMinute}/min (${isNight ? "night" : "day"})`,
+      ),
+  });
 
   const franceConnect = await startFlow<EligibilityJobData>({
     queueName: FRANCE_CONNECT_QUEUE_NAME,
     process: (job, queue) => {
-      const deps: FranceConnectDeps = { apiClient, lcaClient, db, queue };
+      const deps: FranceConnectDeps = { apiClient, db, queue, rateGate };
       return processEligibilityJob(job, job.data, deps);
     },
   });
@@ -105,13 +133,20 @@ async function main(): Promise<void> {
     },
   });
 
-  const flows = [franceConnect, lca];
+  const fcCodeEmails = await startFlow<FcCodeEmailsJobData>({
+    queueName: FC_CODE_EMAILS_QUEUE_NAME,
+    process: (job) => processFcCodeEmailsJob(job, job.data, { db }),
+    workerOptions: { lockDuration: 10 * 60_000 },
+  });
+
+  const flows = [franceConnect, lca, fcCodeEmails];
 
   console.log("[pass-sport-worker] standalone worker started");
 
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`[pass-sport-worker] ${signal} received, closing...`);
     await Promise.all(flows.map((f) => f.close()));
+    await rateGateConnection.quit();
     await pool.end();
     process.exit(0);
   };

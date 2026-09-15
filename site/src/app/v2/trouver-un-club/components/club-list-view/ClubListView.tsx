@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import ClubTags from '../club-tags/ClubTags';
 import rootStyles from '@/app/utilities.module.scss';
 import MoreClubsButton from './more-clubs-button/MoreClubsButton';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 interface Props {
   clubs: SportGouvJSONRecordsResponse;
@@ -27,6 +28,7 @@ const ClubListView = ({ clubs, onSeeMoreClubsClicked }: Props) => {
                 enlargeLink
                 linkProps={{
                   href: `${pathname}/${encodeURIComponent(club.nom)}`,
+                  onClick: () => trackEvent(MATOMO_CATEGORY.clubFinder, 'ouverture fiche', 'liste'),
                 }}
                 size="medium"
                 start={<ClubTags club={club} />}

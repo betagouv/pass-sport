@@ -7,6 +7,7 @@ export {};
 declare global {
   export interface Window {
     tarteaucitron?: TarteAuCitronSDK;
+    _paq?: unknown[][];
   }
 
   export interface Element {

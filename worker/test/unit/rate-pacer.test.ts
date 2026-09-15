@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  AdaptiveRatePacer,
-  RatePacer,
-  isParisNightAt,
-  parisHourAt,
-  type RateChange,
-} from "../../src/scripts/rate-pacer";
+import { AdaptiveRatePacer, RatePacer, type RateChange } from "../../src/scripts/rate-pacer";
+import { isParisNightAt, parisHourAt } from "../../src/paris-time";
 
 const ms = (iso: string): number => new Date(iso).getTime();
 

@@ -29,6 +29,72 @@ pnpm db:reset     # empty the local dev tables (schema and migrations untouched)
 
 `db:reset` truncates `audit`, `eligibility_history`, `eligibility_results` and `email_verifications` in the compose `db` service. Prefer it over `docker compose down -v`, which also removes the `node_modules` and pnpm store volumes and turns a data wipe into a full dependency reinstall.
 
+## Cadence API Particulier
+
+Every online API Particulier call — the `france-connect` chain, and only it — passes through a
+fixed-window rate gate before it goes out
+([src/eligibility/rate-gate.ts](src/eligibility/rate-gate.ts)). Two windows, both aligned on the
+wall clock, both enforced in Redis so the ceiling holds across processes rather than per worker
+instance:
+
+- **20 appels/seconde**, day and night;
+- **300 appels/minute** between 8h and 21h Paris, **500** from 21h to 8h.
+
+When a window is full, the queue is paused until it rolls over and the job is requeued **without**
+consuming an attempt — the same mechanism the 429 path uses, so the chain resumes at its checkpoint
+and no answered call is billed twice. The pause is journalled in `eligibility_history` as a
+`rate_gate` / `rate_limited` row naming the window that blocked. A gate that cannot reach Redis
+pauses too: a burst sent blind is exactly what the ceiling exists to prevent.
+
+Redis keys — the counters expire on their own, the ceilings do not:
+
+| Clé | Rôle |
+|---|---|
+| `apip:rate:s:<seconde>` | compteur de la seconde en cours (TTL 2 s) |
+| `apip:rate:m:<minute>` | compteur de la minute en cours (TTL 120 s) |
+| `apip:rate:config:per_second` | plafond appels/seconde |
+| `apip:rate:config:per_minute_day` | plafond appels/minute, 8h-21h Paris |
+| `apip:rate:config:per_minute_night` | plafond appels/minute, 21h-8h Paris |
+
+The ceilings are re-read on **every** call, so they are retuned on a running worker with no
+redeploy and no restart:
+
+```bash
+pnpm apip:rate                                        # état des 3 plafonds, * = appliqué maintenant
+pnpm apip:rate --per-second 10
+pnpm apip:rate --per-minute-day 250 --per-minute-night 450
+pnpm apip:rate --reset                                # retour aux replis
+```
+
+`API_PARTICULIER_MAX_CALLS_PER_SECOND`, `API_PARTICULIER_MAX_CALLS_PER_MINUTE` and
+`API_PARTICULIER_MAX_CALLS_PER_MINUTE_NIGHT` are **fallbacks only**, used when the matching Redis
+key is absent or carries an unusable value (non-numeric, or below 1). A typo in a ceiling therefore
+can neither stop the chain nor lift the ceiling. Every change of the applied ceilings is logged by
+the worker.
+
+### Sonde (`apip:rate:probe`)
+
+Rejoue un appel API Particulier déjà passé — la ligne la plus récente d'`eligibility_history` qui
+porte son `body_payload`, ou celle que `--id` désigne — autant de fois que demandé, à travers le
+cadenceur. C'est le seul moyen de voir la cadence tenir sur du trafic réel : les tests e2e tournent
+contre un client factice, aucun octet ne part sur le réseau.
+
+```bash
+pnpm apip:rate:probe --calls 20
+```
+
+L'identité pivot est reconstruite depuis le payload enregistré puis **recomparée** à celui-ci avant
+le premier appel : si les deux diffèrent, la sonde s'arrête sans rien appeler plutôt que de mesurer
+la cadence d'un autre appel que celui qu'on croit rejouer. Rien n'est écrit en base, aucune clé
+`apip:rate:config:*` n'est touchée — seuls les compteurs bougent, et ils sont partagés avec le
+worker : une sonde lancée pendant qu'il tourne lui prend du quota.
+
+Sur un refus, la sonde dort jusqu'à la fin de la fenêtre bloquante ; le worker, lui, met la queue en
+pause et requeue le job. Même plafond, deux façons d'attendre.
+
+The offline `qf:batch` runs on the processing machine with its own in-memory pacer
+([src/scripts/rate-pacer.ts](src/scripts/rate-pacer.ts)) and does **not** consume these counters.
+
 ## Scripts
 
 ### QF batch (`qf:batch`)
@@ -70,18 +136,96 @@ The `pass-sport-qf-batch@` systemd unit is deployed by [deploy/ansible/](../depl
 but never enabled or auto-started — each partner's run is started by hand. See
 [deploy/ansible/README.md](../deploy/ansible/README.md) for provisioning the machine.
 
-### DLQ (`dlq`)
+### FC code emails (`fc:code-emails:enqueue`)
+
+Mails their code to the FranceConnect beneficiaries. The FranceConnect pipeline
+([data/2026/partners/franceconnect/](../data/2026/partners/franceconnect/)) sets every row it serves
+to `eligible_confirmed` with its code — a code found in the lamp beneficiary database
+(`writeback_confirmed.sql`) or a freshly minted one (`writeback_verdict.sql`) — which is what lets
+`BeneficiaryRecap` show the code and the PDF route serve the attestation straight away.
+
+The `fc_code_emails` job sweeps every FranceConnect row sitting at `eligible_confirmed` with a code
+and no `email_kind` and sends the template its `situation` names. `email_kind is null` is what
+restricts it to the FranceConnect path: the parcours hors FranceConnect names its template at insert
+time and mails inline.
+
+Sending once is the whole difficulty, since the pass runs after every pipeline run over a table that
+keeps what it has already served. `email_attempts` is incremented **before** the POST, not after:
+Link Mobility answers a verdict in three of its four outcomes — accepted, rejected, HTTP error — and
+the row is marked from that answer, but the fourth (a timeout, a severed socket, a worker killed
+mid-POST) leaves nothing to read. That counter is what bounds the resends in the only case where
+nothing else can.
+
+That mail is not sent on the spot: it is handed to Link Mobility as a campagne programmée
+(`date` on `/api/envoyer/e-mail`, a UNIX timestamp) `FC_CODE_EMAIL_DELAY_MIN` minutes out, 30 by
+default. Link Mobility answers `{resultat: 1, id}` the moment it accepts the schedule, so what the
+row records is the acceptance: `email_sent_at` dates that, and the `scheduled_for` of the
+`email.code_*` history entry dates the diffusion. Until it goes out the campaign sits at `statut 0`
+and can still be moved (`/api/campaign/edit`) or cancelled (`/api/campaign/delete`) with the
+returned id.
+
+This script only enqueues; the pass itself runs in the worker
+([src/jobs/fc-code-emails.ts](src/jobs/fc-code-emails.ts)).
 
 ```bash
-pnpm dlq
+pnpm fc:code-emails:enqueue                      # a nominal pass: every row awaiting its mail
+pnpm fc:code-emails:enqueue --dry-run --limit 5   # essai à blanc, nothing sent
 ```
 
-Inspect/manage the BullMQ dead-letter queue. See [src/scripts/dlq.ts](src/scripts/dlq.ts).
+The job id is constant, so a second enqueue while a pass is queued or running is ignored rather
+than stacked, and the script exits 0.
 
-### Redis decode (`redis:decode`)
+Configuration, all optional, on the worker app:
+
+| var | default | role |
+|---|---|---|
+| `FC_CODE_EMAIL_MAX_DURATION_MIN` | `20` | wall-clock stop, to keep under the interval between two pipeline runs |
+| `FC_CODE_EMAIL_DRY_RUN` | off | `1` selects and journals the rows without sending anything |
+| `FC_CODE_EMAIL_MAX_ATTEMPTS` | `3` | code mails per row before it is abandoned — each attempt risks a duplicate for a real recipient |
+| `FC_CODE_EMAIL_COOLDOWN_MIN` | `60` | minimum delay before a failed code mail is retried |
+| `FC_CODE_EMAIL_DELAY_MIN` | `30` | how far out the code mail is programmed on Link Mobility; `0` sends it on the spot |
+
+#### On the processing machine
+
+There is no cron of its own: [run_fc_pipeline.sh](../data/2026/partners/franceconnect/run_fc_pipeline.sh)
+enqueues the job at the end of every successful run — even one with nobody new to serve, since the
+pass also retries the failed mails. It opens a second Scalingo tunnel for that, to Redis
+(`scalingo db-tunnel SCALINGO_REDIS_URL`, port `FC_REDIS_TUNNEL_PORT`, 10001 by default), and runs
+the enqueuer against it with `FC_CODE_EMAILS_REDIS_URL`. `FC_CODE_EMAILS_DRY_RUN=1` on the pipeline
+enqueues a dry-run pass.
+
+Reading a pass back, through the tunnel:
+
+```sql
+select action, status, count(*)
+  from eligibility_history
+ where action like 'fc_code_emails.%' or action like 'email.code_%'
+ group by 1, 2 order by 1;
+```
+
+### Test email (`email:test`)
+
+Sends one real mail through Link Mobility to an address you choose, and exits. It writes nothing to
+the database and enqueues nothing: it exercises the template, the merge fields and the programmed
+send (`date`) alone. The beneficiary it names is fake — `Test Bénéficiaire`, code
+`TEST-CODE-0000`.
 
 ```bash
-pnpm redis:decode
+pnpm email:test moi@example.org                            # code_direct_boursier, dans 30 min
+pnpm email:test moi@example.org --in 5 --kind code_indirect
+pnpm email:test moi@example.org --in 0                     # immédiat
 ```
 
-Decode raw Redis/BullMQ payloads for debugging. See [src/scripts/redis-decode.ts](src/scripts/redis-decode.ts).
+- `--in`: minutes before the campaign goes out (default `30`). `0` omits `date` entirely.
+- `--kind`: `code_direct_aah`, `code_direct_boursier`, `code_indirect` or `not_eligible_hors_fc`
+  (default `code_direct_boursier`).
+
+It reads `.env.local` like the worker does, so it needs `LINK_MOBILITY_API_KEY` — and it hits
+whatever `LINK_MOBILITY_API_URL` points at. Left unset, that is the real Link Mobility, and the mail
+really leaves. On acceptance it prints the campaign id, which is what `/api/campaign/edit` and
+`/api/campaign/delete` take to move or cancel a scheduled send; on a rejection it prints the codes
+Link Mobility answered and exits 1.
+
+`expediteur` is not yours to pick: Link Mobility only accepts a sender on a domain referenced on the
+account (`info.pass.sports.gouv.fr` here), and anything else is refused with error `17`.
+`LINK_MOBILITY_SENDER_EMAIL` and `LINK_MOBILITY_SENDER_NAME` override it within that constraint.

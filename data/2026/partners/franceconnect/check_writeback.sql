@@ -51,9 +51,9 @@ select
 + (select count(*)
      from eligibility_results r
      join fc_codes_check c on c.eligibility_result_id = r.id
-    -- Seules les lignes que CE CSV a effectivement marquées doivent avoir une trace : une ligne
-    -- passée entre-temps à 'eligible_confirmed' par le worker n'a jamais été marquée ici.
-    where r.verdict = 'eligible_pending_lca'
+    -- Seules les lignes que CE CSV a effectivement marquées doivent avoir une trace : la
+    -- jointure sur le code écarte une ligne confirmée entre-temps avec un autre code.
+    where r.verdict = 'eligible_confirmed'
       and r.pass_sport_code = c.id_psp
       and not exists (
         select 1 from historised h where h.eligibility_result_id = r.id));

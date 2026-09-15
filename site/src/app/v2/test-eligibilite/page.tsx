@@ -1,21 +1,20 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import Card from '@codegouvfr/react-dsfr/Card';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import FranceConnectSection from './components/FranceConnectSection';
 import NoFranceConnectSection from './components/NoFranceConnectSection';
-import PostLoginFlow from './components/post-login-flow/PostLoginFlow';
-import BeneficiaryRecap, {
-  StatusBadge,
-  PENDING_CODE_MESSAGE,
-} from './components/post-login-flow/BeneficiaryRecap';
+import EnqueueRetry from './components/post-login-flow/EnqueueRetry';
+import ResultPanel from './components/post-login-flow/ResultPanel';
+import BeneficiaryRecap from './components/post-login-flow/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
-import { IS_LOCAL_ENV } from '@/app/constants/env';
+import { IS_LOCAL_ENV, PARCOURS_HORS_FC_ENABLED } from '@/app/constants/env';
+import { HORS_FRANCE_CONNECT_MAINTENANCE } from './constants/maintenance';
 import styles from './styles.module.scss';
+import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
+import { MATOMO_CATEGORY } from '@/utils/matomo-category';
 
 export const metadata: Metadata = {
   title: 'Récupération du code | pass Sport',
@@ -29,6 +28,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   login: 'Impossible de démarrer la connexion FranceConnect.',
   state: 'Échec de la vérification de sécurité (state). Veuillez réessayer.',
   callback: "Erreur lors de l'échange avec FranceConnect ou API Particulier.",
+  enqueue:
+    "Vous êtes bien connecté, mais votre demande n'a pas pu être enregistrée. Veuillez la relancer.",
   identity: "FranceConnect n'a pas transmis les informations d'identité attendues.",
   logout_state: 'Vous avez été déconnecté (vérification de sécurité incomplète).',
   access_denied: 'Vous avez refusé la connexion FranceConnect.',
@@ -101,6 +102,25 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
     >
       <h1>Demande du code pass Sport</h1>
 
+      {status === 'ok' && (
+        <TrackEventOnMount
+          category={MATOMO_CATEGORY.franceConnectRequest}
+          action="connexion réussie"
+        />
+      )}
+
+      {status === 'loggedout' && (
+        <TrackEventOnMount category={MATOMO_CATEGORY.franceConnectRequest} action="déconnexion" />
+      )}
+
+      {error && (
+        <TrackEventOnMount
+          category={MATOMO_CATEGORY.franceConnectRequest}
+          action="connexion en erreur"
+          name={Object.keys(ERROR_MESSAGES).includes(error) ? error : 'inconnue'}
+        />
+      )}
+
       {error && (
         <div className="fr-alert fr-alert--error fr-my-3w">
           <p>{ERROR_MESSAGES[error] ?? `Une erreur est survenue (${error}).`}</p>
@@ -117,7 +137,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             severity="info"
             className="fr-mb-3w"
             title="Connectez-vous avec FranceConnect"
-            description="Nous vous demanderons ensuite vos aides et votre commune, puis nous vérifierons votre situation directement auprès des administrations en charge. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
+            description="Nous vérifierons votre situation et celle de vos enfants directement auprès des administrations en charge, sans rien vous demander d'autre. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
           />
 
           <div className="fr-grid-row fr-grid-row--center fr-my-4w">
@@ -147,7 +167,15 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 exactes, je n&apos;ai pas la garantie de pouvoir récupérer mon code.
               </p>
 
-              <NoFranceConnectSection />
+              {PARCOURS_HORS_FC_ENABLED ? (
+                <NoFranceConnectSection />
+              ) : (
+                <Notice
+                  severity="warning"
+                  title={HORS_FRANCE_CONNECT_MAINTENANCE.title}
+                  description={HORS_FRANCE_CONNECT_MAINTENANCE.description}
+                />
+              )}
             </div>
           </div>
         </section>
@@ -170,47 +198,23 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
           )}
 
           {existingJob ? (
-            <>
-              {/* Rows exist only once the worker committed, so this is the verdict itself
-                  rather than a status. Same component the polling panel renders, so a
-                  returning user and a just-submitted one read exactly the same thing. */}
-              {results.length > 0 ? (
-                <BeneficiaryRecap
-                  beneficiaries={results}
-                  allocataireIdentity={result.identity}
-                  jobInfo={existingJobInfo}
-                />
-              ) : (
-                <>
-                  <Card
-                    className="fr-mb-6w"
-                    border
-                    nativeDivProps={{ role: 'status' }}
-                    title="Demande enregistrée"
-                    titleAs="h2"
-                    start={<StatusBadge verdict="not_assessed" />}
-                    desc={
-                      <>
-                        {PENDING_CODE_MESSAGE} Si votre demande dépasse le délai de 72h, merci de
-                        consulter la{' '}
-                        <Link href="/v2/une-question" className="fr-link">
-                          FAQ
-                        </Link>
-                        .
-                      </>
-                    }
-                  />
-                  {existingJobDate && (
-                    <p>
-                      {existingJobDateLabel}{' '}
-                      <time dateTime={existingJobDate.iso}>{existingJobDate.label}</time>.
-                    </p>
-                  )}
-                </>
-              )}
-            </>
+            // Rows exist only once the worker committed, so this is the verdict itself rather
+            // than a status. Below that threshold the polling panel takes over and swaps itself
+            // for the recap the moment they land, with no reload — so a returning user and a
+            // just-redirected one read exactly the same thing.
+            results.length > 0 ? (
+              <BeneficiaryRecap
+                beneficiaries={results}
+                allocataireIdentity={result.identity}
+                jobInfo={existingJobInfo}
+              />
+            ) : (
+              <ResultPanel allocataireIdentity={result.identity} jobInfo={existingJobInfo} />
+            )
           ) : (
-            <PostLoginFlow allocataireIdentity={result.identity} />
+            // The callback enqueues before redirecting here, so this is only reachable when
+            // that enqueue failed.
+            <EnqueueRetry allocataireIdentity={result.identity} jobInfo={existingJobInfo} />
           )}
           {/* Logout moved to the header quick-access item ("Se déconnecter"),
               shown while the POC session is live (see the root layout). */}

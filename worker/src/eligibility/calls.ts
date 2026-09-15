@@ -1,4 +1,5 @@
 import { Worker } from "bullmq";
+import * as Sentry from "@sentry/node";
 import {
   startTimer,
   type HistoryEvent,
@@ -6,6 +7,7 @@ import {
   type HistoryStatus,
 } from "../db/history";
 import { logPii } from "../log";
+import type { ApiParticulierRateGate, RateSlot } from "./rate-gate";
 import type { ResourceResult } from "./types";
 
 export type RateLimitable = { rateLimit(expireTimeMs: number): Promise<void> };
@@ -90,10 +92,64 @@ async function maybeProactivePause(
   }
 }
 
+// Short, and without a failed attempt: a Redis blip must not cost the job its 2h backoff.
+const RATE_GATE_UNAVAILABLE_PAUSE_MS = 10_000;
+
+async function takeRateSlot(
+  jobId: string | undefined,
+  gate: ApiParticulierRateGate,
+  resource: string,
+): Promise<RateSlot | null> {
+  try {
+    return await gate.take();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(
+      `[pass-sport-worker] job ${jobId}: rate gate unavailable before ${resource} (${message}), pausing ${RATE_GATE_UNAVAILABLE_PAUSE_MS / 1000}s`,
+    );
+    Sentry.captureException(e, { tags: { component: "rate_gate", resource } });
+    return null;
+  }
+}
+
+type RefusedSlot = Extract<RateSlot, { allowed: false }>;
+
+// Proactive: pause until the blocking window rolls over, BEFORE any call goes out.
+async function pauseUntilRateWindowResets(
+  jobId: string | undefined,
+  queue: RateLimitable,
+  history: HistoryRecorder,
+  resource: string,
+  slot: RefusedSlot,
+): Promise<never> {
+  console.log(
+    `[pass-sport-worker] job ${jobId}: rate gate full on ${resource} (${slot.blockedBy} window, ${slot.perSecond}/s, ${slot.perMinute}/min${slot.isNight ? ", night" : ""}), pausing ${slot.retryInMs}ms`,
+  );
+
+  // Recorded BEFORE the pause throws, for the same reason as the 429 event below: otherwise
+  // the pause carries off the one row that explains the delay.
+  await history.record({
+    actor: "worker",
+    action: "rate_gate",
+    status: "rate_limited",
+    responsePayload: {
+      resource,
+      blocked_by: slot.blockedBy,
+      limit_per_second: slot.perSecond,
+      limit_per_minute: slot.perMinute,
+      is_night: slot.isNight,
+      retry_after_ms: slot.retryInMs,
+    },
+  });
+
+  return pauseAndResume(queue, slot.retryInMs);
+}
+
 export type ResourceCall = {
   jobId: string | undefined;
   queue: RateLimitable;
   history: HistoryRecorder;
+  rateGate: ApiParticulierRateGate;
   resource: string;
   subject?: "self" | "enfant";
   logSuffix?: string;
@@ -107,7 +163,15 @@ export type ResourceCall = {
 };
 
 export async function callResource(call: ResourceCall): Promise<ResourceResult> {
-  const { jobId, queue, history, resource, subject, logSuffix, params, invoke, commit } = call;
+  const { jobId, queue, history, rateGate, resource, subject, logSuffix, params, invoke, commit } =
+    call;
+
+  // Before the call and before its log line: a paused job never reached the API. A gate that
+  // could not answer at all pauses too — a burst sent blind is what the ceiling exists to prevent.
+  const slot = await takeRateSlot(jobId, rateGate, resource);
+
+  if (slot === null) return pauseAndResume(queue, RATE_GATE_UNAVAILABLE_PAUSE_MS);
+  if (!slot.allowed) return pauseUntilRateWindowResets(jobId, queue, history, resource, slot);
 
   console.log(`[pass-sport-worker] job ${jobId}: → API Particulier ${resource}${logSuffix ?? ""}`);
 

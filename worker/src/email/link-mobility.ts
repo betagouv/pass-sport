@@ -10,7 +10,7 @@ const EMAIL_PATH = "/api/envoyer/e-mail";
 // Link Mobility authorises senders by domain, and info.pass.sports.gouv.fr is the verified
 // one. Both are overridable per environment, so a change needs a restart, not a deploy.
 const DEFAULT_SENDER_EMAIL = "ne-pas-repondre@info.pass.sports.gouv.fr";
-const DEFAULT_SENDER_NAME = "pass Sport — ministère des Sports";
+const DEFAULT_SENDER_NAME = "pass Sport";
 
 export interface TransactionalEmailParams {
   subject: string;
@@ -19,6 +19,8 @@ export interface TransactionalEmailParams {
   variables?: Record<string, Record<string, string | number>>;
   replyTo?: string;
   name?: string;
+  // Sent as `date`. A scheduled campaign answers {resultat: 1, id} on acceptance, not on diffusion.
+  sendAt?: Date;
 }
 
 export type SendEmailResult =
@@ -45,8 +47,20 @@ const LINK_MOBILITY_ERROR_MESSAGES: Record<string, string> = {
   "18": "Le sujet est trop court",
   "20": "Le nom d'expéditeur est trop court",
   "30": "Clé API non reconnue",
+  "50": "Le fuseau horaire spécifié n'est pas valide",
+  "51": "La date est déjà passée après calcul du fuseau horaire",
   "63": "Vous avez dépassé votre limite de requêtes api",
 };
+
+// Rejections no resend will ever fix: they describe the request we built, not the moment we sent
+// it. Retrying one of these three times only delays the moment someone reads the alert.
+//
+// '63' (rate limit) is deliberately absent — it IS the case a resend fixes. So is an unknown code:
+// nothing is known about it, and treating it as terminal would silently drop a mail.
+const TERMINAL_ERROR_CODES = new Set(["2", "4", "17", "30"]);
+
+export const isTerminalEmailError = (errorCodes: string[]): boolean =>
+  errorCodes.length > 0 && errorCodes.every((code) => TERMINAL_ERROR_CODES.has(code));
 
 const requireEnv = (name: string): string => {
   const value = process.env[name];
@@ -91,6 +105,7 @@ const buildEmailRequestBody = (params: TransactionalEmailParams): URLSearchParam
 
   if (params.replyTo) body.set("email_reponse", params.replyTo);
   if (params.name) body.set("nom", params.name);
+  if (params.sendAt) body.set("date", String(Math.floor(params.sendAt.getTime() / 1000)));
 
   return body;
 };

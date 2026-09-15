@@ -1,7 +1,7 @@
 'use client';
 
 import styles from './style.module.scss';
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getClubs, getClubsWithoutLimit, SqlSearchParams } from '../../agent';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ActivityResponse, ClubsOnList, ClubsOnMap } from '@/types/Club';
@@ -21,6 +21,7 @@ import { SegmentedControl } from '@codegouvfr/react-dsfr/SegmentedControl';
 import { GeolocationContext } from '@/store/geolocationContext';
 import { LIST_LIMIT, MAP_DEFAULT_DISTANCE } from '@/utils/club-finder';
 import { push } from '@socialgouv/matomo-next';
+import { MATOMO_CATEGORY, trackEvent, trackSiteSearch } from '@/utils/matomo';
 import { setFocusOn } from '@/utils/dom';
 import dynamic from 'next/dynamic';
 
@@ -78,6 +79,8 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
     }),
   });
 
+  const pendingSearch = useRef<{ keyword: string; category: string } | null>(null);
+
   const parseParameterFromQuery = (searchQueryParam: UrlQueryParameters) => {
     const param = searchParams && searchParams.get(searchQueryParam);
 
@@ -114,9 +117,16 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
         distance,
       };
       if (offset === 0) {
-        getClubs(clubParams).then((clubs) =>
-          setClubsOnList({ ...clubs, firstRecievedClubIndex: 0 }),
-        );
+        const searchToTrack = pendingSearch.current;
+        pendingSearch.current = null;
+
+        getClubs(clubParams).then((clubs) => {
+          setClubsOnList({ ...clubs, firstRecievedClubIndex: 0 });
+
+          if (searchToTrack) {
+            trackSiteSearch(searchToTrack.keyword, searchToTrack.category, clubs.total_count);
+          }
+        });
       } else {
         getClubs(clubParams).then((res) =>
           setClubsOnList((clubs) => {
@@ -196,6 +206,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
   }, [cityParam, postalCodeParam, router, pathname, removeQueryString]);
 
   const seeMoreClubsHandler = () => {
+    trackEvent(MATOMO_CATEGORY.clubFinder, 'voir plus de clubs');
     setClubParams((clubParams) => ({ ...clubParams, offset: clubParams.offset + limit }));
   };
 
@@ -217,6 +228,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
 
     if (postalCode && city) {
       const escapedSingleQuotesCity = escapeSingleQuotes(city);
+      pendingSearch.current = { keyword: `${city} (${postalCode})`, category: 'Ville' };
 
       setClubParams((clubParams) => ({
         ...clubParams,
@@ -254,6 +266,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
       router.push(`${pathname}?${queryString}`, { scroll: false });
     } else {
       const escapedSingleQuotesActivity = escapeSingleQuotes(activity);
+      pendingSearch.current = { keyword: activity, category: 'Activité' };
 
       setClubParams((clubParams) => ({
         ...clubParams,
@@ -270,6 +283,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
   };
 
   const onDisabilityChanged = (isActivated: boolean) => {
+    trackEvent(MATOMO_CATEGORY.clubFinder, 'filtre handicap', isActivated ? 'activé' : 'désactivé');
     setClubParams((clubParams) => ({
       ...clubParams,
       offset: 0,
@@ -284,6 +298,11 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
   };
 
   const onAroundMeActiveStateChanged = (isAroundMeChecked: boolean) => {
+    trackEvent(
+      MATOMO_CATEGORY.clubFinder,
+      'filtre autour de moi',
+      isAroundMeChecked ? 'activé' : 'désactivé',
+    );
     let queryString: String;
     if (isAroundMeChecked) {
       setClubParams((previousState) => ({
@@ -314,6 +333,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
   };
 
   const showClubsOnListTabHandler = () => {
+    trackEvent(MATOMO_CATEGORY.clubFinder, 'vue liste');
     const queryString = appendQueryString([
       { key: SEARCH_QUERY_PARAMS.isShowingMapTab, value: '0' },
     ]);

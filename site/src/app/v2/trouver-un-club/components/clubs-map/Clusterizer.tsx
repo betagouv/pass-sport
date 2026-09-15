@@ -7,6 +7,7 @@ import L from 'leaflet';
 import 'leaflet.markercluster/dist/leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import './styles-marker-cluster.css';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 interface Props {
   clubs: ExportedClub[];
@@ -60,6 +61,9 @@ const Clusterizer: React.FC<Props> = ({ clubs }) => {
         detailsLink.className = 'fr-btn fr-btn--tertiary';
         detailsLink.href = `trouver-un-club/${encodeURIComponent(nom)}`;
         detailsLink.textContent = 'Détails du club';
+        detailsLink.addEventListener('click', () =>
+          trackEvent(MATOMO_CATEGORY.clubFinder, 'ouverture fiche', 'carte'),
+        );
 
         popupContent.append(title, detailsLink);
 

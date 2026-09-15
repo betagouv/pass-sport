@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import TechnicalError from '@codegouvfr/react-dsfr/dsfr/artwork/pictograms/system/technical-error.svg';
 import Ovoid from '@codegouvfr/react-dsfr/dsfr/artwork/background/ovoid.svg';
+import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+
+export const metadata: Metadata = {
+  title: 'Page non trouvée - pass Sport',
+};
 
 export default function Page() {
   return (
