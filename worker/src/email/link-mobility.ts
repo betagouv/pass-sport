@@ -10,7 +10,7 @@ const EMAIL_PATH = "/api/envoyer/e-mail";
 // Link Mobility authorises senders by domain, and info.pass.sports.gouv.fr is the verified
 // one. Both are overridable per environment, so a change needs a restart, not a deploy.
 const DEFAULT_SENDER_EMAIL = "ne-pas-repondre@info.pass.sports.gouv.fr";
-const DEFAULT_SENDER_NAME = "pass Sport — ministère des Sports";
+const DEFAULT_SENDER_NAME = "pass Sport";
 
 export interface TransactionalEmailParams {
   subject: string;
