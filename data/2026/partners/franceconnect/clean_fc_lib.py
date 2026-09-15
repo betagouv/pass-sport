@@ -57,6 +57,12 @@ QUALITE_BY_GENDER = {'male': 'M', 'female': 'Mme'}
 # `sexe` du tableau `enfants` de quotient_familial : déjà au format PSP.
 GENRE_BY_SEXE = {'M': 'M', 'F': 'F'}
 
+# `sexe` d'une entrée du tableau `allocataires` de quotient_familial, projeté vers les deux
+# vocabulaires que le rapprochement confronte : la qualité M/Mme que les caisses écrivent en
+# base, et le genre du pivot ('male'/'female') que porte cnaf_allocataire_genre.
+QUALITE_BY_SEXE = {'M': 'M', 'F': 'Mme'}
+GENRE_PIVOT_BY_SEXE = {'M': 'male', 'F': 'female'}
+
 # Route CROUS : jusqu'à 28 ans à la date de référence de la campagne (2026-12-31, cf.
 # AGE_REFERENCE_DATE dans worker/src/eligibility/candidates.ts), soit né à partir du 01/01/1998.
 # Pas de borne haute : c'est le statut boursier, vérifié par API Particulier, qui ferme
@@ -392,6 +398,98 @@ def resolve_allocataire_caf(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     return df, non_resolus
 
 
+def resolve_allocataire_conjoint(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Le SECOND allocataire du couple `qf_allocataires`, pour le rapprochement élargi.
+
+    Les stratégies AEEH et QF apparient désormais si AU MOINS UN des allocataires du foyer
+    correspond : la base partenaire porte le responsable dossier, qui peut être l'autre
+    parent que celui qui s'est connecté. Le conjoint est l'entrée restante une fois
+    l'allocataire connecté identifié :
+
+      1. par sa date de naissance, celle du pivot — la même règle que resolve_allocataire_caf
+         et que readConjointIdentite côté worker ;
+      2. à défaut, par son nom de naissance, celui du pivot — ce qui sauve le cas d'une date
+         erronée côté caisse ;
+      3. sinon les colonnes restent vides et le rapprochement se fait comme avant, sur le
+         seul allocataire connecté.
+
+    Contrairement à resolve_allocataire_caf, la date, la qualité et le genre émis ici sont
+    ceux de L'ENTRÉE elle-même, pas ceux du pivot : c'est une autre personne.
+
+    Renvoie (df, nombre de lignes avec conjoint identifié).
+    """
+    df = df.copy()
+
+    colonnes = (
+        'match-conjoint_nom_naissance',
+        'match-conjoint_nom_usage',
+        'match-conjoint_prenom',
+        'match-conjoint_date_naissance',
+        'match-conjoint_qualite',
+        'match-conjoint_genre',
+    )
+    vide = ('',) * len(colonnes)
+
+    def conjoint_for(row) -> tuple[str, ...]:
+        try:
+            brut = row.get('qf_allocataires')
+            allocataires = json.loads(brut) if brut else []
+        except (TypeError, ValueError):
+            return vide
+
+        if not isinstance(allocataires, list) or len(allocataires) != 2 \
+                or not all(isinstance(a, dict) for a in allocataires):
+            return vide
+
+        naissance_pivot = _to_iso_birthdate(row.get('allocataire-date_naissance'))
+        concordants = [
+            a for a in allocataires
+            if naissance_pivot and _to_iso_birthdate(a.get('date_naissance')) == naissance_pivot
+        ]
+
+        if len(concordants) != 1:
+            nom_pivot = unaccent_and_upper(_texte(row.get('allocataire-nom_naissance'))).strip()
+            concordants = [
+                a for a in allocataires
+                if nom_pivot
+                and unaccent_and_upper(_texte(a.get('nom_naissance'))).strip() == nom_pivot
+            ]
+
+        if len(concordants) != 1:
+            return vide
+
+        conjoint = next(a for a in allocataires if a is not concordants[0])
+        sexe = _texte(conjoint.get('sexe')).upper()
+
+        return (
+            unaccent_and_upper(_texte(conjoint.get('nom_naissance'))).strip(),
+            unaccent_and_upper(_texte(conjoint.get('nom_usage'))).strip(),
+            unaccent_and_upper(_texte(conjoint.get('prenoms'))).strip(),
+            _to_iso_birthdate(conjoint.get('date_naissance')),
+            QUALITE_BY_SEXE.get(sexe, ''),
+            GENRE_PIVOT_BY_SEXE.get(sexe, ''),
+        )
+
+    if df.empty:
+        for colonne in colonnes:
+            df[colonne] = pd.Series('', index=df.index, dtype=object)
+        return df, 0
+
+    resolus = df.apply(conjoint_for, axis=1, result_type='expand')
+    for position, colonne in enumerate(colonnes):
+        df[colonne] = resolus[position]
+
+    # Nom de naissance OU nom d'usage : le même critère que la table de personas SQL,
+    # une entrée sans aucun nom ne pouvant apparier nulle part.
+    conjoints = int(
+        (
+            (df['match-conjoint_nom_naissance'] != '')
+            | (df['match-conjoint_nom_usage'] != '')
+        ).sum()
+    )
+    return df, conjoints
+
+
 def resolve_beneficiaire_nom_usage(df: pd.DataFrame) -> pd.DataFrame:
     """Le nom d'usage du bénéficiaire, ce que les stratégies CAF du rapprochement comparent.
 
@@ -470,6 +568,15 @@ MATCH_COLUMNS = [
     'beneficiaire_prenom',
     'beneficiaire_date_naissance',
     'beneficiaire_genre',
+    # Le second allocataire du foyer (resolve_allocataire_conjoint), avec SES propres date,
+    # qualité et genre : les stratégies AEEH/QF apparient si au moins un des deux allocataires
+    # correspond. Colonnes vides quand la réponse quotient_familial n'identifie pas de couple.
+    'conjoint_nom',
+    'conjoint_nom_usage',
+    'conjoint_prenom',
+    'conjoint_date_naissance',
+    'conjoint_qualite',
+    'conjoint_genre',
 ]
 
 
@@ -511,6 +618,12 @@ def build_match_candidates(df: pd.DataFrame) -> pd.DataFrame:
         'beneficiaire_date_naissance': pd.to_datetime(
             df['date_naissance'], errors='coerce').dt.strftime('%Y-%m-%d'),
         'beneficiaire_genre': df['genre'],
+        'conjoint_nom': colonne('match-conjoint_nom_naissance'),
+        'conjoint_nom_usage': colonne('match-conjoint_nom_usage'),
+        'conjoint_prenom': colonne('match-conjoint_prenom'),
+        'conjoint_date_naissance': colonne('match-conjoint_date_naissance'),
+        'conjoint_qualite': colonne('match-conjoint_qualite'),
+        'conjoint_genre': colonne('match-conjoint_genre'),
     })
 
     return candidats[MATCH_COLUMNS].fillna('')

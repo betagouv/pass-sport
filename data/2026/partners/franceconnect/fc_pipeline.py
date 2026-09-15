@@ -95,6 +95,11 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
     # quotient_familial et n'a donc aucun tableau `allocataires`.
     df, allocataires_non_resolus = fc.resolve_allocataire_caf(df)
 
+    # Le second allocataire du couple, quand la réponse quotient_familial en identifie un :
+    # les stratégies AEEH/QF du rapprochement apparient si au moins un des deux allocataires
+    # du foyer correspond.
+    df, conjoints_identifies = fc.resolve_allocataire_conjoint(df)
+
     # Nom d'usage du bénéficiaire, seconde variante de la clé de rapprochement : celui que le
     # worker stocke dans enfant_identite, sinon celui de qf_enfants pour les lignes plus
     # anciennes ; sur une ligne 'self', celui de l'allocataire — d'où l'ordre, après
@@ -184,6 +189,12 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
         # seconde variante de la clé rapporte réellement.
         'allocataires_avec_nom_usage': int((candidats['allocataire_nom_usage'] != '').sum()),
         'beneficiaires_avec_nom_usage': int((candidats['beneficiaire_nom_usage'] != '').sum()),
+        # Ce que l'élargissement aux deux allocataires du foyer apporte réellement au
+        # rapprochement : les lignes lues avec conjoint identifié, puis les candidats finaux
+        # qui le portent encore.
+        'conjoints_identifies': conjoints_identifies,
+        'candidats_avec_conjoint': int(
+            ((candidats['conjoint_nom'] != '') | (candidats['conjoint_nom_usage'] != '')).sum()),
         'sortie': str(output_filepath),
         'candidats_rapprochement': str(match_filepath) if match_filepath else '(non écrit)',
         'champs_cnaf': str(cnaf_extra_filepath) if cnaf_extra_filepath else '(non écrit)',

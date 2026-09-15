@@ -12,7 +12,9 @@ import {
   householdQfCovers,
   isWithinBirthdateWindow,
   type Allowance,
+  type AllocataireConjointIdentite,
   type PivotIdentity,
+  type QuotientFamilialData,
   type ResourceResult,
 } from "./types";
 import {
@@ -63,6 +65,34 @@ export const toIsoDate = (date?: string): string | null => {
   if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
 
   return null;
+};
+
+// The OTHER allocataire of the quotient_familial answer. Non-null ONLY when the answer names
+// exactly two allocataires and exactly one carries the pivot birthdate — the connected user —
+// so the remaining entry is the conjoint. Null on a single allocataire, on an ambiguous couple
+// (zero or two pivot-birthdate matches), and without a usable QF answer. Same identification
+// rule as data/'s clean_fc_lib.resolve_allocataire_caf.
+export const readConjointIdentite = (
+  qf: QuotientFamilialData | null,
+  pivotBirthdate: string | undefined,
+): AllocataireConjointIdentite | null => {
+  const allocataires = qf?.allocataires;
+
+  if (!Array.isArray(allocataires) || allocataires.length !== 2 || !pivotBirthdate) return null;
+
+  const matchesPivot = allocataires.map((a) => toIsoDate(a.date_naissance) === pivotBirthdate);
+
+  if (matchesPivot.filter(Boolean).length !== 1) return null;
+
+  const conjoint = allocataires[matchesPivot[0] ? 1 : 0];
+
+  return {
+    family_name: conjoint.nom_naissance || undefined,
+    preferred_username: conjoint.nom_usage || undefined,
+    given_name: conjoint.prenoms || undefined,
+    birthdate: toIsoDate(conjoint.date_naissance) ?? undefined,
+    gender: conjoint.sexe === "F" ? "female" : conjoint.sexe === "M" ? "male" : undefined,
+  };
 };
 
 // An allocataire outside both self windows is not a candidate: nothing was ever asked about

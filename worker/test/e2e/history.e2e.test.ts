@@ -107,6 +107,31 @@ describe("eligibility_history", () => {
     expect(cnous?.response_payload).toHaveProperty("rate_limit_remaining");
   });
 
+  // The data/ pipeline reads the couple back from here (export_eligible_pending.sql,
+  // qf_allocataires) — this is the contract that keeps the conjoint recoverable even for
+  // rows whose eligibility_results column is null.
+  it("garde les deux allocataires du foyer dans la réponse QF brute", async () => {
+    const sub = "fc-sub-history-conjoint";
+    stack.setQfConjoint({
+      nom_naissance: "Voktarimendo",
+      prenoms: "Tarnu",
+      date_naissance: "17/11/1982",
+      sexe: "M",
+    });
+    try {
+      await stack.enqueueAndWait(selfCrous(sub));
+    } finally {
+      stack.setQfConjoint(null);
+    }
+
+    const rows = await historyFor(sub);
+    const qf = rows.find((r) => r.action === "dss.quotient_familial_identite");
+    const allocataires = qf?.response_payload?.data?.allocataires;
+
+    expect(allocataires).toHaveLength(2);
+    expect(allocataires[1].nom_naissance).toBe("Voktarimendo");
+  });
+
   it("records what each endpoint was called with, not only what it answered", async () => {
     const sub = "fc-sub-history-body";
     await stack.enqueueAndWait(selfCrous(sub));

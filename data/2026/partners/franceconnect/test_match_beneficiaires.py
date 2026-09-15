@@ -31,7 +31,8 @@ DB_INIT_DIR = FC_DIR.parents[3] / 'lamp01' / 'db-init'
 # The columns of the recap SELECT that closes match_beneficiaires.sql, in its order.
 RECAP_COLONNES = [
     'candidats', 'par_boursier', 'par_aah_msa', 'par_aah_caf', 'par_aeeh_msa',
-    'par_aeeh_caf', 'par_qf_msa', 'par_qf_caf', 'inconcluants', 'non_apparies',
+    'par_aeeh_caf', 'par_qf_msa', 'par_qf_caf', 'avec_conjoint', 'inconcluants',
+    'non_apparies',
 ]
 
 
@@ -437,6 +438,89 @@ def test_qf_caf_sans_ligne_extra_field_reste_non_apparie(pg):
     assert non_apparies == ['c1']
 
 
+# --- Au moins un des deux allocataires du foyer --------------------------------------
+# The base holds the responsable dossier, who may be the OTHER parent than the connected
+# user: each candidate presents up to two allocataire personas, and the strategies match
+# when either one reaches the row.
+
+# A connected persona matching nobody in the base, to prove the conjoint alone can conclude.
+PERSONA_INCONNU = dict(allocataire_nom='VOKTARIMENDO', allocataire_nom_usage='',
+                       allocataire_prenom='Tarnu', allocataire_date_naissance='1982-11-17',
+                       allocataire_qualite='M', allocataire_genre='male')
+
+
+def test_qf_msa_apparie_par_le_conjoint(pg):
+    cand = candidat(**{**CANDIDAT_QF_MSA, **PERSONA_INCONNU,
+                       'conjoint_nom': 'OSVAREK', 'conjoint_prenom': 'Mirsa Paul',
+                       'conjoint_date_naissance': '1979-07-08',
+                       'conjoint_qualite': 'M', 'conjoint_genre': 'male'})
+    apparies, _, recap = rapprocher(pg, base=[ligne_base(**BASE_QF_MSA)], candidats=[cand])
+    assert apparies == {'c1': 'PSP-Q2'}
+    assert recap['par_qf_msa'] == 1
+    assert recap['avec_conjoint'] == 1
+
+
+def test_aeeh_msa_apparie_par_le_conjoint(pg):
+    cand = candidat(**{**CANDIDAT_AEEH_MSA, **PERSONA_INCONNU,
+                       'conjoint_nom': 'ZELVIK', 'conjoint_prenom': 'Halvi Marie',
+                       'conjoint_date_naissance': '1980-01-02',
+                       'conjoint_qualite': 'Mme', 'conjoint_genre': 'female'})
+    apparies, _, recap = rapprocher(pg, base=[ligne_base(**BASE_AEEH_MSA)], candidats=[cand])
+    assert apparies == {'c1': 'PSP-E1'}
+    assert recap['par_aeeh_msa'] == 1
+
+
+def test_aeeh_caf_apparie_par_le_nom_d_usage_du_conjoint(pg):
+    cand = candidat(**{**CANDIDAT_AEEH_CAF, **PERSONA_INCONNU,
+                       'conjoint_nom': 'AUTRENOM', 'conjoint_nom_usage': 'Respusage',
+                       'conjoint_prenom': 'Paul Henri',
+                       'conjoint_qualite': 'M', 'conjoint_genre': 'male'})
+    apparies, _, recap = rapprocher(pg, base=[ligne_base(**BASE_AEEH_CAF)], candidats=[cand])
+    assert apparies == {'c1': 'PSP-E2'}
+    assert recap['par_aeeh_caf'] == 1
+
+
+def test_qf_caf_apparie_par_le_conjoint(pg):
+    cand = candidat(**{**CANDIDAT_QF_CAF, **PERSONA_INCONNU,
+                       'conjoint_nom': 'BOLIMEK', 'conjoint_prenom': 'Claire Ysolde',
+                       'conjoint_date_naissance': '1985-03-02',
+                       'conjoint_qualite': 'Mme', 'conjoint_genre': 'female'})
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base()], extra=[ligne_extra()], candidats=[cand])
+    assert apparies == {'c1': 'PSP-1'}
+    assert recap['par_qf_caf'] == 1
+
+
+def test_les_deux_personas_sur_la_meme_personne_comptent_pour_un(pg):
+    # Both personas reach the same base row: still exactly one distinct id_psp, matched.
+    cand = candidat(**{**CANDIDAT_QF_MSA,
+                       'conjoint_nom': 'OSVAREK', 'conjoint_prenom': 'Mirsa',
+                       'conjoint_date_naissance': '1979-07-08',
+                       'conjoint_qualite': 'M', 'conjoint_genre': 'male'})
+    apparies, _, recap = rapprocher(pg, base=[ligne_base(**BASE_QF_MSA)], candidats=[cand])
+    assert apparies == {'c1': 'PSP-Q2'}
+    assert recap['par_qf_msa'] == 1
+    assert recap['inconcluants'] == 0
+
+
+def test_conjoint_vers_une_autre_personne_rend_le_candidat_inconcluant(pg):
+    # The connected persona reaches one row, the conjoint another: two distinct id_psp,
+    # the strict verdict refuses to pick and the candidate gets a fresh code.
+    autre_foyer = ligne_base(**{**BASE_QF_MSA, 'id_psp': 'PSP-Q9',
+                                'allocataire_nom': 'ZELVIK', 'allocataire_prenom': 'HALVI',
+                                'allocataire_qualite': 'Mme',
+                                'allocataire_date_naissance': '1980-01-02'})
+    cand = candidat(**{**CANDIDAT_QF_MSA,
+                       'conjoint_nom': 'ZELVIK', 'conjoint_prenom': 'Halvi',
+                       'conjoint_date_naissance': '1980-01-02',
+                       'conjoint_qualite': 'Mme', 'conjoint_genre': 'female'})
+    apparies, non_apparies, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_QF_MSA), autre_foyer], candidats=[cand])
+    assert apparies == {}
+    assert non_apparies == ['c1']
+    assert recap['inconcluants'] == 1
+
+
 # --- Codes issued by the FranceConnect pipeline itself -------------------------------
 # What run_fc_pipeline.sh injects into lamp01 for a code it issued under organisme CAF: the
 # birth name in `nom` and `allocataire_nom`, the allocataire birthdate flattened from its
@@ -516,6 +600,23 @@ CANDIDAT_AEEH_FC = dict(situation='AEEH', organisme='CAF',
                         allocataire_genre='male',
                         beneficiaire_nom='TALVERIN', beneficiaire_prenom='Isa',
                         beneficiaire_date_naissance='2011-05-05', beneficiaire_genre='F')
+
+
+def test_le_conjoint_retrouve_un_code_emis_via_l_autre_parent(pg):
+    # The pipeline issued PSP-F2 when parent 1 (KORVELI) connected: the extra-field row
+    # stores parent 1. When parent 2 connects later, their conjoint persona presents
+    # parent 1 — and the code is found instead of duplicated.
+    extra = ligne_extra(id_psp='PSP-F2', cnaf_allocataire_nom_naissance='KORVELI',
+                        cnaf_allocataire_date_naissance='1984-02-02',
+                        cnaf_allocataire_genre='female')
+    cand = candidat(**{**CANDIDAT_QF_FC, **PERSONA_INCONNU,
+                       'conjoint_nom': 'KORVELI', 'conjoint_prenom': 'Idra',
+                       'conjoint_date_naissance': '1984-02-02',
+                       'conjoint_qualite': 'Mme', 'conjoint_genre': 'female'})
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_QF_FC)], extra=[extra], candidats=[cand])
+    assert apparies == {'c1': 'PSP-F2'}
+    assert recap['par_qf_caf'] == 1
 
 
 def test_aeeh_caf_retrouve_un_code_franceconnect_sans_nom_d_usage(pg):

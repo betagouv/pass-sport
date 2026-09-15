@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { listBeneficiaryCandidates } from "../../src/eligibility/candidates";
-import type { PivotIdentity, QuotientFamilialData, ResourceResult } from "../../src/eligibility/types";
+import { listBeneficiaryCandidates, readConjointIdentite } from "../../src/eligibility/candidates";
+import type {
+  PersonneQuotientFamilial,
+  PivotIdentity,
+  QuotientFamilialData,
+  ResourceResult,
+} from "../../src/eligibility/types";
 
 // Fictional syllable-based identities: pass-sport processes real beneficiary data, so test
 // fixtures must never resemble a plausible real name.
@@ -192,5 +197,106 @@ describe("listBeneficiaryCandidates — nom", () => {
 
     expect(candidates).toHaveLength(1);
     expect(candidates[0].nomUsage).toBeUndefined();
+  });
+});
+
+const CONNECTED: PersonneQuotientFamilial = {
+  nom_naissance: "OSTRENYA",
+  prenoms: "Velmorak",
+  date_naissance: "14/03/1990",
+  sexe: "F",
+};
+
+const CONJOINT: PersonneQuotientFamilial = {
+  nom_naissance: "VOKTARIMENDO",
+  nom_usage: "OSTRENYA",
+  prenoms: "Tarnu Jean",
+  date_naissance: "17/11/1982",
+  sexe: "M",
+};
+
+const qfHousehold = (allocataires: PersonneQuotientFamilial[]): QuotientFamilialData => ({
+  allocataires,
+  enfants: [],
+  quotient_familial: { valeur: 500 },
+});
+
+describe("readConjointIdentite", () => {
+  it("returns the OTHER entry of the couple, converted to the pivot vocabulary", () => {
+    const conjoint = readConjointIdentite(
+      qfHousehold([CONNECTED, CONJOINT]),
+      IDENTITY.birthdate,
+    );
+
+    expect(conjoint).toEqual({
+      family_name: "VOKTARIMENDO",
+      preferred_username: "OSTRENYA",
+      given_name: "Tarnu Jean",
+      birthdate: "1982-11-17",
+      gender: "male",
+    });
+  });
+
+  it("identifies the connected entry wherever it sits in the array", () => {
+    const conjoint = readConjointIdentite(
+      qfHousehold([CONJOINT, CONNECTED]),
+      IDENTITY.birthdate,
+    );
+
+    expect(conjoint?.family_name).toBe("VOKTARIMENDO");
+  });
+
+  it("accepts ISO dates from the caisse as well as DD/MM/YYYY", () => {
+    const conjoint = readConjointIdentite(
+      qfHousehold([
+        { ...CONNECTED, date_naissance: "1990-03-14" },
+        { ...CONJOINT, date_naissance: "1982-11-17" },
+      ]),
+      IDENTITY.birthdate,
+    );
+
+    expect(conjoint?.birthdate).toBe("1982-11-17");
+  });
+
+  it("finds no conjoint in a single-allocataire household", () => {
+    expect(readConjointIdentite(qfHousehold([CONNECTED]), IDENTITY.birthdate)).toBeNull();
+  });
+
+  it("finds no conjoint without a QF answer", () => {
+    expect(readConjointIdentite(null, IDENTITY.birthdate)).toBeNull();
+  });
+
+  it("finds no conjoint without a pivot birthdate to identify the connected entry", () => {
+    expect(readConjointIdentite(qfHousehold([CONNECTED, CONJOINT]), undefined)).toBeNull();
+  });
+
+  it("gives up on a couple where no entry carries the pivot birthdate", () => {
+    const couple = [
+      { ...CONNECTED, date_naissance: "01/01/1991" },
+      CONJOINT,
+    ];
+
+    expect(readConjointIdentite(qfHousehold(couple), IDENTITY.birthdate)).toBeNull();
+  });
+
+  it("gives up on a couple where both entries carry the pivot birthdate", () => {
+    const couple = [CONNECTED, { ...CONJOINT, date_naissance: "14/03/1990" }];
+
+    expect(readConjointIdentite(qfHousehold(couple), IDENTITY.birthdate)).toBeNull();
+  });
+
+  it("omits the keys the caisse did not serve", () => {
+    const conjoint = readConjointIdentite(
+      qfHousehold([CONNECTED, { nom_naissance: "VOKTARIMENDO" }]),
+      IDENTITY.birthdate,
+    );
+
+    expect(conjoint).toEqual({
+      family_name: "VOKTARIMENDO",
+      preferred_username: undefined,
+      given_name: undefined,
+      birthdate: undefined,
+      gender: undefined,
+    });
   });
 });

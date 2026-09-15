@@ -113,6 +113,13 @@
       "when": 1789315302120,
       "tag": "0015_drop_job_id_views",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789478175498,
+      "tag": "0016_add_allocataire_conjoint",
+      "breakpoints": true
     }
   ]
 }

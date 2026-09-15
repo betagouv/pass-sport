@@ -11,7 +11,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { OutcomeEmailKind } from "../email/notify";
-import type { PivotIdentity, ResultCaisse, ResultSituation } from "../eligibility/types";
+import type {
+  AllocataireConjointIdentite,
+  PivotIdentity,
+  ResultCaisse,
+  ResultSituation,
+} from "../eligibility/types";
 
 // The verdict as the USAGER should read it. The verdict column below is where each
 // value is documented.
@@ -60,6 +65,18 @@ export const eligibilityResults = pgTable(
     source: text("source").notNull(),
 
     allocataireIdentite: jsonb("allocataire_identite").$type<AllocataireIdentite>(),
+
+    // The SECOND allocataire of the QF couple, in the same pivot vocabulary as
+    // allocataire_identite. Household-level like `caisse`: the same value on every row of a
+    // job, self and enfant alike. NULL without a QF answer (AAH route, parcours hors
+    // FranceConnect), on a single-allocataire household, on an ambiguous couple (no entry
+    // carrying the pivot birthdate), and on rows predating the column. The data/ pipeline
+    // deliberately does NOT read it — it keeps reading `qf_allocataires` from
+    // eligibility_history, which also covers those NULL rows.
+    allocataireConjointIdentite: jsonb(
+      "allocataire_conjoint_identite",
+    ).$type<AllocataireConjointIdentite>(),
+
     enfantIdentite: jsonb("enfant_identite").$type<Partial<PivotIdentity>>(),
 
     // FranceConnect pairwise pseudonym for the allocataire. Opaque and NOT derived from
