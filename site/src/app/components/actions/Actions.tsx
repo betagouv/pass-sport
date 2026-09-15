@@ -2,6 +2,7 @@ import ButtonsGroup from '@codegouvfr/react-dsfr/ButtonsGroup';
 import { useContext } from 'react';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import { ButtonProps } from '@codegouvfr/react-dsfr/Button';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 type ActionsProps = {
   displayHomeBackBtn?: boolean;
@@ -29,6 +30,7 @@ const Actions = ({ displayHomeBackBtn = true, newTestBtnVariant = 'secondary' }:
         {
           children: 'Refaire le test',
           onClick: () => {
+            trackEvent(MATOMO_CATEGORY.nonFranceConnectRequest, 'refaire le test');
             context.performNewTest();
             // window.scrollTo({ top: 0, behavior: 'smooth' });
           },

@@ -8,6 +8,7 @@ import { CategoryWithArticles } from '@/types/Faq';
 import { useRouter } from 'next/navigation';
 import { FAQ_PAGE_QUERY_PARAMS } from '@/app/constants/search-query-params';
 import { DISPLAY_TYPE } from '@/app/constants/display-type';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 type SegementedFaqProps = {
   benefArticles: CategoryWithArticles[];
@@ -39,6 +40,7 @@ export default function SegmentedFaq({
               'aria-label': 'Afficher les articles dédiés aux jeunes et parents',
               defaultChecked: displayType === DISPLAY_TYPE.BENEF,
               onClick: () => {
+                trackEvent(MATOMO_CATEGORY.faq, 'onglet', 'particuliers');
                 setDisplayType(DISPLAY_TYPE.BENEF);
                 router.replace(`?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.BENEF}`, {
                   scroll: false,
@@ -52,6 +54,7 @@ export default function SegmentedFaq({
               'aria-label': 'Afficher les articles dédiés aux structures sportives',
               defaultChecked: displayType === DISPLAY_TYPE.PRO,
               onClick: () => {
+                trackEvent(MATOMO_CATEGORY.faq, 'onglet', 'structures');
                 setDisplayType(DISPLAY_TYPE.PRO);
                 router.replace(`?${FAQ_PAGE_QUERY_PARAMS.displayType}=${DISPLAY_TYPE.PRO}`, {
                   scroll: false,

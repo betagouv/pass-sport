@@ -4,23 +4,28 @@ import { useCallback } from 'react';
 import { push } from '@socialgouv/matomo-next';
 import Link from 'next/link';
 
-export type JeDonneMonAvisBtnProps = {
-  isSuccess: boolean;
+export type JeDonneMonAvisOrigin =
+  'simplified-test-eligible' | 'simplified-test-not-eligible' | 'request-sent' | 'not-eligible';
+
+const MATOMO_EVENT_NAME_BY_ORIGIN: Record<JeDonneMonAvisOrigin, string> = {
+  'simplified-test-eligible': 'Simplified eligibility test success',
+  'simplified-test-not-eligible': 'Simplified eligibility test failure',
+  'request-sent': 'Eligibility test request sent',
+  'not-eligible': 'Eligibility test not eligible',
 };
 
-export function JeDonneMonAvisBtn({ isSuccess }: JeDonneMonAvisBtnProps) {
+export type JeDonneMonAvisBtnProps = {
+  origin: JeDonneMonAvisOrigin;
+};
+
+export function JeDonneMonAvisBtn({ origin }: JeDonneMonAvisBtnProps) {
   const url = IS_PRODUCTION_ENV
     ? 'https://jedonnemonavis.numerique.gouv.fr/Demarches/3659?button=3942'
     : '';
 
   const onLinkClick = useCallback(() => {
-    push([
-      'trackEvent',
-      'Je donne mon avis',
-      'Link clicked',
-      isSuccess ? 'Simplified eligibility test success' : 'Simplified eligibility test failure',
-    ]);
-  }, [isSuccess]);
+    push(['trackEvent', 'Je donne mon avis', 'Link clicked', MATOMO_EVENT_NAME_BY_ORIGIN[origin]]);
+  }, [origin]);
 
   return (
     <Link

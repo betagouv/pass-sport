@@ -7,12 +7,22 @@ import Card from '@codegouvfr/react-dsfr/Card';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import type { AlertProps } from '@codegouvfr/react-dsfr/Alert';
 import CodePdfDownloadLink from './CodePdfDownloadLink';
+import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
+import { MATOMO_CATEGORY } from '@/utils/matomo-category';
 
 const BIRTHDATE_INPUT_FORMAT = 'yyyy-MM-dd';
 const BIRTHDATE_DISPLAY_FORMAT = 'dd/MM/yyyy';
 
 const formatBirthdate = (birthdate: string): string =>
   format(parse(birthdate, BIRTHDATE_INPUT_FORMAT, new Date()), BIRTHDATE_DISPLAY_FORMAT);
+
+const countBeneficiariesByVerdict = (beneficiaries: BeneficiaryResult[]): [Verdict, number][] => {
+  const countByVerdict = new Map<Verdict, number>();
+  beneficiaries.forEach(({ verdict }) =>
+    countByVerdict.set(verdict, (countByVerdict.get(verdict) ?? 0) + 1),
+  );
+  return Array.from(countByVerdict);
+};
 
 export type AllocataireIdentity = Pick<
   PivotIdentity,
@@ -131,6 +141,11 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, j
   if (beneficiaries.length === 0) {
     return (
       <div className="fr-alert fr-alert--info fr-mb-3w">
+        <TrackEventOnMount
+          category={MATOMO_CATEGORY.franceConnectRequest}
+          action="résultat"
+          name="aucun bénéficiaire trouvé"
+        />
         <h2 className="fr-alert__title">Demande enregistrée</h2>
         <p>
           Après vérification, nous n’avons pas retrouvé vos informations dans les bases de données
@@ -146,6 +161,15 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, j
 
   return (
     <section className="fr-mb-3w">
+      {countBeneficiariesByVerdict(beneficiaries).map(([verdict, count]) => (
+        <TrackEventOnMount
+          key={verdict}
+          category={MATOMO_CATEGORY.franceConnectRequest}
+          action="résultat"
+          name={verdict}
+          value={count}
+        />
+      ))}
       <h2 className="fr-h4 fr-mb-1w">Résultat de votre demande</h2>
       {jobInfo && <p className="fr-text--sm fr-mb-3w">{jobInfo}</p>}
 

@@ -14,12 +14,14 @@ export default function CodePdfDownloadLink({ href, filename }: Props) {
     push(['trackEvent', 'Eligibility Test Button', 'Clicked', 'Code PDF download']);
   }, []);
 
+  // A child's PDF URL carries their pass Sport code, which Matomo's download tracking must not see
   return (
     <DownloadLink
       details="PDF ~ 582 kB"
       label="Télécharger le code"
       href={href}
       filename={filename}
+      className="matomo_ignore"
       onClick={onDownloadClick}
     />
   );
