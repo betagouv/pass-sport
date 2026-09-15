@@ -368,21 +368,6 @@ export default function PolitiqueDeConfidentialite() {
                   </tr>
 
                   <tr>
-                    <td>mtm_consent_removed</td>
-                    <td>France</td>
-                    <td>
-                      Mémorisation de votre opposition à la mesure d&apos;audience, déposé
-                      uniquement si vous vous y opposez
-                    </td>
-                    <td>13 mois</td>
-                    <td>
-                      Ne s&apos;agissant pas d&apos;un cookie tiers, les mesures de sécurité
-                      mentionnées à l&apos;article 10 de la présente politique de confidentialité
-                      s&apos;appliquent
-                    </td>
-                  </tr>
-
-                  <tr>
                     <td>cfuvid</td>
                     <td>USA</td>
                     <td>Cookie de session</td>
@@ -472,15 +457,6 @@ export default function PolitiqueDeConfidentialite() {
             </p>
 
             <h4 className="fr-mb-2w">3. Mesure d&apos;audience</h4>
-            <p className="fr-mb-2w">
-              Nous utilisons Matomo, un outil libre de mesure d&apos;audience, paramétré pour
-              fonctionner sans cookie. Il nous permet de connaître la fréquentation des pages et les
-              étapes des démarches afin d&apos;améliorer le site.
-            </p>
-            <p className="fr-mb-2w">
-              Les données recueillies sont anonymisées, ne sont pas croisées avec d&apos;autres traitements, ne sont pas
-              utilisées à d&apos;autres fins et sont conservées 12 mois.
-            </p>
             <p className="fr-mb-2w">
               Nous utilisons également l&apos;outil de mesure d&apos;audience Matomo, configuré en
               mode &laquo;&nbsp;exempté&nbsp;&raquo; et ne nécessitant pas le recueil de votre
