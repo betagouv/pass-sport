@@ -2,12 +2,11 @@ import { z } from 'zod';
 
 export const CONTACT_REASONS = [
   'benef-aije-droit',
-  'benef-quand',
   'benef-pas-recu',
-  'benef-paiement-phase1',
-  'benef-non-eligible',
+  'benef-parcours-utilisateur',
+  'benef-supprime',
+  'benef-aeeh',
   'benef-boursier',
-  'benef-other',
   'club-aije-droit',
   'club-eligible',
   'club-paiement-phase1',
