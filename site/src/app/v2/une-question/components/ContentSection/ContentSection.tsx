@@ -53,8 +53,10 @@ export default function ContentSection({ categoriesWithArticles, isFromMainPage 
               key={article.id}
               label={article.title}
               defaultExpanded={articleFromUrl?.id === article.id}
-              onExpandedChange={() => {
-                push(['trackEvent', 'View FAQ', `Clicked`, `${article.title} (${article.id})`]);
+              onExpandedChange={(isExpanded) => {
+                if (isExpanded) {
+                  push(['trackEvent', 'View FAQ', `Clicked`, `${article.title} (${article.id})`]);
+                }
               }}
             >
               <article

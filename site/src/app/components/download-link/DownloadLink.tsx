@@ -1,18 +1,28 @@
+import cn from 'classnames';
+
 type DownloadLinkProps = {
   details: string;
   label: string;
   href: string;
   filename?: string;
+  className?: string;
   onClick?: () => void;
 };
 
-export function DownloadLink({ details, label, href, onClick, filename }: DownloadLinkProps) {
+export function DownloadLink({
+  details,
+  label,
+  href,
+  onClick,
+  filename,
+  className,
+}: DownloadLinkProps) {
   return (
     <div className="fr-download">
       <p>
         <a
           href={href}
-          className="fr-download__link"
+          className={cn('fr-download__link', className)}
           {...(onClick ? { onClick } : {})}
           {...(filename ? { download: filename } : { download: true })}
         >

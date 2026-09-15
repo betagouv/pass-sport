@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/react';
+import { push } from '@socialgouv/matomo-next';
 import BeneficiaryRecap from '@/app/v2/test-eligibilite/components/post-login-flow/BeneficiaryRecap';
 import type { BeneficiaryResult } from '@/app/services/applications';
+
+jest.mock('@socialgouv/matomo-next', () => ({ push: jest.fn() }));
 
 // Fictional syllable-based identities: pass-sport processes real beneficiary data, so test
 // fixtures must never resemble a plausible real name.
@@ -83,6 +86,7 @@ describe('BeneficiaryRecap', () => {
 
     const downloadLink = screen.getByRole('link', { name: 'Télécharger le code' });
     expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf');
+    expect(downloadLink).toHaveClass('matomo_ignore');
   });
 
   it('does not show a PDF download link for an eligible_confirmed beneficiary without a code yet', () => {
@@ -109,6 +113,7 @@ describe('BeneficiaryRecap', () => {
     ).toBeInTheDocument();
     const downloadLink = screen.getByRole('link', { name: 'Télécharger le code' });
     expect(downloadLink).toHaveAttribute('href', '/api/france-connect/pdf?code=24-AZUR-KLMB');
+    expect(downloadLink).toHaveClass('matomo_ignore');
   });
 
   it('shows a child’s full identity on their card, the same shape as the allocataire’s', () => {
@@ -224,5 +229,42 @@ describe('BeneficiaryRecap', () => {
     expect(within(confirmedCard).getByText('Astravelle')).toBeInTheDocument();
     const confirmedBadge = within(confirmedCard).getByText('Eligible');
     expect(confirmedBadge).toHaveClass('fr-badge--success');
+  });
+
+  describe('Matomo', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('reports each verdict once, with the number of beneficiaries holding it', () => {
+      renderRecap([
+        beneficiary({
+          source: 'enfant',
+          givenName: 'Quorindel',
+          verdict: 'eligible_confirmed',
+          code: '24-QUIL-MPRS',
+        }),
+        beneficiary({
+          source: 'enfant',
+          givenName: 'Astravelle',
+          verdict: 'eligible_confirmed',
+          code: '24-VORT-XQPL',
+        }),
+        beneficiary({ source: 'enfant', givenName: 'Ostrelin', verdict: 'not_eligible' }),
+      ]);
+
+      expect(jest.mocked(push).mock.calls).toEqual([
+        [['trackEvent', 'Demande FC', 'résultat', 'eligible_confirmed', 2]],
+        [['trackEvent', 'Demande FC', 'résultat', 'not_eligible', 1]],
+      ]);
+    });
+
+    it('reports that no beneficiary was found', () => {
+      renderRecap([]);
+
+      expect(jest.mocked(push).mock.calls).toEqual([
+        [['trackEvent', 'Demande FC', 'résultat', 'aucun bénéficiaire trouvé', undefined]],
+      ]);
+    });
   });
 });

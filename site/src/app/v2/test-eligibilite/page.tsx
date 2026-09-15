@@ -13,6 +13,8 @@ import { findResultsForSub } from '@/app/services/applications';
 import { IS_LOCAL_ENV, PARCOURS_HORS_FC_ENABLED } from '@/app/constants/env';
 import { HORS_FRANCE_CONNECT_MAINTENANCE } from './constants/maintenance';
 import styles from './styles.module.scss';
+import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
+import { MATOMO_CATEGORY } from '@/utils/matomo-category';
 
 export const metadata: Metadata = {
   title: 'Récupération du code | pass Sport',
@@ -99,6 +101,25 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
       role="main"
     >
       <h1>Demande du code pass Sport</h1>
+
+      {status === 'ok' && (
+        <TrackEventOnMount
+          category={MATOMO_CATEGORY.franceConnectRequest}
+          action="connexion réussie"
+        />
+      )}
+
+      {status === 'loggedout' && (
+        <TrackEventOnMount category={MATOMO_CATEGORY.franceConnectRequest} action="déconnexion" />
+      )}
+
+      {error && (
+        <TrackEventOnMount
+          category={MATOMO_CATEGORY.franceConnectRequest}
+          action="connexion en erreur"
+          name={Object.keys(ERROR_MESSAGES).includes(error) ? error : 'inconnue'}
+        />
+      )}
 
       {error && (
         <div className="fr-alert fr-alert--error fr-my-3w">

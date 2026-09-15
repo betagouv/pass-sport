@@ -2,6 +2,8 @@ import { useContext, useState } from 'react';
 import { push } from '@socialgouv/matomo-next';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
 import type { EligibilityTestRequest } from '@/types/EligibilityTest';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
+import { situationTrackingName } from '../helpers/tracking';
 import { requestPassSportCode } from '../agent';
 
 type RecipientFields = Omit<
@@ -54,6 +56,11 @@ export const useStepTwoSubmit = () => {
         'Eligibility test completed',
         'Eligibility test submission failed',
       ]);
+      trackEvent(
+        MATOMO_CATEGORY.nonFranceConnectRequest,
+        "erreur d'envoi",
+        situationTrackingName(allowance, caisse),
+      );
       return;
     }
 
@@ -61,6 +68,11 @@ export const useStepTwoSubmit = () => {
     // No success/failure split any more: the answer is the same whatever LCA held, and only
     // the worker knows which email went out (eligibility_results.verdict).
     push(['trackEvent', 'Eligibility Test', 'Eligibility test completed', 'Outcome emailed']);
+    trackEvent(
+      MATOMO_CATEGORY.nonFranceConnectRequest,
+      'demande envoyée',
+      situationTrackingName(allowance, caisse),
+    );
   };
 
   return { isFormDisabled, error, submit };

@@ -5,6 +5,7 @@ import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import ResultPanel from './ResultPanel';
 import type { AllocataireIdentity } from './BeneficiaryRecap';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 // Only ever rendered when the FranceConnect callback's own enqueue failed: the login went
 // through but the job never reached Redis. The journey asks the usager nothing, so this is a
@@ -29,13 +30,16 @@ export default function EnqueueRetry({ allocataireIdentity, jobInfo }: Props) {
       // 409: the job exists after all — their request is registered, which is what the
       // result panel is there to follow.
       if (res.ok || res.status === 409) {
+        trackEvent(MATOMO_CATEGORY.franceConnectRequest, 'relance', 'succès');
         setQueued(true);
         return;
       }
 
+      trackEvent(MATOMO_CATEGORY.franceConnectRequest, 'relance', 'erreur');
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       setError(body.error ?? 'Une erreur est apparue. Merci de réessayer ultérieurement.');
     } catch {
+      trackEvent(MATOMO_CATEGORY.franceConnectRequest, 'relance', 'erreur');
       setError('Une erreur est apparue. Merci de réessayer ultérieurement.');
     } finally {
       setIsLoading(false);

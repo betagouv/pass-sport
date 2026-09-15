@@ -26,6 +26,8 @@ import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask
 import BoursierAlert from '@/app/v2/test-eligibilite/components/boursier-alert/BoursierAlert';
 import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { InputState } from '@/types/form';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
+import { situationTrackingName } from '@/app/v2/test-eligibilite/helpers/tracking';
 
 /* This is a trick to force the RadioButtonsGroup to reload */
 let CustomButtonsGroupKey = 0;
@@ -191,12 +193,19 @@ const AllowanceStep = () => {
     if (!dob || allowance === null) {
       setBenefIsEligible(false);
     } else {
-      setBenefIsEligible(
-        isEligible({
-          targetDate: dob,
-          allocationName: ALLOWANCE_MAPPING_TO_ALLOCATION[allowance],
-        }),
-      );
+      const isBeneficiaryEligible = isEligible({
+        targetDate: dob,
+        allocationName: ALLOWANCE_MAPPING_TO_ALLOCATION[allowance],
+      });
+      setBenefIsEligible(isBeneficiaryEligible);
+
+      if (!isCaisseMissing) {
+        trackEvent(
+          MATOMO_CATEGORY.nonFranceConnectRequest,
+          isBeneficiaryEligible ? 'situation éligible' : 'situation non éligible',
+          situationTrackingName(allowance, isCaisseNeeded ? caisse : null),
+        );
+      }
     }
   };
 

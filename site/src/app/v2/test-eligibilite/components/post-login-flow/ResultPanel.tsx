@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Card from '@codegouvfr/react-dsfr/Card';
 import type { BeneficiaryResult } from '@/app/services/applications';
 import BeneficiaryRecap, { ProcessingBadge, type AllocataireIdentity } from './BeneficiaryRecap';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 const POLL_INTERVAL_MS = 20_000;
 const MAX_POLLS = 9;
@@ -50,6 +51,11 @@ export default function ResultPanel({ allocataireIdentity, jobInfo }: Props) {
       polls += 1;
 
       if (polls > MAX_POLLS) {
+        trackEvent(
+          MATOMO_CATEGORY.franceConnectRequest,
+          'vérification toujours en cours',
+          'délai dépassé',
+        );
         stop({ kind: 'gave_up' });
         return;
       }
@@ -60,6 +66,11 @@ export default function ResultPanel({ allocataireIdentity, jobInfo }: Props) {
 
         // 401 = the session died before the worker finished. Nothing to retry.
         if (res.status === 401) {
+          trackEvent(
+            MATOMO_CATEGORY.franceConnectRequest,
+            'vérification toujours en cours',
+            'session expirée',
+          );
           stop({ kind: 'gave_up' });
           return;
         }

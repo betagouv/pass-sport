@@ -18,7 +18,7 @@ const EmailSentPanel = () => (
 
     <section className={styles['section-je-donne-mon-avis']}>
       <hr className="fr-mb-2w" />
-      <JeDonneMonAvisBtn isSuccess />
+      <JeDonneMonAvisBtn origin="request-sent" />
     </section>
   </div>
 );

@@ -15,6 +15,8 @@ import { mapper } from '../../helpers/helper';
 import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
+import { situationTrackingName } from '../../helpers/tracking';
 
 interface Props {
   onValidated: (fields: StepOneFields) => void;
@@ -37,7 +39,7 @@ const initialInputsState: StepOneFormInputsState = {
  */
 const StepOneForm = ({ onValidated, initialFields }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
-  const { allowance } = useContext(EligibilityTestContext);
+  const { allowance, caisse } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<StepOneFormInputsState>(initialInputsState);
   const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
   const prefilledResidencePlace: CityOption | undefined = initialFields
@@ -92,6 +94,11 @@ const StepOneForm = ({ onValidated, initialFields }: Props) => {
     }
 
     setIsFormDisabled(true);
+    trackEvent(
+      MATOMO_CATEGORY.nonFranceConnectRequest,
+      'bénéficiaire validé',
+      situationTrackingName(allowance, caisse),
+    );
 
     onValidated({
       beneficiaryLastname: formData.get('beneficiaryLastname')!.toString().trim(),

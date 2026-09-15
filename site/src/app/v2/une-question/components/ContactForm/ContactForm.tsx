@@ -12,6 +12,7 @@ import styles from './styles.module.scss';
 import { EMAIL_REGEX } from '@/utils/email';
 import { CONTACT_PAGE_QUERYPARAMS } from '@/app/constants/search-query-params';
 import { useSearchParams } from 'next/navigation';
+import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 export const visitorReasons = {
   'benef-aije-droit': `Ai-je droit au pass Sport cette année ?`,
@@ -165,9 +166,16 @@ const ContactForm = ({ closeFn, isProVersion }: Props) => {
       return;
     }
 
+    const contactReason = formData.get('reason')?.toString();
+
     try {
       setIsLoading(true);
       const response = await postContact(formData, isProVersion);
+      trackEvent(
+        MATOMO_CATEGORY.contact,
+        response.ok ? 'message envoyé' : "erreur d'envoi",
+        contactReason,
+      );
 
       if (!response.ok) {
         setApiError(true);

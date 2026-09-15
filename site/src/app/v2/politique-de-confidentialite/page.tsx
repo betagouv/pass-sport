@@ -5,6 +5,8 @@ import cn from 'classnames';
 import { Metadata } from 'next';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
 import Link from 'next/link';
+import { IS_PRODUCTION_ENV } from '@/app/constants/env';
+import MatomoOptOut from './components/MatomoOptOut';
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité - pass Sport',
@@ -368,6 +370,21 @@ export default function PolitiqueDeConfidentialite() {
                   </tr>
 
                   <tr>
+                    <td>mtm_consent_removed</td>
+                    <td>France</td>
+                    <td>
+                      Mémorisation de votre opposition à la mesure d&apos;audience, déposé
+                      uniquement si vous vous y opposez
+                    </td>
+                    <td>13 mois</td>
+                    <td>
+                      Ne s&apos;agissant pas d&apos;un cookie tiers, les mesures de sécurité
+                      mentionnées à l&apos;article 10 de la présente politique de confidentialité
+                      s&apos;appliquent
+                    </td>
+                  </tr>
+
+                  <tr>
                     <td>cfuvid</td>
                     <td>USA</td>
                     <td>Cookie de session</td>
@@ -455,6 +472,24 @@ export default function PolitiqueDeConfidentialite() {
             <p>
               En aucun cas, ces pixels ne sont utilisés à des fins publicitaires ou commerciales.
             </p>
+
+            <h4 className="fr-mb-2w">3. Mesure d&apos;audience</h4>
+            <p className="fr-mb-2w">
+              Nous utilisons Matomo, un outil libre de mesure d&apos;audience, paramétré pour
+              fonctionner sans cookie. Il nous permet de connaître la fréquentation des pages et les
+              étapes des démarches afin d&apos;améliorer le site.
+            </p>
+            <p className="fr-mb-2w">
+              Les données recueillies sont anonymisées [À CONFIRMER : anonymisation de
+              l&apos;adresse IP], ne sont pas croisées avec d&apos;autres traitements, ne sont pas
+              utilisées à d&apos;autres fins et sont conservées [À CONFIRMER : durée de
+              conservation, 25 mois au plus].
+            </p>
+            <p className="fr-mb-2w">
+              Cette mesure d&apos;audience est exemptée de consentement. Vous pouvez toutefois vous
+              y opposer en décochant la case ci-dessous.
+            </p>
+            {IS_PRODUCTION_ENV && <MatomoOptOut />}
           </section>
 
           <section className="fr-mb-6w">
