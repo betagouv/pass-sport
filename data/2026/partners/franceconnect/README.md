@@ -124,6 +124,34 @@ du pivot : c'est une autre personne. Le worker persiste la même identification 
 lit toujours `qf_allocataires` depuis `eligibility_history` — ce qui couvre aussi les lignes
 antérieures à cette colonne.
 
+### Rattrapage du conjoint
+
+Une partie des lignes **jeune** et **AEEH** n'a aucun tableau `allocataires` : l'appel
+`quotient_familial` du worker n'a rien rendu (404 « Erreur inattendue », 429, maintenance), et
+la route AEEH se déduit de toute façon de la seule fenêtre de naissance — elle n'a jamais eu
+besoin d'une réponse. Ces foyers ne présentent qu'une persona, et perdent l'élargissement.
+
+La boucle traverse les passages, dans le workdir partagé
+[qf-batch-workdir](../qf-batch-workdir) :
+
+1. `clean --conjoints-manquants` écrit `fc_conjoint_2026_qf_batch_input.csv` — un foyer par
+   ligne (dédupliqué sur le sub), aux colonnes d'identité qu'exige
+   [qf-batch](../../../../worker/src/scripts/qf-batch.ts). Les compteurs
+   `conjoints_manquants_*` et `foyers_a_rappeler` chiffrent le gisement AVANT tout appel ;
+2. `systemctl start pass-sport-qf-batch@fc_conjoint` (ou `run-qf-batch.sh fc_conjoint`) rappelle
+   l'API et écrit `fc_conjoint_2026_qf_batch_output.csv`, colonne `qf_allocataires` comprise.
+   `QF_MOIS` choisit le mois de référence ;
+3. le passage suivant relit cette sortie tout seul (`clean --conjoints`) : seuls les
+   `qf_allocataires` VIDES sont complétés — jamais `qf_valeur`, qu'un quotient d'un autre mois
+   ferait basculer d'AEEH en jeune, donc de stratégie et de code ;
+4. `pnpm conjoint:backfill <sortie>` (dry-run par défaut, `--apply` pour écrire) persiste le
+   conjoint dans `eligibility_results.allocataire_conjoint_identite`, sur les lignes qui l'ont
+   encore à NULL.
+
+Ne sont rappelés que les foyers **sans tableau exploitable** : un allocataire seul ou un couple
+ambigu rendrait exactement la même photo. Les vrais 404 se règlent en `non_trouve` et ne sont
+plus jamais rappelés.
+
 À la main, `fc_2026_eligible_pending.csv` et `DB_FC_EXPORT_2026` sont réécrits à chaque passage.
 La cron, elle, range tout ce qu'un passage produit dans son propre dossier horodaté — voir
 [Un dossier par passage](#un-dossier-par-passage). `EXISTING_CODES_PATHFILE_2026` seul survit à

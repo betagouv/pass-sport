@@ -63,7 +63,8 @@ SOURCE = 'FC'
 
 # --- Étape 2 : nettoyage ----------------------------------------------------------
 
-def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filepath=None) -> dict:
+def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filepath=None,
+          conjoints_filepath=None, conjoints_manquants_filepath=None) -> dict:
     """Transforme l'export brut de eligibility_results en CSV au schéma de production.
 
     L'export SQL sort en CSV standard (séparateur virgule). dtype=str et
@@ -77,11 +78,21 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
     `cnaf_extra_filepath` receives the beneficiaire_cnaf_extra_field row of every beneficiary
     (fc.build_cnaf_extra_field_rows), in a side file for the same reason: split_writeback joins
     it to the coded rows to build the CSV injected into lamp01, never into production.
+
+    `conjoints_filepath` est la sortie d'un passage de rattrapage qf-batch : elle complète les
+    `qf_allocataires` manquants, et rien d'autre. `conjoints_manquants_filepath` reçoit, à
+    l'inverse, la liste des foyers qu'un prochain passage devrait rappeler.
     """
     df = pd.read_csv(
         input_filepath, sep=',', encoding='utf-8', dtype=str, keep_default_na=False,
     )
     lignes_lues = len(df)
+
+    # Avant tout le reste : une réponse quotient_familial rattrapée hors ligne vaut celle que
+    # le worker n'a pas obtenue, et toute la chaîne ci-dessous la lit dans la même colonne.
+    conjoints_rattrapes = 0
+    if conjoints_filepath is not None:
+        df, conjoints_rattrapes = _join_conjoints_rattrapes(df, conjoints_filepath)
 
     # Genre des enfants : `enfant_identite` ne le porte pas, il est retrouvé par appariement
     # sur (nom, prénoms, date de naissance) dans le tableau `enfants` de la réponse quotient
@@ -117,6 +128,11 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
     # droit.
     df, sans_situation = fc.resolve_situation(df)
     df = fc.resolve_organisme(df)
+
+    # Photo pour le rattrapage du conjoint : la `situation` vient d'être posée et la charpente
+    # `allocataire-*` n'est pas encore repliée dans la colonne JSON — les deux ne coexistent
+    # qu'ici. Ce qu'on en écrit est filtré plus bas sur les lignes qui continuent.
+    photo_rattrapage = df.copy()
 
     # Sérialisation des deux colonnes JSON du schéma de production. À faire AVANT le filtre
     # des lignes incomplètes : celui-ci supprime au passage les colonnes entièrement nulles,
@@ -166,6 +182,18 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
         fc.build_cnaf_extra_field_rows(df_final).to_csv(
             cnaf_extra_filepath, sep=';', index=False, encoding='utf-8')
 
+    # Rattrapage du conjoint : restreint aux lignes qui continuent — rappeler l'API pour une
+    # ligne écartée plus haut serait du quota brûlé.
+    photo_rattrapage = photo_rattrapage[
+        photo_rattrapage['eligibility_result_id'].isin(df_final['eligibility_result_id'])]
+    causes_conjoints = fc.count_conjoint_causes(photo_rattrapage)
+
+    if conjoints_manquants_filepath is not None:
+        # Virgule et non point-virgule : c'est qf-batch qui relit ce fichier, et il attend le
+        # CSV standard (csv-parse par défaut, contrôle d'en-tête sur un split(',')).
+        fc.build_conjoint_recall_rows(photo_rattrapage).to_csv(
+            conjoints_manquants_filepath, sep=',', index=False, encoding='utf-8')
+
     df_final = df_final.drop(
         columns=[c for c in df_final.columns if c.startswith('match-')])
 
@@ -195,10 +223,44 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
         'conjoints_identifies': conjoints_identifies,
         'candidats_avec_conjoint': int(
             ((candidats['conjoint_nom'] != '') | (candidats['conjoint_nom_usage'] != '')).sum()),
+        # Lignes dont le tableau `allocataires` vient d'un passage de rattrapage qf-batch.
+        'conjoints_rattrapes': conjoints_rattrapes,
+        # Pourquoi les autres n'ont pas de conjoint, et ce que coûterait un rattrapage :
+        # `foyers_a_rappeler` est le nombre d'appels API, un par foyer.
+        **causes_conjoints,
         'sortie': str(output_filepath),
         'candidats_rapprochement': str(match_filepath) if match_filepath else '(non écrit)',
         'champs_cnaf': str(cnaf_extra_filepath) if cnaf_extra_filepath else '(non écrit)',
+        'foyers_a_rappeler_fichier': (
+            str(conjoints_manquants_filepath) if conjoints_manquants_filepath else '(non écrit)'),
     }
+
+
+def _join_conjoints_rattrapes(df: pd.DataFrame, conjoints_filepath) -> tuple[pd.DataFrame, int]:
+    """Complète `qf_allocataires` depuis la sortie d'un passage qf-batch de rattrapage.
+
+    SEULE cette colonne est touchée. Un `qf_valeur` venant d'un autre mois de référence ferait
+    basculer une ligne AEEH en 'jeune' — autre route, autre stratégie de rapprochement, autre
+    code : le rattrapage ne doit rendre que le foyer, jamais le droit.
+
+    Les lignes qui portent déjà un tableau gardent le leur : la réponse d'origine est celle qui
+    a produit le verdict.
+    """
+    rattrapage = pd.read_csv(
+        conjoints_filepath, sep=',', encoding='utf-8', dtype=str, keep_default_na=False)
+
+    utiles = rattrapage[
+        (rattrapage['allocataire_fc_sub'] != '') & (rattrapage['qf_allocataires'] != '')]
+    par_sub = utiles.drop_duplicates(
+        subset='allocataire_fc_sub').set_index('allocataire_fc_sub')['qf_allocataires']
+
+    complement = df['allocataire_fc_sub'].map(par_sub).fillna('')
+    a_completer = (df['qf_allocataires'].fillna('') == '') & (complement != '')
+
+    df = df.copy()
+    df.loc[a_completer, 'qf_allocataires'] = complement[a_completer]
+
+    return df, int(a_completer.sum())
 
 
 # --- Étape 2b : mise à l'écart des bénéficiaires déjà connus de la base ------------
@@ -342,6 +404,8 @@ def _cmd_clean(args) -> dict:
         args.output or _required_env('DB_FC_EXPORT_2026'),
         args.match_out,
         args.cnaf_extra_out,
+        args.conjoints,
+        args.conjoints_manquants,
     )
 
 
@@ -398,6 +462,12 @@ def main(argv=None) -> int:
     clean_parser.add_argument(
         '--cnaf-extra-out',
         help="lignes beneficiaire_cnaf_extra_field des codes CAF ; sans lui, aucune n'est écrite")
+    clean_parser.add_argument(
+        '--conjoints',
+        help="sortie d'un passage qf-batch de rattrapage ; complète les qf_allocataires vides")
+    clean_parser.add_argument(
+        '--conjoints-manquants',
+        help="foyers QF/AEEH à rappeler sur l'API quotient familial ; entrée de qf-batch")
     clean_parser.set_defaults(func=_cmd_clean)
 
     split_parser = subparsers.add_parser(

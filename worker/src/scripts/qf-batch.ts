@@ -5,7 +5,14 @@ import { createInterface } from "node:readline";
 import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
 import { RealClient } from "../eligibility/real-client";
-import type { ApiJsonError, QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
+import type {
+  ApiJsonError,
+  PersonneQuotientFamilial,
+  QuotientFamilialData,
+  PivotIdentity,
+  ResourceResult,
+} from "../eligibility/types";
+import { QF_REFERENCE_MONTH_MAX, QF_REFERENCE_MONTH_MIN } from "../eligibility/types";
 import { AdaptiveRatePacer, type RateChange, type RateChangeReason } from "./rate-pacer";
 
 // Matches the 'allocataire-*' column convention already used across the data/
@@ -43,6 +50,11 @@ const IDENTITY_COLUMNS = [
 // erreur API Particulier vue pour la ligne — qf_error n'en garde que le message lisible, ce qui
 // suffit à l'oeil mais pas à retrouver après coup le code exact (ex. 35008) ou le fournisseur
 // en cause (meta.provider) sans reparser une ligne de log.
+// `qf_allocataires` porte le tableau `allocataires` de la réponse, tel quel. Même nom de
+// colonne que dans export_eligible_pending.sql : le passage FranceConnect relit ce fichier
+// pour rattraper le conjoint d'un foyer dont l'appel du worker n'avait rien rendu, et
+// clean_fc_lib le parse sans conversion. Le tableau décrit un couple quand il y en a un,
+// donc l'état civil d'un tiers : la sortie ne quitte pas le workdir.
 const ADDED_COLUMNS = [
   "qf_value",
   "qf_status",
@@ -50,6 +62,7 @@ const ADDED_COLUMNS = [
   "qf_error",
   "qf_error_details",
   "qf_request_url",
+  "qf_allocataires",
 ] as const;
 const STATUS_FOUND = "trouve";
 const STATUS_NOT_FOUND = "non_trouve";
@@ -158,6 +171,9 @@ const PROVIDER_DATA_ERROR_CODE = "35000";
 type Verdict = {
   value: number | null;
   error: string | null;
+  // Le foyer tel que la caisse l'écrit, retenu dès qu'une réponse arrive — y compris celle
+  // qui ne porte aucun quotient, qui reste utile à qui cherche les allocataires.
+  allocataires?: PersonneQuotientFamilial[];
   notFound?: boolean;
   insufficientInfo?: boolean;
   httpStatus?: number | null;
@@ -179,6 +195,7 @@ async function screenRow(
   client: RealClient,
   identity: PivotIdentity,
   pacer: AdaptiveRatePacer,
+  mois: string,
 ): Promise<Verdict> {
   let rateLimitPauses = 0;
   let maintenancePauses = 0;
@@ -191,8 +208,12 @@ async function screenRow(
   let errorCode: string | undefined;
   let apiError: ApiJsonError | undefined;
   let responseTimeMs: number | null = null;
+  let allocataires: PersonneQuotientFamilial[] | undefined;
   const verdict = (
-    v: Omit<Verdict, "requestUrl" | "httpStatus" | "errorCode" | "apiError" | "responseTimeMs">,
+    v: Omit<
+      Verdict,
+      "requestUrl" | "httpStatus" | "errorCode" | "apiError" | "responseTimeMs" | "allocataires"
+    >,
   ): Verdict => ({
     ...v,
     requestUrl,
@@ -200,6 +221,7 @@ async function screenRow(
     errorCode,
     apiError,
     responseTimeMs,
+    allocataires,
   });
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -212,7 +234,7 @@ async function screenRow(
     const callStartedMs = Date.now();
 
     try {
-      result = await client.quotientFamilial(identity);
+      result = await client.quotientFamilial(identity, mois);
     } catch (error) {
       responseTimeMs = Date.now() - callStartedMs;
       // RealClient.call rethrows anything that is not an ApiGouvError/RateLimitError.
@@ -286,7 +308,13 @@ async function screenRow(
     if (result.success && result.data) {
       pacer.onSuccess();
 
-      const value = (result.data as QuotientFamilialData).quotient_familial?.valeur;
+      const data = result.data as QuotientFamilialData;
+
+      // Avant le contrôle du quotient : le foyer est la réponse à une autre question que
+      // l'éligibilité, et une réponse sans quotient le porte quand même.
+      if (Array.isArray(data.allocataires)) allocataires = data.allocataires;
+
+      const value = data.quotient_familial?.valeur;
 
       if (typeof value !== "number") {
         return verdict({ value: null, error: "réponse sans quotient_familial.valeur" });
@@ -383,6 +411,19 @@ async function closeStream(
   });
 }
 
+// Tolérant par nécessité : la cellule vient aussi bien de la réponse du jour que du CSV
+// relu à la reprise, où elle a fait l'aller-retour par le disque.
+const countAllocataires = (cell: string | undefined): number => {
+  if (!cell) return 0;
+
+  try {
+    const parsed: unknown = JSON.parse(cell);
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch {
+    return 0;
+  }
+};
+
 const verdictColumns = (verdict: Verdict): Record<string, string> => {
   // A QF value settles the row; failing that, a 404 settles it as absent from the base, and
   // code 35560 as findable-but-undecidable; anything else leaves the status blank and is
@@ -402,10 +443,11 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
     qf_error: verdict.error ?? "",
     qf_error_details: verdict.apiError ? JSON.stringify(verdict.apiError) : "",
     qf_request_url: verdict.requestUrl ?? "",
+    qf_allocataires: verdict.allocataires ? JSON.stringify(verdict.allocataires) : "",
   };
 };
 
-const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate", "--concurrency"];
+const VALUED_OPTIONS = ["--log-every", "--rate", "--night-rate", "--concurrency", "--mois"];
 
 const numberOption = (args: string[], name: string, fallback: number): number => {
   const index = args.indexOf(name);
@@ -509,15 +551,24 @@ async function main(): Promise<void> {
   const nightRatePerMinute = numberOption(args, "--night-rate", DEFAULT_NIGHT_RATE_PER_MINUTE);
   const concurrency = numberOption(args, "--concurrency", DEFAULT_CONCURRENCY);
 
-  const invalidOption = [logEvery, ratePerMinute, nightRatePerMinute, concurrency].some(
-    (value) => Number.isNaN(value) || value < 1,
-  );
+  // Mois de référence du quotient demandé. Le défaut est le premier de la campagne, celui
+  // que toQfParams applique déjà ; un rattrapage peut préférer une photo de foyer plus
+  // récente. Hors campagne la caisse n'a rien à servir, d'où les bornes.
+  const mois = numberOption(args, "--mois", QF_REFERENCE_MONTH_MIN);
+  const invalidMois =
+    !Number.isInteger(mois) || mois < QF_REFERENCE_MONTH_MIN || mois > QF_REFERENCE_MONTH_MAX;
+
+  const invalidOption =
+    [logEvery, ratePerMinute, nightRatePerMinute, concurrency].some(
+      (value) => Number.isNaN(value) || value < 1,
+    ) || invalidMois;
 
   if (!inputPath || !outputPath || invalidOption) {
     console.error(
       "usage: qf-batch <input.csv> <output.csv> [--log-every 1] " +
         `[--rate ${DEFAULT_RATE_PER_MINUTE}] [--night-rate ${DEFAULT_NIGHT_RATE_PER_MINUTE}] ` +
-        `[--concurrency ${DEFAULT_CONCURRENCY}]`,
+        `[--concurrency ${DEFAULT_CONCURRENCY}] ` +
+        `[--mois ${QF_REFERENCE_MONTH_MIN}..${QF_REFERENCE_MONTH_MAX}]`,
     );
     process.exitCode = 1;
     return;
@@ -561,7 +612,7 @@ async function main(): Promise<void> {
   const settle = async (row: Record<string, string>, label: string) => {
     const identity = rowToIdentity(row);
     const verdict: Verdict = identity
-      ? await screenRow(client, identity, pacer)
+      ? await screenRow(client, identity, pacer, String(mois))
       : {
           value: null,
           error:
@@ -596,10 +647,13 @@ async function main(): Promise<void> {
   let called = 0;
   let withQf = 0;
   let noVerdict = 0;
+  // Ce qu'un passage de rattrapage cherche : les foyers dont la réponse décrit un couple.
+  let withCouple = 0;
 
   const record = async (row: Record<string, string>, columns: Record<string, string>) => {
     if (columns.qf_status === STATUS_FOUND) withQf += 1;
     if (columns.qf_status === "") noVerdict += 1;
+    if (countAllocataires(columns.qf_allocataires) >= 2) withCouple += 1;
     await writeRow(stringifier, { ...row, ...columns });
   };
 
@@ -664,6 +718,7 @@ async function main(): Promise<void> {
   console.log(
     `\n${index} ligne(s) au total, ${called} appel(s) API ce run: ` +
       `${withQf} QF récupéré(s), ` +
+      `${withCouple} foyer(s) à deux allocataires, ` +
       `${noVerdict} encore sans verdict -> ${outputPath}`,
   );
 }

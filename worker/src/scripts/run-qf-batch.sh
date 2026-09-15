@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-PARTNER="${1:?usage: run-qf-batch.sh <cnaf|msa>}"
+PARTNER="${1:?usage: run-qf-batch.sh <cnaf|msa|fc_conjoint>}"
 WORKER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORKDIR="$(cd "$WORKER_DIR/../data/2026/partners/qf-batch-workdir" && pwd)"
 
@@ -41,8 +41,13 @@ cd "$WORKER_DIR"     # load-env.ts cherche .env.local dans le cwd (jeton API Par
 # QF_CONCURRENCY : nombre d'appels API en vol en parallèle (voir DEFAULT_CONCURRENCY dans
 # qf-batch.ts) — c'est ce qui permet d'atteindre QF_RATE/QF_NIGHT_RATE malgré des réponses de
 # l'ordre de la seconde ; un run strictement séquentiel ne pourrait pas suivre la cadence visée.
+# QF_MOIS : mois de référence du quotient demandé (8 à 12, la campagne). Le défaut est celui
+# de toQfParams, le premier mois ; un passage de rattrapage `fc_conjoint` peut préférer une
+# photo de foyer plus récente — `systemctl set-environment QF_MOIS=9` ou Environment= dans
+# l'unité, jamais une modification du code.
 exec pnpm qf:batch "$INPUT" "$OUTPUT" \
   --log-every "${QF_LOG_EVERY:-1}" \
   --rate "${QF_RATE:-200}" \
   --night-rate "${QF_NIGHT_RATE:-500}" \
-  --concurrency "${QF_CONCURRENCY:-10}"
+  --concurrency "${QF_CONCURRENCY:-10}" \
+  --mois "${QF_MOIS:-8}"

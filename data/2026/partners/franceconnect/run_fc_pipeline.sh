@@ -282,6 +282,15 @@ PROD_CSV="$RUN_DIR/fc-prod.csv"
 CNAF_EXTRA_CSV="$RUN_DIR/fc_2026_cnaf_extra_field.csv"
 LAMP_CSV="$RUN_DIR/fc-lamp01.csv"
 
+# Rattrapage du conjoint — les deux bouts d'une boucle qui traverse les passages : ce passage-ci
+# écrit les foyers dont la réponse quotient_familial n'a rien rendu, et relit la sortie que le
+# passage qf-batch `fc_conjoint` en aura tirée entre-temps (workdir partagé, jamais dans le
+# dossier de passage). Le fichier d'entrée est écrasé à chaque passage, la sortie ne l'est
+# jamais : c'est qf-batch qui la met à jour, ligne réglée par ligne réglée.
+QF_BATCH_WORKDIR="$(resolve_path "${QF_BATCH_WORKDIR:-$FC_DIR/../qf-batch-workdir}")"
+CONJOINT_RECALL_CSV="$QF_BATCH_WORKDIR/fc_conjoint_2026_qf_batch_input.csv"
+CONJOINT_ANSWERS_CSV="$QF_BATCH_WORKDIR/fc_conjoint_2026_qf_batch_output.csv"
+
 # La base bénéficiaires du lamp, sur cette même machine (lamp01/compose.yml). Rien ne
 # transite par le réseau : le service n'écoute que sur la boucle locale.
 LAMP_DB_HOST="${LAMP_DB_HOST:-127.0.0.1}"
@@ -434,9 +443,21 @@ fi
 # --- Étape 2 : nettoyage -----------------------------------------------------------
 
 step 2/6 "nettoyage vers le schéma PSP -> $CLEANED_CSV"
+
+# Les conjoints déjà rattrapés ne sont relus que si un passage qf-batch en a produit : le
+# nettoyage doit rester autonome, une absence n'est pas une panne.
+CLEAN_CONJOINTS=()
+if [[ -f "$CONJOINT_ANSWERS_CSV" ]]; then
+  CLEAN_CONJOINTS=(--conjoints "$CONJOINT_ANSWERS_CSV")
+  log "conjoints rattrapés relus depuis $CONJOINT_ANSWERS_CSV"
+fi
+
+mkdir -p "$QF_BATCH_WORKDIR"
 "$PYTHON" "$FC_DIR/fc_pipeline.py" clean \
   --input "$EXPORT_CSV" --output "$CLEANED_CSV" --match-out "$MATCH_CANDIDATES_CSV" \
-  --cnaf-extra-out "$CNAF_EXTRA_CSV"
+  --cnaf-extra-out "$CNAF_EXTRA_CSV" \
+  --conjoints-manquants "$CONJOINT_RECALL_CSV" \
+  "${CLEAN_CONJOINTS[@]}"
 
 # --- Étape 3 : rapprochement avec la base bénéficiaires -----------------------------
 # Ce qui remplace l'appel LCA que le parcours FranceConnect ne fait plus : la personne

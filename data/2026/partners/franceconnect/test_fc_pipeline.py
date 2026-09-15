@@ -364,6 +364,146 @@ def test_clean_ecrit_le_conjoint_dans_les_candidats_au_rapprochement(tmp_path):
     assert set(read_psp(output_filepath).columns) == COLONNES_PSP
 
 
+# --- Rattrapage du conjoint --------------------------------------------------------
+
+COUPLE_QF = json.dumps([
+    {'nom_naissance': 'BOLIMEK', 'nom_usage': 'MARTIN', 'prenoms': 'Claire Ysolde',
+     'date_naissance': '02/03/1985', 'sexe': 'F'},
+    {'nom_naissance': 'VOKTARIMENDO', 'prenoms': 'Tarnu',
+     'date_naissance': '17/11/1982', 'sexe': 'M'},
+])
+
+
+def aeeh_export_row(**overrides) -> dict:
+    """Un enfant de 17 ans que le quotient ne couvre pas : route AEEH.
+
+    Une telle ligne se déduit de la seule fenêtre de naissance — elle n'a besoin d'aucune
+    réponse quotient_familial, et c'est là que les tableaux `allocataires` manquent le plus.
+    """
+    row = export_row(
+        qf_valeur='900',
+        enfant_date_naissance='2009-04-12',
+        qf_enfants=json.dumps([{
+            'nom_naissance': 'MARTIN', 'prenoms': 'Lea',
+            'date_naissance': '2009-04-12', 'sexe': 'F',
+        }]),
+    )
+    row.update(overrides)
+    return row
+
+
+def write_rattrapage(tmp_path, rows) -> str:
+    """Écrit une sortie qf-batch : CSV standard, l'entrée recopiée plus les colonnes qf_*."""
+    filepath = tmp_path / 'fc_conjoint_2026_qf_batch_output.csv'
+    pd.DataFrame(rows).to_csv(filepath, sep=',', index=False, encoding='utf-8')
+    return str(filepath)
+
+
+def test_clean_ecrit_les_foyers_a_rappeler(tmp_path):
+    # Un foyer AEEH sans réponse quotient_familial (route déduite de la seule fenêtre de
+    # naissance) et un foyer dont le couple est déjà connu : seul le premier est à rappeler.
+    aeeh = aeeh_export_row()
+    deja_connu = export_row(
+        eligibility_result_id='22222222-2222-2222-2222-222222222222',
+        allocataire_fc_sub='sub-B', enfant_prenom='Tom', qf_allocataires=COUPLE_QF,
+        qf_enfants=json.dumps([{'nom_naissance': 'MARTIN', 'prenoms': 'Tom',
+                                'date_naissance': '2015-06-01', 'sexe': 'M'}]))
+    input_filepath = write_export(tmp_path, [aeeh, deja_connu])
+    a_rappeler_filepath = tmp_path / 'a_rappeler.csv'
+
+    stats = pipeline.clean(
+        input_filepath, tmp_path / 'FC_2026.csv',
+        conjoints_manquants_filepath=a_rappeler_filepath)
+
+    a_rappeler = pd.read_csv(a_rappeler_filepath, sep=',', dtype=str, keep_default_na=False)
+    assert list(a_rappeler.columns) == pipeline.fc.CONJOINT_RECALL_COLUMNS
+    assert list(a_rappeler['allocataire_fc_sub']) == ['sub-A']
+    # Ce que qf-batch exige pour appeler : sans l'une de ces trois valeurs il saute la ligne.
+    assert a_rappeler.loc[0, 'allocataire-nom_naissance'] == 'MARTIN'
+    assert a_rappeler.loc[0, 'allocataire-date_naissance'] == '1985-03-02'
+    assert a_rappeler.loc[0, 'allocataire-code_pays_naissance'] == '99100'
+    assert stats['conjoints_manquants_sans_allocataires'] == 1
+    assert stats['foyers_a_rappeler'] == 1
+
+
+def test_clean_reinjecte_le_conjoint_rattrape(tmp_path):
+    input_filepath = write_export(tmp_path, [export_row()])
+    rattrapage = write_rattrapage(tmp_path, [{
+        'allocataire_fc_sub': 'sub-A',
+        'allocataire-nom_naissance': 'MARTIN',
+        'allocataire-date_naissance': '1985-03-02',
+        'qf_value': '650',
+        'qf_status': 'trouve',
+        'qf_allocataires': COUPLE_QF,
+    }])
+    output_filepath = tmp_path / 'FC_2026.csv'
+    match_filepath = tmp_path / 'candidats.csv'
+
+    stats = pipeline.clean(
+        input_filepath, output_filepath, match_filepath, conjoints_filepath=rattrapage)
+
+    candidats = pd.read_csv(match_filepath, sep=';', dtype=str, keep_default_na=False)
+    assert stats['conjoints_rattrapes'] == 1
+    assert stats['foyers_a_rappeler'] == 0
+    assert candidats.loc[0, 'conjoint_nom'] == 'VOKTARIMENDO'
+    # Bénéfice secondaire : l'allocataire connecté est désormais celui de la caisse, et non
+    # plus le repli sur l'état civil du pivot.
+    assert candidats.loc[0, 'allocataire_nom'] == 'BOLIMEK'
+    assert set(read_psp(output_filepath).columns) == COLONNES_PSP
+
+
+def test_le_rattrapage_ne_touche_ni_la_route_ni_un_tableau_deja_present(tmp_path):
+    # Le rattrapage ne rend que le foyer : un quotient d'un autre mois de référence ferait
+    # basculer cette ligne AEEH en 'jeune', donc changerait sa stratégie de rapprochement.
+    aeeh = aeeh_export_row()
+    deja_connu = export_row(
+        eligibility_result_id='22222222-2222-2222-2222-222222222222',
+        allocataire_fc_sub='sub-B', enfant_prenom='Tom', qf_allocataires=COUPLE_QF,
+        qf_enfants=json.dumps([{'nom_naissance': 'MARTIN', 'prenoms': 'Tom',
+                                'date_naissance': '2015-06-01', 'sexe': 'M'}]))
+    input_filepath = write_export(tmp_path, [aeeh, deja_connu])
+    autre_couple = json.dumps([
+        {'nom_naissance': 'ZELVIK', 'prenoms': 'Halvi', 'date_naissance': '02/03/1985'},
+        {'nom_naissance': 'OSVAREK', 'prenoms': 'Mirsa', 'date_naissance': '05/05/1980'},
+    ])
+    rattrapage = write_rattrapage(tmp_path, [
+        {'allocataire_fc_sub': 'sub-A', 'qf_value': '400', 'qf_status': 'trouve',
+         'qf_allocataires': autre_couple},
+        {'allocataire_fc_sub': 'sub-B', 'qf_value': '400', 'qf_status': 'trouve',
+         'qf_allocataires': autre_couple},
+    ])
+    match_filepath = tmp_path / 'candidats.csv'
+
+    stats = pipeline.clean(
+        input_filepath, tmp_path / 'FC_2026.csv', match_filepath,
+        conjoints_filepath=rattrapage)
+
+    candidats = pd.read_csv(match_filepath, sep=';', dtype=str, keep_default_na=False).set_index(
+        'eligibility_result_id')
+    assert stats['conjoints_rattrapes'] == 1
+    # La ligne AEEH reste AEEH malgré le quotient 400 de la réponse rattrapée.
+    assert candidats.loc['11111111-1111-1111-1111-111111111111', 'situation'] == 'AEEH'
+    assert candidats.loc['11111111-1111-1111-1111-111111111111', 'conjoint_nom'] == 'OSVAREK'
+    # Le foyer qui portait déjà un tableau garde le sien : c'est celui qui a produit le verdict.
+    assert candidats.loc['22222222-2222-2222-2222-222222222222', 'conjoint_nom'] == 'VOKTARIMENDO'
+
+
+def test_une_sortie_de_rattrapage_sans_reponse_ne_change_rien(tmp_path):
+    # Ligne réglée en non_trouve (404 : l'usager est absent de la base CAF/MSA) : aucun
+    # tableau à réinjecter, et qf-batch ne la rappellera plus.
+    input_filepath = write_export(tmp_path, [aeeh_export_row()])
+    rattrapage = write_rattrapage(tmp_path, [{
+        'allocataire_fc_sub': 'sub-A', 'qf_value': '', 'qf_status': 'non_trouve',
+        'qf_allocataires': '',
+    }])
+
+    stats = pipeline.clean(
+        input_filepath, tmp_path / 'FC_2026.csv', conjoints_filepath=rattrapage)
+
+    assert stats['conjoints_rattrapes'] == 0
+    assert stats['foyers_a_rappeler'] == 1
+
+
 def test_split_matched_ne_garde_que_les_non_apparies(tmp_path):
     cleaned = tmp_path / 'cleaned.csv'
     pd.DataFrame([
