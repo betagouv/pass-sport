@@ -11,6 +11,7 @@ export type HistoryStatus =
   | "not_found"
   | "error"
   | "invalid_request"
+  | "provider_error"
   | "rate_limited"
   | "skipped";
 

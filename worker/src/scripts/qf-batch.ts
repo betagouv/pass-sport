@@ -2,8 +2,10 @@ import "../load-env";
 import { createReadStream, createWriteStream, existsSync } from "node:fs";
 import { rename } from "node:fs/promises";
 import { createInterface } from "node:readline";
+import { pathToFileURL } from "node:url";
 import { parse } from "csv-parse";
 import { stringify } from "csv-stringify";
+import type { ApiParticulierClient } from "../eligibility/client";
 import { RealClient } from "../eligibility/real-client";
 import type { ApiJsonError, QuotientFamilialData, PivotIdentity, ResourceResult } from "../eligibility/types";
 import { AdaptiveRatePacer, type RateChange, type RateChangeReason } from "./rate-pacer";
@@ -58,6 +60,11 @@ const STATUS_NOT_FOUND = "non_trouve";
 // "vraiment absent de la base" (STATUS_NOT_FOUND) pour ne pas la confondre en aval.
 const STATUS_NOT_FOUND_INSUFFICIENT_INFO = "non_trouve_pas_assez_info";
 const INSUFFICIENT_INFO_ERROR_CODE = "35560";
+// 422 : API Particulier refuse nos paramètres. Déterministe — les mêmes valeurs CSV seront
+// refusées à l'identique — donc réglé du premier coup, ni réessayé dans le run ni rappelé au
+// suivant (voir hasVerdict). Distinct d'un non_trouve : on n'a rien appris sur la personne.
+const STATUS_INVALID_REQUEST = "requete_invalide";
+const VALIDATION_STATUS = 422;
 const MAX_ATTEMPTS = 3;
 
 // A rate-limit pause does not consume an attempt, so a permanently throttled token
@@ -155,11 +162,14 @@ const PROVIDER_DATA_ERROR_CODE = "35000";
 // one: it settles the row as ineligible so resume never re-calls the API for it.
 // `insufficientInfo` (code 35560) is the same kind of permanent, definitive answer — the base
 // just cannot disambiguate this identity — so it settles the row exactly like `notFound` does.
-type Verdict = {
+// `invalidRequest` (422) is permanent for the other reason: not an answer about the person, but
+// params the API will refuse identically forever. Settled too, so no run ever re-spends on it.
+export type Verdict = {
   value: number | null;
   error: string | null;
   notFound?: boolean;
   insufficientInfo?: boolean;
+  invalidRequest?: boolean;
   httpStatus?: number | null;
   // JSON:API error code, kept only to tell a provider-data 5xx (PROVIDER_DATA_ERROR_CODE)
   // apart from a genuine API outage — not written to the output CSV.
@@ -175,8 +185,8 @@ type Verdict = {
 
 // One row through quotient_familial, pausing (without consuming an attempt) whenever
 // the window is exhausted. Returns the QF value, or the reason there is none.
-async function screenRow(
-  client: RealClient,
+export async function screenRow(
+  client: Pick<ApiParticulierClient, "quotientFamilial">,
   identity: PivotIdentity,
   pacer: AdaptiveRatePacer,
 ): Promise<Verdict> {
@@ -235,6 +245,18 @@ async function screenRow(
         value: null,
         error: result.error ?? "informations insuffisantes pour identifier la personne",
         insufficientInfo: true,
+      });
+    }
+
+    // 422 : nos paramètres sont refusés, pas la personne introuvable. Rejouer la même ligne du
+    // CSV donnerait le même refus, donc réglé tout de suite plutôt que de brûler MAX_ATTEMPTS
+    // ici puis 3 appels de plus à chaque run suivant.
+    if (result.httpStatus === VALIDATION_STATUS) {
+      pacer.onSuccess(); // a well-formed answer, not a sign of API trouble
+      return verdict({
+        value: null,
+        error: result.error ?? "paramètres refusés (422)",
+        invalidRequest: true,
       });
     }
 
@@ -352,10 +374,11 @@ async function readFirstLine(path: string): Promise<string> {
 
 // A row is settled once it carries a real verdict. Anything else — an API error, a
 // 404, an incomplete pivot, an interrupted write — is retried on the next run.
-const hasVerdict = (row: Record<string, string>): boolean =>
+export const hasVerdict = (row: Record<string, string>): boolean =>
   row.qf_status === STATUS_FOUND ||
   row.qf_status === STATUS_NOT_FOUND ||
-  row.qf_status === STATUS_NOT_FOUND_INSUFFICIENT_INFO;
+  row.qf_status === STATUS_NOT_FOUND_INSUFFICIENT_INFO ||
+  row.qf_status === STATUS_INVALID_REQUEST;
 
 const readOutputRows = (path: string): AsyncIterable<Record<string, string>> =>
   createReadStream(path).pipe(
@@ -383,10 +406,10 @@ async function closeStream(
   });
 }
 
-const verdictColumns = (verdict: Verdict): Record<string, string> => {
-  // A QF value settles the row; failing that, a 404 settles it as absent from the base, and
-  // code 35560 as findable-but-undecidable; anything else leaves the status blank and is
-  // picked up again on the next run.
+export const verdictColumns = (verdict: Verdict): Record<string, string> => {
+  // A QF value settles the row; failing that, a 404 settles it as absent from the base, code
+  // 35560 as findable-but-undecidable, and a 422 as a question the API refuses to take; anything
+  // else leaves the status blank and is picked up again on the next run.
   const status =
     verdict.value !== null
       ? STATUS_FOUND
@@ -394,7 +417,9 @@ const verdictColumns = (verdict: Verdict): Record<string, string> => {
         ? STATUS_NOT_FOUND
         : verdict.insufficientInfo
           ? STATUS_NOT_FOUND_INSUFFICIENT_INFO
-          : "";
+          : verdict.invalidRequest
+            ? STATUS_INVALID_REQUEST
+            : "";
   return {
     qf_value: verdict.value === null ? "" : String(verdict.value),
     qf_status: status,
@@ -668,7 +693,11 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((error: unknown) => {
-  console.error("[qf-batch]", error);
-  process.exit(1);
-});
+// Guarded so a test can import screenRow/verdictColumns/hasVerdict without starting a batch.
+// `pnpm qf:batch` runs this file directly, so the check holds there.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error: unknown) => {
+    console.error("[qf-batch]", error);
+    process.exit(1);
+  });
+}

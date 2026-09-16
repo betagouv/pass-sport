@@ -12,17 +12,37 @@ import type { ResourceResult } from "./types";
 
 export type RateLimitable = { rateLimit(expireTimeMs: number): Promise<void> };
 
-// The SDK's ValidationError: API Particulier rejected our params. Deterministic, so every
-// retry would be rejected identically — the chain continues without that resource.
+// The SDK's ValidationError: API Particulier rejected our params.
 export const API_PARTICULIER_VALIDATION_STATUS = 422;
 
-// A 404 is an answer ("pas bénéficiaire"), a 422 a question that cannot be asked. Neither is
-// a failure, so the history must not paint them as errors — and they must stay distinct.
+// Same JSON:API code as qf-batch's PROVIDER_DATA_ERROR_CODE: a 5xx carrying errors[0].code
+// "35000" is the data provider (CNAF/MSA) choking on this one identity, not the platform being
+// down. Only the latter is worth waiting out.
+export const API_PARTICULIER_PROVIDER_DATA_ERROR_CODE = "35000";
+
+const isParamsRejected = (r: ResourceResult): boolean =>
+  r.httpStatus === API_PARTICULIER_VALIDATION_STATUS;
+
+const isProviderDataError = (r: ResourceResult): boolean =>
+  r.httpStatus != null &&
+  r.httpStatus >= 500 &&
+  r.errorCode === API_PARTICULIER_PROVIDER_DATA_ERROR_CODE;
+
+// Neither will change its mind: params already refused stay refused, and the provider replays
+// the same failure on the same data. The chain pronounces without that resource rather than
+// burning the job's four attempts over 24h to hear the same thing.
+export const retryingWouldChangeNothing = (r: ResourceResult): boolean =>
+  isParamsRejected(r) || isProviderDataError(r);
+
+// A 404 is an answer ("pas bénéficiaire"), a 422 a question that cannot be asked, a 5xx/35000 a
+// question the provider cannot answer about this person. None is a failure of ours, so the
+// history must not paint them as errors — and they must stay distinct.
 export const resultStatus = (r: ResourceResult): HistoryStatus => {
   if (r.rateLimited) return "rate_limited";
   if (r.success) return "success";
   if (r.httpStatus === 404) return "not_found";
-  if (r.httpStatus === API_PARTICULIER_VALIDATION_STATUS) return "invalid_request";
+  if (isParamsRejected(r)) return "invalid_request";
+  if (isProviderDataError(r)) return "provider_error";
   return "error";
 };
 
@@ -41,6 +61,11 @@ export const resourceEvent = (
   bodyPayload: params ?? null,
   responsePayload: {
     data: r.data,
+    // The JSON:API error verbatim, code included. Without it a failed row carries a flattened
+    // message and nothing to tell a 35000 from any other 5xx, or to name the provider that
+    // dropped it (api_error.meta.provider). Same role as qf-batch's qf_error_details.
+    error_code: r.errorCode ?? null,
+    api_error: r.apiError ?? null,
     rate_limit_remaining: r.rateLimitRemaining ?? null,
     rate_limit_reset_ms: r.rateLimitResetMs ?? null,
     retry_after: r.retryAfter ?? null,
@@ -56,7 +81,7 @@ async function pauseAndResume(queue: RateLimitable, resetMs: number): Promise<ne
 }
 
 export function assertApiParticulierAnswered(jobId: string | undefined, r: ResourceResult): void {
-  if (r.success || r.httpStatus === 404 || r.httpStatus === API_PARTICULIER_VALIDATION_STATUS) {
+  if (r.success || r.httpStatus === 404 || retryingWouldChangeNothing(r)) {
     return;
   }
   throw new Error(
@@ -195,16 +220,11 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
 
   assertApiParticulierAnswered(jobId, r);
 
-  // A 422 no longer fails the job, so this is the only thing that raises a rejected identity.
-  if (r.httpStatus === API_PARTICULIER_VALIDATION_STATUS) {
+  // These no longer fail the job, so this is the only thing that raises them at read time.
+  if (retryingWouldChangeNothing(r)) {
     console.warn(
-      `[pass-sport-worker] job ${jobId}: ${resource} rejected our params (422), pronouncing without it — ${r.error ?? ""}`,
+      `[pass-sport-worker] job ${jobId}: ${resource} gave no answer (httpStatus=${r.httpStatus ?? "none"}, code=${r.errorCode ?? "none"}), pronouncing without it — ${r.error ?? ""}`,
     );
-    Sentry.captureMessage(`API Particulier rejected ${resource} (422)`, {
-      level: "warning",
-      tags: { component: "api_particulier", resource },
-      extra: { jobId, errorCode: r.errorCode, error: r.error },
-    });
   }
 
   await commit?.(r);
