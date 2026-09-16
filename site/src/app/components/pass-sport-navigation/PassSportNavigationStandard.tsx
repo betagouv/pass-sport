@@ -37,7 +37,8 @@ export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props
     useSimplifiedEligibilityTestUsage();
 
   const isActive = (path: string) => {
-    return !!(paths && paths.includes(path));
+    const pathWithoutQuery = path.split('?')[0];
+    return !!(paths && paths.includes(pathWithoutQuery));
   };
 
   // Only reachable while a POC session is live, so the entry only makes sense in the
