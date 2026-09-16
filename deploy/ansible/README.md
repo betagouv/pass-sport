@@ -109,15 +109,9 @@ C'est une garantie du playbook, pas un oubli à corriger :
   Chaque passage se déclenche à la main, un partenaire à la fois :
   `systemctl start pass-sport-qf-batch@msa`. Rien ne le lance au démarrage de la machine ni à
   l'issue du playbook ;
-- **l'entrée crontab `pass-sport-fc`** est posée **désactivée** (commentée) par défaut. Le
-  premier passage automatique n'a lieu qu'après l'avoir explicitement activée :
-  ```bash
-  ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
-    --extra-vars @~/pass-sport-secrets.yml \
-    --extra-vars pass_sport_fc_cron_enabled=true
-  ```
-  Ne l'activer qu'une fois les deux prérequis suivants validés : l'empreinte SSH Scalingo
-  amorcée (ci-dessous) et un passage à blanc réussi
+- **l'entrée crontab `pass-sport-fc`** est posée **activée** par défaut (toutes les 2 heures),
+  les deux prérequis suivants ayant été validés : l'empreinte SSH Scalingo amorcée (ci-dessous)
+  et un passage à blanc réussi
   (`./run_fc_pipeline.sh --dry-run`, son journal
   dans `data/2026/partners/franceconnect/run/latest/run.log`, voir le
   [README de franceconnect/](../../data/2026/partners/franceconnect/README.md)). Le passage
@@ -132,8 +126,10 @@ C'est une garantie du playbook, pas un oubli à corriger :
 
 ### Reporter tout le volet FC (crontab Scalingo/tunnel)
 
-`pass_sport_fc_cron_enabled` (ci-dessus) pose l'entrée crontab désactivée : la tâche tourne,
-seul son état change. Si le volet FC n'est pas encore prêt (jeton Scalingo, empreinte SSH),
+`pass_sport_fc_cron_enabled` (ci-dessus, `true` par défaut) ne fait que commenter ou décommenter
+l'entrée crontab : la tâche tourne toujours, seul son état change. Repasser cette variable à
+`false` la pose désactivée sans la retirer. Si le volet FC n'est pas encore prêt (jeton
+Scalingo, empreinte SSH),
 `--skip-tags fc-cron` saute les deux tâches qui en dépendent — rien n'est posé :
 
 ```bash

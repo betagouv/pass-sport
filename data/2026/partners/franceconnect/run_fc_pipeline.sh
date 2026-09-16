@@ -70,7 +70,7 @@
 set -Eeuo pipefail
 # Le CSV déposé porte des identités et des courriels : il ne doit jamais naître lisible par
 # tout le monde.
-umask 027
+umask 007
 
 FC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="$(cd "$FC_DIR/../../.." && pwd)"
