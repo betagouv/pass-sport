@@ -24,13 +24,13 @@
 #
 # Le passage finit en posant le job BullMQ fc_code_emails, que le worker Scalingo exécute
 # (worker/src/jobs/fc-code-emails.ts) : aucune autre cron n'est nécessaire pour les courriels.
-- name: Passage FranceConnect toutes les 2 heures
+- name: Passage FranceConnect toutes les 3 minutes
   become: true
   ansible.builtin.cron:
     name: pass-sport-fc
     user: "{{ pass_sport_user }}"
-    minute: '30'
-    hour: '*/2'
+    minute: '*/3'
+    hour: '*'
     job: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run_fc_pipeline.sh"
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]
