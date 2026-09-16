@@ -130,7 +130,7 @@ C'est une garantie du playbook, pas un oubli à corriger :
 l'entrée crontab : la tâche tourne toujours, seul son état change. Repasser cette variable à
 `false` la pose désactivée sans la retirer. Si le volet FC n'est pas encore prêt (jeton
 Scalingo, empreinte SSH),
-`--skip-tags fc-cron` saute les deux tâches qui en dépendent — rien n'est posé :
+`--skip-tags fc-cron` saute toutes les tâches qui en dépendent — rien n'est posé :
 
 ```bash
 ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
@@ -138,14 +138,16 @@ ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
   --skip-tags fc-cron
 ```
 
-Trois tâches portent ce tag : la crontab `pass-sport-fc`, le retrait de l'éventuel
+Portent ce tag : la crontab `pass-sport-fc`, le retrait de l'éventuel
 `/etc/default/pass-sport-fc` d'une installation antérieure, et la vérification que
-`fc_prod_drop_dir` (`/nfs/run` par défaut) est inscriptible — les sauter toutes les trois évite
-un échec sur ce dernier point si le montage NFS n'existe pas encore. Le reste du provisioning
+`fc_prod_drop_dir` (`/nfs/run` par défaut) est inscriptible — en deux tâches, un vrai fichier
+créé puis retiré, et non un `test -w`, qui donne un faux négatif sur un montage NFS à ACL
+NFSv4 (voir le commentaire dans [tasks/config.yml](tasks/config.yml)). Les sauter évite un
+échec sur ce dernier point si le montage NFS n'existe pas encore. Le reste du provisioning
 tourne normalement, CLI Scalingo comprise. Un passage ultérieur sans `--skip-tags fc-cron` pose
 la crontab, activée par défaut (`pass_sport_fc_cron_enabled: true`).
 
-Notes que, contrairement au reste du provisioning, aucune de ces trois tâches n'a besoin de
+À noter que, contrairement au reste du provisioning, aucune de ces tâches n'a besoin de
 `--extra-vars @~/pass-sport-secrets.yml` : `SCALINGO_APP`/`SCALINGO_API_TOKEN` sont dans
 `data/.env`, pas dans ce fichier de secrets. Il reste nécessaire pour le reste du playbook
 (comptes opérateurs), d'où sa présence dans les deux commandes ci-dessus.

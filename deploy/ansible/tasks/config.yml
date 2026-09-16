@@ -14,8 +14,24 @@
     state: absent
   tags: [fc-cron]
 
+# `test -w` (access(2)) donne un faux négatif sur ce montage : le serveur NFS expose une ACL
+# NFSv4 (accès accordé nommément à des UID précis), mais traduit ces droits en bits POSIX
+# approximatifs pour les clients qui ne la comprennent pas (`rwxrwxr-x`, sans le détail des
+# UID autorisés) — et access() se fie souvent à cette approximation mise en cache plutôt que
+# d'interroger le serveur. Un vrai fichier créé puis retiré, en revanche, déclenche une
+# requête d'écriture réelle, évaluée côté serveur contre la vraie ACL.
 - name: Dossier de dépôt inscriptible
-  ansible.builtin.command: "test -w {{ fc_prod_drop_dir }}"
+  ansible.builtin.file:
+    path: "{{ fc_prod_drop_dir }}/.pass-sport-fc-write-test"
+    state: touch
+    mode: '0600'
+  changed_when: false
+  tags: [fc-cron]
+
+- name: Nettoyage du fichier de test d'écriture
+  ansible.builtin.file:
+    path: "{{ fc_prod_drop_dir }}/.pass-sport-fc-write-test"
+    state: absent
   changed_when: false
   tags: [fc-cron]
   # Le montage NFS n'est pas géré ici : il appartient à l'infra, on vérifie seulement que
