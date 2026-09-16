@@ -40,7 +40,7 @@
 # une copie de EXISTING_CODES_PATHFILE_2026 ; rien n'est déposé et aucun job n'est posé dans
 # Redis. De quoi juger l'appariement sur les données réelles avant d'activer la cron.
 #
-# Variables lues (data/.env, puis /etc/default/pass-sport-fc s'il existe) :
+# Variables lues (data/.env) :
 #   SCALINGO_APP                  application Scalingo hébergeant la base      (obligatoire)
 #   SCALINGO_API_TOKEN            jeton d'API, pour un `scalingo` non interactif
 #   EXISTING_CODES_PATHFILE_2026  liste des codes déjà distribués              (obligatoire)
@@ -70,7 +70,7 @@
 set -Eeuo pipefail
 # Le CSV déposé porte des identités et des courriels : il ne doit jamais naître lisible par
 # tout le monde.
-umask 027
+umask 007
 
 FC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="$(cd "$FC_DIR/../../.." && pwd)"
@@ -107,8 +107,8 @@ CONFIG_VARS=(
   LAMP_DB_HOST LAMP_DB_PORT LAMP_DB_USER LAMP_DB_NAME LAMP_DB_PASSWORD
 )
 
-# Ce qui est déjà dans l'environnement l'emporte sur les fichiers de configuration : c'est ce
-# qui permet un passage d'essai sans toucher à data/.env, dossier de dépôt détourné —
+# Ce qui est déjà dans l'environnement l'emporte sur data/.env : c'est ce qui permet un
+# passage d'essai sans y toucher, dossier de dépôt détourné —
 # `FC_PROD_DROP_DIR=/tmp/fc-drop ./run_fc_pipeline.sh`.
 declare -A caller_env=()
 for var in "${CONFIG_VARS[@]}"; do
@@ -124,10 +124,7 @@ source_config() {
   fi
 }
 
-# Les chemins, comme pour les notebooks ; puis ce que la machine seule connaît (jeton
-# Scalingo, dossier de dépôt) et qui n'a rien à faire dans le dépôt de code.
 source_config "$DATA_DIR/.env"
-source_config /etc/default/pass-sport-fc
 
 for var in "${!caller_env[@]}"; do
   printf -v "$var" '%s' "${caller_env[$var]}"

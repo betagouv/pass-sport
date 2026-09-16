@@ -42,7 +42,8 @@ sudo -l -U kelvao                               # les 3 verbes systemctl, rien d
 sudo systemctl start pass-sport-qf-batch@essai  # échoue proprement (pas d'entrée CSV) — normal
 systemctl status pass-sport-qf-batch@
 crontab -l -u passsport                         # la ligne PATH= et l'entrée FC, commentée
-stat -c '%a %U:%G' /srv/pass-sport /etc/default/pass-sport-fc
+stat -c '%a %U:%G' /srv/pass-sport
+test ! -e /etc/default/pass-sport-fc && echo "OK: absent"
 find /srv/pass-sport -perm /o=rwx | head            # doit être vide
 scalingo --version
 data/.venv/bin/jupyter kernelspec list          # doit lister python3
@@ -77,12 +78,12 @@ Python et les dépendances `pnpm` existent déjà sur le poste de dev, hors de p
 
 ## Secrets de test
 
-[`default/test-secrets.yml`](default/test-secrets.yml) ne contient que des valeurs fictives —
-jamais le vrai jeton Scalingo. Sans conséquence : la cron FranceConnect reste posée
-**désactivée** par défaut (`pass_sport_fc_cron_enabled` n'est pas mis à `true` dans ce
-scénario), donc rien n'appelle jamais l'API Scalingo pour de vrai pendant le test. Les deux
-comptes opérateurs de test portent des noms inventés par syllabes, sans rapport avec de vraies
-personnes.
+`SCALINGO_APP`/`SCALINGO_API_TOKEN` ne sont plus des variables du playbook — elles vivent dans
+`data/.env`, hors de son champ — donc [`default/test-secrets.yml`](default/test-secrets.yml)
+n'a plus rien à fournir pour elles. Il force en revanche explicitement
+`pass_sport_fc_cron_enabled: false` (le défaut du playbook est `true`), pour que rien n'appelle
+jamais l'API Scalingo pour de vrai pendant le test. Les deux comptes opérateurs de test portent
+des noms inventés par syllabes, sans rapport avec de vraies personnes.
 
 ## Limites de ce que ce test peut prouver
 

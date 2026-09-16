@@ -106,12 +106,54 @@ class FakeApiClient implements ApiParticulierClient {
     // committed before handleRateLimit throws — so only a later one exercises a resume that has
     // rows to replay.
     private readonly rateLimitOnCall: number = 1,
+    private readonly rejectOnCall?: number,
+    private readonly providerErrorOnCall?: number,
   ) {}
 
   // The gateway answering 5xx on one call of the chain: the job has no verdict for that
-  // resource, so it fails and retries rather than concluding on a partial answer.
+  // resource, so it fails and retries rather than concluding on a partial answer. A 422 on the
+  // same seam is the opposite case — the chain carries on and pronounces without that resource.
+  // So is a 5xx carrying code 35000: the provider choked on this identity, not the platform.
   private takeFailure(meta: { resource: string; label: string }): ResourceResult | null {
     this.calls += 1;
+
+    if (this.calls === this.providerErrorOnCall) {
+      return {
+        ...meta,
+        httpStatus: 502,
+        success: false,
+        data: null,
+        error: "Erreur interne du fournisseur de données",
+        errorCode: "35000",
+        apiError: {
+          code: "35000",
+          title: "Erreur interne du fournisseur de données",
+          detail: "Le fournisseur de données n'a pas pu traiter la demande",
+          meta: { provider: "CNAF" },
+        },
+        rateLimitRemaining: 100,
+        rateLimitResetMs: null,
+      };
+    }
+
+    if (this.calls === this.rejectOnCall) {
+      return {
+        ...meta,
+        httpStatus: 422,
+        success: false,
+        data: null,
+        error: "Le paramètre nomNaissance est invalide",
+        errorCode: "40001",
+        apiError: {
+          code: "40001",
+          title: "Paramètre invalide",
+          detail: "Le paramètre nomNaissance est invalide",
+        },
+        rateLimitRemaining: 100,
+        rateLimitResetMs: null,
+      };
+    }
+
     if (this.calls !== this.failOnCall) return null;
     return {
       ...meta,
@@ -373,6 +415,10 @@ export async function startStack(
   opts: {
     first429RetryAfter?: number;
     apiFailOnCall?: number;
+    // Which call (1-based) answers 422 instead of its payload.
+    apiRejectOnCall?: number;
+    // Which call (1-based) answers 502 with the provider's own error code 35000.
+    apiProviderErrorOnCall?: number;
     apiRateLimitOnCall?: number;
     apiCallsPerSecond?: number;
     apiCallsPerMinute?: number;
@@ -456,6 +502,8 @@ export async function startStack(
     opts.first429RetryAfter,
     opts.apiFailOnCall,
     opts.apiRateLimitOnCall,
+    opts.apiRejectOnCall,
+    opts.apiProviderErrorOnCall,
   );
 
   // Read per job rather than captured, so setNow can move the campaign month a test sweeps over.

@@ -1,28 +1,37 @@
 ---
-# Ce que la machine seule connaît, et qui n'a rien à faire dans data/.env : le script le
-# source lui-même (run_fc_pipeline.sh). scalingo_app / scalingo_api_token viennent des
-# --extra-vars, jamais de ce dépôt.
-# 0640 et non 0600 : un opérateur doit pouvoir jouer run_fc_pipeline.sh à la main — c'est
-# la procédure de reprise que documente le README de franceconnect/ après un échec à
-# l'étape 3. En 0600 il ne pourrait pas lire ce fichier et le script s'arrêterait sur
-# « variable d'environnement manquante : SCALINGO_APP ».
-# Arbitrage assumé : le jeton Scalingo devient lisible par le groupe d'exploitation, qui
-# lit déjà data/.env et exploite la campagne. Rien pour les autres comptes.
+# Toutes les variables de run_fc_pipeline.sh (SCALINGO_APP/SCALINGO_API_TOKEN compris) vivent
+# désormais dans data/.env, à la main sur la machine — hors du champ de ce playbook (voir
+# deploy/ansible/README.md). run_fc_pipeline.sh ne source plus que data/.env : sur une machine
+# déjà provisionnée par une version antérieure du playbook, /etc/default/pass-sport-fc n'est
+# donc plus lu — mais il resterait sur le disque avec un jeton Scalingo dedans si on ne le
+# retirait pas explicitement ici.
 # Tag `fc-cron`, partagé avec la tâche crontab de tasks/ordonnancement.yml : `--skip-tags
-# fc-cron` reporte le volet FC en bloc, donc ce fichier avec (SCALINGO_APP/TOKEN n'ont
-# souvent pas de sens tant que la cron elle-même est reportée).
-- name: /etc/default/pass-sport-fc
+# fc-cron` reporte le volet FC en bloc.
+- name: Retrait de l'ancien /etc/default/pass-sport-fc
   become: true
-  ansible.builtin.template:
-    src: pass-sport-fc.env.j2
-    dest: /etc/default/pass-sport-fc
-    owner: "{{ pass_sport_user }}"
-    group: "{{ pass_sport_group }}"
-    mode: '0640'      # il porte SCALINGO_API_TOKEN
+  ansible.builtin.file:
+    path: /etc/default/pass-sport-fc
+    state: absent
   tags: [fc-cron]
 
+# `test -w` (access(2)) donne un faux négatif sur ce montage : le serveur NFS expose une ACL
+# NFSv4 (accès accordé nommément à des UID précis), mais traduit ces droits en bits POSIX
+# approximatifs pour les clients qui ne la comprennent pas (`rwxrwxr-x`, sans le détail des
+# UID autorisés) — et access() se fie souvent à cette approximation mise en cache plutôt que
+# d'interroger le serveur. Un vrai fichier créé puis retiré, en revanche, déclenche une
+# requête d'écriture réelle, évaluée côté serveur contre la vraie ACL.
 - name: Dossier de dépôt inscriptible
-  ansible.builtin.command: "test -w {{ fc_prod_drop_dir }}"
+  ansible.builtin.file:
+    path: "{{ fc_prod_drop_dir }}/.pass-sport-fc-write-test"
+    state: touch
+    mode: '0600'
+  changed_when: false
+  tags: [fc-cron]
+
+- name: Nettoyage du fichier de test d'écriture
+  ansible.builtin.file:
+    path: "{{ fc_prod_drop_dir }}/.pass-sport-fc-write-test"
+    state: absent
   changed_when: false
   tags: [fc-cron]
   # Le montage NFS n'est pas géré ici : il appartient à l'infra, on vérifie seulement que

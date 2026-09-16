@@ -16,21 +16,21 @@
     user: "{{ pass_sport_user }}"
 
 # `name` porte l'idempotence : rejouer ne duplique pas la ligne, contrairement à un
-# crontab édité à la main. Posée DÉSACTIVÉE tant que pass_sport_fc_cron_enabled n'est
-# pas passé à true : voir l'en-tête de lamp-setup.yml.
+# crontab édité à la main. Activée par défaut désormais (pass_sport_fc_cron_enabled: true) :
+# voir l'en-tête de lamp-setup.yml.
 # Tag `fc-cron`, distinct de ce réglage : `--skip-tags fc-cron` saute la tâche entièrement
 # (rien posé, rien à retirer), là où pass_sport_fc_cron_enabled ne fait que commenter une
 # entrée déjà posée. Sert à reporter tout le volet FC — le reste du provisioning tourne.
 #
 # Le passage finit en posant le job BullMQ fc_code_emails, que le worker Scalingo exécute
 # (worker/src/jobs/fc-code-emails.ts) : aucune autre cron n'est nécessaire pour les courriels.
-- name: Passage FranceConnect toutes les 6 heures
+- name: Passage FranceConnect toutes les 30 minutes
   become: true
   ansible.builtin.cron:
     name: pass-sport-fc
     user: "{{ pass_sport_user }}"
-    minute: '30'
-    hour: '0,6,12,18'
+    minute: '*/30'
+    hour: '*'
     job: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run_fc_pipeline.sh"
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]

@@ -269,8 +269,8 @@ La machine doit porter : `psql`, un `scalingo` authentifié sans interaction
 `scalingo login --ssh-identity` ne configure que la poignée de main de login, pas `db-tunnel`.
 Sans indication, `db-tunnel` retombe sur l'agent SSH puis sur `~/.ssh/id_rsa`. Si la clé à
 utiliser porte un autre nom, soit passer `-i`/`--identity` à la main (voir ci-dessous), soit
-renseigner `SCALINGO_SSH_IDENTITY` dans `data/.env` ou `/etc/default/pass-sport-fc` pour que
-`run_fc_pipeline.sh` la reprenne automatiquement.
+renseigner `SCALINGO_SSH_IDENTITY` dans `data/.env` pour que `run_fc_pipeline.sh` la reprenne
+automatiquement.
 
 ## Étape 1 — extraction
 
@@ -415,11 +415,10 @@ DB_FC_EXPORT_2026="./2026/partners/franceconnect/FC_2026.csv"
 FC_WITH_CODES_PATHFILE_2026="./2026/partners/franceconnect/AAAA-MM-JJ-fc-with-codes.csv"
 ```
 
-Ce dont la cron a besoin en plus. `SCALINGO_APP` et le jeton se mettent plutôt dans
-`/etc/default/pass-sport-fc`, que le script lit aussi : ils appartiennent à la machine, pas
-au dépôt. Les valeurs déjà présentes dans l'environnement l'emportent sur ces deux fichiers,
-ce qui permet un passage d'essai avec un dossier de dépôt détourné —
-`FC_PROD_DROP_DIR=/tmp/fc-drop ./run_fc_pipeline.sh`.
+Ce dont la cron a besoin en plus, à ajouter au même `data/.env` sur la machine (jamais
+versionné, `data/.gitignore` couvre déjà `.env*`). Les valeurs déjà présentes dans
+l'environnement l'emportent sur ce fichier, ce qui permet un passage d'essai avec un dossier
+de dépôt détourné — `FC_PROD_DROP_DIR=/tmp/fc-drop ./run_fc_pipeline.sh`.
 
 ```bash
 SCALINGO_APP="<application hébergeant la base>"   # obligatoire

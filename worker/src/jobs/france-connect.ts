@@ -1,6 +1,7 @@
 import type { Job, Queue } from "bullmq";
 import { type ApiParticulierClient } from "../eligibility/client";
 import type { ApiParticulierRateGate } from "../eligibility/rate-gate";
+import { API_PARTICULIER_VALIDATION_STATUS, retryingWouldChangeNothing } from "../eligibility/calls";
 import { runEligibilitySequence } from "../eligibility/sequence";
 import { readCaisse, readQuotientFamilial } from "../eligibility/verdicts";
 import {
@@ -147,6 +148,14 @@ export async function processEligibilityJob(
   );
 
   const { identity, isFranceConnected } = data;
+  const rejectedResources = results.filter(retryingWouldChangeNothing).map((r) => ({
+    resource: r.resource,
+    child_index: r.childIndex ?? null,
+    reason: r.httpStatus === API_PARTICULIER_VALIDATION_STATUS ? "validation" : "provider_error",
+    http_status: r.httpStatus ?? null,
+    error_code: r.errorCode ?? null,
+    error: r.error ?? null,
+  }));
   const candidates = listBeneficiaryCandidates(identity, results);
   const qfPayload = readQuotientFamilial(results);
   const householdCaisse = readCaisse(results);
@@ -166,10 +175,9 @@ export async function processEligibilityJob(
     );
   }
 
-  // Two verdicts only, and the negative one IS a refusal we are in a position to pronounce: both
-  // sources this path consults return a determination rather than a silence — API Particulier
-  // answers 404 / est_beneficiaire:false, and our own campaign windows exclude by age. A genuine
-  // outage never reaches here, assertApiParticulierCallSuceeded fails the job instead.
+  // Two verdicts only. A genuine outage never reaches here — assertApiParticulierAnswered fails
+  // the job instead — but a 422 and a 5xx/35000 do, and the refusal they feed is pronounced
+  // without that resource ever having answered: rejectedResources below is what says which.
   const outcomes: BeneficiaryOutcome[] = candidates.map((candidate) => {
     const isEligible = candidate.eligibilities.length > 0;
     return {
@@ -202,7 +210,7 @@ export async function processEligibilityJob(
       actor: "worker",
       action: "results.skipped",
       status: "skipped",
-      responsePayload: { rows: 0, reason: "no_beneficiary" },
+      responsePayload: { rows: 0, reason: "no_beneficiary", rejected_resources: rejectedResources },
     });
   } else {
     console.log(
@@ -261,7 +269,11 @@ export async function processEligibilityJob(
       actor: "worker",
       action: "results.persisted",
       status: "success",
-      responsePayload: { rows: candidates.length, reason: "batch" },
+      responsePayload: {
+        rows: candidates.length,
+        reason: "batch",
+        rejected_resources: rejectedResources,
+      },
     });
   }
 
