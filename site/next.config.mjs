@@ -62,6 +62,7 @@ export default withSentryConfig(nextConfig, {
   project: process.env.SENTRY_PROJECT,
   authToken: sentryAuthToken,
   release: { name: process.env.SOURCE_VERSION },
+  widenClientFileUpload: true,
   sourcemaps: {
     disable: !sentryAuthToken,
     deleteSourcemapsAfterUpload: true,
