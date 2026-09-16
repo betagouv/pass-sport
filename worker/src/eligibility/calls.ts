@@ -12,12 +12,17 @@ import type { ResourceResult } from "./types";
 
 export type RateLimitable = { rateLimit(expireTimeMs: number): Promise<void> };
 
-// A 404 is an answer ("pas bénéficiaire"), not a failure — assertApiParticulierCallSuceeded
-// lets it through, so the history must not paint it as an error either.
+// The SDK's ValidationError: API Particulier rejected our params. Deterministic, so every
+// retry would be rejected identically — the chain continues without that resource.
+export const API_PARTICULIER_VALIDATION_STATUS = 422;
+
+// A 404 is an answer ("pas bénéficiaire"), a 422 a question that cannot be asked. Neither is
+// a failure, so the history must not paint them as errors — and they must stay distinct.
 export const resultStatus = (r: ResourceResult): HistoryStatus => {
   if (r.rateLimited) return "rate_limited";
   if (r.success) return "success";
   if (r.httpStatus === 404) return "not_found";
+  if (r.httpStatus === API_PARTICULIER_VALIDATION_STATUS) return "invalid_request";
   return "error";
 };
 
@@ -50,11 +55,8 @@ async function pauseAndResume(queue: RateLimitable, resetMs: number): Promise<ne
   throw Worker.RateLimitError();
 }
 
-export function assertApiParticulierCallSuceeded(
-  jobId: string | undefined,
-  r: ResourceResult,
-): void {
-  if (r.success || r.httpStatus === 404) {
+export function assertApiParticulierAnswered(jobId: string | undefined, r: ResourceResult): void {
+  if (r.success || r.httpStatus === 404 || r.httpStatus === API_PARTICULIER_VALIDATION_STATUS) {
     return;
   }
   throw new Error(
@@ -191,7 +193,19 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
 
   if (r.rateLimited) await handleRateLimit(jobId, queue, r);
 
-  assertApiParticulierCallSuceeded(jobId, r);
+  assertApiParticulierAnswered(jobId, r);
+
+  // A 422 no longer fails the job, so this is the only thing that raises a rejected identity.
+  if (r.httpStatus === API_PARTICULIER_VALIDATION_STATUS) {
+    console.warn(
+      `[pass-sport-worker] job ${jobId}: ${resource} rejected our params (422), pronouncing without it — ${r.error ?? ""}`,
+    );
+    Sentry.captureMessage(`API Particulier rejected ${resource} (422)`, {
+      level: "warning",
+      tags: { component: "api_particulier", resource },
+      extra: { jobId, errorCode: r.errorCode, error: r.error },
+    });
+  }
 
   await commit?.(r);
   await maybeProactivePause(jobId, queue, r);

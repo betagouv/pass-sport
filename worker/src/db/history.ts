@@ -6,7 +6,13 @@ import { eligibilityHistory } from "./schema";
 // data/2026/partners/franceconnect, never through this recorder.
 export type HistoryActor = "api_particulier" | "lca" | "worker" | "cron";
 
-export type HistoryStatus = "success" | "not_found" | "error" | "rate_limited" | "skipped";
+export type HistoryStatus =
+  | "success"
+  | "not_found"
+  | "error"
+  | "invalid_request"
+  | "rate_limited"
+  | "skipped";
 
 export type HistoryEvent = {
   actor: HistoryActor;
