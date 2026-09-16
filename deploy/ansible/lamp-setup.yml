@@ -11,9 +11,11 @@
 #   ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
 #     --extra-vars @~/pass-sport-secrets.yml
 #
-# Secrets (SCALINGO_APP, SCALINGO_API_TOKEN) et noms des comptes opérateurs : jamais dans ce
-# dépôt, public. Ils arrivent par --extra-vars, depuis un fichier gardé hors dépôt en mode 600
-# — voir deploy/ansible/README.md.
+# Secrets, jamais dans ce dépôt, public :
+# - SCALINGO_APP/SCALINGO_API_TOKEN vivent dans data/.env, à la main sur la machine — hors du
+#   champ de ce playbook (data/.env change de campagne en campagne, voir README) ;
+# - les noms des comptes opérateurs arrivent, eux, par --extra-vars, depuis un fichier gardé
+#   hors dépôt en mode 600 — voir deploy/ansible/README.md.
 #
 # Exploitation à deux : un groupe `passsport` réunit le compte de service (qui exécute l'unité
 # et la cron, et possède les fichiers) et les comptes humains. Le groupe peut piloter les
@@ -70,18 +72,15 @@
     # Les deux comptes humains. Vides par défaut : les noms d'opérateurs viennent du fichier
     # hors dépôt (~/pass-sport-secrets.yml), comme les secrets — ce dépôt est public.
     pass_sport_operators: []
+    # Sert uniquement à la vérification « dossier de dépôt inscriptible » (tasks/config.yml) :
+    # depuis que SCALINGO_APP/SCALINGO_API_TOKEN/FC_PROD_DROP_DIR vivent dans data/.env, le
+    # chemin réellement utilisé par run_fc_pipeline.sh peut diverger de ce défaut si data/.env
+    # le surcharge — garder les deux alignés à la main.
     fc_prod_drop_dir: /nfs/run
     # Interrupteur de sécurité : activée par défaut désormais, les prérequis ayant été
     # validés (empreinte SSH amorcée, essai à blanc réussi). Repasser à `false` (ou
     # `--extra-vars pass_sport_fc_cron_enabled=false`) pour redésactiver le passage.
     pass_sport_fc_cron_enabled: true
-    # Chemin, sous le home de passsport, vers la clé privée que `db-tunnel` doit utiliser —
-    # `run_fc_pipeline.sh` retombe sinon sur l'agent SSH puis sur ~/.ssh/id_rsa, qui n'a
-    # aucune raison d'exister sous ce compte. Vide par défaut : le playbook ne génère ni ne
-    # copie la clé — c'est un geste manuel, au même titre que l'amorçage de l'empreinte SSH
-    # (voir deploy/ansible/README.md). Renseigner via
-    # `--extra-vars scalingo_ssh_identity=/home/passsport/.ssh/<clé>`.
-    scalingo_ssh_identity: ""
 
   tasks:
     - name: Groupe d'exploitation et comptes

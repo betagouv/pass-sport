@@ -5,7 +5,7 @@ Ce playbook installe ce que la machine de traitement doit porter pour `qf-batch`
 FranceConnect
 ([data/2026/partners/franceconnect/run_fc_pipeline.sh](../../data/2026/partners/franceconnect/run_fc_pipeline.sh)) :
 paquets système, CLI Scalingo, Node par apt/NodeSource, le virtualenv `data/.venv` et son kernel Jupyter,
-`/etc/default/pass-sport-fc`, l'unité systemd `qf-batch@` et l'entrée crontab de FC.
+l'unité systemd `qf-batch@` et l'entrée crontab de FC.
 
 `lamp-setup.yml` n'est qu'un sommaire : il définit les variables et importe, dans l'ordre où
 elles sont jouées, les tâches réparties par sujet dans [tasks/](tasks/) (comptes, paquets,
@@ -138,13 +138,17 @@ ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
   --skip-tags fc-cron
 ```
 
-Deux tâches portent ce tag : la crontab `pass-sport-fc` et `/etc/default/pass-sport-fc`
-(`SCALINGO_APP`/`SCALINGO_API_TOKEN` n'ont souvent pas de sens tant que la cron elle-même est
-reportée). Le reste du provisioning tourne normalement, CLI Scalingo comprise — y compris la
-vérification que `fc_prod_drop_dir` (`/nfs/run`) est inscriptible, qui n'est **pas**
-taguée : si ce montage n'existe pas encore non plus, le playbook échouera quand même sur cette
-tâche-là. Un passage ultérieur sans `--skip-tags fc-cron` pose les deux fichiers, crontab
-désactivée par défaut comme toujours.
+Trois tâches portent ce tag : la crontab `pass-sport-fc`, le retrait de l'éventuel
+`/etc/default/pass-sport-fc` d'une installation antérieure, et la vérification que
+`fc_prod_drop_dir` (`/nfs/run` par défaut) est inscriptible — les sauter toutes les trois évite
+un échec sur ce dernier point si le montage NFS n'existe pas encore. Le reste du provisioning
+tourne normalement, CLI Scalingo comprise. Un passage ultérieur sans `--skip-tags fc-cron` pose
+la crontab, activée par défaut (`pass_sport_fc_cron_enabled: true`).
+
+Notes que, contrairement au reste du provisioning, aucune de ces trois tâches n'a besoin de
+`--extra-vars @~/pass-sport-secrets.yml` : `SCALINGO_APP`/`SCALINGO_API_TOKEN` sont dans
+`data/.env`, pas dans ce fichier de secrets. Il reste nécessaire pour le reste du playbook
+(comptes opérateurs), d'où sa présence dans les deux commandes ci-dessus.
 
 ## Premier déploiement — le clone
 
@@ -187,19 +191,30 @@ ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
 
 ## Secrets — rien dans ce dépôt, il est public
 
-`SCALINGO_APP` et `SCALINGO_API_TOKEN` arrivent par `--extra-vars`, depuis un fichier gardé
+`SCALINGO_APP` et `SCALINGO_API_TOKEN` ne sont **pas** gérés par le playbook : ils vont
+directement dans `data/.env`, à la main sur la machine, comme les autres variables lues par
+`run_fc_pipeline.sh` (`data/.gitignore` couvre déjà `.env*`, donc rien à versionner). Le
+playbook n'y touche jamais, au même titre que le reste de `data/.env` (voir « Ce que le
+playbook ne fait pas » ci-dessous) :
+
+Si `db-tunnel` ne trouve pas la clé attendue via l'agent SSH ou `~/.ssh/id_rsa` sous le compte
+`passsport` (voir ci-dessous), renseigner aussi `SCALINGO_SSH_IDENTITY` dans ce même
+`data/.env` :
+
+```bash
+# data/.env sur la machine, jamais versionné
+SCALINGO_APP=<application hébergeant la base>
+SCALINGO_API_TOKEN=<jeton>
+SCALINGO_SSH_IDENTITY=/home/passsport/.ssh/<clé>   # optionnel, voir ci-dessous
+```
+
+Les noms des comptes opérateurs, eux, arrivent par `--extra-vars`, depuis un fichier gardé
 **hors dépôt**, en mode `600` :
 
 ```yaml
 # ~/pass-sport-secrets.yml — jamais versionné
-scalingo_app: <application hébergeant la base>
-scalingo_api_token: <jeton>
+pass_sport_operators: [<compte1>, <compte2>]
 ```
-
-Si `db-tunnel` ne trouve pas la clé attendue via l'agent SSH ou `~/.ssh/id_rsa` sous le compte
-`passsport` (voir ci-dessous), lui indiquer le chemin de la clé avec
-`scalingo_ssh_identity: /home/passsport/.ssh/<clé>` dans ce même fichier — vide par défaut,
-la ligne `SCALINGO_SSH_IDENTITY` n'est alors pas posée dans `/etc/default/pass-sport-fc`.
 
 Trois choses ne vont dans aucun dépôt, public ou privé — un dépôt privé n'étant pas un
 gestionnaire de secrets, il ne ferait que déplacer le problème :
@@ -213,19 +228,19 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
 
 - **La clé SSH que `db-tunnel` utilise.** Ni générée ni copiée par le playbook : la déposer à
   la main sous le home de `passsport` (`sudo -u passsport -H bash` ou équivalent), en `600`,
-  appartenant à `passsport` seul — *pas* `0640` partagé avec le groupe d'exploitation comme
-  `/etc/default/pass-sport-fc` : OpenSSH refuse une clé privée lisible par le groupe
+  appartenant à `passsport` seul — OpenSSH refuse une clé privée lisible par le groupe
   (« UNPROTECTED PRIVATE KEY FILE »). Sa clé publique doit être enregistrée sur le compte
   Scalingo qui a accès à `$SCALINGO_APP`. Si son nom n'est pas `id_rsa`, indiquer son chemin
-  via `scalingo_ssh_identity` (voir « Secrets » ci-dessus).
+  via `SCALINGO_SSH_IDENTITY` (voir « Secrets » ci-dessus).
 - **L'empreinte SSH de Scalingo.** `db-tunnel` monte une connexion SSH vers
   `ssh.osc-fr1.scalingo.com` ; sur un `known_hosts` vide il attend une réponse que la cron ne
   donnera jamais. À amorcer une fois, à la main, **sous le compte `passsport` lui-même** — pas
   sous un compte opérateur, dont le `known_hosts` est distinct :
   `scalingo --app "$SCALINGO_APP" db-tunnel SCALINGO_POSTGRESQL_URL` (interactif, `Ctrl+C`
   pour l'arrêter une fois l'empreinte acceptée).
-- **`data/.env` et `worker/.env.local`** — chemins de campagne et jeton API Particulier. Ils
-  changent d'une campagne à l'autre, là où le playbook décrit la machine.
+- **`data/.env` et `worker/.env.local`** — chemins de campagne, jeton API Particulier, et
+  désormais `SCALINGO_APP`/`SCALINGO_API_TOKEN` (voir « Secrets » ci-dessus). Ils changent
+  d'une campagne à l'autre, là où le playbook décrit la machine.
 - **le montage `/nfs/run`** — il appartient à l'infra ; le playbook vérifie seulement
   qu'il est inscriptible.
 
@@ -237,10 +252,10 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
    voulu, pas un défaut).
 2. `scalingo --version`, `psql --version`, `data/.venv/bin/jupyter kernelspec list` (doit
    lister `python3`), `systemctl cat pass-sport-qf-batch@`,
-   `stat -c '%a %U:%G' /etc/default/pass-sport-fc` → `640 passsport:passsport`.
+   `test ! -e /etc/default/pass-sport-fc` (retiré par le playbook — voir tasks/config.yml).
 3. `crontab -l -u <utilisateur> | grep -E 'pass-sport-fc|pass-sport-lca-checks'` : seule la ligne
-   `pass-sport-fc` doit apparaître, **commentée** tant que `pass_sport_fc_cron_enabled` n'a pas été
-   mis à `true`.
+   `pass-sport-fc` doit apparaître, **active** tant que `pass_sport_fc_cron_enabled` (`true` par
+   défaut) n'a pas été repassé à `false`.
 4. `systemctl list-units 'pass-sport-qf-batch@*'` doit être vide : aucune instance active tant
    que personne n'a lancé `systemctl start pass-sport-qf-batch@<partenaire>`.
 5. Aucun secret n'est parti dans le dépôt public :
