@@ -55,4 +55,15 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig);
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
+
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: sentryAuthToken,
+  release: { name: process.env.SOURCE_VERSION },
+  sourcemaps: {
+    disable: !sentryAuthToken,
+    deleteSourcemapsAfterUpload: true,
+  },
+});
