@@ -26,6 +26,12 @@ const PARENT: PivotIdentity = {
   birthdate: "1971-07-12",
 };
 
+const PARENT_NE_A_PARIS: PivotIdentity = {
+  ...PARENT,
+  birthplace: "75056",
+  birthcountry: "99100",
+};
+
 const PARENTS: PersonneQuotientFamilial[] = [
   { nom_naissance: "OSTRENYA", prenoms: "Handrivel", date_naissance: "12/07/1971", sexe: "F" },
   { nom_naissance: "VOKTARIMENDO", prenoms: "Tarnu", date_naissance: "17/11/1969", sexe: "M" },
@@ -55,6 +61,16 @@ const ok = (resource: string, data: ResourceResult["data"]): ResourceResult => (
   data,
 });
 
+const rejected = (resource: string): ResourceResult => ({
+  resource,
+  label: resource,
+  httpStatus: 422,
+  success: false,
+  data: null,
+  error: "Le paramètre codeCogInseeCommuneNaissance est invalide",
+  errorCode: "40001",
+});
+
 const qfData = (enfants: PersonneQuotientFamilial[]): QuotientFamilialData => ({
   allocataires: PARENTS,
   enfants,
@@ -72,7 +88,7 @@ const stubClient = (enfants: PersonneQuotientFamilial[]) => ({
     ok("cnous.etudiant_boursier_identite", { statut_boursier: { est_boursier: false } }),
   ),
   cnousByIne: vi.fn(),
-  aeeh: vi.fn(async () =>
+  aeeh: vi.fn(async (_child: PivotIdentity, _childIndex: number) =>
     ok("dss.allocation_enfant_handicape_identite", { status: "non_allocataire" }),
   ),
 });
@@ -142,5 +158,64 @@ describe("runEligibilitySequence — pivot rattaché au foyer de ses parents", (
     await run(PARENT, client);
 
     expect(client.aeeh).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runEligibilitySequence — AEEH et le lieu de naissance", () => {
+  const AEEH = "dss.allocation_enfant_handicape_identite";
+
+  // The index of AINE in [...FRATRIE, AINE]: the household quotient covers the two others.
+  const AINE_INDEX = 2;
+
+  const aeehCalls = (client: ReturnType<typeof stubClient>) => client.aeeh.mock.calls;
+
+  it("defaults the pays de naissance to France when FranceConnect served none", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+
+    await run({ ...PARENT, birthplace: "75056" }, client);
+
+    expect(aeehCalls(client)[0][0]).toMatchObject({ birthcountry: "99100", birthplace: "75056" });
+  });
+
+  it("keeps the pays de naissance FranceConnect did serve", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+
+    await run({ ...PARENT_NE_A_PARIS, birthcountry: "99135" }, client);
+
+    expect(aeehCalls(client)[0][0]).toMatchObject({ birthcountry: "99135" });
+  });
+
+  it("asks again on the pays alone when the params are rejected", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+    client.aeeh
+      .mockResolvedValueOnce(rejected(AEEH))
+      .mockResolvedValueOnce(ok(AEEH, { status: "allocataire" }));
+
+    const results = await run(PARENT_NE_A_PARIS, client);
+
+    expect(client.aeeh).toHaveBeenCalledTimes(2);
+    expect(aeehCalls(client)[1]).toEqual([
+      expect.objectContaining({ birthplace: undefined, birthcountry: "99100" }),
+      AINE_INDEX,
+    ]);
+    expect(results.filter((r) => r.resource === AEEH)).toHaveLength(2);
+  });
+
+  it("asks nothing more when no commune was sent to begin with", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+    client.aeeh.mockResolvedValue(rejected(AEEH));
+
+    await run({ ...PARENT, birthcountry: "99100" }, client);
+
+    expect(client.aeeh).toHaveBeenCalledTimes(1);
+  });
+
+  it("never asks a third time", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+    client.aeeh.mockResolvedValue(rejected(AEEH));
+
+    await run(PARENT_NE_A_PARIS, client);
+
+    expect(client.aeeh).toHaveBeenCalledTimes(2);
   });
 });

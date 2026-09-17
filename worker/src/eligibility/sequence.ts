@@ -6,6 +6,7 @@ import {
   toDssParams,
   toQfParams,
 } from "./client";
+import { API_PARTICULIER_VALIDATION_STATUS } from "./calls";
 import { createCheckpointRunner } from "./checkpoint";
 import type { ApiParticulierRateGate } from "./rate-gate";
 import type { HistoryRecorder } from "../db/history";
@@ -16,6 +17,7 @@ import {
   AEEH_BIRTHDATE_MIN,
   CROUS_BIRTHDATE_MAX,
   CROUS_BIRTHDATE_MIN,
+  FRANCE_COG_INSEE,
   QF_BIRTHDATE_MAX,
   QF_BIRTHDATE_MIN,
   householdQfCovers,
@@ -48,7 +50,8 @@ export const enfantToIdentity = (
     gender: enfant.sexe === "F" ? "female" : enfant.sexe === "M" ? "male" : undefined,
     birthdate,
     birthplace: parent.birthplace,
-    birthcountry: parent.birthcountry,
+    // FranceConnect does not always serve birthcountry, and AEEH refuses a query without one.
+    birthcountry: parent.birthcountry || FRANCE_COG_INSEE,
   };
 };
 
@@ -77,6 +80,10 @@ const planChildrenChecks = (
 
     return [{ childIndex, identity }];
   });
+
+// Without a commune, a second call would send exactly what was just refused.
+const needsPaysOnlyRetry = (row: ResourceResult | undefined, identity: PivotIdentity): boolean =>
+  row?.httpStatus === API_PARTICULIER_VALIDATION_STATUS && !!identity.birthplace;
 
 // Sequential API Particulier chain: QF (month by month) -> [AAH] -> [CROUS] -> per child: AEEH.
 // Nothing is selected by the usager any more: each resource is gated by its own birthdate
@@ -146,13 +153,28 @@ export async function runEligibilitySequence(
   const enfants = pivotIsHouseholdChild(qfData, identity.birthdate) ? [] : (qfData?.enfants ?? []);
 
   for (const check of planChildrenChecks(enfants, identity, qfCovers)) {
-    await checkpoint.run({
+    const row = await checkpoint.run({
       key: `aeeh:${check.childIndex}`,
       resource: RESOURCE_META.aeeh.resource,
       subject: "enfant",
       childIndex: check.childIndex,
       params: toDssParams(check.identity),
       invoke: () => client.aeeh(check.identity, check.childIndex),
+    });
+
+    if (!needsPaysOnlyRetry(row, check.identity)) continue;
+
+    // The commune sent is the parent's — the child has none of their own — so an incoherent
+    // pays/commune pair is a plausible cause of the 422. Asked again without it, once.
+    const paysOnlyIdentity: PivotIdentity = { ...check.identity, birthplace: undefined };
+
+    await checkpoint.run({
+      key: `aeeh:${check.childIndex}:pays`,
+      resource: RESOURCE_META.aeeh.resource,
+      subject: "enfant",
+      childIndex: check.childIndex,
+      params: toDssParams(paysOnlyIdentity),
+      invoke: () => client.aeeh(paysOnlyIdentity, check.childIndex),
     });
   }
 

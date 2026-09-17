@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  AEEH_RESOURCE,
   childAeehVerdict,
+  findChildResource,
   hasAahRight,
   isAahBeneficiaryRow,
   readCaisse,
@@ -103,5 +105,37 @@ describe("childAeehVerdict", () => {
     expect(childAeehVerdict(answered("dss.allocation_enfant_handicape_identite", { status }))).toBe(
       true,
     );
+  });
+});
+
+describe("findChildResource", () => {
+  const rejected = (childIndex: number): ResourceResult => ({
+    resource: AEEH_RESOURCE,
+    label: AEEH_RESOURCE,
+    httpStatus: 422,
+    success: false,
+    data: null,
+    childIndex,
+  });
+
+  // A child rejected on the pays/commune pair is asked again on the pays alone, which leaves two
+  // rows under the same (resource, childIndex): the second one is the answer.
+  it("answers the last row about that child, not the first", () => {
+    const retried = {
+      ...answered(AEEH_RESOURCE, { status: "allocataire" }),
+      childIndex: 1,
+    } as ResourceResult;
+    const results = [rejected(1), retried];
+
+    expect(findChildResource(results, AEEH_RESOURCE, 1)?.httpStatus).toBe(200);
+    expect(childAeehVerdict(findChildResource(results, AEEH_RESOURCE, 1))).toBe(true);
+  });
+
+  it("keeps each child apart", () => {
+    const results = [rejected(0), notFound(AEEH_RESOURCE, 1)];
+
+    expect(findChildResource(results, AEEH_RESOURCE, 0)?.httpStatus).toBe(422);
+    expect(findChildResource(results, AEEH_RESOURCE, 1)?.httpStatus).toBe(404);
+    expect(findChildResource(results, AEEH_RESOURCE, 2)).toBeUndefined();
   });
 });
