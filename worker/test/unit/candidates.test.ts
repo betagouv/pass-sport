@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { listBeneficiaryCandidates, readConjointIdentite } from "../../src/eligibility/candidates";
-import type {
-  PersonneQuotientFamilial,
-  PivotIdentity,
-  QuotientFamilialData,
-  ResourceResult,
+import {
+  pivotIsHouseholdChild,
+  toIsoDate,
+  type PersonneQuotientFamilial,
+  type PivotIdentity,
+  type QuotientFamilialData,
+  type ResourceResult,
 } from "../../src/eligibility/types";
 
 // Fictional syllable-based identities: pass-sport processes real beneficiary data, so test
@@ -15,16 +17,19 @@ const IDENTITY: PivotIdentity = {
   birthdate: "1990-03-14",
 };
 
-const qfResult = (enfants: QuotientFamilialData["enfants"]): ResourceResult => ({
+// The defaults keep the household out of the way: no allocataire to match the pivot against, and
+// a quotient above the threshold, so neither QF eligibility nor the household-child guard is
+// under test unless a case asks for it.
+const qfResult = (
+  enfants: QuotientFamilialData["enfants"],
+  allocataires: QuotientFamilialData["allocataires"] = [],
+  valeur = 9999,
+): ResourceResult => ({
   resource: "dss.quotient_familial",
   label: "Quotient familial",
   httpStatus: 200,
   success: true,
-  data: {
-    allocataires: [],
-    enfants,
-    quotient_familial: { valeur: 9999 }, // above threshold: QF eligibility itself is not under test here
-  },
+  data: { allocataires, enfants, quotient_familial: { valeur } },
 });
 
 const aahResult = (estBeneficiaire: boolean): ResourceResult => ({
@@ -219,6 +224,128 @@ const qfHousehold = (allocataires: PersonneQuotientFamilial[]): QuotientFamilial
   allocataires,
   enfants: [],
   quotient_familial: { valeur: 500 },
+});
+
+// The incident this guard exists for: a 24 ans still attached to their parents' CAF dossier. The
+// quotient_familial endpoint answers with the foyer the pivot belongs to, so it hands back the
+// PARENTS' foyer — the connected user among the enfants, next to a 12 ans sibling the household
+// quotient covers. 24 ans is inside both self windows, so the self row is queried and kept.
+const JEUNE_RATTACHE: PivotIdentity = {
+  family_name: "OSTRENYA",
+  given_name: "Velmorak",
+  birthdate: "2002-05-10",
+};
+
+const PARENTS: PersonneQuotientFamilial[] = [
+  { nom_naissance: "OSTRENYA", prenoms: "Handrivel", date_naissance: "12/07/1971", sexe: "F" },
+  { nom_naissance: "VOKTARIMENDO", prenoms: "Tarnu", date_naissance: "17/11/1969", sexe: "M" },
+];
+
+const FRATRIE: PersonneQuotientFamilial[] = [
+  { nom_naissance: "OSTRENYA", prenoms: "Velmorak", date_naissance: "10/05/2002", sexe: "F" },
+  { nom_naissance: "OSTRENYA", prenoms: "Quorindel", date_naissance: "03/09/2014", sexe: "M" },
+];
+
+const CADET = FRATRIE[1];
+
+describe("listBeneficiaryCandidates — pivot rattaché au foyer de ses parents", () => {
+  it("opens no child route when the connected user is himself an enfant of the foyer", () => {
+    const candidates = listBeneficiaryCandidates(JEUNE_RATTACHE, [
+      qfResult(FRATRIE, PARENTS, 500),
+    ]);
+
+    expect(candidates.map((c) => c.source)).toEqual(["self"]);
+    expect(candidates[0].eligibilities).toEqual([]);
+  });
+
+  it("says why, so the refusal is not read as a household above the threshold", () => {
+    const candidates = listBeneficiaryCandidates(JEUNE_RATTACHE, [
+      qfResult(FRATRIE, PARENTS, 500),
+    ]);
+
+    expect(candidates[0].reasons.join(" ")).toMatch(/rattaché au foyer de ses parents/);
+  });
+
+  // The whole point of the guard: the sibling is eligible, but not through this allocataire.
+  it("drops the eligible cadet rather than attaching him to his brother", () => {
+    const candidates = listBeneficiaryCandidates(JEUNE_RATTACHE, [
+      qfResult(FRATRIE, PARENTS, 500),
+    ]);
+
+    expect(candidates.some((c) => c.firstname === "Quorindel")).toBe(false);
+  });
+
+  it("triggers on an ISO date from the caisse as well as DD/MM/YYYY", () => {
+    const fratrieIso = FRATRIE.map((enfant) => ({
+      ...enfant,
+      date_naissance: toIsoDate(enfant.date_naissance) ?? undefined,
+    }));
+
+    const candidates = listBeneficiaryCandidates(JEUNE_RATTACHE, [
+      qfResult(fratrieIso, PARENTS, 500),
+    ]);
+
+    expect(candidates.map((c) => c.source)).toEqual(["self"]);
+  });
+
+  // Non-regression: the nominal foyer, where the connected user IS an allocataire.
+  it("serves the children as before when the pivot is one of the allocataires", () => {
+    const parent: PivotIdentity = {
+      family_name: "OSTRENYA",
+      given_name: "Handrivel",
+      birthdate: "1971-07-12",
+    };
+
+    const candidates = listBeneficiaryCandidates(parent, [qfResult([CADET], PARENTS, 500)]);
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      source: "enfant",
+      firstname: "Quorindel",
+      eligibilities: ["QF"],
+    });
+  });
+
+  // A pivot the answer does not place anywhere is left alone: a false refusal on a legitimate
+  // family would be worse than the case being fixed.
+  it("serves the children when the pivot appears neither as allocataire nor as enfant", () => {
+    const candidates = listBeneficiaryCandidates(IDENTITY, [qfResult([CADET], PARENTS, 500)]);
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({ source: "enfant", eligibilities: ["QF"] });
+  });
+});
+
+describe("pivotIsHouseholdChild", () => {
+  const foyer = (
+    allocataires: PersonneQuotientFamilial[],
+    enfants: PersonneQuotientFamilial[],
+  ): QuotientFamilialData => ({ allocataires, enfants, quotient_familial: { valeur: 500 } });
+
+  it("is true for a pivot among the enfants and absent from the allocataires", () => {
+    expect(pivotIsHouseholdChild(foyer(PARENTS, FRATRIE), "2002-05-10")).toBe(true);
+  });
+
+  it("is false for a pivot among the allocataires", () => {
+    expect(pivotIsHouseholdChild(foyer(PARENTS, [CADET]), "1971-07-12")).toBe(false);
+  });
+
+  it("is false for a pivot the answer places nowhere", () => {
+    expect(pivotIsHouseholdChild(foyer(PARENTS, [CADET]), "1990-03-14")).toBe(false);
+  });
+
+  // Nobody can be both, but reading the answer that way would refuse a genuine allocataire.
+  it("is false for a pivot carried by both arrays", () => {
+    expect(pivotIsHouseholdChild(foyer(FRATRIE, FRATRIE), "2002-05-10")).toBe(false);
+  });
+
+  it("is false without a pivot birthdate to match on", () => {
+    expect(pivotIsHouseholdChild(foyer(PARENTS, FRATRIE), undefined)).toBe(false);
+  });
+
+  it("is false without a quotient_familial answer at all", () => {
+    expect(pivotIsHouseholdChild(null, "2002-05-10")).toBe(false);
+  });
 });
 
 describe("readConjointIdentite", () => {
