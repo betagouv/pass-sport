@@ -103,6 +103,45 @@ export const householdQfCovers = (qf: QuotientFamilialData | null | undefined): 
   return typeof valeur === "number" && valeur < QF_ELIGIBILITY_THRESHOLD;
 };
 
+// Normalizes API Particulier dates ("JJ/MM/AAAA" or ISO) to YYYY-MM-DD.
+export const toIsoDate = (date?: string): string | null => {
+  if (!date) return null;
+
+  const fr = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (fr) return `${fr[3]}-${fr[2]}-${fr[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
+
+  return null;
+};
+
+// True when the quotient_familial answer describes the connected user as a CHILD of the
+// household rather than as one of its allocataires. The endpoint answers with the foyer the pivot
+// belongs to, so an adult still attached to their parents' dossier is answered with their
+// PARENTS' foyer: the pivot comes back among `enfants`, the parents among `allocataires`.
+//
+// QF and AEEH are aides for the children OF the allocataire, so that shape opens no child route
+// at all. Without this guard a 24 ans attached to their parents' foyer is recorded as the
+// allocataire of their own younger sibling, and that minor's code is handed to a sibling instead
+// of to the parents — who are the ones who have to connect for them.
+//
+// Matched on the birthdate alone, like readConjointIdentite in candidates.ts: it is the one field
+// the pivot and the caisse always spell identically, and nobody can share a birthdate with an
+// allocataire of their own foyer. Both halves are required — a pivot found nowhere in the answer
+// is left alone rather than treated as a child, a false refusal on a legitimate family being
+// worse than the case being fixed.
+export const pivotIsHouseholdChild = (
+  qf: QuotientFamilialData | null | undefined,
+  pivotBirthdate: string | undefined,
+): boolean => {
+  if (!pivotBirthdate) return false;
+
+  const isPivot = (person: PersonneQuotientFamilial): boolean =>
+    toIsoDate(person.date_naissance) === pivotBirthdate;
+
+  return (qf?.enfants ?? []).some(isPivot) && !(qf?.allocataires ?? []).some(isPivot);
+};
+
 // Pivot identity (subset of FranceConnect's /userinfo used by the identité endpoints).
 export type PivotIdentity = {
   // FranceConnect pairwise pseudonym. NOT part of the identité pivot — carried purely

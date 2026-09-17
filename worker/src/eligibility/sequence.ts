@@ -20,7 +20,9 @@ import {
   QF_BIRTHDATE_MIN,
   householdQfCovers,
   isWithinBirthdateWindow,
+  pivotIsHouseholdChild,
   qfReferenceMonths,
+  toIsoDate,
   type EligibilityJobData,
   type PersonneQuotientFamilial,
   type PivotIdentity,
@@ -29,17 +31,6 @@ import {
 } from "./types";
 import { isAahBeneficiaryRow, readQuotientFamilial } from "./verdicts";
 
-// QF dates come back as "AAAA-MM-JJ" or "JJ/MM/AAAA" — normalize to ISO.
-export const toIsoBirthdate = (date?: string): string | undefined => {
-  if (!date) return undefined;
-  const fr = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-
-  if (fr) return `${fr[3]}-${fr[2]}-${fr[1]}`;
-  if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
-
-  return undefined;
-};
-
 // Synthetic pivot identity for a QF child (reuses the identité param builders).
 // Children carry no birth COG — the parent's is used.
 export const enfantToIdentity = (
@@ -47,7 +38,7 @@ export const enfantToIdentity = (
   parent: PivotIdentity,
 ): PivotIdentity | null => {
   const familyName = enfant.nom_naissance;
-  const birthdate = toIsoBirthdate(enfant.date_naissance);
+  const birthdate = toIsoDate(enfant.date_naissance);
 
   if (!familyName || !enfant.prenoms || !birthdate) return null;
 
@@ -148,7 +139,13 @@ export async function runEligibilitySequence(
   const qfData = readQuotientFamilial(checkpoint.results);
   const qfCovers = householdQfCovers(qfData);
 
-  for (const check of planChildrenChecks(qfData?.enfants ?? [], identity, qfCovers)) {
+  // The answer names the connected user as a child of the foyer rather than as one of its
+  // allocataires: none of those children is theirs to apply for, so none is asked about. Sparing
+  // the AEEH call matters beyond the quota — it is a handicap question about someone else's
+  // children. candidates.ts gates the rows on the same predicate.
+  const enfants = pivotIsHouseholdChild(qfData, identity.birthdate) ? [] : (qfData?.enfants ?? []);
+
+  for (const check of planChildrenChecks(enfants, identity, qfCovers)) {
     await checkpoint.run({
       key: `aeeh:${check.childIndex}`,
       resource: RESOURCE_META.aeeh.resource,
