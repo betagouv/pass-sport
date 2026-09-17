@@ -21,6 +21,8 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/test-eligibilite/hors-france-connect': 'Demander mon pass Sport',
 };
 
+const CLUB_DETAILS_ROUTE_PREFIX = '/v2/trouver-un-club/';
+
 export default function PassSportBreadcrumbStandard() {
   const paths = usePathname();
 
@@ -29,6 +31,7 @@ export default function PassSportBreadcrumbStandard() {
   const notFound = useIsNotFound({
     internalRoutes,
     navigationItemsMap: Object.keys(NAVIGATION_ITEM_MAP),
+    dynamicRoutePrefixes: [CLUB_DETAILS_ROUTE_PREFIX],
   });
 
   // Quick & dirty for now, because /v2/code/scan contains a path parameter

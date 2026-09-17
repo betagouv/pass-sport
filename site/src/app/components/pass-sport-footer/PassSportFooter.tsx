@@ -251,16 +251,6 @@ export default function PassSportFooter() {
     },
     {
       links: [
-        ...((!isPasSportClosed()
-          ? [
-              {
-                text: 'Partenaires',
-                linkProps: {
-                  href: '/v2/partenaires',
-                },
-              },
-            ]
-          : []) as [FooterProps.LinkList.Link]),
         {
           text: 'Une question ?',
           linkProps: {
