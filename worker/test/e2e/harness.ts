@@ -270,14 +270,15 @@ class FakeApiClient implements ApiParticulierClient {
   aeehBeneficiaire = true;
 
   async aeeh(_child: PivotIdentity, childIndex: number): Promise<ResourceResult> {
-    return (
-      this.takeFailure(RESOURCE_META.aeeh) ?? this.take429(RESOURCE_META.aeeh) ?? {
-        ...okRow(RESOURCE_META.aeeh, {
-          status: this.aeehBeneficiaire ? "allocataire" : "non_allocataire",
-        }),
-        childIndex,
-      }
-    );
+    const row =
+      this.takeFailure(RESOURCE_META.aeeh) ??
+      this.take429(RESOURCE_META.aeeh) ??
+      okRow(RESOURCE_META.aeeh, {
+        status: this.aeehBeneficiaire ? "allocataire" : "non_allocataire",
+      });
+
+    // On every row, refusals included, as RealClient does.
+    return { ...row, childIndex };
   }
 }
 

@@ -47,6 +47,9 @@ export const CROUS_BIRTHDATE_MAX = "2026-12-31";
 // Strictly below: 700 itself is NOT eligible.
 export const QF_ELIGIBILITY_THRESHOLD = 700;
 
+// The only country API Particulier accepts a commune de naissance with.
+export const FRANCE_COG_INSEE = "99100";
+
 export const QF_REFERENCE_YEAR = "2026";
 export const QF_REFERENCE_MONTH_MIN = 8;
 export const QF_REFERENCE_MONTH_MAX = 12;

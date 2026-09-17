@@ -78,4 +78,21 @@ describe("toDssParams", () => {
     expect(params).not.toHaveProperty("annee");
     expect(params).not.toHaveProperty("mois");
   });
+
+  it("sends the pays de naissance it is given", () => {
+    const params = toDssParams({ ...IDENTITY, birthcountry: "99100" });
+
+    expect(params.code_cog_insee_pays_naissance).toBe("99100");
+  });
+
+  // The France default belongs to the AEEH child identity (sequence.ts), not to this builder.
+  it("invents no pays de naissance", () => {
+    expect(toDssParams(IDENTITY).code_cog_insee_pays_naissance).toBeUndefined();
+  });
+
+  it("drops the commune de naissance when there is none", () => {
+    const params = toDssParams({ ...IDENTITY, birthplace: undefined });
+
+    expect(params.code_cog_insee_commune_naissance).toBeUndefined();
+  });
 });

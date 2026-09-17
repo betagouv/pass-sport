@@ -9,6 +9,7 @@ import {
   RESULT_SITUATION_BOURSIER,
   toResultSituation,
   type EligibilityJobData,
+  type ResourceResult,
 } from "../eligibility/types";
 import { listBeneficiaryCandidates, readConjointIdentite } from "../eligibility/candidates";
 import { recordEmailDelivery, sendAcknowledgmentEmail } from "../email/notify";
@@ -148,14 +149,28 @@ export async function processEligibilityJob(
   );
 
   const { identity, isFranceConnected } = data;
-  const rejectedResources = results.filter(retryingWouldChangeNothing).map((r) => ({
-    resource: r.resource,
-    child_index: r.childIndex ?? null,
-    reason: r.httpStatus === API_PARTICULIER_VALIDATION_STATUS ? "validation" : "provider_error",
-    http_status: r.httpStatus ?? null,
-    error_code: r.errorCode ?? null,
-    error: r.error ?? null,
-  }));
+  // A child asked again on the pays de naissance alone leaves its rejected first row in the
+  // results; naming it here would accuse a resource that did answer in the end.
+  const answeredLater = (r: ResourceResult, index: number): boolean =>
+    r.childIndex != null &&
+    results.some(
+      (other, otherIndex) =>
+        otherIndex > index &&
+        other.resource === r.resource &&
+        other.childIndex === r.childIndex &&
+        !retryingWouldChangeNothing(other),
+    );
+
+  const rejectedResources = results
+    .filter((r, index) => retryingWouldChangeNothing(r) && !answeredLater(r, index))
+    .map((r) => ({
+      resource: r.resource,
+      child_index: r.childIndex ?? null,
+      reason: r.httpStatus === API_PARTICULIER_VALIDATION_STATUS ? "validation" : "provider_error",
+      http_status: r.httpStatus ?? null,
+      error_code: r.errorCode ?? null,
+      error: r.error ?? null,
+    }));
   const candidates = listBeneficiaryCandidates(identity, results);
   const qfPayload = readQuotientFamilial(results);
   const householdCaisse = readCaisse(results);

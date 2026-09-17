@@ -26,12 +26,20 @@ const answeredAbout = (result: ResourceResult, prefix: string): boolean =>
 const findSelfResource = (results: ResourceResult[], prefix: string): ResourceResult | undefined =>
   results.find((r) => answeredAbout(r, prefix));
 
+// The LAST row about that child: a 422 sends sequence.ts asking again on the pays de naissance
+// alone, which emits a second row under the same (resource, childIndex).
 export const findChildResource = (
   results: ResourceResult[],
   resource: string,
   childIndex: number,
-): ResourceResult | undefined =>
-  results.find((r) => r.resource === resource && r.childIndex === childIndex);
+): ResourceResult | undefined => {
+  for (let index = results.length - 1; index >= 0; index -= 1) {
+    const row = results[index];
+    if (row.resource === resource && row.childIndex === childIndex) return row;
+  }
+
+  return undefined;
+};
 
 // The LAST quotient_familial answer, not the first: the monthly sweep in sequence.ts emits one
 // row per month under the same `resource`, and it stops on the month that opened the right — so
