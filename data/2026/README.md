@@ -224,7 +224,7 @@ flowchart TB
     end
 
     %% Reads generate_new_codes.ipynb's own dated output (FINAL_DB), one source per run: the
-    %% campaign needs id_psp (kept as `code`), but no production DB id and no QR code (see
+    %% campaign needs id_psp (kept as `code`), but no production DB id (see
     %% 1_email_campaign.ipynb summary).
     FINAL_DB -->|"CNAF/CNAF_AAH_AEEH/\nMSA/MSA_AAH_AEEH"| e1
     e3 -->|"allocataire = benef"| CAMP_B[("Campaign CSV B\ndirect beneficiaries")]:::campaignFile

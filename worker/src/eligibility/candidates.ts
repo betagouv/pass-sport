@@ -11,6 +11,8 @@ import {
   QF_ELIGIBILITY_THRESHOLD,
   householdQfCovers,
   isWithinBirthdateWindow,
+  pivotIsHouseholdChild,
+  toIsoDate,
   type Allowance,
   type AllocataireConjointIdentite,
   type PivotIdentity,
@@ -55,18 +57,6 @@ export const ageAtReferenceDate = (birthdate: string): number => {
   return age;
 };
 
-// Normalizes API Particulier dates ("DD/MM/YYYY" or ISO) to YYYY-MM-DD.
-export const toIsoDate = (date?: string): string | null => {
-  if (!date) return null;
-
-  const fr = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-
-  if (fr) return `${fr[3]}-${fr[2]}-${fr[1]}`;
-  if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
-
-  return null;
-};
-
 // The OTHER allocataire of the quotient_familial answer. Non-null ONLY when the answer names
 // exactly two allocataires and exactly one carries the pivot birthdate — the connected user —
 // so the remaining entry is the conjoint. Null on a single allocataire, on an ambiguous couple
@@ -100,7 +90,10 @@ export const readConjointIdentite = (
 // applications_by_sub empty — the usager is not recognised as having applied, so every
 // reconnection re-burns the whole API Particulier chain, and /api/france-connect/result reads the
 // empty list as "not committed yet" and polls until it gives up. One row says what happened.
-const allocataireWithoutAnyRoute = (identity: PivotIdentity): BeneficiaryCandidate | null => {
+const allocataireWithoutAnyRoute = (
+  identity: PivotIdentity,
+  extraReasons: string[],
+): BeneficiaryCandidate | null => {
   if (!identity.family_name || !identity.given_name || !identity.birthdate) return null;
 
   return {
@@ -111,9 +104,15 @@ const allocataireWithoutAnyRoute = (identity: PivotIdentity): BeneficiaryCandida
     eligibilities: [],
     reasons: [
       `${ageAtReferenceDate(identity.birthdate)} ans: hors des fenêtres AAH (16-30) et CROUS (≤28), aucun enfant exploitable`,
+      ...extraReasons,
     ],
   };
 };
+
+// Carried on the rows of a job whose pivot turned out to be a child of the foyer, so that a log
+// read months later tells that refusal apart from an ordinary "the household is above 700".
+const HOUSEHOLD_CHILD_REASON =
+  "rattaché au foyer de ses parents : les enfants du foyer relèvent de l'allocataire, c'est à lui de se connecter";
 
 // Every person this job pronounces on: each QF child, plus the connected user when at least
 // one of the two self routes was actually queried. QF and AEEH are aides for a child, so on
@@ -124,6 +123,13 @@ export const listBeneficiaryCandidates = (
   results: ResourceResult[],
 ): BeneficiaryCandidate[] => {
   const candidates: BeneficiaryCandidate[] = [];
+
+  const qfData = readQuotientFamilial(results);
+
+  // Same gate as sequence.ts, which spared the per-child AEEH calls for the same reason: the
+  // quotient_familial answer names the connected user as a child of the foyer, not as one of its
+  // allocataires, so no child of that foyer is theirs to apply for.
+  const pivotIsChild = pivotIsHouseholdChild(qfData, identity.birthdate);
 
   // The same two windows sequence.ts gates the AAH and CROUS calls on, so a self row means
   // "we asked about you, here is what came back" and never "we never looked".
@@ -152,6 +158,8 @@ export const listBeneficiaryCandidates = (
       reasons.push(`CROUS: boursier, ${age} ans (≤28)`);
     }
 
+    if (pivotIsChild) reasons.push(HOUSEHOLD_CHILD_REASON);
+
     candidates.push({
       source: "self",
       lastname: identity.family_name,
@@ -168,9 +176,8 @@ export const listBeneficiaryCandidates = (
   //   - AEEH: for 6-19 ans, on the child's own per-child verdict.
   // The windows overlap on 2009-2020; QF has priority there, which is also why sequence.ts
   // skips the AEEH call for those children.
-  const qfData = readQuotientFamilial(results);
   const qfCovers = householdQfCovers(qfData);
-  const enfants = qfData?.enfants ?? [];
+  const enfants = pivotIsChild ? [] : (qfData?.enfants ?? []);
 
   enfants.forEach((enfant, childIndex) => {
     // The child is NAMED by their nom de naissance, like enfantToIdentity in sequence.ts: the AEEH call goes out under that name, so naming them
@@ -216,7 +223,10 @@ export const listBeneficiaryCandidates = (
   });
 
   if (candidates.length === 0) {
-    const allocataire = allocataireWithoutAnyRoute(identity);
+    const allocataire = allocataireWithoutAnyRoute(
+      identity,
+      pivotIsChild ? [HOUSEHOLD_CHILD_REASON] : [],
+    );
     if (allocataire) candidates.push(allocataire);
   }
 

@@ -34,10 +34,7 @@ export default function PassSportBreadcrumbStandard() {
     dynamicRoutePrefixes: [CLUB_DETAILS_ROUTE_PREFIX],
   });
 
-  // Quick & dirty for now, because /v2/code/scan contains a path parameter
-  const isOnQRPage = paths && paths.startsWith('/v2/code/scan');
-
-  if (!paths || internalRoutes.includes(paths) || isOnQRPage || notFound) {
+  if (!paths || internalRoutes.includes(paths) || notFound) {
     return null;
   }
 

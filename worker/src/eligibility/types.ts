@@ -103,6 +103,31 @@ export const householdQfCovers = (qf: QuotientFamilialData | null | undefined): 
   return typeof valeur === "number" && valeur < QF_ELIGIBILITY_THRESHOLD;
 };
 
+// Normalizes API Particulier dates ("JJ/MM/AAAA" or ISO) to YYYY-MM-DD.
+export const toIsoDate = (date?: string): string | null => {
+  if (!date) return null;
+
+  const fr = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (fr) return `${fr[3]}-${fr[2]}-${fr[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
+
+  return null;
+};
+
+// Ensures the allocataire is not within the household
+export const pivotIsHouseholdChild = (
+  qf: QuotientFamilialData | null | undefined,
+  pivotBirthdate: string | undefined,
+): boolean => {
+  if (!pivotBirthdate) return false;
+
+  const isPivot = (person: PersonneQuotientFamilial): boolean =>
+    toIsoDate(person.date_naissance) === pivotBirthdate;
+
+  return (qf?.enfants ?? []).some(isPivot) && !(qf?.allocataires ?? []).some(isPivot);
+};
+
 // Pivot identity (subset of FranceConnect's /userinfo used by the identité endpoints).
 export type PivotIdentity = {
   // FranceConnect pairwise pseudonym. NOT part of the identité pivot — carried purely
