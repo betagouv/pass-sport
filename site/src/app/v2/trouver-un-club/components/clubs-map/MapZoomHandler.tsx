@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMap } from 'react-leaflet';
 
 const MapZoomHandler = () => {
@@ -6,9 +6,17 @@ const MapZoomHandler = () => {
 
   const [msg, setMsg] = useState<string | null>(null);
 
-  map.on('zoomend', () => {
-    setMsg(`le zoom de la carte est maintenant au niveau ${map.getZoom()}`);
-  });
+  useEffect(() => {
+    const onZoomEnd = () => {
+      setMsg(`le zoom de la carte est maintenant au niveau ${map.getZoom()}`);
+    };
+
+    map.on('zoomend', onZoomEnd);
+
+    return () => {
+      map.off('zoomend', onZoomEnd);
+    };
+  }, [map]);
 
   return <p aria-live="polite">{msg}</p>;
 };

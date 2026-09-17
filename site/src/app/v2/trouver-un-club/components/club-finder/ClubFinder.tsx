@@ -17,7 +17,6 @@ import { escapeSingleQuotes } from '@/utils/string';
 import ClubMapView from '../club-map-view/ClubMapView';
 import ClubListView from '../club-list-view/ClubListView';
 import MissingClubInformationPanel from '../missing-club-information-panel/MissingClubInformationPanel';
-import { SegmentedControl } from '@codegouvfr/react-dsfr/SegmentedControl';
 import { GeolocationContext } from '@/store/geolocationContext';
 import { LIST_LIMIT, MAP_DEFAULT_DISTANCE } from '@/utils/club-finder';
 import { push } from '@socialgouv/matomo-next';
@@ -30,8 +29,18 @@ interface Props {
   isProVersion?: boolean;
 }
 
+const GEOLOCATION_DECIMALS = 3;
+
+const roundCoordinate = (coordinate: number | null) =>
+  coordinate === null ? null : Number(coordinate.toFixed(GEOLOCATION_DECIMALS));
+
 const ClubFiltersInAccordion = dynamic(
   () => import('../club-filters-in-accordion/ClubFiltersInAccordion'),
+  { ssr: false },
+);
+
+const SegmentedControl = dynamic(
+  () => import('@codegouvfr/react-dsfr/SegmentedControl').then((mod) => mod.SegmentedControl),
   { ssr: false },
 );
 
@@ -46,6 +55,9 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
 
   const geolocationContext = useContext(GeolocationContext);
   const { latitude, longitude, loading: isGeolocationLoading } = geolocationContext;
+
+  const roundedLatitude = roundCoordinate(latitude);
+  const roundedLongitude = roundCoordinate(longitude);
 
   const [clubsOnList, setClubsOnList] = useState<ClubsOnList>({
     results: [],
@@ -160,7 +172,7 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
   const buildDistanceExpression = useCallback((): string | null | undefined => {
     const distance = MAP_DEFAULT_DISTANCE.toString();
 
-    if (!latitude && !longitude) {
+    if (!roundedLatitude && !roundedLongitude) {
       return null;
     }
 
@@ -172,17 +184,16 @@ const ClubFinder = ({ activities, isProVersion }: Props) => {
       return null;
     }
 
-    return `within_distance(geoloc_finale, GEOM'POINT(${longitude} ${latitude} )',${distance}km)`;
-  }, [latitude, longitude, isAroundMeChecked]);
+    return `within_distance(geoloc_finale, GEOM'POINT(${roundedLongitude} ${roundedLatitude} )',${distance}km)`;
+  }, [roundedLatitude, roundedLongitude, isAroundMeChecked]);
 
   useEffect(() => {
     if (!isGeolocationLoading) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setClubParams((previousState) => {
-        return {
-          ...previousState,
-          distance: buildDistanceExpression(),
-        };
+        const distance = buildDistanceExpression();
+
+        return previousState.distance === distance ? previousState : { ...previousState, distance };
       });
     }
   }, [isGeolocationLoading, buildDistanceExpression]);
