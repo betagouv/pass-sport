@@ -267,7 +267,7 @@ describe("listBeneficiaryCandidates — pivot rattaché au foyer de ses parents"
   });
 
   // The whole point of the guard: the sibling is eligible, but not through this allocataire.
-  it("drops the eligible cadet rather than attaching him to his frère", () => {
+  it("drops the eligible cadet rather than attaching him to his brother", () => {
     const candidates = listBeneficiaryCandidates(JEUNE_RATTACHE, [
       qfResult(FRATRIE, PARENTS, 500),
     ]);

@@ -115,21 +115,7 @@ export const toIsoDate = (date?: string): string | null => {
   return null;
 };
 
-// True when the quotient_familial answer describes the connected user as a CHILD of the
-// household rather than as one of its allocataires. The endpoint answers with the foyer the pivot
-// belongs to, so an adult still attached to their parents' dossier is answered with their
-// PARENTS' foyer: the pivot comes back among `enfants`, the parents among `allocataires`.
-//
-// QF and AEEH are aides for the children OF the allocataire, so that shape opens no child route
-// at all. Without this guard a 24 ans attached to their parents' foyer is recorded as the
-// allocataire of their own younger sibling, and that minor's code is handed to a sibling instead
-// of to the parents — who are the ones who have to connect for them.
-//
-// Matched on the birthdate alone, like readConjointIdentite in candidates.ts: it is the one field
-// the pivot and the caisse always spell identically, and nobody can share a birthdate with an
-// allocataire of their own foyer. Both halves are required — a pivot found nowhere in the answer
-// is left alone rather than treated as a child, a false refusal on a legitimate family being
-// worse than the case being fixed.
+// Ensures the allocataire is not within the household
 export const pivotIsHouseholdChild = (
   qf: QuotientFamilialData | null | undefined,
   pivotBirthdate: string | undefined,
