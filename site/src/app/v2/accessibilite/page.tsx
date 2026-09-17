@@ -131,7 +131,7 @@ export default function Accessibilite() {
             </li>
             <li>
               Test d&apos;éligibilité{' '}
-              <strong>https://staging.pass-sport.incubateur.net/v2/test-eligibilite</strong>
+              <strong>https://www.pass.sports.gouv.fr/v2/test-eligibilite</strong>
             </li>
             <li>
               Structures sportives <strong>https://www.pass.sports.gouv.fr/v2/structures</strong>
