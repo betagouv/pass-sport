@@ -31,7 +31,7 @@ const isProviderDataError = (r: ResourceResult): boolean =>
 // Neither will change its mind: params already refused stay refused, and the provider replays
 // the same failure on the same data. The chain pronounces without that resource rather than
 // burning the job's four attempts over 24h to hear the same thing. Same params only: sequence.ts
-// still re-asks AEEH once on a narrower set after a 422.
+// still re-asks AEEH once on another pays de naissance after a 422.
 export const retryingWouldChangeNothing = (r: ResourceResult): boolean =>
   isParamsRejected(r) || isProviderDataError(r);
 

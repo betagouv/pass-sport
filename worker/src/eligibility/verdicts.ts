@@ -26,8 +26,8 @@ const answeredAbout = (result: ResourceResult, prefix: string): boolean =>
 const findSelfResource = (results: ResourceResult[], prefix: string): ResourceResult | undefined =>
   results.find((r) => answeredAbout(r, prefix));
 
-// The LAST row about that child: a 422 sends sequence.ts asking again on the pays de naissance
-// alone, which emits a second row under the same (resource, childIndex).
+// The LAST row about that child: a 422 sends sequence.ts asking again on another pays de
+// naissance, which emits a second row under the same (resource, childIndex).
 export const findChildResource = (
   results: ResourceResult[],
   resource: string,

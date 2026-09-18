@@ -33,12 +33,10 @@ import {
 } from "./types";
 import { isAahBeneficiaryRow, readQuotientFamilial } from "./verdicts";
 
-// Synthetic pivot identity for a QF child (reuses the identité param builders).
-// Children carry no birth COG — the parent's is used.
-export const enfantToIdentity = (
-  enfant: PersonneQuotientFamilial,
-  parent: PivotIdentity,
-): PivotIdentity | null => {
+// Synthetic pivot identity for a QF child (reuses the identité param builders). The parent's
+// lieu de naissance says nothing about the child's: the commune is never sent, and the pays
+// starts at France, which AEEH requires and nearly all these children answer to.
+export const enfantToIdentity = (enfant: PersonneQuotientFamilial): PivotIdentity | null => {
   const familyName = enfant.nom_naissance;
   const birthdate = toIsoDate(enfant.date_naissance);
 
@@ -49,9 +47,7 @@ export const enfantToIdentity = (
     given_name: enfant.prenoms,
     gender: enfant.sexe === "F" ? "female" : enfant.sexe === "M" ? "male" : undefined,
     birthdate,
-    birthplace: parent.birthplace,
-    // FranceConnect does not always serve birthcountry, and AEEH refuses a query without one.
-    birthcountry: parent.birthcountry || FRANCE_COG_INSEE,
+    birthcountry: FRANCE_COG_INSEE,
   };
 };
 
@@ -65,11 +61,10 @@ type ChildCheck = { childIndex: number; identity: PivotIdentity };
 
 const planChildrenChecks = (
   enfants: PersonneQuotientFamilial[],
-  parent: PivotIdentity,
   qfCovers: boolean,
 ): ChildCheck[] =>
   enfants.flatMap((enfant, childIndex) => {
-    const identity = enfantToIdentity(enfant, parent);
+    const identity = enfantToIdentity(enfant);
     if (!identity) return [];
 
     const { birthdate } = identity;
@@ -81,9 +76,19 @@ const planChildrenChecks = (
     return [{ childIndex, identity }];
   });
 
-// Without a commune, a second call would send exactly what was just refused.
-const needsPaysOnlyRetry = (row: ResourceResult | undefined, identity: PivotIdentity): boolean =>
-  row?.httpStatus === API_PARTICULIER_VALIDATION_STATUS && !!identity.birthplace;
+// France refused, the parent's pays is the only other one worth trying.
+export const needsParentCountryRetry = (
+  row: ResourceResult | undefined,
+  parent: PivotIdentity,
+): boolean =>
+  row?.httpStatus === API_PARTICULIER_VALIDATION_STATUS &&
+  !!parent.birthcountry &&
+  parent.birthcountry !== FRANCE_COG_INSEE;
+
+export const parentCountryIdentity = (
+  identity: PivotIdentity,
+  parent: PivotIdentity,
+): PivotIdentity => ({ ...identity, birthcountry: parent.birthcountry });
 
 // Sequential API Particulier chain: QF (month by month) -> [AAH] -> [CROUS] -> per child: AEEH.
 // Nothing is selected by the usager any more: each resource is gated by its own birthdate
@@ -152,7 +157,7 @@ export async function runEligibilitySequence(
   // children. candidates.ts gates the rows on the same predicate.
   const enfants = pivotIsHouseholdChild(qfData, identity.birthdate) ? [] : (qfData?.enfants ?? []);
 
-  for (const check of planChildrenChecks(enfants, identity, qfCovers)) {
+  for (const check of planChildrenChecks(enfants, qfCovers)) {
     const row = await checkpoint.run({
       key: `aeeh:${check.childIndex}`,
       resource: RESOURCE_META.aeeh.resource,
@@ -162,19 +167,17 @@ export async function runEligibilitySequence(
       invoke: () => client.aeeh(check.identity, check.childIndex),
     });
 
-    if (!needsPaysOnlyRetry(row, check.identity)) continue;
+    if (!needsParentCountryRetry(row, identity)) continue;
 
-    // The commune sent is the parent's — the child has none of their own — so an incoherent
-    // pays/commune pair is a plausible cause of the 422. Asked again without it, once.
-    const paysOnlyIdentity: PivotIdentity = { ...check.identity, birthplace: undefined };
+    const paysParent = parentCountryIdentity(check.identity, identity);
 
     await checkpoint.run({
-      key: `aeeh:${check.childIndex}:pays`,
+      key: `aeeh:${check.childIndex}:pays-parent`,
       resource: RESOURCE_META.aeeh.resource,
       subject: "enfant",
       childIndex: check.childIndex,
-      params: toDssParams(paysOnlyIdentity),
-      invoke: () => client.aeeh(paysOnlyIdentity, check.childIndex),
+      params: toDssParams(paysParent),
+      invoke: () => client.aeeh(paysParent, check.childIndex),
     });
   }
 
