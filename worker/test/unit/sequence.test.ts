@@ -169,43 +169,53 @@ describe("runEligibilitySequence — AEEH et le lieu de naissance", () => {
 
   const aeehCalls = (client: ReturnType<typeof stubClient>) => client.aeeh.mock.calls;
 
-  it("defaults the pays de naissance to France when FranceConnect served none", async () => {
+  it("never sends the commune de naissance, which is the parent's alone", async () => {
     const client = stubClient([...FRATRIE, AINE]);
 
-    await run({ ...PARENT, birthplace: "75056" }, client);
+    await run(PARENT_NE_A_PARIS, client);
 
-    expect(aeehCalls(client)[0][0]).toMatchObject({ birthcountry: "99100", birthplace: "75056" });
+    expect(aeehCalls(client)[0][0].birthplace).toBeUndefined();
   });
 
-  it("keeps the pays de naissance FranceConnect did serve", async () => {
+  it("asks on France first, whatever the pays de naissance of the parent", async () => {
     const client = stubClient([...FRATRIE, AINE]);
 
     await run({ ...PARENT_NE_A_PARIS, birthcountry: "99135" }, client);
 
-    expect(aeehCalls(client)[0][0]).toMatchObject({ birthcountry: "99135" });
+    expect(aeehCalls(client)[0][0]).toMatchObject({ birthcountry: "99100" });
   });
 
-  it("asks again on the pays alone when the params are rejected", async () => {
+  it("asks again on the pays de naissance of the parent when France was rejected", async () => {
     const client = stubClient([...FRATRIE, AINE]);
     client.aeeh
       .mockResolvedValueOnce(rejected(AEEH))
       .mockResolvedValueOnce(ok(AEEH, { status: "allocataire" }));
 
-    const results = await run(PARENT_NE_A_PARIS, client);
+    const results = await run({ ...PARENT_NE_A_PARIS, birthcountry: "99135" }, client);
 
     expect(client.aeeh).toHaveBeenCalledTimes(2);
     expect(aeehCalls(client)[1]).toEqual([
-      expect.objectContaining({ birthplace: undefined, birthcountry: "99100" }),
+      expect.objectContaining({ birthcountry: "99135" }),
       AINE_INDEX,
     ]);
+    expect(aeehCalls(client)[1][0].birthplace).toBeUndefined();
     expect(results.filter((r) => r.resource === AEEH)).toHaveLength(2);
   });
 
-  it("asks nothing more when no commune was sent to begin with", async () => {
+  it("asks nothing more when the parent was born in France too", async () => {
     const client = stubClient([...FRATRIE, AINE]);
     client.aeeh.mockResolvedValue(rejected(AEEH));
 
-    await run({ ...PARENT, birthcountry: "99100" }, client);
+    await run(PARENT_NE_A_PARIS, client);
+
+    expect(client.aeeh).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks nothing more when FranceConnect served no pays de naissance", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+    client.aeeh.mockResolvedValue(rejected(AEEH));
+
+    await run(PARENT, client);
 
     expect(client.aeeh).toHaveBeenCalledTimes(1);
   });
@@ -214,7 +224,7 @@ describe("runEligibilitySequence — AEEH et le lieu de naissance", () => {
     const client = stubClient([...FRATRIE, AINE]);
     client.aeeh.mockResolvedValue(rejected(AEEH));
 
-    await run(PARENT_NE_A_PARIS, client);
+    await run({ ...PARENT_NE_A_PARIS, birthcountry: "99135" }, client);
 
     expect(client.aeeh).toHaveBeenCalledTimes(2);
   });

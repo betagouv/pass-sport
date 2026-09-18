@@ -2,7 +2,7 @@
 
 ## General guidelines
 - Comments should always be in english
-- Code should be self explanatory, make the variable names meaningful, avoid the comments as much as possible (it is a code smell)
+- Be as concise as possible in the commented code, code should be self explanatory
 
 ## Node version
 

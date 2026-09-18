@@ -118,8 +118,8 @@ describe("findChildResource", () => {
     childIndex,
   });
 
-  // A child rejected on the pays/commune pair is asked again on the pays alone, which leaves two
-  // rows under the same (resource, childIndex): the second one is the answer.
+  // A child rejected on France is asked again on the pays de naissance of the parent, which
+  // leaves two rows under the same (resource, childIndex): the second one is the answer.
   it("answers the last row about that child, not the first", () => {
     const retried = {
       ...answered(AEEH_RESOURCE, { status: "allocataire" }),

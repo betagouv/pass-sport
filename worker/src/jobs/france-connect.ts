@@ -149,7 +149,7 @@ export async function processEligibilityJob(
   );
 
   const { identity, isFranceConnected } = data;
-  // A child asked again on the pays de naissance alone leaves its rejected first row in the
+  // A child asked again on another pays de naissance leaves its rejected first row in the
   // results; naming it here would accuse a resource that did answer in the end.
   const answeredLater = (r: ResourceResult, index: number): boolean =>
     r.childIndex != null &&
