@@ -14,9 +14,15 @@
 // ralentit à chaud.
 //
 // Les tunnels Scalingo sont à ouvrir À CÔTÉ, ce script ne les monte pas :
-//   scalingo --app "$SCALINGO_APP" db-tunnel -p 10000 SCALINGO_POSTGRESQL_URL
-//   scalingo --app "$SCALINGO_APP" db-tunnel -p 10001 SCALINGO_REDIS_URL
+//   scalingo --app "$SCALINGO_APP" db-tunnel -p 10010 SCALINGO_POSTGRESQL_URL
+//   scalingo --app "$SCALINGO_APP" db-tunnel -p 10011 SCALINGO_REDIS_URL
 // puis exporter SCALINGO_POSTGRESQL_URL / FC_CODE_EMAILS_REDIS_URL réécrites vers 127.0.0.1.
+//
+// 10000/10001 sont les ports du passage FranceConnect, que la cron pass-sport-fc lance toutes
+// les 30 minutes (run_fc_pipeline.sh) : les reprendre ici entrerait en collision avec lui. Le
+// second db-tunnel meurt alors sur "address already in use" pendant que l'autre process croit
+// son tunnel ouvert — son contrôle ne fait que tester le port, qui répond. Les deux se
+// retrouvent sur le même tunnel, que le premier sorti referme sous les pieds du second.
 //
 // À lancer DEPUIS worker/ : load-env lit .env.local relativement au cwd.
 //
@@ -61,8 +67,7 @@ const DEFAULT_DRY_RUN_SPACING_MS = 800;
 // plafond ne se voit que si Redis ment ou si le site sature des heures durant.
 const MAX_GATE_RETRIES = 1_000;
 
-const REDIS_URL =
-  process.env.FC_CODE_EMAILS_REDIS_URL ?? process.env.SCALINGO_REDIS_URL ?? "redis://localhost:6379";
+const REDIS_URL = process.env.SCALINGO_REDIS_URL ?? "redis://localhost:6379";
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
