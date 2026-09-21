@@ -34,7 +34,7 @@
     "@uidotdev/usehooks": "^2.4.1",
     "bullmq": "^5.81.4",
     "classnames": "^2.5.1",
-    "crisp-api": "^10.11.0",
+    "crisp-api": "^11.1.0",
     "date-fns": "^4.4.0",
     "geolib": "^3.3.14",
     "got": "^15.1.0",
