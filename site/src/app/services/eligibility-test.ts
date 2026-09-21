@@ -2,9 +2,10 @@ import {
   ConfirmPayload,
   ConfirmResponseBody,
   ConfirmResponseErrorBody,
+  RawSearchResponseBody,
   SearchPayload,
-  SearchResponseBody,
   SearchResponseErrorBody,
+  toLcaSituation,
 } from '@/types/EligibilityTest';
 
 import * as Sentry from '@sentry/nextjs';
@@ -91,7 +92,6 @@ export const fetchCode = async (
   }
 
   const url: URL = buildLCAConfirmUrl(payload);
-
   const response = await fetch(url, { headers: { 'X-Gravitee-Api-Key': authenticationKey } });
 
   if (!response.ok) {
@@ -140,7 +140,7 @@ export const fetchEligible = async (
     );
   }
 
-  const responseBody = (await response.json()) as SearchResponseBody | SearchResponseErrorBody;
+  const responseBody = (await response.json()) as RawSearchResponseBody | SearchResponseErrorBody;
 
   if ('message' in responseBody) {
     Sentry.withScope((scope) => {
@@ -152,14 +152,13 @@ export const fetchEligible = async (
     return responseBody;
   }
 
-  return responseBody.map((item) => {
-    if (options?.keepMatricule) {
-      return { ...item, hasMatricule: !!item.matricule };
-    }
+  return responseBody.map(({ matricule, ...item }) => {
+    const normalised = {
+      ...item,
+      situation: toLcaSituation(item.situation),
+      hasMatricule: !!matricule,
+    };
 
-    // Remove matricule from final output
-    const { matricule, ...remaining } = item;
-
-    return { ...remaining, hasMatricule: !!matricule };
+    return options?.keepMatricule ? { ...normalised, matricule } : normalised;
   });
 };
