@@ -67,6 +67,10 @@ export const LCA_SITUATION = { JEUNE: 'jeune', AAH: 'AAH', BOURSIER: 'boursier' 
 
 export type SituationType = (typeof LCA_SITUATION)[keyof typeof LCA_SITUATION];
 
+const SITUATION_ALIASES: Record<string, SituationType> = { aeeh: LCA_SITUATION.JEUNE };
+export const toLcaSituation = (answered: string): SituationType =>
+  SITUATION_ALIASES[answered.toLowerCase()] ?? (answered as SituationType);
+
 export const ORGANISME = { MSA: 'MSA', CAF: 'CAF', CNOUS: 'cnous' } as const;
 
 export type OrganismType = (typeof ORGANISME)[keyof typeof ORGANISME];
@@ -83,6 +87,13 @@ export interface SearchResponseBodyItem {
 }
 
 export type SearchResponseBody = SearchResponseBodyItem[];
+
+export type RawSearchResponseBodyItem = Omit<
+  SearchResponseBodyItem,
+  'situation' | 'hasMatricule'
+> & { situation: string };
+
+export type RawSearchResponseBody = RawSearchResponseBodyItem[];
 
 export interface SearchResponseErrorBody {
   message: string;

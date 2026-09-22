@@ -13,6 +13,7 @@ import {
 import {
   ConfirmResponseBody,
   ConfirmResponseErrorBody,
+  RawSearchResponseBody,
   SearchResponseBody,
   SearchResponseErrorBody,
 } from '@/types/EligibilityTest';
@@ -22,7 +23,11 @@ global.fetch = jest.fn() as jest.Mock;
 function mockFetch(
   status: number,
   responseBody:
-    ConfirmResponseBody | ConfirmResponseErrorBody | SearchResponseBody | SearchResponseErrorBody,
+    | ConfirmResponseBody
+    | ConfirmResponseErrorBody
+    | RawSearchResponseBody
+    | SearchResponseBody
+    | SearchResponseErrorBody,
 ) {
   (global.fetch as jest.Mock).mockImplementationOnce(() =>
     Promise.resolve({
@@ -82,6 +87,15 @@ describe('eligibility-test service', () => {
 
       const data = await fetchEligible(payload);
       expect(data).toMatchSnapshot();
+    });
+
+    it('normalises the AEEH spelling LCA answers into the jeune situation', async () => {
+      const payload = buildSearchPayload({});
+
+      mockFetch(200, [{ ...buildSearchResponseBody()[0], situation: 'AEEH' }]);
+
+      const data = await fetchEligible(payload);
+      expect(data).toEqual([expect.objectContaining({ situation: 'jeune' })]);
     });
   });
 

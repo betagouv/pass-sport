@@ -4,3 +4,4 @@ allowBuilds:
   msgpackr-extract: false
   protobufjs: false
   ssh2: false
+minimumReleaseAge: 10080 # minutes = 7 days
