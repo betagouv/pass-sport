@@ -2,6 +2,8 @@ name: Site tests
 on:
   pull_request:
     branches: [main, develop]
+permissions:
+  contents: read
 defaults:
   run:
     working-directory: ./site
