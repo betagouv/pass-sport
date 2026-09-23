@@ -204,6 +204,8 @@ export const eligibilityResults = pgTable(
     // there, and nothing has confirmed it.
     caisse: text("caisse").$type<ResultCaisse>(),
 
+    relanceAllowed: boolean("relance_allowed").notNull().default(false),
+
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -263,6 +265,7 @@ export const applicationResultsBySub = pgView("application_results_by_sub").as((
       gender: sql<string | null>`${eligibilityResults.enfantIdentite}->>'gender'`.as("gender"),
       verdict: eligibilityResults.verdict,
       passSportCode: eligibilityResults.passSportCode,
+      relanceAllowed: eligibilityResults.relanceAllowed,
       createdAt: eligibilityResults.createdAt,
     })
     .from(eligibilityResults)
@@ -339,6 +342,10 @@ export const eligibilityHistory = pgTable(
     //   The send itself is recorded under the same 'email.code_*' actions as everywhere else.
     // | 'psp.code_match_base' — written by data/ too: the beneficiary was found in the lamp
     //   beneficiary database with a code already assigned, so no new one was minted
+    // | 'fc_relance' — l'usager a redemandé une vérification depuis son espace FranceConnect
+    //   (jobs/fc-relance.ts). Une ligne par bénéficiaire re-jugé, plus une ligne job-level quand
+    //   la relance est refusée d'emblée (quota, aucun refus à reprendre). C'est aussi cette
+    //   action que lit le garde-fou du quota, via la vue fc_relance_last_by_sub.
     action: text("action").notNull(),
 
     // 'success' | 'not_found' | 'error' | 'rate_limited' | 'skipped'
@@ -376,3 +383,22 @@ export const eligibilityHistory = pgTable(
 );
 
 export type EligibilityHistoryRow = typeof eligibilityHistory.$inferInsert;
+
+// When each FranceConnect user last asked for a relance, and nothing else. eligibility_history
+// itself is never granted to site_readonly — it holds raw payloads, codes and matricules
+// included — so this projection exists purely to let the site grey out the button and name the
+// date it comes back. It carries no personal data beyond the pseudonym the site already holds.
+// The authoritative quota guard is the worker's own (jobs/fc-relance.ts); this is display.
+export const fcRelanceLastBySub = pgView("fc_relance_last_by_sub").as((qb) =>
+  qb
+    .select({
+      sub: sql<string>`${eligibilityHistory.allocataireFcSub}`.as("sub"),
+      lastRelance: sql<Date>`max(${eligibilityHistory.createdAt})`.as("last_relance"),
+    })
+    .from(eligibilityHistory)
+    .where(
+      sql`${eligibilityHistory.action} = 'fc_relance'
+        and ${eligibilityHistory.allocataireFcSub} is not null`,
+    )
+    .groupBy(eligibilityHistory.allocataireFcSub),
+);

@@ -9,8 +9,15 @@ import ResultPanel from './components/post-login-flow/ResultPanel';
 import BeneficiaryRecap from './components/post-login-flow/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
-import { findResultsForSub } from '@/app/services/applications';
-import { FC_DEBUGGING_ONLY, IS_LOCAL_ENV, PARCOURS_HORS_FC_ENABLED } from '@/app/constants/env';
+import { findLastRelanceForSub, findResultsForSub } from '@/app/services/applications';
+import { nextRelanceAt } from '@/app/services/relance';
+import {
+  FC_DEBUGGING_ONLY,
+  FC_RELANCE_ALLOWLIST_ONLY,
+  FC_RELANCE_ENABLED,
+  IS_LOCAL_ENV,
+  PARCOURS_HORS_FC_ENABLED,
+} from '@/app/constants/env';
 import { HORS_FRANCE_CONNECT_MAINTENANCE } from './constants/maintenance';
 import styles from './styles.module.scss';
 import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
@@ -71,11 +78,10 @@ interface Props {
 export default async function PocFcApiParticulier({ searchParams }: Props) {
   const { error, status } = await searchParams;
   const result = await loadPocResult();
-  // A returning FranceConnect user keeps the same `sub`, which is the job id — so a
-  // request submitted in an earlier session is still findable after reconnecting.
   const existingJob = result ? await findJobForSub(result.sub) : null;
-  // Empty while the job is still queued — the generic status block below covers that.
   const results = result ? await findResultsForSub(result.sub) : [];
+  const relanceAvailableAt =
+    result && FC_RELANCE_ENABLED ? nextRelanceAt(await findLastRelanceForSub(result.sub)) : null;
 
   // Raw FranceConnect identity + API Particulier response dumps (including their
   // errors) are debug-only and restricted to the local environment.
@@ -207,9 +213,18 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 beneficiaries={results}
                 allocataireIdentity={result.identity}
                 jobInfo={existingJobInfo}
+                relanceAvailableAt={relanceAvailableAt?.toISOString() ?? null}
+                relanceEnabled={FC_RELANCE_ENABLED}
+                relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
               />
             ) : (
-              <ResultPanel allocataireIdentity={result.identity} jobInfo={existingJobInfo} />
+              <ResultPanel
+                allocataireIdentity={result.identity}
+                jobInfo={existingJobInfo}
+                relanceAvailableAt={relanceAvailableAt?.toISOString() ?? null}
+                relanceEnabled={FC_RELANCE_ENABLED}
+                relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
+              />
             )
           ) : (
             // The callback enqueues before redirecting here, so this is only reachable when

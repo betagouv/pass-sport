@@ -2,7 +2,7 @@
   "name": "pass-sport-worker",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.33.2",
+  "packageManager": "pnpm@12.5.1",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.0.4",
-    "@testcontainers/redis": "^12.0.4",
+    "@testcontainers/redis": "^12.1.0",
     "@types/node": "^20",
     "@types/pg": "^8.15.0",
     "drizzle-kit": "^0.31.5",
@@ -41,10 +41,5 @@
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
-  },
-  "pnpm": {
-    "overrides": {
-      "esbuild": "^0.28.1"
-    }
   }
 }

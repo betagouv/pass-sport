@@ -17,6 +17,7 @@ import {
   FC_CODE_EMAILS_JOB_ID,
   FC_CODE_EMAILS_JOB_NAME,
   FC_CODE_EMAILS_QUEUE_NAME,
+  FC_RELANCE_JOB_NAME,
   FRANCE_CONNECT_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
   LCA_JOB_NAME,
@@ -24,6 +25,7 @@ import {
   retryBackoff,
 } from "../../src/queues";
 import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/france-connect";
+import { processFcRelanceJob } from "../../src/jobs/fc-relance";
 import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
 import { processFcCodeEmailsJob, type FcCodeEmailsJobData } from "../../src/jobs/fc-code-emails";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
@@ -74,8 +76,13 @@ const okRow = (meta: { resource: string; label: string }, data: unknown): Resour
 // that Retry-After (then never again) to exercise the pause-and-retry path.
 class FakeApiClient implements ApiParticulierClient {
   private fired429 = false;
-  // Counts every resource call, so a test can make the Nth one answer 502.
+  // Counts every resource call, so a test can make the Nth one answer 502 — and so a test that
+  // expects a job to spend NO quota at all can prove it.
   private calls = 0;
+
+  get callCount(): number {
+    return this.calls;
+  }
   // Household quotient the fake QF reports. Default sits ABOVE the 700 threshold, so
   // the QF route grants nothing unless a test lowers it (setQfValeur on the Stack).
   qfValeur = 1000;
@@ -348,9 +355,11 @@ export type Stack = {
   redis: Redis;
   db: FranceConnectDeps["db"];
   queue: Queue<EligibilityJobData>;
-  enqueueAndWait: (data: EligibilityJobPayload) => Promise<unknown>;
+  enqueueAndWait: (data: EligibilityJobPayload, jobId?: string) => Promise<unknown>;
   // Enqueue a payload and wait for the worker to reject it. Returns the failure reason.
   enqueueAndWaitFailure: (data: EligibilityJobPayload) => Promise<string>;
+  enqueueRelanceAndWait: (data: EligibilityJobPayload, sub: string) => Promise<unknown>;
+  apiCallCount: () => number;
 
   // The two-step form flow, on its own queue and worker exactly as in production. The LCA
   // calls happen on the site, so what lands here is already an outcome.
@@ -526,25 +535,47 @@ export async function startStack(
 
   const worker = new Worker<EligibilityJobData>(
     FRANCE_CONNECT_QUEUE_NAME,
-    async (job) => processEligibilityJob(job, job.data, deps),
+    async (job) =>
+      job.name === FC_RELANCE_JOB_NAME
+        ? processFcRelanceJob(job, job.data, deps)
+        : processEligibilityJob(job, job.data, deps),
     // Same settings as production, so the producer's "escalating" backoff resolves here
     // too if a test ever enqueues with attempts > 1.
     { connection: conn(), settings: { backoffStrategy: retryBackoff } },
   );
   await worker.waitUntilReady();
 
-  const enqueueAndWait = async (data: EligibilityJobPayload): Promise<unknown> => {
-    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data);
+  const awaitJob = async (jobId: string, freeId = false): Promise<unknown> => {
     for (let i = 0; i < 100; i++) {
-      const state = await job.getState();
-      if (state === "completed") return (await queue.getJob(job.id!))?.returnvalue;
-      if (state === "failed") {
-        const fresh = await queue.getJob(job.id!);
-        throw new Error(`job ${job.id} failed: ${fresh?.failedReason ?? "<no reason>"}`);
+      const fresh = await queue.getJob(jobId);
+      const state = await fresh?.getState();
+
+      if (state === "completed") {
+        const value = fresh?.returnvalue;
+        if (freeId) await fresh?.remove();
+        return value;
       }
+
+      if (state === "failed") {
+        throw new Error(`job ${jobId} failed: ${fresh?.failedReason ?? "<no reason>"}`);
+      }
+
       await new Promise((r) => setTimeout(r, 100));
     }
-    throw new Error(`job ${job.id} did not finish in time`);
+    throw new Error(`job ${jobId} did not finish in time`);
+  };
+
+  const enqueueAndWait = async (data: EligibilityJobPayload, jobId?: string): Promise<unknown> => {
+    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data, jobId ? { jobId } : undefined);
+    return awaitJob(job.id!, jobId != null);
+  };
+
+  const enqueueRelanceAndWait = async (
+    data: EligibilityJobPayload,
+    sub: string,
+  ): Promise<unknown> => {
+    const job = await queue.add(FC_RELANCE_JOB_NAME, data, { jobId: sub, priority: 1 });
+    return awaitJob(job.id!, true);
   };
 
   const enqueueAndWaitFailure = async (data: EligibilityJobPayload): Promise<string> => {
@@ -694,6 +725,8 @@ export async function startStack(
     redis: guardConn,
     enqueueAndWait,
     enqueueAndWaitFailure,
+    enqueueRelanceAndWait,
+    apiCallCount: () => apiClient.callCount,
     lcaQueue,
     enqueueLcaAndWait,
     enqueueLcaAndWaitFailure,

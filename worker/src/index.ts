@@ -10,9 +10,11 @@ import { getClient } from "./eligibility/client";
 import { createRedisRateGate } from "./eligibility/rate-gate";
 import type { EligibilityJobData, LcaJobData } from "./eligibility/types";
 import { processEligibilityJob, type FranceConnectDeps } from "./jobs/france-connect";
+import { processFcRelanceJob } from "./jobs/fc-relance";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
 import { processFcCodeEmailsJob, type FcCodeEmailsJobData } from "./jobs/fc-code-emails";
 import {
+  FC_RELANCE_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
   FC_CODE_EMAILS_QUEUE_NAME,
   LCA_QUEUE_NAME,
@@ -119,7 +121,9 @@ async function main(): Promise<void> {
     queueName: FRANCE_CONNECT_QUEUE_NAME,
     process: (job, queue) => {
       const deps: FranceConnectDeps = { apiClient, db, queue, rateGate };
-      return processEligibilityJob(job, job.data, deps);
+      return job.name === FC_RELANCE_JOB_NAME
+        ? processFcRelanceJob(job, job.data, deps)
+        : processEligibilityJob(job, job.data, deps);
     },
   });
 

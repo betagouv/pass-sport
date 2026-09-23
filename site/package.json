@@ -75,7 +75,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-unused-imports": "^4.4.1",
     "jest": "^30.5.1",
-    "jest-environment-jsdom": "^29.7.0",
+    "jest-environment-jsdom": "^30.5.1",
     "prettier": "^3.9.6",
     "sass": "^1.103.1",
     "typescript": "^5.9.3",

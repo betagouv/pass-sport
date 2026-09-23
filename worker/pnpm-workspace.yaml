@@ -4,4 +4,6 @@ allowBuilds:
   msgpackr-extract: false
   protobufjs: false
   ssh2: false
+overrides:
+  esbuild: ^0.28.1
 minimumReleaseAge: 10080 # minutes = 7 days

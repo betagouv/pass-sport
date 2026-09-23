@@ -23,6 +23,7 @@ const beneficiary = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryRes
   gender: null,
   verdict: 'eligible_confirmed',
   code: null,
+  relanceAllowed: false,
   ...overrides,
 });
 
@@ -30,6 +31,8 @@ const renderRecap = (beneficiaries: BeneficiaryResult[]) =>
   render(
     <BeneficiaryRecap beneficiaries={beneficiaries} allocataireIdentity={ALLOCATAIRE_IDENTITY} />,
   );
+
+const RELANCE_LABEL = 'Relancer la vérification';
 
 const cards = (container: HTMLElement) =>
   Array.from(container.querySelectorAll<HTMLElement>('.fr-card'));
@@ -283,6 +286,82 @@ describe('BeneficiaryRecap', () => {
       expect(jest.mocked(push).mock.calls).toEqual([
         [['trackEvent', 'Demande FC', 'résultat', 'aucun bénéficiaire trouvé', undefined]],
       ]);
+    });
+  });
+
+  // Le drapeau est lu côté serveur et descendu en prop : ce composant est rendu depuis
+  // ResultPanel, qui est 'use client'.
+  describe('bouton de relance', () => {
+    const refused = [beneficiary({ verdict: 'not_eligible' })];
+
+    const renderWithRelance = (
+      beneficiaries: BeneficiaryResult[],
+      relanceEnabled: boolean | undefined,
+      relanceAllowlistOnly = false,
+    ) =>
+      render(
+        <BeneficiaryRecap
+          beneficiaries={beneficiaries}
+          allocataireIdentity={ALLOCATAIRE_IDENTITY}
+          relanceEnabled={relanceEnabled}
+          relanceAllowlistOnly={relanceAllowlistOnly}
+        />,
+      );
+
+    it('est rendu quand le drapeau est levé et qu’il reste un refus', () => {
+      renderWithRelance(refused, true);
+
+      expect(screen.getByRole('button', { name: RELANCE_LABEL })).toBeInTheDocument();
+    });
+
+    it.each([
+      ['le drapeau est baissé', false],
+      ['le drapeau est absent', undefined],
+    ])('est absent quand %s, même avec un refus', (_label, relanceEnabled) => {
+      renderWithRelance(refused, relanceEnabled);
+
+      expect(screen.queryByRole('button', { name: RELANCE_LABEL })).not.toBeInTheDocument();
+    });
+
+    // Une relance n'a rien à amender : elle ne touche que des lignes 'not_eligible'.
+    it('est absent sans refus à reprendre, drapeau levé ou non', () => {
+      renderWithRelance([beneficiary({ verdict: 'eligible_pending' })], true);
+
+      expect(screen.queryByRole('button', { name: RELANCE_LABEL })).not.toBeInTheDocument();
+    });
+
+    describe('restreinte à la liste de test', () => {
+      it('est absent quand aucun refus n’est autorisé', () => {
+        renderWithRelance(refused, true, true);
+
+        expect(screen.queryByRole('button', { name: RELANCE_LABEL })).not.toBeInTheDocument();
+      });
+
+      it('est rendu quand un refus est autorisé', () => {
+        renderWithRelance(
+          [
+            beneficiary({ verdict: 'not_eligible' }),
+            beneficiary({ source: 'enfant', verdict: 'not_eligible', relanceAllowed: true }),
+          ],
+          true,
+          true,
+        );
+
+        expect(screen.getByRole('button', { name: RELANCE_LABEL })).toBeInTheDocument();
+      });
+
+      it('ignore une autorisation portée par une ligne déjà éligible', () => {
+        renderWithRelance(
+          [
+            beneficiary({ verdict: 'not_eligible' }),
+            beneficiary({ verdict: 'eligible_pending', relanceAllowed: true }),
+          ],
+          true,
+          true,
+        );
+
+        expect(screen.queryByRole('button', { name: RELANCE_LABEL })).not.toBeInTheDocument();
+      });
     });
   });
 });
