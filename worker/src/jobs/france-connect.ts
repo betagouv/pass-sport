@@ -8,10 +8,17 @@ import {
   ORGANISME_BOURSIER,
   RESULT_SITUATION_BOURSIER,
   toResultSituation,
+  type AllocataireConjointIdentite,
+  type Caisse,
   type EligibilityJobData,
+  type QuotientFamilialData,
   type ResourceResult,
 } from "../eligibility/types";
-import { listBeneficiaryCandidates, readConjointIdentite } from "../eligibility/candidates";
+import {
+  listBeneficiaryCandidates,
+  readConjointIdentite,
+  type BeneficiaryCandidate,
+} from "../eligibility/candidates";
 import { recordEmailDelivery, sendAcknowledgmentEmail } from "../email/notify";
 import type { HistoryRecorder } from "../db/history";
 import { startJob } from "./shared";
@@ -116,27 +123,35 @@ export type BeneficiaryOutcome = {
   verdict: Verdict;
 };
 
-// Processes one eligibility job end-to-end: accusé de réception -> API Particulier chain
-// -> one Postgres row per beneficiary. No LCA call and no outcome email: the code is minted
-// later by the data/ pipeline, which picks the 'eligible_pending' rows written here.
-export async function processEligibilityJob(
+export type RejectedResource = {
+  resource: string;
+  child_index: number | null;
+  reason: string;
+  http_status: number | null;
+  error_code: string | null;
+  error: string | null;
+};
+
+export type HouseholdAssessment = {
+  results: ResourceResult[];
+  candidates: BeneficiaryCandidate[];
+  qfPayload: QuotientFamilialData | null;
+  householdCaisse: Caisse | null;
+  conjointIdentite: AllocataireConjointIdentite | null;
+  rejectedResources: RejectedResource[];
+};
+
+// The API Particulier chain and everything read off it — who this job pronounces on, and the
+// household-level facts their rows carry. Shared verbatim by the two processors: the initial
+// demande (which inserts) and the relance (which only amends), so a right can never be judged
+// one way on one path and another way on the other.
+export async function assessHousehold(
   job: Job<EligibilityJobData>,
   data: EligibilityJobData,
   deps: FranceConnectDeps,
-): Promise<{
-  beneficiaries: number;
-  outcomes: BeneficiaryOutcome[];
-  apCalls: number;
-  processedAt: string;
-}> {
-  const { apiClient, db: database, queue, rateGate, now } = deps;
-
-  console.log(`[pass-sport-worker] job ${job.id}: eligibility chain`);
-
-  const history = await startJob(job, database, data.identity.sub ?? null, data);
-
-  // Sent before the asynchronous treatment, and the only mail this path ever sends.
-  await acknowledgeReception(job, database, history, data, queue);
+  history: HistoryRecorder,
+): Promise<HouseholdAssessment> {
+  const { apiClient, queue, rateGate, now } = deps;
 
   const results = await runEligibilitySequence(
     job,
@@ -148,7 +163,7 @@ export async function processEligibilityJob(
     now?.(),
   );
 
-  const { identity, isFranceConnected } = data;
+  const { identity } = data;
   // A child asked again on another pays de naissance leaves its rejected first row in the
   // results; naming it here would accuse a resource that did answer in the end.
   const answeredLater = (r: ResourceResult, index: number): boolean =>
@@ -189,6 +204,32 @@ export async function processEligibilityJob(
       `job ${job.id}: ${c.source} -> ${c.eligibilities.join(",") || "aucune aide"}${c.reasons.length ? ` (${c.reasons.join("; ")})` : ""}`,
     );
   }
+
+  return { results, candidates, qfPayload, householdCaisse, conjointIdentite, rejectedResources };
+}
+
+export async function processEligibilityJob(
+  job: Job<EligibilityJobData>,
+  data: EligibilityJobData,
+  deps: FranceConnectDeps,
+): Promise<{
+  beneficiaries: number;
+  outcomes: BeneficiaryOutcome[];
+  apCalls: number;
+  processedAt: string;
+}> {
+  const { db: database, queue } = deps;
+
+  console.log(`[pass-sport-worker] job ${job.id}: eligibility chain`);
+
+  const history = await startJob(job, database, data.identity.sub ?? null, data);
+
+  await acknowledgeReception(job, database, history, data, queue);
+
+  const { results, candidates, householdCaisse, conjointIdentite, rejectedResources } =
+    await assessHousehold(job, data, deps, history);
+
+  const { identity, isFranceConnected } = data;
 
   // Two verdicts only. A genuine outage never reaches here — assertApiParticulierAnswered fails
   // the job instead — but a 422 and a 5xx/35000 do, and the refusal they feed is pronounced

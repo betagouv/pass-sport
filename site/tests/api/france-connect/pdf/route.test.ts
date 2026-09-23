@@ -52,6 +52,7 @@ const result = (overrides: Partial<BeneficiaryResult> = {}): BeneficiaryResult =
   gender: null,
   verdict: 'eligible_confirmed',
   code: null,
+  relanceAllowed: false,
   ...overrides,
 });
 

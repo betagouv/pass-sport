@@ -18,6 +18,7 @@ export const LCA_QUEUE_NAME = 'codes-queue-lca';
 
 export const CODES_JOB_NAME = 'france-connect-job';
 export const LCA_JOB_NAME = 'lca-job';
+export const FC_RELANCE_JOB_NAME = 'fc-relance-job';
 
 const JOB_OPTS = {
   attempts: 4,
@@ -94,10 +95,20 @@ const clearIfDead = async <T>(queue: Queue<T>, jobId: string): Promise<void> => 
   }
 };
 
-export const findJobForSub = async (sub: string): Promise<ExistingJob | null> => {
+export const findLiveJobForSub = async (sub: string): Promise<ExistingJob | null> => {
   const job = await getCodesQueue().getJob(sub);
+
   if (job && !(await isDeadJob(job))) {
     return { id: job.id ?? sub, state: await job.getState(), createdAt: job.timestamp };
+  }
+
+  return null;
+};
+
+export const findJobForSub = async (sub: string): Promise<ExistingJob | null> => {
+  const live = await findLiveJobForSub(sub);
+  if (live) {
+    return live;
   }
 
   const application = await findApplicationForSub(sub);
@@ -131,6 +142,28 @@ export const enqueueCodesJob = async (
   });
 
   return { id: job.id, existing: null };
+};
+
+const RELANCE_JOB_OPTS = {
+  attempts: 2,
+  backoff: { type: 'escalating' as const },
+  removeOnComplete: true,
+  removeOnFail: { age: 120 * 86_400 },
+  priority: 1,
+};
+
+export const enqueueFcRelanceJob = async (
+  data: EligibilityJobData,
+  sub: string,
+): Promise<{ id: string | undefined; name: string }> => {
+  await clearIfDead(getCodesQueue(), sub);
+
+  const job = await getCodesQueue().add(FC_RELANCE_JOB_NAME, data, {
+    ...RELANCE_JOB_OPTS,
+    jobId: sub,
+  });
+
+  return { id: job.id, name: job.name };
 };
 
 // Keyed on the beneficiary identity hash, so a double submit collapses into one email:

@@ -32,9 +32,18 @@ interface Props {
   allocataireIdentity: AllocataireIdentity;
   // "Demande soumise le …", for a usager coming back to a request already on its way.
   jobInfo?: ReactNode;
+  relanceAvailableAt?: string | null;
+  relanceEnabled?: boolean;
+  relanceAllowlistOnly?: boolean;
 }
 
-export default function ResultPanel({ allocataireIdentity, jobInfo }: Props) {
+export default function ResultPanel({
+  allocataireIdentity,
+  jobInfo,
+  relanceAvailableAt = null,
+  relanceEnabled = false,
+  relanceAllowlistOnly = false,
+}: Props) {
   const [state, setState] = useState<State>({ kind: 'polling' });
 
   useEffect(() => {
@@ -111,6 +120,9 @@ export default function ResultPanel({ allocataireIdentity, jobInfo }: Props) {
           beneficiaries={state.beneficiaries}
           allocataireIdentity={allocataireIdentity}
           jobInfo={jobInfo}
+          relanceAvailableAt={relanceAvailableAt}
+          relanceEnabled={relanceEnabled}
+          relanceAllowlistOnly={relanceAllowlistOnly}
         />
       </div>
     );

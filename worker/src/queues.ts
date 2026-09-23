@@ -1,6 +1,7 @@
 export const FRANCE_CONNECT_QUEUE_NAME = "codes-queue-france-connect";
 export const FRANCE_CONNECT_JOB_NAME = "france-connect-job";
 
+export const FC_RELANCE_JOB_NAME = "fc-relance-job";
 export const LCA_QUEUE_NAME = "codes-queue-lca";
 export const LCA_JOB_NAME = "lca-job";
 
