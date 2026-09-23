@@ -37,6 +37,7 @@ export type BeneficiaryResult = {
   // Set on 'eligible_confirmed'. Null elsewhere, and on rows written before the code was stored
   // at all — those users only ever got it by email.
   code: string | null;
+  relanceAllowed: boolean;
 };
 
 const campaignStart = (): Date => {
@@ -108,6 +109,28 @@ export const findApplicationForSub = async (sub: string): Promise<ExistingApplic
   }
 };
 
+export const findLastRelanceForSub = async (sub: string): Promise<Date | null> => {
+  try {
+    const { rows } = await getPool().query<{ last_relance: Date }>(
+      'SELECT last_relance FROM fc_relance_last_by_sub WHERE sub = $1',
+      [sub],
+    );
+
+    return rows.length === 0 ? null : rows[0].last_relance;
+  } catch (e) {
+    console.error(`[pass-sport] relance lookup failed: ${(e as Error).message}`);
+
+    Sentry.withScope((scope) => {
+      scope.setLevel('error');
+      scope.setTag('lookup', 'fc_relance_last_by_sub');
+      scope.captureMessage('Relance lookup failed — the quota will not be shown on screen');
+      scope.captureException(e);
+    });
+
+    return null;
+  }
+};
+
 export const findResultsForSub = async (sub: string): Promise<BeneficiaryResult[]> => {
   try {
     const { rows } = await getPool().query<{
@@ -118,13 +141,14 @@ export const findResultsForSub = async (sub: string): Promise<BeneficiaryResult[
       gender: 'male' | 'female' | null;
       verdict: Verdict;
       pass_sport_code: string | null;
+      relance_allowed: boolean;
     }>(
       // The PDF route addresses a child by its position in this result set, so the ordering has
       // to be total across the two queries that serve one download (page render, then click).
       // Ordering on every projected column is what makes it so: any pair of rows still free to
       // swap is identical in all of them, code included, so neither position can hand out the
       // wrong document. The view has no key of its own to order on — it projects no row id.
-      'SELECT source, given_name, family_name, birthdate, gender, verdict, pass_sport_code FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name, family_name, birthdate, gender, verdict, pass_sport_code',
+      'SELECT source, given_name, family_name, birthdate, gender, verdict, pass_sport_code, relance_allowed FROM application_results_by_sub WHERE sub = $1 ORDER BY source, given_name, family_name, birthdate, gender, verdict, pass_sport_code, relance_allowed',
       [sub],
     );
     return rows.map((r) => ({
@@ -135,6 +159,7 @@ export const findResultsForSub = async (sub: string): Promise<BeneficiaryResult[
       gender: r.gender,
       verdict: r.verdict,
       code: r.pass_sport_code,
+      relanceAllowed: r.relance_allowed,
     }));
   } catch (e) {
     console.error(`[pass-sport] results lookup failed: ${(e as Error).message}`);

@@ -7,6 +7,8 @@ import Card from '@codegouvfr/react-dsfr/Card';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import type { AlertProps } from '@codegouvfr/react-dsfr/Alert';
 import CodePdfDownloadLink from './CodePdfDownloadLink';
+import RelanceButton from './RelanceButton';
+import { canRerun } from '@/app/services/relance';
 import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
 import { MATOMO_CATEGORY } from '@/utils/matomo-category';
 
@@ -135,9 +137,19 @@ interface Props {
   // paragraph further down the page, so it reads as part of "Résultat de votre demande" instead
   // of a disconnected footnote.
   jobInfo?: ReactNode;
+  relanceAvailableAt?: string | null;
+  relanceEnabled?: boolean;
+  relanceAllowlistOnly?: boolean;
 }
 
-export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, jobInfo }: Props) {
+export default function BeneficiaryRecap({
+  beneficiaries,
+  allocataireIdentity,
+  jobInfo,
+  relanceAvailableAt = null,
+  relanceEnabled = false,
+  relanceAllowlistOnly = false,
+}: Props) {
   if (beneficiaries.length === 0) {
     return (
       <div className="fr-alert fr-alert--info fr-mb-3w">
@@ -186,6 +198,10 @@ export default function BeneficiaryRecap({ beneficiaries, allocataireIdentity, j
           end={downloadLink(b, i)}
         />
       ))}
+
+      {relanceEnabled && canRerun(beneficiaries, relanceAllowlistOnly) && (
+        <RelanceButton availableAt={relanceAvailableAt} />
+      )}
     </section>
   );
 }

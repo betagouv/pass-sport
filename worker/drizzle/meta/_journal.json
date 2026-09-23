@@ -120,6 +120,20 @@
       "when": 1789478175498,
       "tag": "0016_add_allocataire_conjoint",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790087233782,
+      "tag": "0017_add_fc_relance_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790152187344,
+      "tag": "0018_add_relance_allowed",
+      "breakpoints": true
     }
   ]
 }
