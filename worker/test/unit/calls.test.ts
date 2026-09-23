@@ -47,15 +47,12 @@ describe("resultStatus", () => {
 });
 
 describe("assertApiParticulierAnswered", () => {
-  // A 422 and a 5xx/35000 are determinations too: retrying cannot change params the API already
-  // rejected, nor the data the provider already choked on. The chain pronounces without that
-  // resource rather than failing the job.
+  // A 422 is a determination too: retrying cannot change params the API already rejected. The
+  // chain pronounces without that resource rather than failing the job.
   it.each([
     ["a success", row({})],
     ["a 404", row({ httpStatus: 404, success: false })],
     ["a 422", row({ httpStatus: 422, success: false })],
-    ["a 502 carrying 35000", providerDataError(502)],
-    ["a 500 carrying 35000", providerDataError(500)],
   ])("lets %s through", (_case, result) => {
     expect(() => assertApiParticulierAnswered("job-1", result)).not.toThrow();
   });
@@ -64,6 +61,9 @@ describe("assertApiParticulierAnswered", () => {
     ["a 500", row({ httpStatus: 500, success: false })],
     ["a 502", row({ httpStatus: 502, success: false })],
     ["a 502 carrying another code", row({ httpStatus: 502, success: false, errorCode: "35008" })],
+    // The provider may answer on a later attempt, so a 5xx/35000 is retried like any 5xx.
+    ["a 502 carrying 35000", providerDataError(502)],
+    ["a 500 carrying 35000", providerDataError(500)],
     ["a transport failure", row({ httpStatus: null, success: false })],
     // No httpStatus means no 5xx to read the code against — a transport failure is worth retrying.
     ["a transport failure carrying 35000", row({ httpStatus: null, success: false, errorCode: "35000" })],

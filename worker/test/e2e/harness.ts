@@ -120,7 +120,7 @@ class FakeApiClient implements ApiParticulierClient {
   // The gateway answering 5xx on one call of the chain: the job has no verdict for that
   // resource, so it fails and retries rather than concluding on a partial answer. A 422 on the
   // same seam is the opposite case — the chain carries on and pronounces without that resource.
-  // So is a 5xx carrying code 35000: the provider choked on this identity, not the platform.
+  // A 5xx carrying code 35000 fails the job too, only labelled apart in the history.
   private takeFailure(meta: { resource: string; label: string }): ResourceResult | null {
     this.calls += 1;
 

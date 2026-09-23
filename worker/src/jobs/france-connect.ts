@@ -1,7 +1,7 @@
 import type { Job, Queue } from "bullmq";
 import { type ApiParticulierClient } from "../eligibility/client";
 import type { ApiParticulierRateGate } from "../eligibility/rate-gate";
-import { API_PARTICULIER_VALIDATION_STATUS, retryingWouldChangeNothing } from "../eligibility/calls";
+import { retryingWouldChangeNothing } from "../eligibility/calls";
 import { runEligibilitySequence } from "../eligibility/sequence";
 import { readCaisse, readQuotientFamilial } from "../eligibility/verdicts";
 import {
@@ -181,7 +181,7 @@ export async function assessHousehold(
     .map((r) => ({
       resource: r.resource,
       child_index: r.childIndex ?? null,
-      reason: r.httpStatus === API_PARTICULIER_VALIDATION_STATUS ? "validation" : "provider_error",
+      reason: "validation",
       http_status: r.httpStatus ?? null,
       error_code: r.errorCode ?? null,
       error: r.error ?? null,
@@ -232,7 +232,7 @@ export async function processEligibilityJob(
   const { identity, isFranceConnected } = data;
 
   // Two verdicts only. A genuine outage never reaches here — assertApiParticulierAnswered fails
-  // the job instead — but a 422 and a 5xx/35000 do, and the refusal they feed is pronounced
+  // the job instead — but a 422 does, and the refusal it feeds is pronounced
   // without that resource ever having answered: rejectedResources below is what says which.
   const outcomes: BeneficiaryOutcome[] = candidates.map((candidate) => {
     const isEligible = candidate.eligibilities.length > 0;

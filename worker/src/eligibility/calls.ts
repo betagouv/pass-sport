@@ -16,8 +16,8 @@ export type RateLimitable = { rateLimit(expireTimeMs: number): Promise<void> };
 export const API_PARTICULIER_VALIDATION_STATUS = 422;
 
 // Same JSON:API code as qf-batch's PROVIDER_DATA_ERROR_CODE: a 5xx carrying errors[0].code
-// "35000" is the data provider (CNAF/MSA) choking on this one identity, not the platform being
-// down. Only the latter is worth waiting out.
+// "35000" is the data provider (CNAF/MSA) choking on this identity. Retried like any 5xx, but
+// labelled apart in the history.
 export const API_PARTICULIER_PROVIDER_DATA_ERROR_CODE = "35000";
 
 const isParamsRejected = (r: ResourceResult): boolean =>
@@ -28,16 +28,14 @@ const isProviderDataError = (r: ResourceResult): boolean =>
   r.httpStatus >= 500 &&
   r.errorCode === API_PARTICULIER_PROVIDER_DATA_ERROR_CODE;
 
-// Neither will change its mind: params already refused stay refused, and the provider replays
-// the same failure on the same data. The chain pronounces without that resource rather than
+// Params already refused stay refused. The chain pronounces without that resource rather than
 // burning the job's four attempts over 24h to hear the same thing. Same params only: sequence.ts
 // still re-asks AEEH once on another pays de naissance after a 422.
-export const retryingWouldChangeNothing = (r: ResourceResult): boolean =>
-  isParamsRejected(r) || isProviderDataError(r);
+export const retryingWouldChangeNothing = (r: ResourceResult): boolean => isParamsRejected(r);
 
 // A 404 is an answer ("pas bénéficiaire"), a 422 a question that cannot be asked, a 5xx/35000 a
-// question the provider cannot answer about this person. None is a failure of ours, so the
-// history must not paint them as errors — and they must stay distinct.
+// question the provider could not answer about this person this time. None is a failure of ours,
+// so the history must not paint them as errors — and they must stay distinct.
 export const resultStatus = (r: ResourceResult): HistoryStatus => {
   if (r.rateLimited) return "rate_limited";
   if (r.success) return "success";
