@@ -99,6 +99,8 @@ class FakeApiClient implements ApiParticulierClient {
   // beneficiary to search, only the demande itself to record.
   qfChildless = false;
 
+  qfOutage = false;
+
   // Caisse that served the quotient, as API Particulier spells it.
   qfFournisseur: string | undefined = "CNAF";
 
@@ -117,10 +119,10 @@ class FakeApiClient implements ApiParticulierClient {
     private readonly providerErrorOnCall?: number,
   ) {}
 
-  // The gateway answering 5xx on one call of the chain: the job has no verdict for that
-  // resource, so it fails and retries rather than concluding on a partial answer. A 422 on the
-  // same seam is the opposite case — the chain carries on and pronounces without that resource.
-  // So is a 5xx carrying code 35000: the provider choked on this identity, not the platform.
+  // The gateway answering 5xx on one call of the chain: while a retry is left the job fails
+  // rather than concluding on a partial answer; on its last attempt it pronounces without that
+  // resource. A 422 on the same seam always pronounces without it. A 5xx carrying code 35000
+  // behaves like any 5xx, only labelled apart in the history.
   private takeFailure(meta: { resource: string; label: string }): ResourceResult | null {
     this.calls += 1;
 
@@ -191,6 +193,19 @@ class FakeApiClient implements ApiParticulierClient {
   }
 
   async quotientFamilial(identity: PivotIdentity, mois?: string): Promise<ResourceResult> {
+    if (this.qfOutage) {
+      this.calls += 1;
+      return {
+        ...RESOURCE_META.qf,
+        httpStatus: 503,
+        success: false,
+        data: null,
+        error: "Service temporairement indisponible",
+        rateLimitRemaining: 100,
+        rateLimitResetMs: null,
+      };
+    }
+
     return (
       this.takeFailure(RESOURCE_META.qf) ??
       this.take429(RESOURCE_META.qf) ??
@@ -356,10 +371,12 @@ export type Stack = {
   db: FranceConnectDeps["db"];
   queue: Queue<EligibilityJobData>;
   enqueueAndWait: (data: EligibilityJobPayload, jobId?: string) => Promise<unknown>;
-  // Enqueue a payload and wait for the worker to reject it. Returns the failure reason.
+  // Enqueue a payload with a retry left and wait for its first attempt to fail. Returns the
+  // failure reason. enqueueAndWait runs a single, hence final, attempt.
   enqueueAndWaitFailure: (data: EligibilityJobPayload) => Promise<string>;
   enqueueRelanceAndWait: (data: EligibilityJobPayload, sub: string) => Promise<unknown>;
   apiCallCount: () => number;
+  ageResults: (sub: string, days: number) => Promise<void>;
 
   // The two-step form flow, on its own queue and worker exactly as in production. The LCA
   // calls happen on the site, so what lands here is already an outcome.
@@ -406,6 +423,7 @@ export type Stack = {
   // Strips the fake children from the QF answer, leaving a child-aide demande with no
   // beneficiary at all.
   setQfChildless: (childless: boolean) => void;
+  setQfOutage: (outage: boolean) => void;
   // Caisse the fake QF answers with, undefined for a payload that names none.
   setQfFournisseur: (fournisseur: string | undefined) => void;
   // Second allocataire of the fake QF couple, null for a single-allocataire household.
@@ -579,10 +597,16 @@ export async function startStack(
   };
 
   const enqueueAndWaitFailure = async (data: EligibilityJobPayload): Promise<string> => {
-    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data);
+    // The retry is parked behind the 2h production backoff, so it never runs during the test.
+    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data, {
+      attempts: 2,
+      backoff: { type: "escalating" },
+    });
     for (let i = 0; i < 100; i++) {
       const state = await job.getState();
-      if (state === "failed") return (await queue.getJob(job.id!))?.failedReason ?? "";
+      if (state === "delayed" || state === "failed") {
+        return (await queue.getJob(job.id!))?.failedReason ?? "";
+      }
       if (state === "completed") throw new Error(`job ${job.id} was ACCEPTED but should have been rejected`);
       await new Promise((r) => setTimeout(r, 100));
     }
@@ -768,6 +792,28 @@ export async function startStack(
     },
     setQfChildless: (childless: boolean) => {
       apiClient.qfChildless = childless;
+    },
+    ageResults: async (sub: string, days: number) => {
+      const client = await pool.connect();
+      try {
+        await client.query("begin");
+        await client.query(
+          "alter table eligibility_results disable trigger eligibility_results_set_updated_at",
+        );
+        await client.query(
+          "update eligibility_results set created_at = created_at - make_interval(days => $2), updated_at = updated_at - make_interval(days => $2) where allocataire_fc_sub = $1",
+          [sub, days],
+        );
+        await client.query(
+          "alter table eligibility_results enable trigger eligibility_results_set_updated_at",
+        );
+        await client.query("commit");
+      } finally {
+        client.release();
+      }
+    },
+    setQfOutage: (outage: boolean) => {
+      apiClient.qfOutage = outage;
     },
     setQfFournisseur: (fournisseur: string | undefined) => {
       apiClient.qfFournisseur = fournisseur;

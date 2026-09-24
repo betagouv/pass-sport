@@ -29,10 +29,13 @@ const openGate = (): ApiParticulierRateGate & { take: ReturnType<typeof vi.fn> }
   ),
 });
 
-// Stands in for the BullMQ job: the runner only reads `id`, `data.checkpoint` and `updateData`.
+// Stands in for the BullMQ job: the runner only reads `id`, the attempt counters,
+// `data.checkpoint` and `updateData`.
 const runner = (checkpoint?: EligibilityCheckpoint) => {
   const job = {
     id: "job-1",
+    attemptsMade: 0,
+    opts: { attempts: 4 },
     data: { checkpoint } as CheckpointedJob,
     updateData: vi.fn(async (next: CheckpointedJob) => {
       job.data = next;

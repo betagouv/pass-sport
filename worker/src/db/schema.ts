@@ -123,7 +123,9 @@ export const eligibilityResults = pgTable(
     //                            Particulier ni les fenêtres d'âge de la campagne n'ouvrent
     //                            quoi que ce soit (parcours FC). Dans les deux cas une source
     //                            a répondu — une panne, elle, fait échouer le job sans rien
-    //                            écrire.
+    //                            écrire, sauf à sa dernière tentative : le verdict est alors
+    //                            prononcé sans la ressource muette, que rejected_resources
+    //                            (results.persisted) nomme, et la relance peut le reprendre.
     //
     // Quand rien n'a pu être conclu, aucune ligne n'est écrite du tout : c'est le cas de LCA
     // injoignable (jobs/lca.ts), qui laisse la table vide pour que l'usager puisse revenir.
@@ -344,7 +346,7 @@ export const eligibilityHistory = pgTable(
     //   beneficiary database with a code already assigned, so no new one was minted
     // | 'fc_relance' — l'usager a redemandé une vérification depuis son espace FranceConnect
     //   (jobs/fc-relance.ts). Une ligne par bénéficiaire re-jugé, plus une ligne job-level quand
-    //   la relance est refusée d'emblée (quota, aucun refus à reprendre). C'est aussi cette
+    //   la relance est refusée d'emblée (quota, aucune cible). C'est aussi cette
     //   action que lit le garde-fou du quota, via la vue fc_relance_last_by_sub.
     action: text("action").notNull(),
 

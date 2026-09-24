@@ -1,23 +1,29 @@
 import type { Job } from "bullmq";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, sql } from "drizzle-orm";
 import {
   ORGANISME_BOURSIER,
   RESULT_SITUATION_BOURSIER,
   toResultSituation,
-  type EligibilityJobData, ResultSituation,
+  type AllocataireConjointIdentite,
+  type Caisse,
+  type EligibilityJobData,
 } from "../eligibility/types";
+import { RESOURCE_META } from "../eligibility/client";
 import type { BeneficiaryCandidate } from "../eligibility/candidates";
 import type { HistoryRecorder } from "../db/history";
 import type { Database } from "../db/client";
-import { eligibilityHistory, eligibilityResults } from "../db/schema";
-import { assessHousehold, type FranceConnectDeps } from "./france-connect";
+import { eligibilityHistory, eligibilityResults, type AllocataireIdentite } from "../db/schema";
+import {
+  assessHousehold,
+  toBeneficiaryRowValues,
+  type FranceConnectDeps,
+  type RejectedResource,
+} from "./france-connect";
 import { startJob } from "./shared";
 import { fcRelanceAllowlistOnly, fcRelanceCooldownDays } from "../env";
 
 export const FC_RELANCE_ACTION = "fc_relance";
 
-// A row of the run being amended. Only the columns the rapprochement and the optimistic
-// guards need: nothing here rewrites an identity.
 type TargetRow = {
   id: string;
   source: string;
@@ -28,12 +34,17 @@ type TargetRow = {
   isEligible: boolean;
   situation: string | null;
   relanceAllowed: boolean;
+  jobId: string | null;
+  createdAt: Date;
+  allocataireIdentite: AllocataireIdentite | null;
+  isFranceConnected: boolean;
+  email: string | null;
 };
 
-// The rows of this sub's LAST run that were refused. Same definition of "last run" as the
+// Every row of this sub's LAST run. Same definition of "last run" as the
 // application_results_by_sub view and export_eligible_pending.sql — created_at = max(created_at),
 // which holds because now() is transaction-scoped and the whole PHASE 2 batch shares one instant.
-const findLastRunRefusals = async (db: Database, sub: string): Promise<TargetRow[]> =>
+const findLastRunRows = async (db: Database, sub: string): Promise<TargetRow[]> =>
   db
     .select({
       id: eligibilityResults.id,
@@ -45,32 +56,83 @@ const findLastRunRefusals = async (db: Database, sub: string): Promise<TargetRow
       isEligible: eligibilityResults.isEligible,
       situation: eligibilityResults.situation,
       relanceAllowed: eligibilityResults.relanceAllowed,
+      jobId: eligibilityResults.jobId,
+      createdAt: eligibilityResults.createdAt,
+      allocataireIdentite: eligibilityResults.allocataireIdentite,
+      isFranceConnected: eligibilityResults.isFranceConnected,
+      email: eligibilityResults.email,
     })
     .from(eligibilityResults)
     .where(
       and(
         eq(eligibilityResults.allocataireFcSub, sub),
-        eq(eligibilityResults.verdict, "not_eligible"),
         sql`${eligibilityResults.createdAt} = (
           select max(created_at) from eligibility_results where allocataire_fc_sub = ${sub}
         )`,
       ),
     );
 
-const hasRecentRelance = async (db: Database, sub: string, days: number): Promise<boolean> => {
-  const [row] = await db
+const isQfOutage = (rejected: RejectedResource): boolean =>
+  rejected.resource === RESOURCE_META.qf.resource &&
+  rejected.http_status != null &&
+  rejected.http_status >= 500;
+
+// Read off that run's results.persisted: a relance writes none, so a QF failing again keeps it.
+const lastRunMissedChildren = async (
+  db: Database,
+  sub: string,
+  rows: TargetRow[],
+  selfRow: TargetRow,
+): Promise<boolean> => {
+  if (rows.some((row) => row.source === "enfant")) return false;
+
+  const [persisted] = await db
+    .select({ responsePayload: eligibilityHistory.responsePayload })
+    .from(eligibilityHistory)
+    .where(
+      and(
+        eq(eligibilityHistory.allocataireFcSub, sub),
+        eq(eligibilityHistory.action, "results.persisted"),
+        gte(eligibilityHistory.createdAt, selfRow.createdAt),
+      ),
+    )
+    .orderBy(asc(eligibilityHistory.createdAt))
+    .limit(1);
+
+  const rejected = persisted?.responsePayload?.rejected_resources;
+
+  return Array.isArray(rejected) && (rejected as RejectedResource[]).some(isQfOutage);
+};
+
+const isWithinCooldown = async (db: Database, sub: string, days: number): Promise<boolean> => {
+  const since = sql`now() - ${`${days} days`}::interval`;
+
+  const [relance] = await db
     .select({ id: eligibilityHistory.id })
     .from(eligibilityHistory)
     .where(
       and(
         eq(eligibilityHistory.allocataireFcSub, sub),
         eq(eligibilityHistory.action, FC_RELANCE_ACTION),
-        sql`${eligibilityHistory.createdAt} > now() - ${`${days} days`}::interval`,
+        sql`${eligibilityHistory.createdAt} > ${since}`,
       ),
     )
     .limit(1);
 
-  return row != null;
+  if (relance) return true;
+
+  const [run] = await db
+    .select({ id: eligibilityResults.id })
+    .from(eligibilityResults)
+    .where(
+      and(
+        eq(eligibilityResults.allocataireFcSub, sub),
+        sql`${eligibilityResults.createdAt} > ${since}`,
+      ),
+    )
+    .limit(1);
+
+  return run != null;
 };
 
 const matchesCandidate = (row: TargetRow, candidate: BeneficiaryCandidate): boolean =>
@@ -101,16 +163,14 @@ const skip = (history: HistoryRecorder, raison: string, extra: Record<string, un
 export type FcRelanceOutcome = {
   targeted: number;
   updated: number;
+  inserted: number;
   apCalls: number;
   raison?: string;
   processedAt: string;
 };
 
-// Re-judges a household that came out refused and AMENDS its existing rows. This processor
-// contains no insert at all, which is what makes "a relance never adds a line to
-// eligibility_results" structural rather than conditional: a beneficiary with no row of their own
-// — a child who joined the foyer since the initial run — cannot be served here, and is traced
-// instead.
+// Re-judges a household and AMENDS the refused rows of its last run. Only inserts the children a
+// failed QF call hid from that run; any other beneficiary without a row is traced instead.
 export async function processFcRelanceJob(
   job: Job<EligibilityJobData>,
   data: EligibilityJobData,
@@ -126,6 +186,7 @@ export async function processFcRelanceJob(
   const done = (raison: string): FcRelanceOutcome => ({
     targeted: 0,
     updated: 0,
+    inserted: 0,
     apCalls: 0,
     raison,
     processedAt: new Date().toISOString(),
@@ -138,34 +199,50 @@ export async function processFcRelanceJob(
 
   // Only on a first pass: a BullMQ retry is the SAME relance resuming, and it would otherwise
   // be turned away by the trace its own first attempt left.
-  if (job.attemptsMade === 0 && (await hasRecentRelance(database, sub, fcRelanceCooldownDays()))) {
+  if (job.attemptsMade === 0 && (await isWithinCooldown(database, sub, fcRelanceCooldownDays()))) {
     await skip(history, "quota", { cooldown_days: fcRelanceCooldownDays() });
     return done("quota");
   }
 
-  const targets = await findLastRunRefusals(database, sub);
+  const lastRun = await findLastRunRows(database, sub);
+  const selfRow = lastRun.find((row) => row.source === "self");
+  const missedChildren =
+    selfRow != null && (await lastRunMissedChildren(database, sub, lastRun, selfRow));
+
+  const targets = lastRun.filter(
+    (row) => row.verdict === "not_eligible" || (missedChildren && row === selfRow),
+  );
 
   if (targets.length === 0) {
-    // A race only: the button is shown to a usager who has at least one refused row.
-    await skip(history, "aucun_not_eligible");
-    return done("aucun_not_eligible");
+    await skip(history, "aucune_cible");
+    return done("aucune_cible");
   }
 
   const allowlistOnly = fcRelanceAllowlistOnly();
   const isAllowed = (row: TargetRow) => !allowlistOnly || row.relanceAllowed;
+  const canInsertChildren = missedChildren && selfRow != null && isAllowed(selfRow);
 
   if (!targets.some(isAllowed)) {
     await skip(history, "relance_non_autorisee");
     return done("relance_non_autorisee");
   }
 
-  const { results, candidates, householdCaisse } = await assessHousehold(job, data, deps, history);
+  const { results, candidates, householdCaisse, conjointIdentite, rejectedResources } =
+    await assessHousehold(job, data, deps, history);
+  // The children come from the QF alone: without it, none of them can be told apart from gone.
+  const qfUnanswered = rejectedResources.some(isQfOutage);
 
   const taken = new Set<string>();
+  const missingChildren: BeneficiaryCandidate[] = [];
   let updatedCount = 0;
 
   for (const candidate of candidates) {
     const row = findRowFor(candidate, targets, taken);
+
+    if (!row && candidate.source === "enfant" && canInsertChildren) {
+      missingChildren.push(candidate);
+      continue;
+    }
 
     if (!row) {
       // A beneficiary this run knows and the initial run did not — a child newly attached to the
@@ -248,20 +325,51 @@ export async function processFcRelanceJob(
         aides: candidate.eligibilities,
         raisons: candidate.reasons,
         updated,
+        // Tells a refusal re-pronounced blind, on the last attempt, from one the sources confirmed.
+        rejected_resources: rejectedResources,
+      },
+    });
+  }
+
+  const inserted = canInsertChildren
+    ? await insertMissingChildren(database, sub, selfRow, missingChildren, {
+        householdCaisse,
+        conjointIdentite,
+      })
+    : [];
+
+  for (const { id, candidate, values } of inserted) {
+    await history.record({
+      actor: "worker",
+      action: FC_RELANCE_ACTION,
+      status: "success",
+      subject: "enfant",
+      responsePayload: {
+        raison: "enfant_recupere_apres_echec_qf",
+        eligibility_result_id: id,
+        verdict_apres: values.verdict,
+        situation_apres: values.situation,
+        aides: candidate.eligibilities,
+        raisons: candidate.reasons,
+        inserted: true,
+        rejected_resources: rejectedResources,
       },
     });
   }
 
   for (const row of targets.filter((r) => !taken.has(r.id))) {
     // Someone the initial run pronounced on and this one no longer knows of — gone from the
-    // foyer. The row is left exactly as it stands.
+    // foyer, unless the QF that lists the children never answered. The row is left exactly as it
+    // stands.
+    const isEnfant = row.source === "enfant";
+
     await history.record({
       actor: "worker",
       action: FC_RELANCE_ACTION,
       status: "skipped",
-      subject: row.source === "enfant" ? "enfant" : "self",
+      subject: isEnfant ? "enfant" : "self",
       responsePayload: {
-        raison: "beneficiaire_absent_du_foyer",
+        raison: isEnfant && qfUnanswered ? "qf_sans_reponse" : "beneficiaire_absent_du_foyer",
         eligibility_result_id: row.id,
         verdict_avant: row.verdict,
       },
@@ -269,13 +377,71 @@ export async function processFcRelanceJob(
   }
 
   console.log(
-    `[pass-sport-worker] job ${job.id}: relance — ${results.length} AP calls, ${targets.length} refused rows, ${updatedCount} raised`,
+    `[pass-sport-worker] job ${job.id}: relance — ${results.length} AP calls, ${targets.length} targeted rows, ${updatedCount} raised, ${inserted.length} children inserted`,
   );
 
   return {
     targeted: targets.length,
     updated: updatedCount,
+    inserted: inserted.length,
     apCalls: results.length,
     processedAt: new Date().toISOString(),
   };
+}
+
+async function insertMissingChildren(
+  database: Database,
+  sub: string,
+  selfRow: TargetRow,
+  children: BeneficiaryCandidate[],
+  household: {
+    householdCaisse: Caisse | null;
+    conjointIdentite: AllocataireConjointIdentite | null;
+  },
+): Promise<
+  { id: string; candidate: BeneficiaryCandidate; values: ReturnType<typeof toBeneficiaryRowValues> }[]
+> {
+  if (children.length === 0) return [];
+
+  const { householdCaisse, conjointIdentite } = household;
+
+  return database.transaction(async (tx) => {
+    const inserted = [];
+
+    for (const candidate of children) {
+      const values = toBeneficiaryRowValues(candidate, householdCaisse);
+      const [{ id }] = await tx
+        .insert(eligibilityResults)
+        .values({
+          ...values,
+          // Same instant as the run, read in SQL: a JS Date drops the microseconds.
+          createdAt: sql`(select created_at from eligibility_results where id = ${selfRow.id})`,
+          jobId: selfRow.jobId,
+          allocataireIdentite: selfRow.allocataireIdentite,
+          allocataireConjointIdentite: conjointIdentite,
+          allocataireFcSub: sub,
+          isFranceConnected: selfRow.isFranceConnected,
+          residenceInsee: null,
+          lcaStatus: "not_applicable",
+          passSportCode: null,
+          emailKind: null,
+          emailSent: false,
+          email: selfRow.email,
+          relanceAllowed: selfRow.relanceAllowed,
+        })
+        .returning({ id: eligibilityResults.id });
+
+      inserted.push({ id, candidate, values });
+    }
+
+    await tx
+      .update(eligibilityResults)
+      .set({
+        allocataireConjointIdentite: conjointIdentite,
+        caisse: sql`coalesce(${eligibilityResults.caisse}, ${householdCaisse})`,
+      })
+      .where(eq(eligibilityResults.id, selfRow.id));
+
+    return inserted;
+  });
 }
