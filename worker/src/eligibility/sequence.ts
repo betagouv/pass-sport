@@ -6,7 +6,7 @@ import {
   toDssParams,
   toQfParams,
 } from "./client";
-import { API_PARTICULIER_VALIDATION_STATUS } from "./calls";
+import { API_PARTICULIER_VALIDATION_STATUS, isFinalAttempt } from "./calls";
 import { createCheckpointRunner } from "./checkpoint";
 import type { ApiParticulierRateGate } from "./rate-gate";
 import type { HistoryRecorder } from "../db/history";
@@ -109,12 +109,15 @@ export async function runEligibilitySequence(
   // Always first: quotient_familial is the only source of the household's children. Swept over
   // the campaign months and stopped on the first one under the threshold — a further month
   // could no longer change the outcome and would only cost quota.
+  const tolerateQfFailure = isFinalAttempt(job);
+
   for (const mois of qfReferenceMonths(now)) {
     const row = await checkpoint.run({
       key: `qf:${mois}`,
       resource: RESOURCE_META.qf.resource,
       subject: "self",
       params: toQfParams(identity, mois),
+      tolerateFailure: tolerateQfFailure,
       invoke: () => client.quotientFamilial(identity, mois),
     });
 

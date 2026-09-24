@@ -1,7 +1,7 @@
 import type { Job, Queue } from "bullmq";
-import { type ApiParticulierClient } from "../eligibility/client";
+import { RESOURCE_META, type ApiParticulierClient } from "../eligibility/client";
 import type { ApiParticulierRateGate } from "../eligibility/rate-gate";
-import { retryingWouldChangeNothing } from "../eligibility/calls";
+import { isProviderFailure, retryingWouldChangeNothing } from "../eligibility/calls";
 import { runEligibilitySequence } from "../eligibility/sequence";
 import { readCaisse, readQuotientFamilial } from "../eligibility/verdicts";
 import {
@@ -23,7 +23,12 @@ import { recordEmailDelivery, sendAcknowledgmentEmail } from "../email/notify";
 import type { HistoryRecorder } from "../db/history";
 import { startJob } from "./shared";
 import type { Database } from "../db/client";
-import { eligibilityResults, type AllocataireIdentite, type Verdict } from "../db/schema";
+import {
+  eligibilityResults,
+  type AllocataireIdentite,
+  type EligibilityRow,
+  type Verdict,
+} from "../db/schema";
 import { logPii } from "../log";
 
 export type FranceConnectDeps = {
@@ -176,18 +181,25 @@ export async function assessHousehold(
         !retryingWouldChangeNothing(other),
     );
 
+  const qfPayload = readQuotientFamilial(results);
+
+  const isUnansweredQf = (r: ResourceResult): boolean =>
+    !qfPayload && r.resource === RESOURCE_META.qf.resource && isProviderFailure(r);
+
   const rejectedResources = results
-    .filter((r, index) => retryingWouldChangeNothing(r) && !answeredLater(r, index))
+    .filter(
+      (r, index) =>
+        (retryingWouldChangeNothing(r) && !answeredLater(r, index)) || isUnansweredQf(r),
+    )
     .map((r) => ({
       resource: r.resource,
       child_index: r.childIndex ?? null,
-      reason: "validation",
+      reason: isProviderFailure(r) ? "provider_error" : "validation",
       http_status: r.httpStatus ?? null,
       error_code: r.errorCode ?? null,
       error: r.error ?? null,
     }));
   const candidates = listBeneficiaryCandidates(identity, results);
-  const qfPayload = readQuotientFamilial(results);
   const householdCaisse = readCaisse(results);
   const conjointIdentite = readConjointIdentite(qfPayload, identity.birthdate);
 
@@ -207,6 +219,41 @@ export async function assessHousehold(
 
   return { results, candidates, qfPayload, householdCaisse, conjointIdentite, rejectedResources };
 }
+
+export const toBeneficiaryRowValues = (
+  candidate: BeneficiaryCandidate,
+  householdCaisse: Caisse | null,
+): Required<
+  Pick<EligibilityRow, "source" | "enfantIdentite" | "isEligible" | "verdict" | "situation" | "caisse">
+> => {
+  // allocataire = connected FranceConnect user, enfant = the QF child ('self' rows leave enfant_* NULL).
+  const enfantIdentite =
+    candidate.source === "enfant"
+      ? {
+          family_name: candidate.lastname,
+          preferred_username: candidate.nomUsage,
+          given_name: candidate.firstname,
+          birthdate: candidate.birthdate,
+          gender: candidate.gender,
+        }
+      : null;
+
+  // First rather than only: the two routes a candidate can carry are pushed in priority order by
+  // listBeneficiaryCandidates (QF before AEEH, AAH before CROUS). Null on the rows that opened no
+  // route at all, which are the 'not_eligible' ones.
+  const aide = candidate.eligibilities[0];
+  const situation = aide ? toResultSituation(aide) : null;
+  const isEligible = aide !== undefined;
+
+  return {
+    source: candidate.source,
+    enfantIdentite,
+    isEligible,
+    verdict: isEligible ? "eligible_pending" : "not_eligible",
+    situation,
+    caisse: situation === RESULT_SITUATION_BOURSIER ? ORGANISME_BOURSIER : householdCaisse,
+  };
+};
 
 export async function processEligibilityJob(
   job: Job<EligibilityJobData>,
@@ -231,16 +278,11 @@ export async function processEligibilityJob(
 
   const { identity, isFranceConnected } = data;
 
-  // Two verdicts only. A genuine outage never reaches here — assertApiParticulierAnswered fails
-  // the job instead — but a 422 does, and the refusal it feeds is pronounced
-  // without that resource ever having answered: rejectedResources below is what says which.
+  // Two verdicts only. Only a 422, or a QF outage on the last attempt, reaches here without an
+  // answer: rejectedResources says which.
   const outcomes: BeneficiaryOutcome[] = candidates.map((candidate) => {
-    const isEligible = candidate.eligibilities.length > 0;
-    return {
-      source: candidate.source,
-      isEligible,
-      verdict: isEligible ? "eligible_pending" : "not_eligible",
-    };
+    const { isEligible, verdict } = toBeneficiaryRowValues(candidate, householdCaisse);
+    return { source: candidate.source, isEligible, verdict };
   });
 
   // The `sub` is not part of the identité pivot and has its own indexed column, so
@@ -276,38 +318,17 @@ export async function processEligibilityJob(
     // A single transaction: a failure here rolls the whole batch back, so a retry
     // cannot find half a job already written.
     await database.transaction(async (tx) => {
-      for (const [index, candidate] of candidates.entries()) {
-        // allocataire = connected FranceConnect user, enfant = the QF child ('self' rows leave enfant_* NULL).
-        const isEnfant = candidate.source === "enfant";
-        const enfantIdentite = isEnfant
-          ? {
-              family_name: candidate.lastname,
-              preferred_username: candidate.nomUsage,
-              given_name: candidate.firstname,
-              birthdate: candidate.birthdate,
-              gender: candidate.gender,
-            }
-          : null;
-
-        // First rather than only: the two routes a candidate can carry are pushed in priority
-        // order by listBeneficiaryCandidates (QF before AEEH, AAH before CROUS). Null on the
-        // rows that opened no route at all, which are the 'not_eligible' ones.
-        const aide = candidate.eligibilities[0];
-        const situation = aide ? toResultSituation(aide) : null;
-
+      for (const candidate of candidates) {
         await tx.insert(eligibilityResults).values({
+          ...toBeneficiaryRowValues(candidate, householdCaisse),
           jobId: job.id ?? null,
-          source: candidate.source,
           allocataireIdentite,
           allocataireConjointIdentite: conjointIdentite,
           allocataireFcSub: identity.sub ?? null,
-          enfantIdentite,
-          isEligible: outcomes[index].isEligible,
           isFranceConnected,
           residenceInsee: null,
           // Nothing was ever asked of LCA on this path.
           lcaStatus: "not_applicable",
-          verdict: outcomes[index].verdict,
           passSportCode: null,
           // No outcome email is sent HERE — the code does not exist yet. The template is named
           // later, by the fc_code_emails job, and a null email_kind is exactly how that job
@@ -315,8 +336,6 @@ export async function processEligibilityJob(
           emailKind: null,
           emailSent: false,
           email: to,
-          situation,
-          caisse: situation === RESULT_SITUATION_BOURSIER ? ORGANISME_BOURSIER : householdCaisse,
         });
       }
     });

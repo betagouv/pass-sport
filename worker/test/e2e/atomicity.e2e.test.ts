@@ -14,8 +14,8 @@ import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 let stack: Stack;
 
 beforeAll(async () => {
-  // The 2nd API Particulier call answers 502: the first resource is read, the next is not.
-  stack = await startStack({ apiFailOnCall: 2 });
+  // The 3rd API Particulier call (AAH, after the two QF months) answers 502.
+  stack = await startStack({ apiFailOnCall: 3 });
 }, 180_000);
 
 afterAll(async () => {

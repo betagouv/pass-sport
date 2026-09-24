@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertApiParticulierAnswered,
+  isFinalAttempt,
   resourceEvent,
   resultStatus,
 } from "../../src/eligibility/calls";
@@ -104,5 +105,18 @@ describe("resourceEvent", () => {
       error_code: null,
       api_error: null,
     });
+  });
+});
+
+describe("isFinalAttempt", () => {
+  it.each([
+    [0, 4, false],
+    [2, 4, false],
+    [3, 4, true],
+    [0, 2, false],
+    [1, 2, true],
+    [0, undefined, true],
+  ])("attemptsMade=%i out of %s -> %s", (attemptsMade, attempts, expected) => {
+    expect(isFinalAttempt({ attemptsMade, opts: { attempts } })).toBe(expected);
   });
 });

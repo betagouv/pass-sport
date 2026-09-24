@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { FC_RELANCE_JOB_NAME, enqueueFcRelanceJob, findLiveJobForSub } from '@/app/services/queue';
-import { findLastRelanceForSub, findResultsForSub } from '@/app/services/applications';
-import { canRerun, nextRelanceAt } from '@/app/services/relance';
+import { findResultsForSub } from '@/app/services/applications';
+import { canRerun } from '@/app/services/relance';
+import { relanceAvailableAtForSub } from '@/app/services/relance-availability';
 import { FC_RELANCE_ALLOWLIST_ONLY, FC_RELANCE_ENABLED } from '@/app/constants/env';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { getClientIp } from '@/utils/client-ip';
@@ -29,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ queued: false, state: live.state }, { status: 409 });
     }
 
-    const availableAt = nextRelanceAt(await findLastRelanceForSub(pocResult.sub));
+    const availableAt = await relanceAvailableAtForSub(pocResult.sub);
 
     if (availableAt) {
       return NextResponse.json(

@@ -12,6 +12,7 @@ type CheckpointedCall = {
   subject: "self" | "enfant";
   childIndex?: number;
   params?: Record<string, unknown>;
+  tolerateFailure?: boolean;
   invoke: () => Promise<ResourceResult>;
 };
 
@@ -55,6 +56,7 @@ export function createCheckpointRunner<TData extends CheckpointedJob>(
       subject: call.subject,
       logSuffix: call.childIndex != null ? ` (child ${call.childIndex})` : undefined,
       params: call.params,
+      tolerateFailure: call.tolerateFailure,
       invoke: call.invoke,
       commit: async (r) => {
         checkpoint.results.push({ ...r, checkpointKey: call.key });

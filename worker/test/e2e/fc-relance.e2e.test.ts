@@ -73,6 +73,7 @@ beforeAll(async () => {
   confirmedRowId = await stack.seedConfirmedRow({ sub, code: "24-ZORV-QYXA" });
 
   await stack.enqueueAndWait(input, sub);
+  await stack.ageResults(sub, 3);
   rowsBeforeRelance = await rows();
 
   stack.setQfValeur(500);
@@ -217,6 +218,24 @@ describe("le quota est tenu par le worker, pas seulement par le site", () => {
   it("n'a toujours ajouté aucune ligne", async () => {
     expect(await rows()).toHaveLength(rowsBeforeRelance.length);
   });
+
+  it("refuse une relance juste après le premier passage, sans relance antérieure", async () => {
+    const recentSub = "fc-sub-relance-run-recent";
+    await stack.enqueueAndWait({ identity: { ...identity, sub: recentSub }, isFranceConnected: true }, recentSub);
+    const before = stack.apiCallCount();
+
+    await stack.enqueueRelanceAndWait(
+      { identity: { ...identity, sub: recentSub }, isFranceConnected: true },
+      recentSub,
+    );
+
+    expect(stack.apiCallCount()).toBe(before);
+    const { rows: events } = await stack.pool.query(
+      "select response_payload from eligibility_history where allocataire_fc_sub = $1 and action = 'fc_relance'",
+      [recentSub],
+    );
+    expect(events.map((e) => e.response_payload.raison)).toEqual(["quota"]);
+  });
 });
 
 describe("une relance ne passe jamais devant une première demande", () => {
@@ -278,7 +297,7 @@ describe("un foyer sans refus à reprendre", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].status).toBe("skipped");
-    expect(events[0].response_payload.raison).toBe("aucun_not_eligible");
+    expect(events[0].response_payload.raison).toBe("aucune_cible");
   });
 });
 
@@ -309,6 +328,8 @@ describe("relance restreinte à la liste de test (FC_RELANCE_ALLOWLIST_ONLY)", (
     stack.setQfValeur(1000);
     await stack.enqueueAndWait(inputFor(aucunAutoriseSub), aucunAutoriseSub);
     await stack.enqueueAndWait(inputFor(unAutoriseSub), unAutoriseSub);
+    await stack.ageResults(aucunAutoriseSub, 3);
+    await stack.ageResults(unAutoriseSub, 3);
 
     await stack.pool.query(
       "update eligibility_results set relance_allowed = true where allocataire_fc_sub = $1 and enfant_identite->>'given_name' = 'Milieu'",

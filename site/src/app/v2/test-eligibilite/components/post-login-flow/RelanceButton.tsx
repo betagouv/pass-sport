@@ -127,7 +127,7 @@ export default function RelanceButton({ availableAt }: RelanceButtonProps) {
         <>
           <Button disabled>Relancer la vérification</Button>
           <p className="fr-mt-1w">
-            Une vérification a déjà été demandée récemment. Nouvelle vérification possible le{' '}
+            Votre dernière vérification est récente. Nouvelle vérification possible le{' '}
             <time dateTime={blockedUntil}>{formatDate(blockedUntil)}</time>.
           </p>
         </>

@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { Worker, type Job } from "bullmq";
 import * as Sentry from "@sentry/node";
 import {
   startTimer,
@@ -12,6 +12,9 @@ import type { ResourceResult } from "./types";
 
 export type RateLimitable = { rateLimit(expireTimeMs: number): Promise<void> };
 
+export const isFinalAttempt = (job: Pick<Job, "attemptsMade" | "opts">): boolean =>
+  job.attemptsMade >= (job.opts.attempts ?? 1) - 1;
+
 // The SDK's ValidationError: API Particulier rejected our params.
 export const API_PARTICULIER_VALIDATION_STATUS = 422;
 
@@ -23,10 +26,11 @@ export const API_PARTICULIER_PROVIDER_DATA_ERROR_CODE = "35000";
 const isParamsRejected = (r: ResourceResult): boolean =>
   r.httpStatus === API_PARTICULIER_VALIDATION_STATUS;
 
+export const isProviderFailure = (r: ResourceResult): boolean =>
+  r.httpStatus != null && r.httpStatus >= 500;
+
 const isProviderDataError = (r: ResourceResult): boolean =>
-  r.httpStatus != null &&
-  r.httpStatus >= 500 &&
-  r.errorCode === API_PARTICULIER_PROVIDER_DATA_ERROR_CODE;
+  isProviderFailure(r) && r.errorCode === API_PARTICULIER_PROVIDER_DATA_ERROR_CODE;
 
 // Params already refused stay refused. The chain pronounces without that resource rather than
 // burning the job's four attempts over 24h to hear the same thing. Same params only: sequence.ts
@@ -184,13 +188,25 @@ export type ResourceCall = {
   // Set only from here, where the call is actually made rather than replayed from the
   // checkpoint.
   params?: Record<string, unknown>;
+  tolerateFailure?: boolean;
   invoke: () => Promise<ResourceResult>;
   commit?: (r: ResourceResult) => Promise<void>;
 };
 
 export async function callResource(call: ResourceCall): Promise<ResourceResult> {
-  const { jobId, queue, history, rateGate, resource, subject, logSuffix, params, invoke, commit } =
-    call;
+  const {
+    jobId,
+    queue,
+    history,
+    rateGate,
+    resource,
+    subject,
+    logSuffix,
+    params,
+    tolerateFailure,
+    invoke,
+    commit,
+  } = call;
 
   // Before the call and before its log line: a paused job never reached the API. A gate that
   // could not answer at all pauses too — a burst sent blind is what the ceiling exists to prevent.
@@ -217,10 +233,12 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
 
   if (r.rateLimited) await handleRateLimit(jobId, queue, r);
 
-  assertApiParticulierAnswered(jobId, r);
+  const answered = r.success || r.httpStatus === 404;
+
+  if (!tolerateFailure) assertApiParticulierAnswered(jobId, r);
 
   // These no longer fail the job, so this is the only thing that raises them at read time.
-  if (retryingWouldChangeNothing(r)) {
+  if (!answered && (tolerateFailure || retryingWouldChangeNothing(r))) {
     console.warn(
       `[pass-sport-worker] job ${jobId}: ${resource} gave no answer (httpStatus=${r.httpStatus ?? "none"}, code=${r.errorCode ?? "none"}), pronouncing without it — ${r.error ?? ""}`,
     );

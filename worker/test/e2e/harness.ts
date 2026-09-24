@@ -99,6 +99,8 @@ class FakeApiClient implements ApiParticulierClient {
   // beneficiary to search, only the demande itself to record.
   qfChildless = false;
 
+  qfOutage = false;
+
   // Caisse that served the quotient, as API Particulier spells it.
   qfFournisseur: string | undefined = "CNAF";
 
@@ -191,6 +193,19 @@ class FakeApiClient implements ApiParticulierClient {
   }
 
   async quotientFamilial(identity: PivotIdentity, mois?: string): Promise<ResourceResult> {
+    if (this.qfOutage) {
+      this.calls += 1;
+      return {
+        ...RESOURCE_META.qf,
+        httpStatus: 503,
+        success: false,
+        data: null,
+        error: "Service temporairement indisponible",
+        rateLimitRemaining: 100,
+        rateLimitResetMs: null,
+      };
+    }
+
     return (
       this.takeFailure(RESOURCE_META.qf) ??
       this.take429(RESOURCE_META.qf) ??
@@ -360,6 +375,7 @@ export type Stack = {
   enqueueAndWaitFailure: (data: EligibilityJobPayload) => Promise<string>;
   enqueueRelanceAndWait: (data: EligibilityJobPayload, sub: string) => Promise<unknown>;
   apiCallCount: () => number;
+  ageResults: (sub: string, days: number) => Promise<void>;
 
   // The two-step form flow, on its own queue and worker exactly as in production. The LCA
   // calls happen on the site, so what lands here is already an outcome.
@@ -406,6 +422,7 @@ export type Stack = {
   // Strips the fake children from the QF answer, leaving a child-aide demande with no
   // beneficiary at all.
   setQfChildless: (childless: boolean) => void;
+  setQfOutage: (outage: boolean) => void;
   // Caisse the fake QF answers with, undefined for a payload that names none.
   setQfFournisseur: (fournisseur: string | undefined) => void;
   // Second allocataire of the fake QF couple, null for a single-allocataire household.
@@ -768,6 +785,28 @@ export async function startStack(
     },
     setQfChildless: (childless: boolean) => {
       apiClient.qfChildless = childless;
+    },
+    ageResults: async (sub: string, days: number) => {
+      const client = await pool.connect();
+      try {
+        await client.query("begin");
+        await client.query(
+          "alter table eligibility_results disable trigger eligibility_results_set_updated_at",
+        );
+        await client.query(
+          "update eligibility_results set created_at = created_at - make_interval(days => $2), updated_at = updated_at - make_interval(days => $2) where allocataire_fc_sub = $1",
+          [sub, days],
+        );
+        await client.query(
+          "alter table eligibility_results enable trigger eligibility_results_set_updated_at",
+        );
+        await client.query("commit");
+      } finally {
+        client.release();
+      }
+    },
+    setQfOutage: (outage: boolean) => {
+      apiClient.qfOutage = outage;
     },
     setQfFournisseur: (fournisseur: string | undefined) => {
       apiClient.qfFournisseur = fournisseur;

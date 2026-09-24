@@ -344,7 +344,7 @@ export const eligibilityHistory = pgTable(
     //   beneficiary database with a code already assigned, so no new one was minted
     // | 'fc_relance' — l'usager a redemandé une vérification depuis son espace FranceConnect
     //   (jobs/fc-relance.ts). Une ligne par bénéficiaire re-jugé, plus une ligne job-level quand
-    //   la relance est refusée d'emblée (quota, aucun refus à reprendre). C'est aussi cette
+    //   la relance est refusée d'emblée (quota, aucune cible). C'est aussi cette
     //   action que lit le garde-fou du quota, via la vue fc_relance_last_by_sub.
     action: text("action").notNull(),
 
