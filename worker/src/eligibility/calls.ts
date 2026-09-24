@@ -235,10 +235,13 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
 
   const answered = r.success || r.httpStatus === 404;
 
-  if (!tolerateFailure) assertApiParticulierAnswered(jobId, r);
+  // Only a provider outage is tolerated: a 4xx of ours would read as a silent "pas bénéficiaire".
+  const toleratedOutage = !!tolerateFailure && isProviderFailure(r);
+
+  if (!toleratedOutage) assertApiParticulierAnswered(jobId, r);
 
   // These no longer fail the job, so this is the only thing that raises them at read time.
-  if (!answered && (tolerateFailure || retryingWouldChangeNothing(r))) {
+  if (!answered && (toleratedOutage || retryingWouldChangeNothing(r))) {
     console.warn(
       `[pass-sport-worker] job ${jobId}: ${resource} gave no answer (httpStatus=${r.httpStatus ?? "none"}, code=${r.errorCode ?? "none"}), pronouncing without it — ${r.error ?? ""}`,
     );

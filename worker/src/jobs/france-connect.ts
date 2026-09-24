@@ -183,13 +183,16 @@ export async function assessHousehold(
 
   const qfPayload = readQuotientFamilial(results);
 
-  const isUnansweredQf = (r: ResourceResult): boolean =>
-    !qfPayload && r.resource === RESOURCE_META.qf.resource && isProviderFailure(r);
+  // Tolerated on the last attempt only. A QF month is covered by any other month that answered.
+  const isUnansweredOutage = (r: ResourceResult, index: number): boolean =>
+    isProviderFailure(r) &&
+    (r.resource === RESOURCE_META.qf.resource ? !qfPayload : !answeredLater(r, index));
 
   const rejectedResources = results
     .filter(
       (r, index) =>
-        (retryingWouldChangeNothing(r) && !answeredLater(r, index)) || isUnansweredQf(r),
+        (retryingWouldChangeNothing(r) && !answeredLater(r, index)) ||
+        isUnansweredOutage(r, index),
     )
     .map((r) => ({
       resource: r.resource,
@@ -278,8 +281,8 @@ export async function processEligibilityJob(
 
   const { identity, isFranceConnected } = data;
 
-  // Two verdicts only. Only a 422, or a QF outage on the last attempt, reaches here without an
-  // answer: rejectedResources says which.
+  // Two verdicts only. Only a 422, or a provider outage on the last attempt, reaches here without
+  // an answer: rejectedResources says which.
   const outcomes: BeneficiaryOutcome[] = candidates.map((candidate) => {
     const { isEligible, verdict } = toBeneficiaryRowValues(candidate, householdCaisse);
     return { source: candidate.source, isEligible, verdict };

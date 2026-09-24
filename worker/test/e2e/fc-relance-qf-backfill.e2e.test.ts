@@ -185,3 +185,46 @@ describe("allocataire seul dont le QF a répondu", () => {
     expect(events[0].response_payload.raison).toBe("aucune_cible");
   });
 });
+
+describe("foyer refusé dont le QF tombe à la relance", () => {
+  const sub = "fc-sub-qf-ko-a-la-relance";
+
+  beforeAll(async () => {
+    stack.setCrousBoursier(false);
+    await stack.enqueueAndWait(inputFor(sub), sub);
+
+    stack.setQfOutage(true);
+    await stack.enqueueRelanceAndWait(inputFor(sub), sub);
+  }, 120_000);
+
+  afterAll(() => {
+    stack.setQfOutage(false);
+  });
+
+  it("ne dit pas les enfants partis du foyer", async () => {
+    const events = await relanceEventsFor(sub);
+    const enfants = events.filter((e) => e.subject === "enfant");
+
+    expect(enfants).toHaveLength(4);
+    expect(enfants.every((e) => e.response_payload.raison === "qf_sans_reponse")).toBe(true);
+  });
+
+  it("nomme le QF muet sur le refus re-prononcé de l'allocataire", async () => {
+    const self = (await relanceEventsFor(sub)).find((e) => e.subject === "self");
+
+    expect(self.response_payload.updated).toBe(false);
+    expect(self.response_payload.rejected_resources).toContainEqual(
+      expect.objectContaining({
+        resource: "dss.quotient_familial_identite",
+        reason: "provider_error",
+      }),
+    );
+  });
+
+  it("laisse les lignes en l'état", async () => {
+    const rows = await rowsFor(sub);
+
+    expect(rows).toHaveLength(5);
+    expect(rows.every((r) => r.verdict === "not_eligible")).toBe(true);
+  });
+});

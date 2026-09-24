@@ -123,7 +123,9 @@ export const eligibilityResults = pgTable(
     //                            Particulier ni les fenêtres d'âge de la campagne n'ouvrent
     //                            quoi que ce soit (parcours FC). Dans les deux cas une source
     //                            a répondu — une panne, elle, fait échouer le job sans rien
-    //                            écrire.
+    //                            écrire, sauf à sa dernière tentative : le verdict est alors
+    //                            prononcé sans la ressource muette, que rejected_resources
+    //                            (results.persisted) nomme, et la relance peut le reprendre.
     //
     // Quand rien n'a pu être conclu, aucune ligne n'est écrite du tout : c'est le cas de LCA
     // injoignable (jobs/lca.ts), qui laisse la table vide pour que l'usager puisse revenir.

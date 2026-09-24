@@ -119,10 +119,10 @@ class FakeApiClient implements ApiParticulierClient {
     private readonly providerErrorOnCall?: number,
   ) {}
 
-  // The gateway answering 5xx on one call of the chain: the job has no verdict for that
-  // resource, so it fails and retries rather than concluding on a partial answer. A 422 on the
-  // same seam is the opposite case — the chain carries on and pronounces without that resource.
-  // A 5xx carrying code 35000 fails the job too, only labelled apart in the history.
+  // The gateway answering 5xx on one call of the chain: while a retry is left the job fails
+  // rather than concluding on a partial answer; on its last attempt it pronounces without that
+  // resource. A 422 on the same seam always pronounces without it. A 5xx carrying code 35000
+  // behaves like any 5xx, only labelled apart in the history.
   private takeFailure(meta: { resource: string; label: string }): ResourceResult | null {
     this.calls += 1;
 
@@ -371,7 +371,8 @@ export type Stack = {
   db: FranceConnectDeps["db"];
   queue: Queue<EligibilityJobData>;
   enqueueAndWait: (data: EligibilityJobPayload, jobId?: string) => Promise<unknown>;
-  // Enqueue a payload and wait for the worker to reject it. Returns the failure reason.
+  // Enqueue a payload with a retry left and wait for its first attempt to fail. Returns the
+  // failure reason. enqueueAndWait runs a single, hence final, attempt.
   enqueueAndWaitFailure: (data: EligibilityJobPayload) => Promise<string>;
   enqueueRelanceAndWait: (data: EligibilityJobPayload, sub: string) => Promise<unknown>;
   apiCallCount: () => number;
@@ -596,10 +597,16 @@ export async function startStack(
   };
 
   const enqueueAndWaitFailure = async (data: EligibilityJobPayload): Promise<string> => {
-    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data);
+    // The retry is parked behind the 2h production backoff, so it never runs during the test.
+    const job = await queue.add(FRANCE_CONNECT_JOB_NAME, data, {
+      attempts: 2,
+      backoff: { type: "escalating" },
+    });
     for (let i = 0; i < 100; i++) {
       const state = await job.getState();
-      if (state === "failed") return (await queue.getJob(job.id!))?.failedReason ?? "";
+      if (state === "delayed" || state === "failed") {
+        return (await queue.getJob(job.id!))?.failedReason ?? "";
+      }
       if (state === "completed") throw new Error(`job ${job.id} was ACCEPTED but should have been rejected`);
       await new Promise((r) => setTimeout(r, 100));
     }

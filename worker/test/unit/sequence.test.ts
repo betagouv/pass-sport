@@ -236,27 +236,27 @@ describe("runEligibilitySequence — AEEH et le lieu de naissance", () => {
   });
 });
 
-describe("runEligibilitySequence — QF en échec", () => {
-  const qfOutage = (): ResourceResult => ({
-    resource: "dss.quotient_familial_identite",
-    label: "dss.quotient_familial_identite",
-    httpStatus: 503,
+describe("runEligibilitySequence — ressource en panne", () => {
+  const outage = (resource: string, httpStatus = 503): ResourceResult => ({
+    resource,
+    label: resource,
+    httpStatus,
     success: false,
     data: null,
     error: "Service indisponible",
   });
 
-  it("fails the job while a retry is left", async () => {
+  it("fails the job on a QF outage while a retry is left", async () => {
     const client = stubClient([...FRATRIE, AINE]);
-    client.quotientFamilial.mockResolvedValue(qfOutage());
+    client.quotientFamilial.mockResolvedValue(outage("dss.quotient_familial_identite"));
 
     await expect(run(JEUNE_RATTACHE, client)).rejects.toThrow("gave no verdict");
     expect(client.aah).not.toHaveBeenCalled();
   });
 
-  it("carries on with AAH and CROUS on the last attempt", async () => {
+  it("carries on with AAH and CROUS after a QF outage on the last attempt", async () => {
     const client = stubClient([...FRATRIE, AINE]);
-    client.quotientFamilial.mockResolvedValue(qfOutage());
+    client.quotientFamilial.mockResolvedValue(outage("dss.quotient_familial_identite"));
 
     const results = await run(JEUNE_RATTACHE, client, { finalAttempt: true });
 
@@ -266,9 +266,46 @@ describe("runEligibilitySequence — QF en échec", () => {
     expect(results[0]).toMatchObject({ httpStatus: 503, success: false });
   });
 
-  it("still fails the job on an AAH outage on the last attempt", async () => {
+  it("fails the job on an AAH outage while a retry is left", async () => {
     const client = stubClient([...FRATRIE, AINE]);
-    client.aah.mockResolvedValue({ ...qfOutage(), resource: "dss.allocation_adulte_handicape_identite" });
+    client.aah.mockResolvedValue(outage("dss.allocation_adulte_handicape_identite"));
+
+    await expect(run(JEUNE_RATTACHE, client)).rejects.toThrow("gave no verdict");
+    expect(client.cnous).not.toHaveBeenCalled();
+  });
+
+  it("carries on with CROUS after an AAH outage on the last attempt", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+    client.aah.mockResolvedValue(outage("dss.allocation_adulte_handicape_identite"));
+
+    const results = await run(JEUNE_RATTACHE, client, { finalAttempt: true });
+
+    expect(client.cnous).toHaveBeenCalledTimes(1);
+    expect(results.map((r) => r.httpStatus)).toEqual([200, 503, 200]);
+  });
+
+  it("pronounces without a CROUS outage on the last attempt", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+    client.cnous.mockResolvedValue(outage("cnous.etudiant_boursier_identite"));
+
+    const results = await run(JEUNE_RATTACHE, client, { finalAttempt: true });
+
+    expect(results.at(-1)).toMatchObject({ httpStatus: 503, success: false });
+  });
+
+  it("asks about the next child after an AEEH outage on the last attempt", async () => {
+    const client = stubClient([AINE, { ...AINE, prenoms: "Brevannor" }]);
+    client.aeeh.mockResolvedValueOnce(outage("dss.allocation_enfant_handicape_identite"));
+
+    const results = await run(PARENT_NE_A_PARIS, client, { finalAttempt: true });
+
+    expect(client.aeeh.mock.calls.map(([, childIndex]) => childIndex)).toEqual([0, 1]);
+    expect(results.filter((r) => r.httpStatus === 503)).toHaveLength(1);
+  });
+
+  it("never tolerates a 4xx of ours, even on the last attempt", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+    client.aah.mockResolvedValue(outage("dss.allocation_adulte_handicape_identite", 403));
 
     await expect(run(JEUNE_RATTACHE, client, { finalAttempt: true })).rejects.toThrow(
       "gave no verdict",

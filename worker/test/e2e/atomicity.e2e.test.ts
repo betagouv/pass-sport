@@ -3,8 +3,8 @@ import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 
 // No RESULT is persisted until every external call has answered.
 //
-// The failure modelled here is a chain that blows up partway through: some API Particulier
-// resources answered, one did not. The job fails, eligibility_results is untouched — no
+// The failure modelled here is a chain that blows up partway through, with a retry left: some
+// API Particulier resources answered, one did not. The job fails, eligibility_results is untouched — no
 // half-batch of verdicts built on a partial reading of someone's situation — and the retry
 // replays from the checkpoint.
 //

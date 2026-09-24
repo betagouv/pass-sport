@@ -227,12 +227,10 @@ export async function processFcRelanceJob(
     return done("relance_non_autorisee");
   }
 
-  const { results, candidates, householdCaisse, conjointIdentite } = await assessHousehold(
-    job,
-    data,
-    deps,
-    history,
-  );
+  const { results, candidates, householdCaisse, conjointIdentite, rejectedResources } =
+    await assessHousehold(job, data, deps, history);
+  // The children come from the QF alone: without it, none of them can be told apart from gone.
+  const qfUnanswered = rejectedResources.some(isQfOutage);
 
   const taken = new Set<string>();
   const missingChildren: BeneficiaryCandidate[] = [];
@@ -327,6 +325,8 @@ export async function processFcRelanceJob(
         aides: candidate.eligibilities,
         raisons: candidate.reasons,
         updated,
+        // Tells a refusal re-pronounced blind, on the last attempt, from one the sources confirmed.
+        rejected_resources: rejectedResources,
       },
     });
   }
@@ -352,20 +352,24 @@ export async function processFcRelanceJob(
         aides: candidate.eligibilities,
         raisons: candidate.reasons,
         inserted: true,
+        rejected_resources: rejectedResources,
       },
     });
   }
 
   for (const row of targets.filter((r) => !taken.has(r.id))) {
     // Someone the initial run pronounced on and this one no longer knows of — gone from the
-    // foyer. The row is left exactly as it stands.
+    // foyer, unless the QF that lists the children never answered. The row is left exactly as it
+    // stands.
+    const isEnfant = row.source === "enfant";
+
     await history.record({
       actor: "worker",
       action: FC_RELANCE_ACTION,
       status: "skipped",
-      subject: row.source === "enfant" ? "enfant" : "self",
+      subject: isEnfant ? "enfant" : "self",
       responsePayload: {
-        raison: "beneficiaire_absent_du_foyer",
+        raison: isEnfant && qfUnanswered ? "qf_sans_reponse" : "beneficiaire_absent_du_foyer",
         eligibility_result_id: row.id,
         verdict_avant: row.verdict,
       },
