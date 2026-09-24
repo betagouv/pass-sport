@@ -323,9 +323,14 @@ describe('BeneficiaryRecap', () => {
       expect(screen.queryByRole('button', { name: RELANCE_LABEL })).not.toBeInTheDocument();
     });
 
-    // Une relance n'a rien à amender : elle ne touche que des lignes 'not_eligible'.
-    it('est absent sans refus à reprendre, drapeau levé ou non', () => {
+    it('est rendu même sans refus', () => {
       renderWithRelance([beneficiary({ verdict: 'eligible_pending' })], true);
+
+      expect(screen.getByRole('button', { name: RELANCE_LABEL })).toBeInTheDocument();
+    });
+
+    it('est absent sans aucun résultat', () => {
+      renderWithRelance([], true);
 
       expect(screen.queryByRole('button', { name: RELANCE_LABEL })).not.toBeInTheDocument();
     });
@@ -350,7 +355,7 @@ describe('BeneficiaryRecap', () => {
         expect(screen.getByRole('button', { name: RELANCE_LABEL })).toBeInTheDocument();
       });
 
-      it('ignore une autorisation portée par une ligne déjà éligible', () => {
+      it('est rendu quand l’autorisation est portée par une ligne déjà éligible', () => {
         renderWithRelance(
           [
             beneficiary({ verdict: 'not_eligible' }),
@@ -360,7 +365,7 @@ describe('BeneficiaryRecap', () => {
           true,
         );
 
-        expect(screen.queryByRole('button', { name: RELANCE_LABEL })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: RELANCE_LABEL })).toBeInTheDocument();
       });
     });
   });

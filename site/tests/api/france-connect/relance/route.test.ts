@@ -4,7 +4,11 @@
 
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { enqueueFcRelanceJob, findLiveJobForSub } from '@/app/services/queue';
-import { findLastRelanceForSub, findResultsForSub } from '@/app/services/applications';
+import {
+  findApplicationForSub,
+  findLastRelanceForSub,
+  findResultsForSub,
+} from '@/app/services/applications';
 import type { BeneficiaryResult } from '@/app/services/applications';
 import { POST } from '@/app/api/france-connect/relance/route';
 import type { PivotIdentity } from '@/app/services/eligibility-job';
@@ -20,6 +24,7 @@ jest.mock('../../../../src/app/services/queue', () => ({
 }));
 
 jest.mock('../../../../src/app/services/applications', () => ({
+  findApplicationForSub: jest.fn(),
   findLastRelanceForSub: jest.fn(),
   findResultsForSub: jest.fn(),
 }));
@@ -46,6 +51,7 @@ jest.mock('../../../../src/app/constants/env', () => ({
 const mockedLoadPocResult = loadPocResult as jest.Mock;
 const mockedFindLiveJobForSub = findLiveJobForSub as jest.Mock;
 const mockedFindLastRelanceForSub = findLastRelanceForSub as jest.Mock;
+const mockedFindApplicationForSub = findApplicationForSub as jest.Mock;
 const mockedFindResultsForSub = findResultsForSub as jest.Mock;
 const mockedEnqueueFcRelanceJob = enqueueFcRelanceJob as jest.Mock;
 
@@ -79,6 +85,7 @@ beforeEach(() => {
   mockEnv.FC_RELANCE_ALLOWLIST_ONLY = false;
   mockedFindLiveJobForSub.mockResolvedValue(null);
   mockedFindLastRelanceForSub.mockResolvedValue(null);
+  mockedFindApplicationForSub.mockResolvedValue(null);
   mockedEnqueueFcRelanceJob.mockResolvedValue({ id: IDENTITY.sub, name: 'fc-relance-job' });
 });
 
@@ -132,6 +139,37 @@ describe('POST /api/france-connect/relance', () => {
     expect(response.status).toBe(429);
     expect(new Date(body.availableAt).getTime()).toBe(lastRelance.getTime() + 2 * DAY_MS);
     expect(mockedEnqueueFcRelanceJob).not.toHaveBeenCalled();
+  });
+
+  it('refuses inside the window that follows the last run, even without any relance', async () => {
+    authenticate();
+    const lastApplication = new Date(Date.now() - DAY_MS);
+    mockedFindApplicationForSub.mockResolvedValue({
+      firstApplication: lastApplication,
+      lastApplication,
+    });
+
+    const response = await POST(request());
+    const body = (await response.json()) as { availableAt: string };
+
+    expect(response.status).toBe(429);
+    expect(new Date(body.availableAt).getTime()).toBe(lastApplication.getTime() + 2 * DAY_MS);
+    expect(mockedEnqueueFcRelanceJob).not.toHaveBeenCalled();
+  });
+
+  it('counts from the later of the last relance and the last run', async () => {
+    authenticate();
+    const lastApplication = new Date(Date.now() - 5 * DAY_MS);
+    const lastRelance = new Date(Date.now() - DAY_MS);
+    mockedFindApplicationForSub.mockResolvedValue({
+      firstApplication: lastApplication,
+      lastApplication,
+    });
+    mockedFindLastRelanceForSub.mockResolvedValue(lastRelance);
+
+    const body = (await (await POST(request())).json()) as { availableAt: string };
+
+    expect(new Date(body.availableAt).getTime()).toBe(lastRelance.getTime() + 2 * DAY_MS);
   });
 
   it('accepts once the window has elapsed', async () => {
@@ -211,6 +249,14 @@ describe('POST /api/france-connect/relance, restreinte à la liste de test', () 
 
   it('accepte quand un refus est autorisé', async () => {
     mockedFindResultsForSub.mockResolvedValue([refusal(false), refusal(true)]);
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(202);
+  });
+
+  it('accepte un foyer autorisé déjà éligible', async () => {
+    mockedFindResultsForSub.mockResolvedValue([{ ...refusal(true), verdict: 'eligible_pending' }]);
 
     const response = await POST(request());
 

@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { callResource, type RateLimitable } from "./calls";
+import { callResource, isFinalAttempt, type RateLimitable } from "./calls";
 import type { ApiParticulierRateGate } from "./rate-gate";
 import type { HistoryRecorder } from "../db/history";
 import type { EligibilityCheckpoint, ResourceResult } from "./types";
@@ -28,6 +28,9 @@ export function createCheckpointRunner<TData extends CheckpointedJob>(
   run: (call: CheckpointedCall) => Promise<ResourceResult | undefined>;
 } {
   const checkpoint: EligibilityCheckpoint = job.data.checkpoint ?? { results: [] };
+  // No retry left to wait for the provider: the chain pronounces without the missing answer
+  // rather than failing the job and writing nothing at all.
+  const tolerateFailure = isFinalAttempt(job);
 
   const run = async (call: CheckpointedCall): Promise<ResourceResult | undefined> => {
     // Matched on the key alone: several rows share one `resource` — one per swept quotient
@@ -55,6 +58,7 @@ export function createCheckpointRunner<TData extends CheckpointedJob>(
       subject: call.subject,
       logSuffix: call.childIndex != null ? ` (child ${call.childIndex})` : undefined,
       params: call.params,
+      tolerateFailure,
       invoke: call.invoke,
       commit: async (r) => {
         checkpoint.results.push({ ...r, checkpointKey: call.key });

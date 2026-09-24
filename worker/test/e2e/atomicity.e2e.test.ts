@@ -3,8 +3,8 @@ import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 
 // No RESULT is persisted until every external call has answered.
 //
-// The failure modelled here is a chain that blows up partway through: some API Particulier
-// resources answered, one did not. The job fails, eligibility_results is untouched — no
+// The failure modelled here is a chain that blows up partway through, with a retry left: some
+// API Particulier resources answered, one did not. The job fails, eligibility_results is untouched — no
 // half-batch of verdicts built on a partial reading of someone's situation — and the retry
 // replays from the checkpoint.
 //
@@ -14,8 +14,8 @@ import { startStack, TEMPLATE_IDS, type Stack } from "./harness";
 let stack: Stack;
 
 beforeAll(async () => {
-  // The 2nd API Particulier call answers 502: the first resource is read, the next is not.
-  stack = await startStack({ apiFailOnCall: 2 });
+  // The 3rd API Particulier call (AAH, after the two QF months) answers 502.
+  stack = await startStack({ apiFailOnCall: 3 });
 }, 180_000);
 
 afterAll(async () => {

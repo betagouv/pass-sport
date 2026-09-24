@@ -9,8 +9,8 @@ import ResultPanel from './components/post-login-flow/ResultPanel';
 import BeneficiaryRecap from './components/post-login-flow/BeneficiaryRecap';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
-import { findLastRelanceForSub, findResultsForSub } from '@/app/services/applications';
-import { nextRelanceAt } from '@/app/services/relance';
+import { findResultsForSub } from '@/app/services/applications';
+import { relanceAvailableAtForSub } from '@/app/services/relance-availability';
 import {
   FC_DEBUGGING_ONLY,
   FC_RELANCE_ALLOWLIST_ONLY,
@@ -81,7 +81,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
   const existingJob = result ? await findJobForSub(result.sub) : null;
   const results = result ? await findResultsForSub(result.sub) : [];
   const relanceAvailableAt =
-    result && FC_RELANCE_ENABLED ? nextRelanceAt(await findLastRelanceForSub(result.sub)) : null;
+    result && FC_RELANCE_ENABLED ? await relanceAvailableAtForSub(result.sub) : null;
 
   // Raw FranceConnect identity + API Particulier response dumps (including their
   // errors) are debug-only and restricted to the local environment.

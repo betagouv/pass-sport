@@ -1,23 +1,21 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startStack, type Stack } from "./harness";
+import { RESOURCE_META } from "../../src/eligibility/client";
 
-// A 502 carrying the provider's own code 35000 is CNAF/MSA choking on this one identity, not the
-// platform being down — the same distinction qf-batch makes. Deterministic, so the four job
-// attempts spread over a day would hear it four times. The chain therefore carries on, exactly
-// like the 422 of validation-error.e2e.test.ts, where a 502 without that code (atomicity.e2e.test.ts)
-// still fails the job and writes nothing.
+// A 502 carrying the provider's own code 35000 is CNAF/MSA choking on this identity. The provider
+// may answer on a later attempt, so while one is left the job fails and retries like on any 5xx
+// (atomicity.e2e.test.ts): nothing is pronounced on a partial reading. On the last attempt there is
+// nothing left to wait for, and the chain pronounces without it. Only the history tells it apart
+// from a platform outage.
 //
 // The chain for the identity below is: qf août, qf septembre, aah, cnous, then one aeeh per
-// child inside the AEEH window. Call 4 is cnous, the self candidate's only remaining route once
-// aah answers est_beneficiaire:false.
+// child inside the AEEH window. Call 4 is cnous.
 
 let stack: Stack;
 
 const CNOUS_CALL = 4;
 
-const sub = "fc-sub-provider-data-error";
-
-const input = {
+const inputFor = (sub: string) => ({
   identity: {
     family_name: "Martin",
     given_name: "Camille",
@@ -29,26 +27,16 @@ const input = {
     sub,
   },
   isFranceConnected: true,
-};
-
-beforeAll(async () => {
-  stack = await startStack({ apiProviderErrorOnCall: CNOUS_CALL });
-  await stack.enqueueAndWait(input);
-}, 180_000);
-
-afterAll(async () => {
-  await stack?.close();
 });
 
-const rows = async () =>
+const rows = async (sub: string) =>
   (
-    await stack.pool.query(
-      "select * from eligibility_results where allocataire_fc_sub = $1 order by source, (enfant_identite->>'given_name')",
-      [sub],
-    )
+    await stack.pool.query("select * from eligibility_results where allocataire_fc_sub = $1", [
+      sub,
+    ])
   ).rows;
 
-const history = async () =>
+const history = async (sub: string) =>
   (
     await stack.pool.query(
       "select * from eligibility_history where allocataire_fc_sub = $1 order by created_at, id",
@@ -56,45 +44,38 @@ const history = async () =>
     )
   ).rows;
 
-describe("a provider data error does not break the chain", () => {
-  it("still pronounces on every beneficiary", async () => {
-    const results = await rows();
+describe("a provider data error fails the job while a retry is left", () => {
+  const sub = "fc-sub-provider-data-error";
+  let failureReason: string;
 
-    // The four children the QF answer names, plus the connected adult.
-    expect(results).toHaveLength(5);
-    expect(results.every((r) => r.verdict !== null)).toBe(true);
+  beforeAll(async () => {
+    stack = await startStack({ apiProviderErrorOnCall: CNOUS_CALL });
+    failureReason = await stack.enqueueAndWaitFailure(inputFor(sub));
+  }, 180_000);
+
+  afterAll(async () => {
+    await stack?.close();
   });
 
-  it("refuses the candidate whose only route went unanswered", async () => {
-    const self = (await rows()).find((r) => r.source === "self");
-
-    expect(self.verdict).toBe("not_eligible");
-    expect(self.is_eligible).toBe(false);
+  it("fails the job and writes no verdict", async () => {
+    expect(failureReason).toContain("API Particulier");
+    expect(await rows(sub)).toHaveLength(0);
   });
 
-  it("keeps the calls made after the failed one", async () => {
-    const children = (await rows()).filter((r) => r.source === "enfant");
-    const granted = children.filter((r) => r.verdict === "eligible_pending");
-
-    // The three inside the AEEH window; the fourth is 21 ans, so no call was ever made for them.
-    expect(granted).toHaveLength(3);
-    expect(granted.every((r) => r.situation === "AEEH")).toBe(true);
-  });
-
-  it("records it as provider_error, not as an error that would have failed the job", async () => {
-    const events = await history();
+  it("records it as provider_error", async () => {
+    const events = await history(sub);
     const failed = events.filter((e) => e.status === "provider_error");
 
     expect(failed).toHaveLength(1);
     expect(failed[0].http_status).toBe(502);
     expect(failed[0].action).toContain("etudiant_boursier");
-    expect(events.some((e) => e.status === "error")).toBe(false);
+    expect(events.some((e) => e.action === "results.persisted")).toBe(false);
   });
 
   // Without this the row says a 502 happened and nothing more — no way to tell this apart from a
   // platform outage after the fact, nor to name the provider that dropped it.
   it("keeps the raw API error on that row", async () => {
-    const failed = (await history()).find((e) => e.status === "provider_error");
+    const failed = (await history(sub)).find((e) => e.status === "provider_error");
 
     expect(failed.response_payload.error_code).toBe("35000");
     expect(failed.response_payload.api_error).toMatchObject({
@@ -102,19 +83,48 @@ describe("a provider data error does not break the chain", () => {
       meta: { provider: "CNAF" },
     });
   });
+});
 
-  it("names the unanswered resource on the row that persisted the verdicts", async () => {
-    const persisted = (await history()).find((e) => e.action === "results.persisted");
+describe("a provider data error on the last attempt is pronounced without", () => {
+  const sub = "fc-sub-provider-data-error-final";
 
-    expect(persisted.response_payload.rows).toBe(5);
-    expect(persisted.response_payload.rejected_resources).toHaveLength(1);
-    expect(persisted.response_payload.rejected_resources[0]).toMatchObject({
-      reason: "provider_error",
-      http_status: 502,
-      error_code: "35000",
-    });
-    expect(persisted.response_payload.rejected_resources[0].resource).toContain(
-      "etudiant_boursier",
+  beforeAll(async () => {
+    stack = await startStack({ apiProviderErrorOnCall: CNOUS_CALL });
+    await stack.enqueueAndWait(inputFor(sub));
+  }, 180_000);
+
+  afterAll(async () => {
+    await stack?.close();
+  });
+
+  it("carries on with the children after the silent CROUS", async () => {
+    const aeehCalls = (await history(sub)).filter((e) => e.action === RESOURCE_META.aeeh.resource);
+
+    expect(aeehCalls.length).toBeGreaterThan(0);
+  });
+
+  it("writes the verdicts, the connected user left without the CROUS route", async () => {
+    const written = await rows(sub);
+    const self = written.find((r) => r.source === "self");
+
+    expect(self).toMatchObject({ verdict: "not_eligible", is_eligible: false });
+    expect(written.some((r) => r.source === "enfant" && r.verdict === "eligible_pending")).toBe(
+      true,
     );
+  });
+
+  // What the relance reads to know the refusal was pronounced blind.
+  it("names the CROUS call the chain had to pronounce without", async () => {
+    const persisted = (await history(sub)).find((e) => e.action === "results.persisted");
+
+    expect(persisted.response_payload.rejected_resources).toEqual([
+      expect.objectContaining({
+        resource: RESOURCE_META.cnous.resource,
+        child_index: null,
+        reason: "provider_error",
+        http_status: 502,
+        error_code: "35000",
+      }),
+    ]);
   });
 });

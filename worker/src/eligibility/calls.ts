@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { Worker, type Job } from "bullmq";
 import * as Sentry from "@sentry/node";
 import {
   startTimer,
@@ -12,32 +12,34 @@ import type { ResourceResult } from "./types";
 
 export type RateLimitable = { rateLimit(expireTimeMs: number): Promise<void> };
 
+export const isFinalAttempt = (job: Pick<Job, "attemptsMade" | "opts">): boolean =>
+  job.attemptsMade >= (job.opts.attempts ?? 1) - 1;
+
 // The SDK's ValidationError: API Particulier rejected our params.
 export const API_PARTICULIER_VALIDATION_STATUS = 422;
 
 // Same JSON:API code as qf-batch's PROVIDER_DATA_ERROR_CODE: a 5xx carrying errors[0].code
-// "35000" is the data provider (CNAF/MSA) choking on this one identity, not the platform being
-// down. Only the latter is worth waiting out.
+// "35000" is the data provider (CNAF/MSA) choking on this identity. Retried like any 5xx, but
+// labelled apart in the history.
 export const API_PARTICULIER_PROVIDER_DATA_ERROR_CODE = "35000";
 
 const isParamsRejected = (r: ResourceResult): boolean =>
   r.httpStatus === API_PARTICULIER_VALIDATION_STATUS;
 
-const isProviderDataError = (r: ResourceResult): boolean =>
-  r.httpStatus != null &&
-  r.httpStatus >= 500 &&
-  r.errorCode === API_PARTICULIER_PROVIDER_DATA_ERROR_CODE;
+export const isProviderFailure = (r: ResourceResult): boolean =>
+  r.httpStatus != null && r.httpStatus >= 500;
 
-// Neither will change its mind: params already refused stay refused, and the provider replays
-// the same failure on the same data. The chain pronounces without that resource rather than
+const isProviderDataError = (r: ResourceResult): boolean =>
+  isProviderFailure(r) && r.errorCode === API_PARTICULIER_PROVIDER_DATA_ERROR_CODE;
+
+// Params already refused stay refused. The chain pronounces without that resource rather than
 // burning the job's four attempts over 24h to hear the same thing. Same params only: sequence.ts
 // still re-asks AEEH once on another pays de naissance after a 422.
-export const retryingWouldChangeNothing = (r: ResourceResult): boolean =>
-  isParamsRejected(r) || isProviderDataError(r);
+export const retryingWouldChangeNothing = (r: ResourceResult): boolean => isParamsRejected(r);
 
 // A 404 is an answer ("pas bénéficiaire"), a 422 a question that cannot be asked, a 5xx/35000 a
-// question the provider cannot answer about this person. None is a failure of ours, so the
-// history must not paint them as errors — and they must stay distinct.
+// question the provider could not answer about this person this time. None is a failure of ours,
+// so the history must not paint them as errors — and they must stay distinct.
 export const resultStatus = (r: ResourceResult): HistoryStatus => {
   if (r.rateLimited) return "rate_limited";
   if (r.success) return "success";
@@ -186,13 +188,25 @@ export type ResourceCall = {
   // Set only from here, where the call is actually made rather than replayed from the
   // checkpoint.
   params?: Record<string, unknown>;
+  tolerateFailure?: boolean;
   invoke: () => Promise<ResourceResult>;
   commit?: (r: ResourceResult) => Promise<void>;
 };
 
 export async function callResource(call: ResourceCall): Promise<ResourceResult> {
-  const { jobId, queue, history, rateGate, resource, subject, logSuffix, params, invoke, commit } =
-    call;
+  const {
+    jobId,
+    queue,
+    history,
+    rateGate,
+    resource,
+    subject,
+    logSuffix,
+    params,
+    tolerateFailure,
+    invoke,
+    commit,
+  } = call;
 
   // Before the call and before its log line: a paused job never reached the API. A gate that
   // could not answer at all pauses too — a burst sent blind is what the ceiling exists to prevent.
@@ -219,10 +233,15 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
 
   if (r.rateLimited) await handleRateLimit(jobId, queue, r);
 
-  assertApiParticulierAnswered(jobId, r);
+  const answered = r.success || r.httpStatus === 404;
+
+  // Only a provider outage is tolerated: a 4xx of ours would read as a silent "pas bénéficiaire".
+  const toleratedOutage = !!tolerateFailure && isProviderFailure(r);
+
+  if (!toleratedOutage) assertApiParticulierAnswered(jobId, r);
 
   // These no longer fail the job, so this is the only thing that raises them at read time.
-  if (retryingWouldChangeNothing(r)) {
+  if (!answered && (toleratedOutage || retryingWouldChangeNothing(r))) {
     console.warn(
       `[pass-sport-worker] job ${jobId}: ${resource} gave no answer (httpStatus=${r.httpStatus ?? "none"}, code=${r.errorCode ?? "none"}), pronouncing without it — ${r.error ?? ""}`,
     );
