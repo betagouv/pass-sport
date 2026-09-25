@@ -213,7 +213,10 @@ export const eligibilityResults = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
-    index("eligibility_results_allocataire_fc_sub_idx").on(t.allocataireFcSub),
+    // Serves every "last run" lookup (max(created_at) per sub). The migration adds
+    // INCLUDE (source), which drizzle cannot express, so the enfant/self check stays index-only.
+    index("eligibility_results_sub_created_at_idx").on(t.allocataireFcSub, t.createdAt),
+    index("eligibility_results_job_id_idx").on(t.jobId),
     // Covers the whole WHERE and ORDER BY of the code-mail sweep. email_kind IS NULL is what
     // restricts it to the FranceConnect path: the other one always names its template at insert
     // time.
@@ -377,8 +380,28 @@ export const eligibilityHistory = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
-    index("eligibility_history_allocataire_fc_sub_idx").on(t.allocataireFcSub),
-    index("eligibility_history_job_id_idx").on(t.jobId),
+    // The migration adds INCLUDE (status, http_status), which drizzle cannot express.
+    index("eligibility_history_sub_action_created_at_idx").on(
+      t.allocataireFcSub,
+      t.action,
+      t.createdAt,
+    ),
+    index("eligibility_history_job_id_action_created_at_idx").on(t.jobId, t.action, t.createdAt),
+    // Backs fc_relance_last_by_sub, read by the site on every espace FranceConnect display.
+    index("eligibility_history_fc_relance_idx")
+      .on(t.allocataireFcSub, t.createdAt)
+      .where(sql`${t.action} = 'fc_relance'`),
+    // Scans QF outcomes per sub without touching the jsonb payloads. The migration adds
+    // INCLUDE (http_status, created_at); a query must repeat this exact predicate to use it.
+    index("eligibility_history_qf_by_sub_idx")
+      .on(t.allocataireFcSub)
+      .where(
+        sql`${t.action} in ('dss.quotient_familial_identite', 'dss.quotient_familial') and ${t.allocataireFcSub} is not null`,
+      ),
+    // Joins the data/ writeback events back to their eligibility_results row.
+    index("eligibility_history_psp_result_id_idx")
+      .on(sql`((${t.responsePayload} ->> 'eligibility_result_id')::uuid)`)
+      .where(sql`${t.action} in ('psp.code_writeback', 'psp.code_match_base')`),
     // An append-only log is read in time order; the table never shrinks, so keep it cheap.
     index("eligibility_history_created_at_idx").on(t.createdAt),
   ],
