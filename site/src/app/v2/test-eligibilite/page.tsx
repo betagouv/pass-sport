@@ -22,6 +22,7 @@ import { HORS_FRANCE_CONNECT_MAINTENANCE } from './constants/maintenance';
 import styles from './styles.module.scss';
 import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
 import { MATOMO_CATEGORY } from '@/utils/matomo-category';
+import { AAH, AEEH, CAF, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 export const metadata: Metadata = {
   title: 'Récupération du code | pass Sport',
@@ -150,9 +151,29 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             <div className={`fr-col-12 fr-col-md-8 ${styles.choices}`}>
               <h2 className="fr-h4">S&apos;authentifier avec FranceConnect</h2>
               <p className="fr-mb-1w">
-                Nous vérifions vos droits directement auprès des administrations : aucun
-                justificatif à fournir.
+                Pour obtenir un code pass Sport, vous devez vous connecter avec le compte
+                FranceConnect de la personne qui bénéficie de l’aide :
               </p>
+              <ul className="fr-mb-3w text-align--left">
+                <li>
+                  <strong>Pour un enfant :</strong> utilisez le compte FranceConnect du parent
+                  allocataire principal (<CAF /> ou <MSA />
+                  ), c’est-à-dire celui qui perçoit l’allocation de rentrée scolaire ou l’
+                  <AEEH /> pour l’enfant.
+                  <p className="fr-mt-1w fr-mb-1w">
+                    Le code de l’enfant est accessible uniquement au parent allocataire principal.
+                    L’autre parent ne pourra pas le récupérer, même si l’enfant figure sur son
+                    dossier <CAF /> ou <MSA />.
+                  </p>
+                </li>
+                <li>
+                  <strong>
+                    Pour un bénéficiaire de l’
+                    <AAH /> ou un étudiant boursier :
+                  </strong>{' '}
+                  utilisez votre propre compte FranceConnect, et non celui de vos parents.
+                </li>
+              </ul>
               {/* Wording imposed by the FranceConnect FS qualification (criterion 1):
                   it must appear verbatim, directly above the button. */}
               <p className="fr-mb-3w">

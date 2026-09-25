@@ -35,8 +35,8 @@ const EligibilityTest = () => {
           />
           <div className={styles['top-section-tile__description']}>
             <p className="fr-text--xl fr-mb-1w">
-              Si vous êtes éligible, vous recevrez un courrier électronique avec votre code pass
-              Sport, mi-septembre.
+              Les codes pass Sport ont été envoyés aux bénéficiaires entre le 9 et le 13 septembre
+              2026.
             </p>
           </div>
         </div>
