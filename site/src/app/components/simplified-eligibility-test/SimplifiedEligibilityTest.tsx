@@ -17,6 +17,52 @@ import { InputState } from '@/types/form';
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
 import { useSimplifiedEligibilityTestUsage } from '@/app/hooks/use-simplified-eligibility-test-usage';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
+import { AEEH, CAF, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
+
+const buildParentKnowMore = (allowance: React.ReactNode) => ({
+  title: 'À savoir',
+  description: (
+    <>
+      <span className="display--block">
+        Pour demander le pass Sport pour votre enfant, vous devez être l’allocataire principal
+        auprès de la <CAF /> ou de la <MSA />.
+      </span>
+      <span className="display--block fr-mt-1w">
+        Connectez-vous avec FranceConnect en utilisant le compte de la personne qui perçoit{' '}
+        {allowance}.
+      </span>
+      <span className="display--block fr-mt-1w">
+        L’autre parent ne peut pas demander le code, même si l’enfant figure sur son dossier <CAF />{' '}
+        ou <MSA />.
+      </span>
+    </>
+  ),
+});
+
+type KnowMoreMeta = { title: string; description: React.ReactNode };
+
+const BOURSIER_KNOW_MORE: KnowMoreMeta = {
+  title: 'À savoir',
+  description:
+    'Seuls les boursiers ayant eu leur notification définitive au 20 août 2026 ont reçu leur code. Si vous avez reçu votre notification définitive après cette date, cliquez ci-après pour savoir comment obtenir votre code : en savoir plus',
+};
+
+const KNOW_MORE_BY_ALLOCATION: Partial<Record<ALLOCATION, KnowMoreMeta>> = {
+  [ALLOCATION.QF]: buildParentKnowMore('l’allocation de rentrée scolaire'),
+  [ALLOCATION.AEEH]: buildParentKnowMore(
+    <>
+      l’
+      <AEEH /> pour l’enfant
+    </>,
+  ),
+  [ALLOCATION.AAH]: {
+    title: 'À savoir',
+    description:
+      'Pour demander votre pass Sport, utilisez votre propre compte FranceConnect, et non celui de vos parents.',
+  },
+  [ALLOCATION.CROUS]: BOURSIER_KNOW_MORE,
+  [ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX]: BOURSIER_KNOW_MORE,
+};
 
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
@@ -50,7 +96,7 @@ const defaultOptions = [
   },
   {
     value: ALLOCATION.QF,
-    label: 'Quotient familial (CAF ou MSA) du foyer allocataire inférieur ou égal à 699 €',
+    label: 'Quotient familial de l’allocataire principal (CAF ou MSA) inférieur ou égal à 699 €',
   },
   {
     value: ALLOCATION.AEEH,
@@ -83,9 +129,7 @@ export default function SimplifiedEligibilityTest({
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [allocationName, setAllocationName] = useState<ALLOCATION | null>(null);
-  const [knowMoreMeta, setKnowMoreMeta] = useState<{ title: string; description: string } | null>(
-    null,
-  );
+  const [knowMoreMeta, setKnowMoreMeta] = useState<KnowMoreMeta | null>(null);
   const [alertMeta, setAlertMeta] = useState<{
     title: string;
     description: string | React.ReactNode;
@@ -148,7 +192,10 @@ export default function SimplifiedEligibilityTest({
                 const successInitialMeta = {
                   title: `Bonne nouvelle, vous êtes éligible au pass Sport.`,
                   description: (
-                    <>Les codes pass Sport seront envoyés aux bénéficiaires mi-septembre 2026.</>
+                    <>
+                      Les codes pass Sport ont été envoyés aux bénéficiaires entre le 9 et le 13
+                      septembre 2026.
+                    </>
                   ),
                 };
 
@@ -158,10 +205,11 @@ export default function SimplifiedEligibilityTest({
                 };
 
                 if (isBenefEligible && targetDate) {
+                  setKnowMoreMeta(KNOW_MORE_BY_ALLOCATION[allocationName] ?? null);
                   switch (allocationName) {
+                    case ALLOCATION.QF:
                     case ALLOCATION.AAH:
                     case ALLOCATION.AEEH:
-                    case ALLOCATION.QF:
                       setAlertMeta({
                         title: successInitialMeta.title,
                         description: successInitialMeta.description,
@@ -173,7 +221,8 @@ export default function SimplifiedEligibilityTest({
                         title: successInitialMeta.title,
                         description: (
                           <>
-                            Les codes pass Sport seront envoyés aux bénéficiaires mi-septembre 2026.
+                            Les codes pass Sport ont été envoyés aux bénéficiaires entre le 9 et le
+                            13 septembre 2026.
                           </>
                         ),
                       });
@@ -308,7 +357,7 @@ export default function SimplifiedEligibilityTest({
 
           {knowMoreMeta && (
             <section className="fr-mt-3w">
-              <KnowMore variant="purple" knowMore={knowMoreMeta} />
+              <KnowMore variant="blue" knowMore={knowMoreMeta} />
             </section>
           )}
 
