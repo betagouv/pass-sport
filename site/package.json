@@ -24,7 +24,8 @@
     "scripts:send-in-mass-code-pas-recu": "node -r dotenv/config ./scripts/send-in-mass-code-pas-recu.mjs.mjs dotenv_config_path=./.env.local",
     "scripts:send-in-mass-aeeh": "node -r dotenv/config ./scripts/send-in-mass-aeeh.mjs dotenv_config_path=./.env.local",
     "scripts:send-in-mass-eligibility-test-fail": "node -r dotenv/config ./scripts/send-in-mass-eligibility-test-fail.mjs dotenv_config_path=./.env.local",
-    "scripts:unresolve-boursiers": "node -r dotenv/config ./scripts/unresolve-boursiers.mjs dotenv_config_path=./.env.local"
+    "scripts:unresolve-boursiers": "node -r dotenv/config ./scripts/unresolve-boursiers.mjs dotenv_config_path=./.env.local",
+    "scripts:add-note-to-conversations": "node --env-file=.env.local scripts/add-note-to-conversations-for-non-existing-qf.mjs"
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.33.0",
