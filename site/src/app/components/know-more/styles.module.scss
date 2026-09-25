@@ -3,21 +3,28 @@
 .container {
   --know-more-bg-color: initial;
   --know-more-title-color: initial;
+  --know-more-border-color: transparent;
 
   &--purple {
     --know-more-title-color: var(--purple-glycine-sun-319-moon-630);
     --know-more-bg-color: var(--purple-glycine-975-75);
   }
-  //light/accent/$purple-glycine-sun-319
   &--yellow {
     --know-more-title-color: var(--yellow-moutarde-sun-348-moon-860);
     --know-more-bg-color: var(--yellow-moutarde-975-75);
+  }
+
+  &--blue {
+    --know-more-title-color: var(--text-title-blue-france);
+    --know-more-bg-color: var(--blue-france-975-75);
+    --know-more-border-color: var(--border-default-blue-france);
   }
 
   padding: 12px;
   margin-top: auto;
   border-radius: 8px;
   background-color: var(--know-more-bg-color);
+  border: 1px solid var(--know-more-border-color);
 
   &__title {
     color: var(--know-more-title-color);
