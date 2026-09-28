@@ -79,7 +79,7 @@
     "jest-environment-jsdom": "^30.5.1",
     "prettier": "^3.9.6",
     "sass": "^1.103.1",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "webpack": "^5.110.1"
   },
   "packageManager": "pnpm@11.4.0"
