@@ -234,12 +234,6 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
   (« UNPROTECTED PRIVATE KEY FILE »). Sa clé publique doit être enregistrée sur le compte
   Scalingo qui a accès à `$SCALINGO_APP`. Si son nom n'est pas `id_rsa`, indiquer son chemin
   via `SCALINGO_SSH_IDENTITY` (voir « Secrets » ci-dessus).
-- **L'empreinte SSH de Scalingo.** `db-tunnel` monte une connexion SSH vers
-  `ssh.osc-fr1.scalingo.com` ; sur un `known_hosts` vide il attend une réponse que la cron ne
-  donnera jamais. À amorcer une fois, à la main, **sous le compte `passsport` lui-même** — pas
-  sous un compte opérateur, dont le `known_hosts` est distinct :
-  `scalingo --app "$SCALINGO_APP" db-tunnel SCALINGO_POSTGRESQL_URL` (interactif, `Ctrl+C`
-  pour l'arrêter une fois l'empreinte acceptée).
 - **`data/.env` et `worker/.env.local`** — chemins de campagne, jeton API Particulier, et
   désormais `SCALINGO_APP`/`SCALINGO_API_TOKEN` (voir « Secrets » ci-dessus). Ils changent
   d'une campagne à l'autre, là où le playbook décrit la machine.
