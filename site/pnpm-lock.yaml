@@ -244,11 +244,6 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  '@babel/parser@7.29.9':
-    resolution: {integrity: sha512-CjXrNHTnvqBVqHgdBysY3vk2T8tpJHb5/RMeHJBTyVa9xgugCB0CJTx/3oO8RV2QRQP391RWpB7D6hLjm8V9uA==}
-    engines: {node: '>=6.0.0'}
-    hasBin: true
-
   '@babel/plugin-syntax-async-generators@7.8.4':
     resolution: {integrity: sha512-tycmZxkGfZaxhMRbXlPXuVFpdWlXpir2W4AMhSJgRKzk/eDlIXOhb2LHWoLpDF7TEHylV5zNhykX6KAgHJmTNw==}
     peerDependencies:
@@ -5244,10 +5239,6 @@ snapshots:
   '@babel/helpers@7.29.7':
     dependencies:
       '@babel/template': 7.29.7
-      '@babel/types': 7.29.8
-
-  '@babel/parser@7.29.9':
-    dependencies:
       '@babel/types': 7.29.8
 
   '@babel/parser@7.29.9':
