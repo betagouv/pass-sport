@@ -10,8 +10,13 @@ import {
   getRedirectUri,
   transientCookieOptions,
 } from '@/app/api/france-connect/shared';
+import { PARCOURS_FC_ENABLED } from '@/app/constants/env';
 
 export async function GET(request: Request): Promise<Response> {
+  if (!PARCOURS_FC_ENABLED) {
+    return NextResponse.redirect(new URL(FC_INTERNAL_PAGE_PATH, request.url));
+  }
+
   try {
     const config = getFranceConnectConfig();
     const state = generateOidcSecret();
