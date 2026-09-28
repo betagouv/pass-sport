@@ -27,7 +27,7 @@
     "csv-parse": "^7.0.2",
     "csv-stringify": "^6.8.1",
     "drizzle-orm": "^0.45.2",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "pg": "^8.22.0"
   },
   "devDependencies": {
