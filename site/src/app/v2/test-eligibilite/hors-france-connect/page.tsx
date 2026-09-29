@@ -7,7 +7,11 @@ import breakdance from '@/images/eligibility-test/break-dance.webp';
 import cn from 'classnames';
 import Button from '@codegouvfr/react-dsfr/Button';
 import AllowanceStep from '@/app/v2/test-eligibilite/components/allowance-step/AllowanceStep';
-import { CODES_OBTAINABLE, PARCOURS_HORS_FC_ENABLED } from '@/app/constants/env';
+import {
+  CODES_OBTAINABLE,
+  PARCOURS_FC_ENABLED,
+  PARCOURS_HORS_FC_ENABLED,
+} from '@/app/constants/env';
 import { HORS_FRANCE_CONNECT_MAINTENANCE } from '@/app/v2/test-eligibilite/constants/maintenance';
 import KnowMore from '@/app/components/know-more/KnowMore';
 
@@ -60,9 +64,11 @@ const EligibilityTest = () => {
           <div className={styles.wrapper}>
             <p className="fr-text--xl fr-text--bold">{HORS_FRANCE_CONNECT_MAINTENANCE.title}</p>
             <p className="fr-mb-4w">{HORS_FRANCE_CONNECT_MAINTENANCE.description}</p>
-            <Button linkProps={{ href: '/v2/test-eligibilite' }}>
-              Faire ma demande avec FranceConnect
-            </Button>
+            {PARCOURS_FC_ENABLED && (
+              <Button linkProps={{ href: '/v2/test-eligibilite' }}>
+                Faire ma demande avec FranceConnect
+              </Button>
+            )}
           </div>
         </div>
       ) : CODES_OBTAINABLE ? (

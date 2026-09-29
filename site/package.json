@@ -24,7 +24,8 @@
     "scripts:send-in-mass-code-pas-recu": "node -r dotenv/config ./scripts/send-in-mass-code-pas-recu.mjs.mjs dotenv_config_path=./.env.local",
     "scripts:send-in-mass-aeeh": "node -r dotenv/config ./scripts/send-in-mass-aeeh.mjs dotenv_config_path=./.env.local",
     "scripts:send-in-mass-eligibility-test-fail": "node -r dotenv/config ./scripts/send-in-mass-eligibility-test-fail.mjs dotenv_config_path=./.env.local",
-    "scripts:unresolve-boursiers": "node -r dotenv/config ./scripts/unresolve-boursiers.mjs dotenv_config_path=./.env.local"
+    "scripts:unresolve-boursiers": "node -r dotenv/config ./scripts/unresolve-boursiers.mjs dotenv_config_path=./.env.local",
+    "scripts:add-note-to-conversations": "node --env-file=.env.local scripts/add-note-to-conversations-for-non-existing-qf.mjs"
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.33.0",
@@ -52,7 +53,7 @@
     "react-select": "^5.10.2",
     "remark-breaks": "^4.0.0",
     "server-only": "^0.0.1",
-    "zod": "^4.5.4",
+    "zod": "^4.6.5",
     "zod-form-data": "^3.0.3"
   },
   "devDependencies": {
@@ -69,14 +70,14 @@
     "@types/react-dom": "^19.0.1",
     "csv-parse": "^7.0.2",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.3",
+    "eslint-config-next": "^16.3.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-unused-imports": "^4.4.1",
-    "jest": "^30.5.1",
+    "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.1",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.8",
     "sass": "^1.103.1",
     "typescript": "^5.9.3",
     "webpack": "^5.110.1"

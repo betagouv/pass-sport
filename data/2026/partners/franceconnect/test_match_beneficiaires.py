@@ -619,6 +619,43 @@ def test_le_conjoint_retrouve_un_code_emis_via_l_autre_parent(pg):
     assert recap['par_qf_caf'] == 1
 
 
+def test_aeeh_caf_le_conjoint_aux_prenoms_caf_retrouve_un_code_emis_avec_ses_prenoms_fc(pg):
+    # Parent 1 connected first: the code carries their FranceConnect given names, all of
+    # them. Parent 2 presents parent 1 as conjoint with the quotient_familial given names,
+    # the first one only — base ⊄ candidate, candidate ⊂ base.
+    base = ligne_base(**{**BASE_AEEH_FC, 'allocataire_prenom': 'OSKAR FLORENT DANIEL'})
+    extra = ligne_extra(id_psp='PSP-F3', cnaf_allocataire_nom_naissance='DORMALEK',
+                        cnaf_allocataire_date_naissance='1978-06-06',
+                        cnaf_allocataire_genre='male')
+    cand = candidat(**{**CANDIDAT_AEEH_FC, **PERSONA_INCONNU,
+                       'conjoint_nom': 'DORMALEK', 'conjoint_nom_usage': '',
+                       'conjoint_prenom': 'OSKAR', 'conjoint_date_naissance': '1978-06-06',
+                       'conjoint_qualite': 'M', 'conjoint_genre': 'male'})
+    apparies, _, recap = rapprocher(pg, base=[base], extra=[extra], candidats=[cand])
+    assert apparies == {'c1': 'PSP-F3'}
+    assert recap['par_aeeh_caf'] == 1
+
+
+def test_aeeh_msa_le_conjoint_aux_prenoms_caisse_retrouve_un_code_emis_avec_ses_prenoms_fc(pg):
+    base = ligne_base(**{**BASE_AEEH_MSA, 'allocataire_prenom': 'HALVI MARIE ANNE'})
+    cand = candidat(**{**CANDIDAT_AEEH_MSA, **PERSONA_INCONNU,
+                       'conjoint_nom': 'ZELVIK', 'conjoint_prenom': 'Halvi',
+                       'conjoint_date_naissance': '1980-01-02',
+                       'conjoint_qualite': 'Mme', 'conjoint_genre': 'female'})
+    apparies, _, recap = rapprocher(pg, base=[base], candidats=[cand])
+    assert apparies == {'c1': 'PSP-E1'}
+    assert recap['par_aeeh_msa'] == 1
+
+
+def test_les_prenoms_de_l_allocataire_doivent_encore_se_recouvrir(pg):
+    # Both directions, but still containment: disjoint given names never match.
+    base = ligne_base(**{**BASE_AEEH_MSA, 'allocataire_prenom': 'HALVI MARIE'})
+    cand = candidat(**{**CANDIDAT_AEEH_MSA, 'allocataire_prenom': 'Halvi Sophie'})
+    apparies, non_apparies, _ = rapprocher(pg, base=[base], candidats=[cand])
+    assert apparies == {}
+    assert non_apparies == ['c1']
+
+
 def test_aeeh_caf_retrouve_un_code_franceconnect_sans_nom_d_usage(pg):
     extra = ligne_extra(id_psp='PSP-F3', cnaf_allocataire_nom_naissance='DORMALEK',
                         cnaf_allocataire_date_naissance='1978-06-06',
