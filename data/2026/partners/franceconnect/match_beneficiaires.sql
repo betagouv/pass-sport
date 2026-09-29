@@ -54,6 +54,12 @@
 -- sous-ensemble de mots, ordre libre (opérateur <@ sur les tableaux de mots normalisés).
 -- La CNAF ne stocke qu'un prénom (PRENOMDOS, NOMENF), FranceConnect les porte tous.
 --
+-- Exception : les prénoms de l'ALLOCATAIRE se comparent dans les deux sens. Un code émis par
+-- ce pipeline porte en base les prénoms FranceConnect du parent connecté (tous ceux de l'état
+-- civil), et l'autre parent le présente plus tard en conjoint avec les prénoms de la réponse
+-- quotient_familial (souvent le seul premier) : base {DAVID, FLORENT, DANIEL} contre candidat
+-- {DAVID}. Dans un seul sens, ce code n'est jamais retrouvé et l'enfant en reçoit un second.
+--
 -- VERDICT STRICT : un candidat est apparié ssi sa stratégie retourne exactement UN id_psp.
 -- Zéro ou plusieurs lignes = non apparié -> il recevra un code neuf, le moins risqué des
 -- deux. Aucun départageur. Pour l'AAH : exactement une des deux stratégies retourne
@@ -118,7 +124,8 @@ create temp table fc_candidats (
 -- candidat n'a pas la valeur ne peut pas apparier.
 --
 -- Les prénoms deviennent des TABLEAUX de mots : le containment « prénoms LAMP contenus
--- dans les prénoms FranceConnect » s'écrit alors base_prenoms <@ fc_prenoms, ordre libre.
+-- dans les prénoms FranceConnect » s'écrit alors base_prenoms <@ fc_prenoms, ordre libre
+-- (dans les deux sens pour les prénoms de l'allocataire, voir l'en-tête).
 create temp table fc_norm on commit drop as
 select
 	c.eligibility_result_id,
@@ -262,7 +269,8 @@ join public.beneficiaires b
  and b.situation = 'AEEH'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+ and (string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+      or p.alloc_prenoms <@ string_to_array(public.normalise_recherche(b.allocataire_prenom), ' '))
  and b.allocataire_qualite = p.alloc_qualite
  and public.normalise_date_recherche(b.allocataire_date_naissance) = p.alloc_naissance
  and public.normalise_recherche(b.nom) = n.benef_nom_naissance
@@ -297,7 +305,8 @@ join public.beneficiaires b
  and b.situation = 'AEEH'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+ and (string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+      or p.alloc_prenoms <@ string_to_array(public.normalise_recherche(b.allocataire_prenom), ' '))
  and b.allocataire_qualite = p.alloc_qualite
  and public.normalise_recherche(b.prenom) = n.benef_prenoms_texte
  and b.genre::text = n.benef_genre
@@ -328,7 +337,8 @@ join public.beneficiaires b
  and b.situation = 'jeune'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+ and (string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+      or p.alloc_prenoms <@ string_to_array(public.normalise_recherche(b.allocataire_prenom), ' '))
  and b.allocataire_qualite = p.alloc_qualite
  and public.normalise_date_recherche(b.allocataire_date_naissance) = p.alloc_naissance
  and public.normalise_recherche(b.nom) = n.benef_nom_naissance
@@ -362,7 +372,8 @@ join public.beneficiaires b
  and b.situation = 'jeune'
  and b.exercice_id = :exercice
  and b.id_psp is not null
- and string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+ and (string_to_array(public.normalise_recherche(b.allocataire_prenom), ' ') <@ p.alloc_prenoms
+      or p.alloc_prenoms <@ string_to_array(public.normalise_recherche(b.allocataire_prenom), ' '))
  and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
