@@ -16,9 +16,13 @@ import {
   FC_RELANCE_ALLOWLIST_ONLY,
   FC_RELANCE_ENABLED,
   IS_LOCAL_ENV,
+  PARCOURS_FC_ENABLED,
   PARCOURS_HORS_FC_ENABLED,
 } from '@/app/constants/env';
-import { HORS_FRANCE_CONNECT_MAINTENANCE } from './constants/maintenance';
+import {
+  FRANCE_CONNECT_MAINTENANCE,
+  HORS_FRANCE_CONNECT_MAINTENANCE,
+} from './constants/maintenance';
 import styles from './styles.module.scss';
 import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
 import { MATOMO_CATEGORY } from '@/utils/matomo-category';
@@ -139,12 +143,14 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
 
       {!result ? (
         <section className={styles.section}>
-          <Notice
-            severity="info"
-            className="fr-mb-3w"
-            title="Connectez-vous avec FranceConnect"
-            description="Nous vérifierons votre situation et celle de vos enfants directement auprès des administrations en charge, sans rien vous demander d'autre. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
-          />
+          {PARCOURS_FC_ENABLED && (
+            <Notice
+              severity="info"
+              className="fr-mb-3w"
+              title="Connectez-vous avec FranceConnect"
+              description="Nous vérifierons votre situation et celle de vos enfants directement auprès des administrations en charge, sans rien vous demander d'autre. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
+            />
+          )}
 
           <div className="fr-grid-row fr-grid-row--center fr-my-4w">
             <div className={`fr-col-12 fr-col-md-8 ${styles.choices}`}>
@@ -160,7 +166,15 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 connexion à vos services en ligne.
               </p>
 
-              <FranceConnectSection />
+              {PARCOURS_FC_ENABLED ? (
+                <FranceConnectSection />
+              ) : (
+                <Notice
+                  severity="warning"
+                  title={FRANCE_CONNECT_MAINTENANCE.title}
+                  description={FRANCE_CONNECT_MAINTENANCE.description}
+                />
+              )}
 
               <p className={`fr-my-6w ${styles.separator}`}>OU</p>
 
