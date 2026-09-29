@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
-import { AAH, AEEH, CAF, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 const MATOMO_ACTION = 'relance verification';
 
@@ -94,34 +93,8 @@ export default function RelanceButton({ availableAt }: RelanceButtonProps) {
       <h2 className="fr-h3">Votre situation a changé&nbsp;?</h2>
       <p className="fr-mb-1w">
         Pour obtenir un code pass Sport, vous devez vous connecter avec le compte FranceConnect de
-        la personne qui bénéficie de l’aide :
+        la personne qui bénéficie de l&apos;aide.
       </p>
-
-      <ul>
-        <li>
-          <p className="fr-mb-1w">
-            <span className="fr-text--bold">Pour un enfant : </span>utilisez le compte FranceConnect
-            du parent allocataire principal (<CAF /> ou <MSA />
-            ), c’est-à-dire celui qui perçoit l’allocation de rentrée scolaire ou l’
-            <AEEH /> pour l’enfant.
-          </p>
-
-          <p className="fr-mb-0">
-            Le code de l’enfant est accessible uniquement au parent allocataire principal. L’autre
-            parent ne pourra pas le récupérer, même si l’enfant figure sur son dossier <CAF /> ou{' '}
-            <MSA />.
-          </p>
-        </li>
-        <li>
-          <p className="fr-mb-1w">
-            <span className="fr-text--bold">
-              Pour un bénéficiaire de l’
-              <AAH /> ou un étudiant boursier :
-            </span>{' '}
-            utilisez votre propre compte FranceConnect, et non celui de vos parents.
-          </p>
-        </li>
-      </ul>
 
       {blockedUntil ? (
         <>

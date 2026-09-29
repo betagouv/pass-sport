@@ -12,6 +12,7 @@ import MainTiles from '@/app/v2/accueil/components/main-tiles/MainTiles';
 import SimplifiedEligibilityTest from '@/app/components/simplified-eligibility-test/SimplifiedEligibilityTest';
 import styles from './styles.module.scss';
 import { CAF, CROUS, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
+import Video from '@/app/v2/accueil/components/video/Video';
 
 export const metadata: Metadata = {
   title: 'Accueil - pass Sport',
@@ -67,15 +68,20 @@ export default async function Accueil() {
                 l&apos;inscription.
               </p>
             </section>
-
+            <section className="fr-my-4w">
+              <h3>Vidéo de présentation du pass Sport</h3>
+              <Video
+                videoFullUrl="https://vimeo.com/1230190323?share=copy#t=0"
+                videoId="1230190323"
+              />
+            </section>
             <section>
               <h2 className="fr-mb-2w fr-h1">Qui peut bénéficier du pass Sport ?</h2>
               <p className="fr-mb-2w">Pour la saison 2026-2027, le dispositif est ouvert aux :</p>
               <ul>
                 <li>
                   Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire dont le
-                  quotient familial de l&apos;allocataire principal (<CAF /> ou <MSA />) est
-                  inférieur ou égal à 699 € ;
+                  quotient familial (<CAF /> ou <MSA />) est inférieur ou égal à 699 € ;
                 </li>
                 <li>
                   Jeunes en situation de handicap :
@@ -107,7 +113,6 @@ export default async function Accueil() {
                 d&apos;un environnement structurant, éducatif et sécurisé.
               </p>
             </section>
-
             <section>
               <h2 className="fr-mb-2w fr-h1">Comment recevoir mon pass Sport ?</h2>
               <p className="fr-mb-2w">
@@ -129,7 +134,6 @@ export default async function Accueil() {
                 dans un délai pouvant aller jusqu&apos;à 72 heures.
               </p>
             </section>
-
             <section>
               <h2 className="fr-mb-2w fr-h1">Où et comment utiliser le pass Sport ?</h2>
               <p className="fr-mb-2w">
@@ -159,7 +163,6 @@ export default async function Accueil() {
                 Le pass Sport est valable du 1er septembre au 31 décembre 2026.
               </p>
             </section>
-
             <section>
               <h2 className="fr-mb-2w fr-h1">Une question ?</h2>
               <p className="fr-mb-4w">
@@ -173,7 +176,6 @@ export default async function Accueil() {
                 Consulter la liste des questions fréquemment posées
               </Link>
             </section>
-
             {!isPasSportClosed() && (
               <section className="fr-my-5w">
                 <MainTiles titleAs="h3" />

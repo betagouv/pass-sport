@@ -7,11 +7,11 @@ import { useRef } from 'react';
 
 interface Props {
   videoFullUrl: string;
+  videoId: string;
 }
 
-const Video = ({ videoFullUrl }: Props) => {
-  const title =
-    'Vidéo de présentation du dispositif pass Sport avec deux athlètes français : Lucie Hautière (para tennis de table) et Simon Boypa (athlétisme).\n';
+const Video = ({ videoFullUrl, videoId }: Props) => {
+  const title = 'Vidéo de présentation du dispositif pass Sport';
   const parentRef = useRef<HTMLDivElement | null>(null);
 
   useUpdateTitleIframe({
@@ -23,7 +23,7 @@ const Video = ({ videoFullUrl }: Props) => {
   return (
     <div ref={parentRef}>
       <figure className="fr-my-2w fr-content-media">
-        <div className={cn('vimeo_player', styles['vimeo_player'])} data-videoid="1113160982" />
+        <div className={cn('vimeo_player', styles['vimeo_player'])} data-videoid={videoId} />
         <figcaption className="fr-content-media__caption">
           {title}
           <a
@@ -89,37 +89,22 @@ const Video = ({ videoFullUrl }: Props) => {
                           id="fr-transcription-modal-transcription-2160-title"
                           className="fr-modal__title"
                         >
-                          Vidéo de présentation du dispositif pass Sport avec deux athlètes français
-                          : Lucie Hautière (para tennis de table) et Simon Boypa (athlétisme).
+                          Vidéo de présentation du dispositif pass Sport
                         </h1>
                         <div>
-                          <p>Lucie : Bonne nouvelle, la campagne pass Sport est lancée. </p>
-                          <p>
-                            Simon : Cette année, c&apos;est 50 € pour aider les jeunes à pratiquer
-                            un sport, sous conditions d&apos;éligibilité.
+                          <p className="fr-mb-1w">
+                            50 € de réduction pour mon inscription au football ? Oui, avec le pass
+                            Sport. On donne le code au club et hop.
                           </p>
-                          <p>Lucie : C&apos;est super simple à utiliser.</p>
-                          <p>
-                            Simon : T&apos;as rien à faire. Si tu es éligible, tu recevras un code
-                            directement par mail.
+                          <p className="fr-mb-1w">
+                            Génial. Et ma sœur peut aussi s&apos;inscrire au basket-fauteuil ? Oui,
+                            c&apos;est valable pour tous les sports et même pour la salle de sport.
                           </p>
-                          <p>
-                            Lucie : Ensuite, Il suffit de le montrer à ton club ou à ta salle de
-                            sport au moment de l&apos;inscription.
-                          </p>
-                          <p>
-                            Simon : Il y a plus de 85 000 clubs, associations sportives et salles de
-                            sport qui sont partenaires. Si tu n&apos;as pas reçu de code, pas de
-                            panique, tu peux le demander sur le site pass.sport.gouv.fr.
-                          </p>
-                          <p>
-                            Lucie : Le pass est valable du 1er septembre au 31 décembre 2025, pense
-                            à l’activer à temps.
-                          </p>
-                          <p>
-                            Simon : Pour plus d&apos;infos, rendez vous sur le site internet et les
-                            réseaux sociaux de pass Sport. Envie de bouger ? pass Sport, faites
-                            entrer le sport dans votre vie.
+                          <p className="fr-mb-1w">
+                            Le pass Sport est ouvert aux jeunes de 6 à 17 ans sous condition de
+                            ressources, aux jeunes en situation de handicap de 6 à 30 ans
+                            bénéficiaires d&apos;aides spécifiques, ainsi qu&apos;aux étudiants
+                            boursiers jusqu&apos;à 28 ans.
                           </p>
                         </div>
                       </div>

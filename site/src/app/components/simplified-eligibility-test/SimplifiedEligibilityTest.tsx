@@ -17,44 +17,28 @@ import { InputState } from '@/types/form';
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
 import { useSimplifiedEligibilityTestUsage } from '@/app/hooks/use-simplified-eligibility-test-usage';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
-import { AEEH, CAF, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
-
-const buildParentKnowMore = (allowance: React.ReactNode) => ({
-  title: 'À savoir',
-  description: (
-    <>
-      <span className="display--block">
-        Pour demander le pass Sport pour votre enfant, vous devez être l’allocataire principal
-        auprès de la <CAF /> ou de la <MSA />.
-      </span>
-      <span className="display--block fr-mt-1w">
-        Connectez-vous avec FranceConnect en utilisant le compte de la personne qui perçoit{' '}
-        {allowance}.
-      </span>
-      <span className="display--block fr-mt-1w">
-        L’autre parent ne peut pas demander le code, même si l’enfant figure sur son dossier <CAF />{' '}
-        ou <MSA />.
-      </span>
-    </>
-  ),
-});
 
 type KnowMoreMeta = { title: string; description: React.ReactNode };
 
 const BOURSIER_KNOW_MORE: KnowMoreMeta = {
   title: 'À savoir',
-  description:
-    'Seuls les boursiers ayant eu leur notification définitive au 20 août 2026 ont reçu leur code. Si vous avez reçu votre notification définitive après cette date, cliquez ci-après pour savoir comment obtenir votre code : en savoir plus',
+  description: (
+    <>
+      Conformément au décret relatif au pass Sport 2026, seuls les étudiants dont la bourse a été
+      attribuée définitivement avant le 15 octobre 2026 sont éligibles.
+      <br />
+      Si vous n’avez pas reçu votre code Pass Sport par e‑mail et que vous ne parvenez pas à le
+      récupérer sur le site, cela signifie que votre bourse n’est pas encore enregistrée comme
+      définitive dans nos bases de données.
+      <br />
+      Un nouvel envoi des codes pour les étudiants éligibles sera effectué le 26 octobre par e‑mail.
+      Si vous ne recevez toujours rien à cette date, vous pourrez tenter de récupérer de nouveau sur
+      le site.
+    </>
+  ),
 };
 
 const KNOW_MORE_BY_ALLOCATION: Partial<Record<ALLOCATION, KnowMoreMeta>> = {
-  [ALLOCATION.QF]: buildParentKnowMore('l’allocation de rentrée scolaire'),
-  [ALLOCATION.AEEH]: buildParentKnowMore(
-    <>
-      l’
-      <AEEH /> pour l’enfant
-    </>,
-  ),
   [ALLOCATION.AAH]: {
     title: 'À savoir',
     description:
@@ -96,7 +80,7 @@ const defaultOptions = [
   },
   {
     value: ALLOCATION.QF,
-    label: 'Quotient familial de l’allocataire principal (CAF ou MSA) inférieur ou égal à 699 €',
+    label: 'Quotient familial (CAF ou MSA) du foyer allocataire inférieur ou égal à 699 €',
   },
   {
     value: ALLOCATION.AEEH,
