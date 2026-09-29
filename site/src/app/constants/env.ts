@@ -7,7 +7,7 @@ export const IS_LOCAL_ENV = process.env.NEXT_PUBLIC_ENV === 'local';
 export const CHATBOT_IS_ACTIVATED = process.env.NEXT_PUBLIC_CHATBOT_IS_ACTIVATED === 'yes';
 
 export const PARCOURS_HORS_FC_ENABLED = process.env.PARCOURS_HORS_FC_ENABLED === 'yes';
-export const PARCOURS_FC_ENABLED = process.env.PARCOURS_FC_ENABLE === 'yes';
+export const PARCOURS_FC_ENABLED = process.env.PARCOURS_FC_ENABLED === 'yes';
 export const FC_ENABLED_FOR_DEBUGGING = process.env.FC_ENABLED_FOR_DEBUGGING === 'yes';
 export const FC_DEBUGGING_ONLY = FC_ENABLED_FOR_DEBUGGING && !CODES_OBTAINABLE;
 
