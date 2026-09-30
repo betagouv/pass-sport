@@ -62,7 +62,7 @@ const STATUS_DISPLAY_BY_VERDICT: Record<Verdict, StatusDisplay> = {
 };
 
 export const PENDING_CODE_MESSAGE =
-  'Vous allez recevoir votre code individuel par courrier électronique à l’adresse email FranceConnect dans les prochains jours. Si vous n’avez pas reçu votre code dans les 72 heures, vous pourrez le retrouver dans votre espace en FC.';
+  'Vous allez recevoir votre code individuel par courrier électronique à l’adresse email FranceConnect dans les prochains jours. Si vous n’avez pas reçu votre code dans les 72 heures, vous pourrez le retrouver dans votre espace en FranceConnect.';
 
 const verdictMessage = (b: BeneficiaryResult): ReactNode => {
   switch (b.verdict) {
