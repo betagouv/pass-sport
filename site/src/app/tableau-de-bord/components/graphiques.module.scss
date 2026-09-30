@@ -1,0 +1,112 @@
+.figure {
+  margin: 0 0 1rem;
+}
+
+// Below this width the labels would shrink past legibility: the chart scrolls instead.
+.defilement {
+  overflow-x: auto;
+}
+
+.graphique {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  min-width: 720px;
+  height: auto;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.grille {
+  stroke: var(--border-default-grey);
+  stroke-width: 1;
+}
+
+.base {
+  stroke: var(--border-contrast-grey);
+  stroke-width: 1;
+}
+
+.graduation {
+  fill: var(--text-mention-grey);
+  font-size: 12px;
+}
+
+.etiquette {
+  fill: var(--text-default-grey);
+  font-weight: 700;
+}
+
+.etiquetteNom {
+  font-weight: 400;
+  fill: var(--text-mention-grey);
+}
+
+.renvoi {
+  stroke: var(--border-contrast-grey);
+  stroke-width: 1;
+}
+
+// Surface ring: keeps end dots legible where lines cross.
+.point {
+  stroke: var(--background-default-grey);
+  stroke-width: 2;
+}
+
+.survol {
+  fill: transparent;
+
+  &:hover {
+    fill: var(--background-alt-grey);
+    fill-opacity: 0.6;
+  }
+}
+
+.colonne:hover path,
+.barre:hover path {
+  opacity: 0.8;
+}
+
+.libelleBarre {
+  fill: var(--text-default-grey);
+}
+
+.titreFigure {
+  margin-bottom: 0.5rem;
+  color: var(--text-mention-grey);
+  font-size: 0.875rem;
+}
+
+.legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  color: var(--text-default-grey);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+  }
+}
+
+.donnees {
+  margin-bottom: 2rem;
+
+  summary {
+    cursor: pointer;
+    color: var(--text-action-high-blue-france);
+    font-size: 0.875rem;
+  }
+}
+
+.nombre {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

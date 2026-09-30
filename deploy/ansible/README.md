@@ -123,6 +123,14 @@ C'est une garantie du playbook, pas un oubli à corriger :
 
   L'ancienne entrée `pass-sport-lca-checks` n'existe plus : le playbook la retire (tag
   `lca-checks-cron`) là où une version précédente l'avait posée.
+- **l'entrée crontab `pass-sport-tableaux-de-bord`** (tous les jours à 07:15) est posée
+  **désactivée** tant que `pass_sport_tdb_cron_enabled` vaut `false`, sa valeur par défaut. Elle
+  charge dans la base du site les statistiques que l'hébergeur de la base LCA dépose chaque matin dans `/nfs/stats`
+  (voir le [README de dashboard/](../../data/2026/dashboard/README.md)). On
+  l'active une fois que l'hébergeur de la base LCA a déposé une première extraction réelle et que
+  `./run_dashboard.sh --dry-run` est passé dessus. La tâche qui vérifie que
+  `tdb_drop_dir` est lisible porte le tag `tdb-cron` : `--skip-tags tdb-cron` la saute tant
+  que l'hébergeur de la base LCA n'a pas créé le dossier.
 
 ### Reporter tout le volet FC (crontab Scalingo/tunnel)
 
@@ -239,6 +247,8 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
   d'une campagne à l'autre, là où le playbook décrit la machine.
 - **le montage `/nfs/run`** — il appartient à l'infra ; le playbook vérifie seulement
   qu'il est inscriptible.
+- **le dossier `/nfs/stats`** — créé par l'hébergeur de la base LCA ; le playbook vérifie seulement qu'il est
+  lisible par le compte de service.
 
 ## Vérification après un provisioning
 
@@ -252,6 +262,8 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
 3. `crontab -l -u <utilisateur> | grep -E 'pass-sport-fc|pass-sport-lca-checks'` : seule la ligne
    `pass-sport-fc` doit apparaître, **active** tant que `pass_sport_fc_cron_enabled` (`true` par
    défaut) n'a pas été repassé à `false`.
+   `crontab -l -u <utilisateur> | grep pass-sport-tableaux-de-bord` : la ligne est commentée tant
+   que `pass_sport_tdb_cron_enabled` vaut `false`.
 4. `systemctl list-units 'pass-sport-qf-batch@*'` doit être vide : aucune instance active tant
    que personne n'a lancé `systemctl start pass-sport-qf-batch@<partenaire>`.
 5. Aucun secret n'est parti dans le dépôt public :

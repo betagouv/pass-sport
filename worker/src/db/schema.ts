@@ -1,11 +1,15 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
+  date,
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   pgView,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -426,4 +430,41 @@ export const fcRelanceLastBySub = pgView("fc_relance_last_by_sub").as((qb) =>
         and ${eligibilityHistory.allocataireFcSub} is not null`,
     )
     .groupBy(eligibilityHistory.allocataireFcSub),
+);
+
+// The public LCA dashboards, as the LCA host extracts them every day (specs/dashboard/). Each
+// extraction recomputes the whole series since the campaign opened, so
+// data/2026/dashboard/load_dashboard.sql replaces the table rather than appending
+// to it. Column names are those of the CSV contract. The worker never reads it.
+export const lcaTableauxDeBord = pgTable(
+  "lca_tableaux_de_bord",
+  {
+    tableau: text("tableau").notNull(),
+    jour: date("jour", { mode: "string" }).notNull(),
+    // Display order within the day, as the export query sorted it.
+    rang: integer("rang").notNull(),
+    // INSEE code, departement rows only.
+    code: text("code"),
+    libelle: text("libelle").notNull(),
+    // Null where a dashboard does not report the measure (see the CSV contract).
+    eligibles: integer("eligibles"),
+    codesActives: integer("codes_actives").notNull(),
+    codesActivesDuJour: integer("codes_actives_du_jour").notNull(),
+    tauxRecours: numeric("taux_recours", { precision: 5, scale: 2 }),
+    partEligibles: numeric("part_eligibles", { precision: 5, scale: 2 }),
+    partActives: numeric("part_actives", { precision: 5, scale: 2 }),
+    extraitLe: timestamp("extrait_le", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.tableau, t.jour, t.libelle] }),
+    check(
+      "lca_tableaux_de_bord_tableau_check",
+      sql`${t.tableau} in ('genre', 'situation', 'organisme', 'region', 'departement', 'age', 'federation')`,
+    ),
+  ],
+);
+
+// What the public dashboard page reads: site_readonly is only ever granted views.
+export const lcaTableauxDeBordPublies = pgView("lca_tableaux_de_bord_publies").as((qb) =>
+  qb.select().from(lcaTableauxDeBord),
 );

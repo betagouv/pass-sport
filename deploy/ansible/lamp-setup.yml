@@ -1,6 +1,7 @@
 ---
-# Provisioning de la machine de traitement pass Sport : qf-batch (worker/) et le passage
-# FranceConnect (data/2026/partners/franceconnect/).
+# Provisioning de la machine de traitement pass Sport : qf-batch (worker/), le passage
+# FranceConnect (data/2026/partners/franceconnect/) et le chargement du tableau de bord LCA
+# (data/2026/dashboard/).
 #
 # Joué SUR la machine elle-même, jamais depuis un nœud de contrôle distant : l'accès passe
 # par un bastion à session interactive (RemoteCommand + auth par mot de passe), qu'OpenSSH
@@ -81,6 +82,11 @@
     # validés (empreinte SSH amorcée, essai à blanc réussi). Repasser à `false` (ou
     # `--extra-vars pass_sport_fc_cron_enabled=false`) pour redésactiver le passage.
     pass_sport_fc_cron_enabled: true
+    # LCA dashboards loader (data/2026/dashboard/run_dashboard.sh): reads what the LCA host
+    # drops in tdb_drop_dir every morning and loads it into the site database. Posted disabled:
+    # set to true once a --dry-run on a real extraction has passed.
+    tdb_drop_dir: /nfs/stats
+    pass_sport_tdb_cron_enabled: false
 
   tasks:
     - name: Groupe d'exploitation et comptes

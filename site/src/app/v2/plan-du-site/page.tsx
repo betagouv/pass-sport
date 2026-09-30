@@ -33,6 +33,9 @@ export default function PlanDuSite() {
               <Link href="/v2/une-question">Une question ?</Link>
             </li>
             <li>
+              <Link href="/tableau-de-bord">Tableau de bord</Link>
+            </li>
+            <li>
               <Link href="/v2/mentions-legales">Mentions légales</Link>
             </li>
             <li>

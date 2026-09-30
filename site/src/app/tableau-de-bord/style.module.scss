@@ -1,0 +1,65 @@
+@use '../variables';
+
+.page-header {
+  height: auto;
+  min-height: 120px;
+  padding-top: 1.5rem;
+  padding-bottom: 1rem;
+}
+
+// One filter row above everything it scopes: the evolutions and the detail, not the key figures.
+.filtres {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 2rem;
+  margin: 0 0 2.5rem;
+  padding: 1.5rem;
+  background-color: var(--background-alt-grey);
+
+  :global(.fr-select-group),
+  :global(.fr-fieldset__element) {
+    margin-bottom: 0;
+  }
+}
+
+.tuiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 2.5rem;
+  padding: 0;
+  list-style: none;
+
+  @media screen and (max-width: variables.$md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border-default-grey);
+    background-color: var(--background-default-grey);
+  }
+}
+
+.tuileLibelle {
+  color: var(--text-mention-grey);
+  font-size: 0.875rem;
+}
+
+// Proportional figures: tabular ones look loose at this size.
+.tuileValeur {
+  color: var(--text-title-grey);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 2.25rem;
+}
+
+.replie summary {
+  cursor: pointer;
+  color: var(--text-action-high-blue-france);
+  margin-bottom: 1rem;
+}
