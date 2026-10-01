@@ -18,6 +18,7 @@ import { storePocResult } from '@/app/api/france-connect/session';
 import { toPivotIdentity } from '@/app/api/france-connect/pivot';
 import { enqueueCodesJob } from '@/app/services/queue';
 import { getClientIp } from '@/utils/client-ip';
+import { markFranceConnectInSupportCookie } from '@/utils/cookie';
 
 const redirectToPage = (params: Record<string, string> = {}): NextResponse => {
   const url = new URL(FC_INTERNAL_PAGE_PATH, BASE_DOMAIN);
@@ -88,6 +89,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     await storePocResult({ identity: pivot, sub: identity.sub, idToken: tokens.idToken });
+    await markFranceConnectInSupportCookie(identity.sub);
 
     // The journey asks the usager nothing, so the eligibility job starts here. Its own
     // try/catch: the login itself succeeded, and the session is already stored, so a Redis
