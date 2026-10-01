@@ -128,6 +128,24 @@ export async function POST(request: Request): Promise<Response> {
       isFromCrous: isBoursier,
     };
 
+    const stepTwoPayload = {
+      recipientLastname: payload.recipientLastname,
+      recipientFirstname: payload.recipientFirstname,
+      recipientCafNumber: payload.recipientCafNumber,
+      recipientIneNumber: payload.recipientIneNumber,
+      recipientBirthDate: payload.recipientBirthDate,
+      recipientBirthCountry: payload.recipientBirthCountry,
+      recipientBirthPlace: payload.recipientBirthPlace,
+    };
+
+    // Written on every submission, from what the usager typed only: a cookie set or sized
+    // according to the LCA outcome would bring back the enumeration oracle.
+    await handleSupportCookie({
+      ...searchPayload,
+      ...stepTwoPayload,
+      recipientEmail: payload.recipientEmail,
+    });
+
     const enqueue = (
       lcaStatus: LcaJobData['lcaStatus'],
       passSportCode: string | null,
@@ -221,7 +239,6 @@ export async function POST(request: Request): Promise<Response> {
           answered: search.map((c) => ({ situation: c.situation, organisme: c.organisme })),
         },
       });
-      await handleSupportCookie(searchPayload, 'search');
       await enqueue('not_found', null, null);
       return Response.json({ outcome: 'sent' } satisfies VerdictResponseBody);
     }
@@ -230,13 +247,7 @@ export async function POST(request: Request): Promise<Response> {
       id: item.id.toString(),
       situation: item.situation,
       organisme: item.organisme,
-      recipientLastname: payload.recipientLastname,
-      recipientFirstname: payload.recipientFirstname,
-      recipientCafNumber: payload.recipientCafNumber,
-      recipientIneNumber: payload.recipientIneNumber,
-      recipientBirthDate: payload.recipientBirthDate,
-      recipientBirthCountry: payload.recipientBirthCountry,
-      recipientBirthPlace: payload.recipientBirthPlace,
+      ...stepTwoPayload,
     };
 
     const recordConfirm = (
@@ -290,7 +301,6 @@ export async function POST(request: Request): Promise<Response> {
     const confirmed = confirm[0];
 
     if (!confirmed?.id_psp) {
-      await handleSupportCookie(confirmPayload, 'confirm');
       await enqueue('not_found', null, null);
       return Response.json({ outcome: 'sent' } satisfies VerdictResponseBody);
     }

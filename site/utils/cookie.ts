@@ -4,46 +4,34 @@ import { cookies } from 'next/headers';
 import { getAnHourFromNow } from './date';
 import { decryptAuthenticated, encryptAuthenticated } from '@/utils/decryption';
 import { fromBase64ToString } from '@/utils/string';
-import { ConfirmPayload, FormStep, SearchPayload } from '@/types/EligibilityTest';
+import { ConfirmPayload, SearchPayload } from '@/types/EligibilityTest';
 import { AUTHORIZED_VENDORS_KEY } from '@/app/constants/cookie-manager';
 
 const COOKIE_SUPPORT_KEY = process.env.NEXT_PUBLIC_COOKIE_SUPPORT_KEY as string;
 const BASE_64_KEY_FOR_SUPPORT_COOKIE = process.env.BASE_64_KEY_FOR_SUPPORT_COOKIE as string;
 
-const MAX_ATTEMPTS_PER_STEP = 5;
+const MAX_ATTEMPTS = 5;
 
-export type SupportAttempt = Record<string, unknown> & { step?: string };
+// User input only, never LCA's answer (see the verdict route)
+export type SupportAttempt = SearchPayload &
+  Omit<Partial<ConfirmPayload>, 'id' | 'situation' | 'organisme'> & { recipientEmail: string };
 
 export interface SupportData {
   attempts: SupportAttempt[];
   franceConnect: { allocataire_fc_sub: string; connectedAt: string } | null;
 }
 
-async function handleSupportCookie(payload: SearchPayload | ConfirmPayload, step: FormStep) {
+async function handleSupportCookie(payload: SupportAttempt) {
   if (!(await hasGivenConsentForSupportCookie())) {
     await removeSupportCookie();
     return;
   }
 
-  const mappingStep: Record<FormStep, string> = {
-    search: 'Première étape du formulaire',
-    confirm: 'Étape finale du formulaire',
-  };
-
   const { attempts, franceConnect } = await getDecryptedSupportCookie();
-  const supportCookiePayload = [...attempts, { ...payload, step: mappingStep[step] }];
-
-  const searchStepPayloads = supportCookiePayload
-    .filter(({ step }) => step === mappingStep.search)
-    .slice(-MAX_ATTEMPTS_PER_STEP);
-
-  const confirmStepPayloads = supportCookiePayload
-    .filter(({ step }) => step === mappingStep.confirm)
-    .slice(-MAX_ATTEMPTS_PER_STEP);
 
   await setSupportCookie(
     encryptSupportPayload({
-      attempts: [...searchStepPayloads, ...confirmStepPayloads],
+      attempts: [...attempts, payload].slice(-MAX_ATTEMPTS),
       franceConnect,
     }),
   );
