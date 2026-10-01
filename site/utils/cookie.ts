@@ -12,10 +12,16 @@ const BASE_64_KEY_FOR_SUPPORT_COOKIE = process.env.BASE_64_KEY_FOR_SUPPORT_COOKI
 
 const MAX_ATTEMPTS_PER_STEP = 5;
 
+export type SupportAttempt = Record<string, unknown> & { step?: string };
+
+export interface SupportData {
+  attempts: SupportAttempt[];
+  franceConnect: { allocataire_fc_sub: string; connectedAt: string } | null;
+}
+
 async function handleSupportCookie(payload: SearchPayload | ConfirmPayload, step: FormStep) {
-  // Added await here because hasGivenConsentForSupportCookie is now async
   if (!(await hasGivenConsentForSupportCookie())) {
-    await removeSupportCookie(); // Added await
+    await removeSupportCookie();
     return;
   }
 
@@ -24,10 +30,8 @@ async function handleSupportCookie(payload: SearchPayload | ConfirmPayload, step
     confirm: 'Étape finale du formulaire',
   };
 
-  const supportCookiePayload = [
-    ...(await getDecryptedSupportCookie()),
-    { ...payload, step: mappingStep[step] },
-  ].filter(Boolean);
+  const { attempts, franceConnect } = await getDecryptedSupportCookie();
+  const supportCookiePayload = [...attempts, { ...payload, step: mappingStep[step] }];
 
   const searchStepPayloads = supportCookiePayload
     .filter(({ step }) => step === mappingStep.search)
@@ -37,13 +41,29 @@ async function handleSupportCookie(payload: SearchPayload | ConfirmPayload, step
     .filter(({ step }) => step === mappingStep.confirm)
     .slice(-MAX_ATTEMPTS_PER_STEP);
 
-  const mergedPayloads = [...searchStepPayloads, ...confirmStepPayloads];
-  const encryptedCookiePayload = encryptSupportPayload(mergedPayloads);
-
-  await setSupportCookie(encryptedCookiePayload); // Added await
+  await setSupportCookie(
+    encryptSupportPayload({
+      attempts: [...searchStepPayloads, ...confirmStepPayloads],
+      franceConnect,
+    }),
+  );
 }
 
-// Changed to async to await cookies()
+async function markFranceConnectInSupportCookie(sub: string) {
+  if (!(await hasGivenConsentForSupportCookie())) {
+    return;
+  }
+
+  const { attempts } = await getDecryptedSupportCookie();
+
+  await setSupportCookie(
+    encryptSupportPayload({
+      attempts,
+      franceConnect: { allocataire_fc_sub: sub, connectedAt: new Date().toISOString() },
+    }),
+  );
+}
+
 async function hasGivenConsentForSupportCookie() {
   const cookieStore = await cookies();
   const consentCookie = cookieStore.get(AUTHORIZED_VENDORS_KEY)?.value;
@@ -51,34 +71,53 @@ async function hasGivenConsentForSupportCookie() {
   return consentCookie?.includes(`${COOKIE_SUPPORT_KEY}=true`);
 }
 
-function encryptSupportPayload(valueToEncrypt: object) {
+function encryptSupportPayload(valueToEncrypt: SupportData) {
   return encryptAuthenticated(
     Buffer.from(JSON.stringify(valueToEncrypt), 'utf-8').toString('base64'),
     BASE_64_KEY_FOR_SUPPORT_COOKIE,
   );
 }
 
-async function getDecryptedSupportCookie() {
-  const cookieStore = await cookies(); // Added await
-  const supportCookie = cookieStore.get(COOKIE_SUPPORT_KEY);
-
-  if (typeof supportCookie?.value === 'string') {
-    const decryptedCookieValue = decryptAuthenticated(
-      supportCookie.value,
-      BASE_64_KEY_FOR_SUPPORT_COOKIE,
-    );
-
-    if (typeof decryptedCookieValue === 'string') {
-      return JSON.parse(fromBase64ToString(decryptedCookieValue));
-    }
-
-    return [];
+// Null when the cookie is missing or cannot be decrypted/parsed. Cookies written before the
+// FranceConnect marker existed hold a bare array of attempts.
+function decodeSupportCookie(encryptedValue: string | undefined): SupportData | null {
+  if (typeof encryptedValue !== 'string') {
+    return null;
   }
 
-  return [];
+  const decryptedValue = decryptAuthenticated(encryptedValue, BASE_64_KEY_FOR_SUPPORT_COOKIE);
+
+  if (typeof decryptedValue !== 'string') {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(fromBase64ToString(decryptedValue));
+
+    if (Array.isArray(parsed)) {
+      return { attempts: parsed, franceConnect: null };
+    }
+
+    return {
+      attempts: Array.isArray(parsed?.attempts) ? parsed.attempts : [],
+      franceConnect: parsed?.franceConnect ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
-// Changed to async to await cookies()
+async function getDecryptedSupportCookie(): Promise<SupportData> {
+  const cookieStore = await cookies();
+
+  return (
+    decodeSupportCookie(cookieStore.get(COOKIE_SUPPORT_KEY)?.value) ?? {
+      attempts: [],
+      franceConnect: null,
+    }
+  );
+}
+
 async function setSupportCookie(encryptedPayload: string) {
   const oneHourFromNow = getAnHourFromNow();
   const cookieStore = await cookies();
@@ -87,14 +126,15 @@ async function setSupportCookie(encryptedPayload: string) {
     secure: true,
     httpOnly: true,
     expires: oneHourFromNow,
-    sameSite: 'strict',
+    // Lax, not strict: the FranceConnect callback is a cross-site redirect and must read the
+    // existing attempts before adding the FranceConnect marker.
+    sameSite: 'lax',
   });
 }
 
-// Changed to async to await cookies()
 async function removeSupportCookie() {
   const cookieStore = await cookies();
   return cookieStore.delete(COOKIE_SUPPORT_KEY);
 }
 
-export { handleSupportCookie };
+export { decodeSupportCookie, handleSupportCookie, markFranceConnectInSupportCookie };

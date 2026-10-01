@@ -2,36 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { ZodError } from 'zod';
 import { initCrispClient } from '@/utils/crisp';
-import { decryptAuthenticated } from '@/utils/decryption';
+import { decodeSupportCookie, SupportAttempt, SupportData } from '@/utils/cookie';
 import { AUTHORIZED_VENDORS_KEY, SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
 import { matchExactDrajes, matchExactLsm } from '@/utils/string';
 import { ContactRequestBody, contactFormSchema } from '@/app/api/contact/schema';
 
 const { crispClient, envVars } = initCrispClient();
 
-const BASE_64_KEY_FOR_SUPPORT_COOKIE = process.env.BASE_64_KEY_FOR_SUPPORT_COOKIE as string;
-
 export async function POST(request: NextRequest): Promise<Response> {
   const cookies = request.cookies;
-  const hasSupportConsent = hasGivenConsentForSupportCookie(cookies);
-  const encryptedBase64Value = cookies.get(SUPPORT_COOKIE_KEY)?.value;
-
-  let attempts = null;
-
-  if (hasSupportConsent && typeof encryptedBase64Value === 'string') {
-    const decryptedSupportCookieValue = decryptAuthenticated(
-      encryptedBase64Value,
-      BASE_64_KEY_FOR_SUPPORT_COOKIE,
-    );
-
-    if (typeof decryptedSupportCookieValue === 'string') {
-      try {
-        attempts = JSON.parse(Buffer.from(decryptedSupportCookieValue, 'base64').toString());
-      } catch {
-        attempts = null;
-      }
-    }
-  }
+  const supportData = hasGivenConsentForSupportCookie(cookies)
+    ? decodeSupportCookie(cookies.get(SUPPORT_COOKIE_KEY)?.value)
+    : null;
 
   let body: ContactRequestBody;
 
@@ -57,7 +39,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     const sessionId = conversation.session_id;
 
     const byWhoSegment = isProRequest ? 'Pro' : 'Particulier';
-    const failedAttemptSegment = hasSupportConsent && attempts !== null ? 'tentative-code' : null;
+    const failedAttemptSegment = supportData?.attempts.length ? 'tentative-code' : null;
+    const franceConnectSegment = supportData?.franceConnect ? 'france-connect' : null;
     const drajesSegment = 'est-drajes';
     const lsmSegment = 'est-lsm';
 
@@ -74,6 +57,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         byWhoSegment,
         reason,
         failedAttemptSegment,
+        franceConnectSegment,
         isFromDrajes ? drajesSegment : null,
         isFromLsm ? lsmSegment : null,
       ].filter((s): s is string => Boolean(s)),
@@ -86,15 +70,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       content: message,
     });
 
-    // Writing private note, with all attempts
-    if (attempts !== null) {
+    // Writing private note, with the FranceConnect usage and all attempts
+    if (supportData !== null) {
       // Delay needed for the note to not appear first in some situations
       await new Promise((resolve) => setTimeout(resolve, 150));
       await crispClient.website.sendMessageInConversation(envVars.CRISP_WEBSITE, sessionId, {
         type: 'note',
         from: 'operator',
         origin: 'urn:pass-sport',
-        content: `⚠ Données déclarées par l'usager (cookie support) :\n\n${formatNote(attempts)}`,
+        content: `${formatNote(supportData)}`,
       });
       await new Promise((resolve) => setTimeout(resolve, 150));
       await crispClient.website.changeConversationState(
@@ -120,7 +104,23 @@ function hasGivenConsentForSupportCookie(cookies: NextRequest['cookies']) {
   return Boolean(cookies.get(AUTHORIZED_VENDORS_KEY)?.value.includes(`${SUPPORT_COOKIE_KEY}=true`));
 }
 
-function formatNote(attempts: object[]) {
+function formatNote({ attempts, franceConnect }: SupportData) {
+  const franceConnectLine = franceConnect
+    ? `Connexion FranceConnect -> oui, le ${formatParisDate(franceConnect.connectedAt)} (allocataire_fc_sub -> ${franceConnect.allocataire_fc_sub})`
+    : 'Connexion FranceConnect -> non';
+
+  return [franceConnectLine, formatAttempts(attempts)].filter(Boolean).join('\n\n');
+}
+
+function formatParisDate(iso: string) {
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+    timeZone: 'Europe/Paris',
+  }).format(new Date(iso));
+}
+
+function formatAttempts(attempts: SupportAttempt[]) {
   let mapping: { [key: string]: string } = {
     attemptNumber: 'Tentative numéro',
     id: 'Id du bénéficiaire en base',
