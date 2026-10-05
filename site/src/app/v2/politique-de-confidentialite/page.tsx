@@ -357,8 +357,9 @@ export default function PolitiqueDeConfidentialite() {
                     <td>France</td>
                     <td>
                       Conservation des tentatives infructueuses du formulaire et, en cas de
-                      connexion FranceConnect, de l&apos;identifiant FranceConnect pseudonymisé de
-                      l&apos;allocataire, pour le traitement du support utilisateur
+                      connexion FranceConnect, de l&apos;identifiant FranceConnect pseudonymisé, du
+                      nom, du prénom et de la date de naissance de l&apos;allocataire, pour le
+                      traitement du support utilisateur
                     </td>
                     <td>1 heure</td>
                     <td>

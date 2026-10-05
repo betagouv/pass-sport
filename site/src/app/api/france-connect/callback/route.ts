@@ -89,7 +89,12 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     await storePocResult({ identity: pivot, sub: identity.sub, idToken: tokens.idToken });
-    await markFranceConnectInSupportCookie(identity.sub);
+    await markFranceConnectInSupportCookie({
+      allocataire_fc_sub: identity.sub,
+      recipientLastname: pivot.family_name,
+      recipientFirstname: pivot.given_name,
+      recipientBirthDate: pivot.birthdate,
+    });
 
     // The journey asks the usager nothing, so the eligibility job starts here. Its own
     // try/catch: the login itself succeeded, and the session is already stored, so a Redis
