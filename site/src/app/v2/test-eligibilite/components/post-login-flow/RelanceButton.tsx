@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
+import { CAF, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 
 const MATOMO_ACTION = 'relance verification';
 
@@ -91,10 +92,31 @@ export default function RelanceButton({ availableAt }: RelanceButtonProps) {
   return (
     <div className="fr-mt-3w">
       <h2 className="fr-h3">Votre situation a changé&nbsp;?</h2>
-      <p className="fr-mb-1w">
-        Pour obtenir un code pass Sport, vous devez vous connecter avec le compte FranceConnect de
-        la personne qui bénéficie de l&apos;aide.
+      <p className="fr-mb-0">
+        Seule la personne percevant la prestation sociale peut demander un pass Sport.
+        <br />
+        Pour obtenir un code, vous devez impérativement vous connecter avec le compte FranceConnect
+        de la personne bénéficiaire de l&apos;aide&nbsp;:
       </p>
+      <ul className="fr-mb-2w fr-mt-0 fr-ml-2w">
+        <li>
+          <span className="fr-text--bold">Famille</span>&nbsp;: connectez-vous avec le compte
+          FranceConnect du parent faisant partie d&apos;un foyer allocataire dont le quotient
+          familial (<CAF /> ou <MSA />) est inférieur ou égal à 699 €. <br />
+          Important&nbsp;: le code de l&apos;enfant est accessible uniquement au parent allocataire
+          principal. L&apos;autre parent ne pourra pas le récupérer, même si l&apos;enfant figure
+          sur son dossier <CAF />/
+          <MSA />.
+        </li>
+        <li>
+          <span className="fr-text--bold">Bénéficiaires de l&apos;AAH</span>&nbsp;: connectez-vous
+          avec votre propre compte FranceConnect (et non celui de vos parents).
+        </li>
+        <li>
+          <span className="fr-text--bold">Étudiants boursiers</span>&nbsp;: connectez-vous avec
+          votre propre compte FranceConnect (et non celui de vos parents).
+        </li>
+      </ul>
 
       {blockedUntil ? (
         <>
