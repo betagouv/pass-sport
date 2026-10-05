@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { ZodError } from 'zod';
 import { initCrispClient } from '@/utils/crisp';
-import { decodeSupportCookie, SupportAttempt, SupportData } from '@/utils/cookie';
+import {
+  decodeSupportCookie,
+  SupportAttempt,
+  SupportData,
+  SupportFranceConnect,
+} from '@/utils/cookie';
 import { AUTHORIZED_VENDORS_KEY, SUPPORT_COOKIE_KEY } from '@/app/constants/cookie-manager';
 import { matchExactDrajes, matchExactLsm } from '@/utils/string';
 import { ContactRequestBody, contactFormSchema } from '@/app/api/contact/schema';
@@ -106,10 +111,40 @@ function hasGivenConsentForSupportCookie(cookies: NextRequest['cookies']) {
 
 function formatNote({ attempts, franceConnect }: SupportData) {
   const franceConnectLine = franceConnect
-    ? `Connexion FranceConnect -> oui, le ${formatParisDate(franceConnect.connectedAt)} (allocataire_fc_sub -> ${franceConnect.allocataire_fc_sub})`
+    ? formatFranceConnect(franceConnect)
     : 'Connexion FranceConnect -> non';
 
   return [franceConnectLine, formatAttempts(attempts)].filter(Boolean).join('\n\n');
+}
+
+function formatFranceConnect({
+  allocataire_fc_sub,
+  connectedAt,
+  disconnectedAt,
+  recipientLastname,
+  recipientFirstname,
+  recipientBirthDate,
+}: SupportFranceConnect) {
+  const connectionLine = `Connexion FranceConnect -> oui, le ${formatParisDate(connectedAt)}`;
+
+  if (disconnectedAt) {
+    return `${connectionLine}\nDéconnexion FranceConnect -> le ${formatParisDate(disconnectedAt)} (identité effacée du cookie)`;
+  }
+
+  return [
+    connectionLine,
+    `allocataire_fc_sub -> ${allocataire_fc_sub ?? ''}`,
+    `Nom de l'allocataire (FranceConnect) -> ${recipientLastname ?? ''}`,
+    `Prénom de l'allocataire (FranceConnect) -> ${recipientFirstname ?? ''}`,
+    `Date de naissance de l'allocataire (FranceConnect) -> ${formatIsoBirthDate(recipientBirthDate)}`,
+  ].join('\n');
+}
+
+// String-only: going through Date would shift the day depending on the server timezone
+function formatIsoBirthDate(isoDate: string | undefined) {
+  const [year, month, day] = isoDate?.split('-') ?? [];
+
+  return year && month && day ? `${day}/${month}/${year}` : (isoDate ?? '');
 }
 
 function formatParisDate(iso: string) {
