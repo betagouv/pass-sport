@@ -10,7 +10,7 @@ import { AUTHORIZED_VENDORS_KEY } from '@/app/constants/cookie-manager';
 const COOKIE_SUPPORT_KEY = process.env.NEXT_PUBLIC_COOKIE_SUPPORT_KEY as string;
 const BASE_64_KEY_FOR_SUPPORT_COOKIE = process.env.BASE_64_KEY_FOR_SUPPORT_COOKIE as string;
 
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 3;
 
 // User input only, never LCA's answer (see the verdict route)
 export type SupportAttempt = SearchPayload &
@@ -18,7 +18,17 @@ export type SupportAttempt = SearchPayload &
 
 export interface SupportData {
   attempts: SupportAttempt[];
-  franceConnect: { allocataire_fc_sub: string; connectedAt: string } | null;
+  franceConnect: SupportFranceConnect | null;
+}
+
+// Identity fields are dropped on FranceConnect logout, only the visit dates are kept
+export interface SupportFranceConnect {
+  allocataire_fc_sub?: string;
+  recipientLastname?: string;
+  recipientFirstname?: string;
+  recipientBirthDate?: string;
+  connectedAt: string;
+  disconnectedAt?: string;
 }
 
 async function handleSupportCookie(payload: SupportAttempt) {
@@ -37,7 +47,9 @@ async function handleSupportCookie(payload: SupportAttempt) {
   );
 }
 
-async function markFranceConnectInSupportCookie(sub: string) {
+async function markFranceConnectInSupportCookie(
+  franceConnect: Omit<SupportFranceConnect, 'connectedAt' | 'disconnectedAt'>,
+) {
   if (!(await hasGivenConsentForSupportCookie())) {
     return;
   }
@@ -47,7 +59,31 @@ async function markFranceConnectInSupportCookie(sub: string) {
   await setSupportCookie(
     encryptSupportPayload({
       attempts,
-      franceConnect: { allocataire_fc_sub: sub, connectedAt: new Date().toISOString() },
+      franceConnect: { ...franceConnect, connectedAt: new Date().toISOString() },
+    }),
+  );
+}
+
+// Shared devices: the next person using the browser must not send this identity to support
+async function clearFranceConnectIdentityFromSupportCookie() {
+  const { attempts, franceConnect } = await getDecryptedSupportCookie();
+
+  if (!franceConnect) {
+    return;
+  }
+
+  if (!(await hasGivenConsentForSupportCookie())) {
+    await removeSupportCookie();
+    return;
+  }
+
+  await setSupportCookie(
+    encryptSupportPayload({
+      attempts,
+      franceConnect: {
+        connectedAt: franceConnect.connectedAt,
+        disconnectedAt: new Date().toISOString(),
+      },
     }),
   );
 }
@@ -60,14 +96,12 @@ async function hasGivenConsentForSupportCookie() {
 }
 
 function encryptSupportPayload(valueToEncrypt: SupportData) {
-  return encryptAuthenticated(
-    Buffer.from(JSON.stringify(valueToEncrypt), 'utf-8').toString('base64'),
-    BASE_64_KEY_FOR_SUPPORT_COOKIE,
-  );
+  return encryptAuthenticated(JSON.stringify(valueToEncrypt), BASE_64_KEY_FOR_SUPPORT_COOKIE);
 }
 
-// Null when the cookie is missing or cannot be decrypted/parsed. Cookies written before the
-// FranceConnect marker existed hold a bare array of attempts.
+// Null when the cookie is missing or cannot be decrypted/parsed. Legacy cookies (still alive
+// for up to an hour) base64-encode the JSON before encryption, and the oldest ones hold a bare
+// array of attempts.
 function decodeSupportCookie(encryptedValue: string | undefined): SupportData | null {
   if (typeof encryptedValue !== 'string') {
     return null;
@@ -80,7 +114,8 @@ function decodeSupportCookie(encryptedValue: string | undefined): SupportData | 
   }
 
   try {
-    const parsed = JSON.parse(fromBase64ToString(decryptedValue));
+    const isPlainJson = decryptedValue.startsWith('{') || decryptedValue.startsWith('[');
+    const parsed = JSON.parse(isPlainJson ? decryptedValue : fromBase64ToString(decryptedValue));
 
     if (Array.isArray(parsed)) {
       return { attempts: parsed, franceConnect: null };
@@ -125,4 +160,9 @@ async function removeSupportCookie() {
   return cookieStore.delete(COOKIE_SUPPORT_KEY);
 }
 
-export { decodeSupportCookie, handleSupportCookie, markFranceConnectInSupportCookie };
+export {
+  clearFranceConnectIdentityFromSupportCookie,
+  decodeSupportCookie,
+  handleSupportCookie,
+  markFranceConnectInSupportCookie,
+};

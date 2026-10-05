@@ -13,6 +13,7 @@ import {
   transientCookieOptions,
 } from '@/app/api/france-connect/shared';
 import { deletePocResult, loadPocResult } from '@/app/api/france-connect/session';
+import { clearFranceConnectIdentityFromSupportCookie } from '@/utils/cookie';
 
 export async function GET(): Promise<Response> {
   // Read the id_token before dropping the session: criterion 14 needs it as
@@ -21,6 +22,7 @@ export async function GET(): Promise<Response> {
 
   // Removes the Redis session entry and the session id cookie.
   await deletePocResult();
+  await clearFranceConnectIdentityFromSupportCookie();
 
   const cookieStore = await cookies();
 
