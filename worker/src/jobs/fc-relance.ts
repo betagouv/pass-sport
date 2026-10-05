@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { and, asc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   ORGANISME_BOURSIER,
   RESULT_SITUATION_BOURSIER,
@@ -77,7 +77,8 @@ const isQfOutage = (rejected: RejectedResource): boolean =>
   rejected.http_status != null &&
   rejected.http_status >= 500;
 
-// Read off that run's results.persisted: a relance writes none, so a QF failing again keeps it.
+// Read off that run's own QF calls, all journaled before its rows: no month answered, and at
+// least one said 404 or failed. A relance writes none before selfRow, so a QF failing again keeps it.
 const lastRunMissedChildren = async (
   db: Database,
   sub: string,
@@ -86,22 +87,22 @@ const lastRunMissedChildren = async (
 ): Promise<boolean> => {
   if (rows.some((row) => row.source === "enfant")) return false;
 
-  const [persisted] = await db
-    .select({ responsePayload: eligibilityHistory.responsePayload })
+  const [qf] = await db
+    .select({
+      answered: sql<boolean>`bool_or(${eligibilityHistory.status} = 'success')`,
+      unanswered: sql<boolean>`bool_or(${eligibilityHistory.httpStatus} = 404 or ${eligibilityHistory.httpStatus} >= 500)`,
+    })
     .from(eligibilityHistory)
     .where(
       and(
         eq(eligibilityHistory.allocataireFcSub, sub),
-        eq(eligibilityHistory.action, "results.persisted"),
-        gte(eligibilityHistory.createdAt, selfRow.createdAt),
+        eq(eligibilityHistory.action, RESOURCE_META.qf.resource),
+        // Read in SQL: a JS Date drops the microseconds.
+        sql`${eligibilityHistory.createdAt} <= (select created_at from eligibility_results where id = ${selfRow.id})`,
       ),
-    )
-    .orderBy(asc(eligibilityHistory.createdAt))
-    .limit(1);
+    );
 
-  const rejected = persisted?.responsePayload?.rejected_resources;
-
-  return Array.isArray(rejected) && (rejected as RejectedResource[]).some(isQfOutage);
+  return qf?.answered === false && qf.unanswered === true;
 };
 
 const isWithinCooldown = async (db: Database, sub: string, days: number): Promise<boolean> => {
@@ -170,7 +171,7 @@ export type FcRelanceOutcome = {
 };
 
 // Re-judges a household and AMENDS the refused rows of its last run. Only inserts the children a
-// failed QF call hid from that run; any other beneficiary without a row is traced instead.
+// failed or 404 QF call hid from that run; any other beneficiary without a row is traced instead.
 export async function processFcRelanceJob(
   job: Job<EligibilityJobData>,
   data: EligibilityJobData,

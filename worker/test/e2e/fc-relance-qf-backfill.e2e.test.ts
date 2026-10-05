@@ -126,6 +126,50 @@ describe("allocataire éligible dont le QF a échoué", () => {
   });
 });
 
+describe("allocataire éligible dont le QF a répondu 404", () => {
+  const sub = "fc-sub-qf-404-eligible";
+
+  beforeAll(async () => {
+    stack.setCrousBoursier(true);
+    stack.setQfNotFound(true);
+    await stack.enqueueAndWait(inputFor(sub), sub);
+  }, 120_000);
+
+  afterAll(() => {
+    stack.setQfNotFound(false);
+    stack.setQfValeur(1000);
+  });
+
+  it("pose le verdict de l'allocataire seul", async () => {
+    const rows = await rowsFor(sub);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ source: "self", verdict: "eligible_pending" });
+  });
+
+  it("n'insère rien tant que le QF répond 404", async () => {
+    await stack.enqueueRelanceAndWait(inputFor(sub), sub);
+
+    expect(await rowsFor(sub)).toHaveLength(1);
+  });
+
+  it("récupère les enfants quand le QF finit par répondre", async () => {
+    stack.setQfNotFound(false);
+    stack.setQfValeur(500);
+
+    await stack.enqueueRelanceAndWait(inputFor(sub), sub);
+
+    const rows = await rowsFor(sub);
+    expect(rows).toHaveLength(5);
+    expect(byName(rows, "Cadet")).toMatchObject({ verdict: "eligible_pending", situation: "QF" });
+
+    const inserted = (await relanceEventsFor(sub)).filter(
+      (e) => e.response_payload.raison === "enfant_recupere_apres_echec_qf",
+    );
+    expect(inserted).toHaveLength(4);
+  });
+});
+
 describe("allocataire refusé dont le QF a échoué", () => {
   const sub = "fc-sub-qf-ko-refuse";
 

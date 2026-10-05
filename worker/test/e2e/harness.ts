@@ -101,6 +101,9 @@ class FakeApiClient implements ApiParticulierClient {
 
   qfOutage = false;
 
+  // Pivot unknown to CAF/MSA: an answer, not an outage.
+  qfNotFound = false;
+
   // Caisse that served the quotient, as API Particulier spells it.
   qfFournisseur: string | undefined = "CNAF";
 
@@ -201,6 +204,19 @@ class FakeApiClient implements ApiParticulierClient {
         success: false,
         data: null,
         error: "Service temporairement indisponible",
+        rateLimitRemaining: 100,
+        rateLimitResetMs: null,
+      };
+    }
+
+    if (this.qfNotFound) {
+      this.calls += 1;
+      return {
+        ...RESOURCE_META.qf,
+        httpStatus: 404,
+        success: false,
+        data: null,
+        error: "Dossier allocataire non trouvé",
         rateLimitRemaining: 100,
         rateLimitResetMs: null,
       };
@@ -424,6 +440,7 @@ export type Stack = {
   // beneficiary at all.
   setQfChildless: (childless: boolean) => void;
   setQfOutage: (outage: boolean) => void;
+  setQfNotFound: (notFound: boolean) => void;
   // Caisse the fake QF answers with, undefined for a payload that names none.
   setQfFournisseur: (fournisseur: string | undefined) => void;
   // Second allocataire of the fake QF couple, null for a single-allocataire household.
@@ -814,6 +831,9 @@ export async function startStack(
     },
     setQfOutage: (outage: boolean) => {
       apiClient.qfOutage = outage;
+    },
+    setQfNotFound: (notFound: boolean) => {
+      apiClient.qfNotFound = notFound;
     },
     setQfFournisseur: (fournisseur: string | undefined) => {
       apiClient.qfFournisseur = fournisseur;
