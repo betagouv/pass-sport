@@ -31,7 +31,7 @@
     "@codegouvfr/react-dsfr": "^1.33.0",
     "@react-pdf/renderer": "^4.9.0",
     "@sentry/nextjs": "^10.71.0",
-    "@socialgouv/matomo-next": "1.9.2",
+    "@socialgouv/matomo-next": "1.14.2",
     "@uidotdev/usehooks": "^2.4.1",
     "bullmq": "^5.81.4",
     "classnames": "^2.5.1",
