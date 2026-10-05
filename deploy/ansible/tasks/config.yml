@@ -36,3 +36,14 @@
   tags: [fc-cron]
   # Le montage NFS n'est pas géré ici : il appartient à l'infra, on vérifie seulement que
   # le passage FC ne mourra pas au dernier moment, après avoir marqué la base.
+
+# ls rather than test -r, for the NFSv4 ACL reason given above: listing the directory is a real
+# read, evaluated by the server against the actual ACL, and as the account the cron runs as.
+# /nfs/stats is created by the LCA host: `--skip-tags tdb-cron` until it exists.
+- name: Dossier du tableau de bord lisible
+  become: true
+  become_user: "{{ pass_sport_user }}"
+  ansible.builtin.command:
+    argv: [ls, "{{ tdb_drop_dir }}"]
+  changed_when: false
+  tags: [tdb-cron]

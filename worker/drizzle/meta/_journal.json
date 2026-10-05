@@ -141,6 +141,27 @@
       "when": 1790328152325,
       "tag": "0019_add_query_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790688951115,
+      "tag": "0020_add_lca_dashboard",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790775843420,
+      "tag": "0021_lca_tableaux_de_bord_age",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790780699766,
+      "tag": "0022_lca_tableaux_de_bord_federation",
+      "breakpoints": true
     }
   ]
 }

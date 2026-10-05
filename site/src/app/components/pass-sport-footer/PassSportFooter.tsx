@@ -257,6 +257,12 @@ export default function PassSportFooter() {
             href: '/v2/une-question',
           },
         },
+        {
+          text: 'Tableau de bord',
+          linkProps: {
+            href: '/tableau-de-bord',
+          },
+        },
       ],
     },
     {

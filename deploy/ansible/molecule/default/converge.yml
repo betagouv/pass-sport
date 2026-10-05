@@ -20,6 +20,7 @@
         /srv/pass-sport/deploy/ansible/lamp-setup.yml
         --extra-vars @/srv/pass-sport/deploy/ansible/molecule/default/test-secrets.yml
         --extra-vars fc_prod_drop_dir=/tmp/fc-drop
+        --extra-vars tdb_drop_dir=/tmp/stats
       args:
         chdir: /srv/pass-sport
       register: lamp_setup_result
