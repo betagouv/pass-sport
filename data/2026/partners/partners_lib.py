@@ -510,3 +510,79 @@ def select_eligible_by_index(df_final: pd.DataFrame, eligible_index: pd.Index) -
     independent of the two frames having the exact same index lineage.
     """
     return df_final[df_final.index.isin(eligible_index)]
+
+
+# --- LAMP deduplication -----------------------------------------------------------
+# Drops the beneficiaries a cleaned export would insert a second time into the LAMP
+# database. The LAMP side is an export of public.beneficiaires: flat columns
+# (allocataire_nom...) where the cleaned exports carry an `allocataire` JSON column.
+
+LAMP_DEDUPLICATION_KEY_COLUMNS = [
+    'nom',
+    'prenom',
+    'date_naissance',
+    'genre',
+    'allocataire_nom',
+    'allocataire_prenom',
+]
+
+_ACCENTED = 'àáâäãåçèéêëìíîïñòóôöõùúûüýÿÀÁÂÄÃÅÇÈÉÊËÌÍÎÏÑÒÓÔÖÕÙÚÛÜÝ-'
+_UNACCENTED = 'aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUY '
+
+
+def normalise_recherche(values: pd.Series) -> pd.Series:
+    """Python twin of LAMP's public.normalise_recherche (lamp01/db-init/00-schema.sql).
+
+    Apostrophes dropped, accents removed, hyphens become spaces, upper case, anything
+    outside [A-Z0-9 ] removed, whitespace collapsed: N'GUYEN = NGUYEN, JEAN-PIERRE = JEAN PIERRE.
+    Missing values become '' so two blanks match (the SQL function, STRICT, yields NULL).
+    """
+    return (
+        values.fillna('').astype(str)
+        .str.replace("'", '', regex=False)
+        .str.translate(str.maketrans(_ACCENTED, _UNACCENTED))
+        .str.upper()
+        .str.replace(r'[^A-Z0-9 ]', '', regex=True)
+        .str.replace(r'\s+', ' ', regex=True)
+        .str.strip()
+    )
+
+
+def flatten_allocataire_identity(df: pd.DataFrame) -> pd.DataFrame:
+    """Lift nom/prenom out of the `allocataire` JSON column, under LAMP's flat column names."""
+    df = df.copy()
+    allocataire = df['allocataire'].map(json.loads)
+    df['allocataire_nom'] = allocataire.map(lambda a: a.get('nom'))
+    df['allocataire_prenom'] = allocataire.map(lambda a: a.get('prenom'))
+    return df
+
+
+def build_lamp_deduplication_key(df: pd.DataFrame, key_columns: list = None) -> pd.Series:
+    """One comparable string per row: every key column normalised, date_naissance to its day.
+
+    The day alone, because the cleaned exports shift birthdates by 4h (shift_birthdate_by_hours)
+    and LAMP may hold either shape - same rule as LAMP's normalise_date_recherche.
+    """
+    key_columns = LAMP_DEDUPLICATION_KEY_COLUMNS if key_columns is None else key_columns
+    parts = [
+        df[column].fillna('').astype(str).str[:10] if column == 'date_naissance'
+        else normalise_recherche(df[column])
+        for column in key_columns
+    ]
+    return pd.concat(parts, axis=1).agg('|'.join, axis=1)
+
+
+def drop_beneficiaries_already_in_lamp(
+    df: pd.DataFrame, df_lamp: pd.DataFrame, key_columns: list = None
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split a cleaned export into the rows LAMP lacks and the ones it already holds.
+
+    df carries the `allocataire` JSON column (a cleaned export), df_lamp the flat
+    allocataire_nom/allocataire_prenom columns (a public.beneficiaires export).
+
+    Returns (df_new, df_already_in_lamp), both with df's own columns only.
+    """
+    lamp_keys = set(build_lamp_deduplication_key(df_lamp, key_columns))
+    keys = build_lamp_deduplication_key(flatten_allocataire_identity(df), key_columns)
+    mask_in_lamp = keys.isin(lamp_keys)
+    return df[~mask_in_lamp], df[mask_in_lamp]

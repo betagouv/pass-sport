@@ -710,3 +710,60 @@ def test_route_selection_matches_the_boolean_mask_it_replaces():
     result = lib.select_eligible_by_index(df_final, lib.qf_eligible_index(df_source))
 
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_normalise_recherche_matches_lamp_rules():
+    values = pd.Series(["N'Guyen", 'Jean-Pierre', '  Éloïse   Marie ', None, 'O.BRIEN'])
+
+    result = lib.normalise_recherche(values)
+
+    assert result.tolist() == ['NGUYEN', 'JEAN PIERRE', 'ELOISE MARIE', '', 'OBRIEN']
+
+
+def _cleaned_export_row(**overrides):
+    row = {
+        'nom': 'DUPONT', 'prenom': 'LEO', 'date_naissance': '2012-02-01 04:00:00', 'genre': 'M',
+        'organisme': 'CAF', 'situation': 'AEEH',
+        'allocataire': json.dumps({'nom': 'DUPONT', 'prenom': 'MARIE', 'matricule': '456'}),
+        'adresse_allocataire': json.dumps({'code_postal': '75001'}),
+    }
+    return row | overrides
+
+
+def _lamp_row(**overrides):
+    row = {
+        'id_psp': '26-AAAA-BBBB', 'nom': 'Dupont', 'prenom': 'Léo', 'date_naissance': '2012-02-01 00:00:00',
+        'genre': 'M', 'allocataire_nom': 'DUPONT', 'allocataire_prenom': 'Marie',
+    }
+    return row | overrides
+
+
+def test_drop_beneficiaries_already_in_lamp_ignores_spelling_and_birth_time():
+    df = pd.DataFrame([_cleaned_export_row(), _cleaned_export_row(prenom='ZOE')])
+    df_lamp = pd.DataFrame([_lamp_row()])
+
+    df_new, df_already_in_lamp = lib.drop_beneficiaries_already_in_lamp(df, df_lamp)
+
+    assert df_new['prenom'].tolist() == ['ZOE']
+    assert df_already_in_lamp['prenom'].tolist() == ['LEO']
+    assert df_new.columns.tolist() == df.columns.tolist()
+
+
+def test_drop_beneficiaries_already_in_lamp_keeps_a_different_allocataire():
+    df = pd.DataFrame([_cleaned_export_row()])
+    df_lamp = pd.DataFrame([_lamp_row(allocataire_prenom='PAUL')])
+
+    df_new, df_already_in_lamp = lib.drop_beneficiaries_already_in_lamp(df, df_lamp)
+
+    assert len(df_new) == 1
+    assert df_already_in_lamp.empty
+
+
+def test_drop_beneficiaries_already_in_lamp_does_not_mutate_its_inputs():
+    df = pd.DataFrame([_cleaned_export_row()])
+    df_lamp = pd.DataFrame([_lamp_row()])
+
+    lib.drop_beneficiaries_already_in_lamp(df, df_lamp)
+
+    assert 'allocataire_nom' not in df.columns
+    assert df_lamp['nom'].tolist() == ['Dupont']
