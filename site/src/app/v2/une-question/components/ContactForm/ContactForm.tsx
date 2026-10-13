@@ -15,12 +15,11 @@ import { useSearchParams } from 'next/navigation';
 import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
 export const visitorReasons = {
-  'benef-aije-droit': `Ai-je droit au pass Sport cette année ?`,
-  'benef-pas-recu': `Je n'ai pas reçu mon code`,
-  'benef-parcours-utilisateur': `Je n'arrive pas à obtenir mon code sur le site`,
+  'fc-qf': `J'ai un quotient familial inférieur à 699€ et je n'arrive pas à obtenir mon code`,
+  'fc-aah': `Je perçois l'AAH et je n'arrive pas à obtenir mon code`,
+  'fc-aeeh': `Je perçois l'AEEH pour mon enfant (6-19 ans) et je n'arrive pas à obtenir mon code`,
+  'fc-boursier': `Je suis étudiant boursier, j'ai une question`,
   'benef-supprime': `J’ai supprimé par erreur l’e-mail contenant mon code pass Sport`,
-  'benef-aeeh': `Je perçois l'AEEH pour mon enfant (6-19 ans), mais je n'ai pas reçu le code`,
-  'benef-boursier': `Je suis boursier, j'ai une question`,
 };
 
 const proReasons = {
