@@ -20,7 +20,9 @@ définies dans `worker/src/db/schema.ts` (migration `0020`).
 | --- | --- |
 | `run_dashboard.sh` | La cron de lamp01. |
 | `load_dashboard.sql` | Le chargement, joué à travers le tunnel depuis le dossier de l'extraction. |
-| `test_dashboard.py` | Les tests du kit d'export et du chargement, sur un Postgres jetable (Docker). |
+
+Les tests du kit d'export et du chargement sont rangés avec le kit, dans son sous-dossier
+`test/`.
 
 ## Un passage
 
@@ -74,8 +76,10 @@ TDB_DROP_DIR=/tmp/stats ./run_dashboard.sh --dry-run
 
 ## Tests
 
+Depuis la racine du dépôt, sur un Postgres jetable (Docker) :
+
 ```bash
-cd data && source .venv/bin/activate && pytest 2026/dashboard
+data/.venv/bin/python -m pytest <dossier du kit>/test
 ```
 
 Les tests lancent le script d'export lui-même sur un extrait du schéma LCA peuplé de données
