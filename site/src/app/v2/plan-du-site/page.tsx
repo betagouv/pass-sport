@@ -3,7 +3,7 @@ import PageTitle from '../../../../components/PageTitle/PageTitle';
 import styles from './style.module.scss';
 import Link from 'next/link';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
-import { DASHBOARD_LINK_VISIBLE } from '@/app/constants/env';
+import { DASHBOARD_ENABLED } from '@/app/constants/env';
 
 export default function PlanDuSite() {
   return (
@@ -33,7 +33,7 @@ export default function PlanDuSite() {
             <li>
               <Link href="/v2/une-question">Une question ?</Link>
             </li>
-            {DASHBOARD_LINK_VISIBLE && (
+            {DASHBOARD_ENABLED && (
               <li>
                 <Link href="/tableau-de-bord">Tableau de bord</Link>
               </li>
