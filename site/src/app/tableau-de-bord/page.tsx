@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { notFound } from 'next/navigation';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import PageTitle from '@/components/PageTitle/PageTitle';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
+import { DASHBOARD_ENABLED } from '@/app/constants/env';
 import { getEtatTableauxDeBord, getLignesDeLaPeriode, getSeries } from '@/app/services/dashboard';
 import {
   COULEUR_SERIE_UNIQUE,
@@ -64,6 +66,10 @@ const pourcentAxe = (v: number) => `${formaterNombre(v)} %`;
 const REPLIES: Tableau[] = ['federation', 'departement'];
 
 export default async function TableauxDeBord({ searchParams }: Props) {
+  // The proxy already answers 404; this keeps the figures out of reach if it is bypassed.
+  if (!DASHBOARD_ENABLED) {
+    notFound();
+  }
   const etat = await getEtatTableauxDeBord();
   if (!etat) {
     return (
