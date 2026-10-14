@@ -109,7 +109,7 @@ C'est une garantie du playbook, pas un oubli à corriger :
   Chaque passage se déclenche à la main, un partenaire à la fois :
   `systemctl start pass-sport-qf-batch@msa`. Rien ne le lance au démarrage de la machine ni à
   l'issue du playbook ;
-- **l'entrée crontab `pass-sport-fc`** est posée **activée** par défaut (toutes les 2 heures),
+- **l'entrée crontab `pass-sport-fc`** est posée **activée** par défaut (toutes les 30 minutes),
   les deux prérequis suivants ayant été validés : l'empreinte SSH Scalingo amorcée (ci-dessous)
   et un passage à blanc réussi
   (`./run_fc_pipeline.sh --dry-run`, son journal
