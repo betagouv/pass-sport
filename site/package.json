@@ -18,6 +18,7 @@
     "test": "jest --runInBand",
     "test:ct": "playwright test -c playwright-ct.config.ts",
     "docker:run:dev": "docker-compose -f ../compose.yml down && docker-compose -f ../compose.yml up",
+    "docker:run:dev:waf": "docker compose -f ../compose.yml -f ../compose.waf.yml down && docker compose -f ../compose.yml -f ../compose.waf.yml up",
     "generate:communes": "node ./scripts/generate-communes-dataset.mjs",
     "scripts:send-in-mass": "node -r dotenv/config ./scripts/send-in-mass.mjs dotenv_config_path=./.env.local",
     "scripts:send-in-mass-march-2025": "node -r dotenv/config ./scripts/send-in-mass-march-2025.mjs dotenv_config_path=./.env.local",
