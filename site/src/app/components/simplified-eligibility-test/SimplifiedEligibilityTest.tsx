@@ -18,6 +18,36 @@ import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-stor
 import { useSimplifiedEligibilityTestUsage } from '@/app/hooks/use-simplified-eligibility-test-usage';
 import { CODES_OBTAINABLE } from '@/app/constants/env';
 
+type KnowMoreMeta = { title: string; description: React.ReactNode };
+
+const BOURSIER_KNOW_MORE: KnowMoreMeta = {
+  title: 'À savoir',
+  description: (
+    <>
+      Conformément au décret relatif au pass Sport 2026, seuls les étudiants dont la bourse a été
+      attribuée définitivement avant le 15 octobre 2026 sont éligibles.
+      <br />
+      Si vous n’avez pas reçu votre code Pass Sport par e‑mail et que vous ne parvenez pas à le
+      récupérer sur le site, cela signifie que votre bourse n’est pas encore enregistrée comme
+      définitive dans nos bases de données.
+      <br />
+      Un nouvel envoi des codes pour les étudiants éligibles sera effectué le 26 octobre par e‑mail.
+      Si vous ne recevez toujours rien à cette date, vous pourrez tenter de récupérer de nouveau sur
+      le site.
+    </>
+  ),
+};
+
+const KNOW_MORE_BY_ALLOCATION: Partial<Record<ALLOCATION, KnowMoreMeta>> = {
+  [ALLOCATION.AAH]: {
+    title: 'À savoir',
+    description:
+      'Pour demander votre pass Sport, utilisez votre propre compte FranceConnect, et non celui de vos parents.',
+  },
+  [ALLOCATION.CROUS]: BOURSIER_KNOW_MORE,
+  [ALLOCATION.FORMATIONS_SANITAIRES_SOCIAUX]: BOURSIER_KNOW_MORE,
+};
+
 type SimplifiedEligibilityTestProps = {
   display?: 'column' | 'row';
   buttonVariant?: ButtonProps['priority'];
@@ -83,9 +113,7 @@ export default function SimplifiedEligibilityTest({
   const [targetDate, setTargetDate] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [allocationName, setAllocationName] = useState<ALLOCATION | null>(null);
-  const [knowMoreMeta, setKnowMoreMeta] = useState<{ title: string; description: string } | null>(
-    null,
-  );
+  const [knowMoreMeta, setKnowMoreMeta] = useState<KnowMoreMeta | null>(null);
   const [alertMeta, setAlertMeta] = useState<{
     title: string;
     description: string | React.ReactNode;
@@ -148,7 +176,10 @@ export default function SimplifiedEligibilityTest({
                 const successInitialMeta = {
                   title: `Bonne nouvelle, vous êtes éligible au pass Sport.`,
                   description: (
-                    <>Les codes pass Sport seront envoyés aux bénéficiaires mi-septembre 2026.</>
+                    <>
+                      Les codes pass Sport ont été envoyés aux bénéficiaires entre le 9 et le 13
+                      septembre 2026.
+                    </>
                   ),
                 };
 
@@ -158,10 +189,11 @@ export default function SimplifiedEligibilityTest({
                 };
 
                 if (isBenefEligible && targetDate) {
+                  setKnowMoreMeta(KNOW_MORE_BY_ALLOCATION[allocationName] ?? null);
                   switch (allocationName) {
+                    case ALLOCATION.QF:
                     case ALLOCATION.AAH:
                     case ALLOCATION.AEEH:
-                    case ALLOCATION.QF:
                       setAlertMeta({
                         title: successInitialMeta.title,
                         description: successInitialMeta.description,
@@ -173,7 +205,8 @@ export default function SimplifiedEligibilityTest({
                         title: successInitialMeta.title,
                         description: (
                           <>
-                            Les codes pass Sport seront envoyés aux bénéficiaires mi-septembre 2026.
+                            Les codes pass Sport ont été envoyés aux bénéficiaires entre le 9 et le
+                            13 septembre 2026.
                           </>
                         ),
                       });
@@ -308,7 +341,7 @@ export default function SimplifiedEligibilityTest({
 
           {knowMoreMeta && (
             <section className="fr-mt-3w">
-              <KnowMore variant="purple" knowMore={knowMoreMeta} />
+              <KnowMore variant="blue" knowMore={knowMoreMeta} />
             </section>
           )}
 

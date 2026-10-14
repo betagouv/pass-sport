@@ -77,6 +77,7 @@ flowchart TB
     EXISTING_CODES[("Existing codes\n2026")]:::sharedInput
 
     CNAF_RAW[("CNAF_PATHFILE_2026\nCSV / ASCII / sep=;")]:::rawFile
+    CNAF_RAW_10_06[("CNAF_PATHFILE_10_06_2026\nCSV / ASCII / sep=;\nARS/AEEH only, no AAH")]:::rawFile
     MSA_RAW[("MSA_PATHFILE_2026\nCSV / utf-8-sig / sep=;")]:::rawFile
     CNOUS_RAW[("CNOUS_PATHFILE_2026\nCSV / UTF-8 / sep=;")]:::rawFile
     FSS_RAW[("FSS_PATHFILE_2026\nCSV / UTF-8 / sep=;")]:::rawFile
@@ -97,17 +98,35 @@ flowchart TB
     end
 
     subgraph CNAF_NB2A["①b-bis cnaf/clean_cnaf_2a_aah_aeeh.ipynb  ·  no qf-batch, runs right after ①a"]
-        c5a["Select AAH (16-30) + AEEH (6-19)\nsituation already flagged by CNAF, no quotient_familial call"]
+        c5aa["Select AAH (16-30) + AEEH (6-19)\nsituation already flagged by CNAF, no quotient_familial call"]
+    end
+
+    subgraph CNAF_AEEH_NB["①c cnaf/10_06_2026_clean_cnaf_aeeh.ipynb  ·  2026-10-06 export, no qf-batch"]
+        ca1["Load CSV · strip whitespace\nmap columns → PSP schema · organisme='CAF'\nsituation = CNAF's own DRT (ARS→jeune/AEEH)"]
+        ca2["Remove rows missing nom/prenom/dob/genre\nage floor 1996 · fix phone numbers · drop duplicates\nserialize allocataire + adresse_allocataire → JSON"]
+        c5a["Select AEEH (6-19)\nsituation already flagged by CNAF, no quotient_familial call"]
+        ca1-->ca2-->c5a
     end
 
     CNAF_RAW --> c1
     c2b -->|"CSV"| QF_BATCH[("qf-batch.ts\ndetached process, up to a week")]:::rawFile
     QF_BATCH -->|"CSV: qf_value/qf_status/qf_error"| c4b
     c4 -->|"CNAF_INTERMEDIATE_PATHFILE_2026\nParquet: cleaned benef rows waiting for the verdict"| c4b
-    c4 -->|"CNAF_INTERMEDIATE_PATHFILE_2026"| c5a
+    c4 -->|"CNAF_INTERMEDIATE_PATHFILE_2026"| c5aa
+    CNAF_RAW_10_06 --> ca1
 
     c5 -->|"QF 6-17 + quotient < 700"| DB_CNAF[("DB_CNAF_EXPORT_2026\nCSV")]:::cleanedFile
-    c5a --> DB_CNAF_AAH_AEEH[("DB_CNAF_EXPORT_2026_AAH_AEEH\nCSV")]:::cleanedFile
+    c5aa --> DB_CNAF_AAH_AEEH[("DB_CNAF_EXPORT_2026_AAH_AEEH\nCSV")]:::cleanedFile
+    c5a --> DB_CNAF_AEEH_RAW[("DB_CNAF_EXPORT_2026_AEEH\nCSV")]:::cleanedFile
+
+    subgraph CNAF_AEEH_DEDUP["①d cnaf/10_06_2026_cnaf_aeeh_deduplication.ipynb"]
+        cd1["Drop beneficiaries already in LAMP\nkey: child nom/prenom/date de naissance/genre\n+ allocataire nom/prenom, LAMP-normalised"]
+    end
+
+    LAMP_EXPORT[("LAMP_BENEFICIAIRES_EXPORT_PATHFILE_2026\npublic.beneficiaires export")]:::rawFile
+    DB_CNAF_AEEH_RAW --> cd1
+    LAMP_EXPORT --> cd1
+    cd1 --> DB_CNAF_AEEH[("DB_CNAF_EXPORT_2026_AEEH_DEDUPLICATED\nCSV")]:::cleanedFile
 
     subgraph MSA_NB1["②a msa/clean_msa_1_before_qf_batch.ipynb"]
         m1["Load CSV · strip whitespace\nmap 29 columns → PSP schema · organisme='MSA'\ngenre 1/2→M/F · dates %Y%m%d · pad INSEE & postal codes\nsituation = MSA's own prestation (ARS→jeune, AEH→AEEH)"]
@@ -155,7 +174,7 @@ flowchart TB
     end
 
     subgraph MERGE_NB["③ generate_new_codes.ipynb  ·  run once per cleaned file"]
-        mg1["Load ONE cleaned file (SOURCE = CNAF | CNAF_AAH_AEEH |\nMSA | MSA_AAH_AEEH | FC)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
+        mg1["Load ONE cleaned file (SOURCE = CNAF | CNAF_AAH_AEEH | CNAF_AEEH |\nMSA | MSA_AAH_AEEH | FC)\nexercice_id=5 · timestamps\nzrr/qpv/a_valider/refuser = False"]
         mg2["Generate unique id_psp codes\nformat: YY-XXXX-XXXX\nseeded with the existing codes"]
         mg3["Write YYYY-MM-DD-source-with-codes.csv\nrewrite the existing codes file with the new ones"]
         mg1-->mg2-->mg3
@@ -163,6 +182,7 @@ flowchart TB
 
     DB_CNAF --> mg1
     DB_CNAF_AAH_AEEH --> mg1
+    DB_CNAF_AEEH --> mg1
     DB_MSA --> mg1
     DB_MSA_AAH_AEEH --> mg1
     DB_FC --> mg1
@@ -226,7 +246,7 @@ flowchart TB
     %% Reads generate_new_codes.ipynb's own dated output (FINAL_DB), one source per run: the
     %% campaign needs id_psp (kept as `code`), but no production DB id (see
     %% 1_email_campaign.ipynb summary).
-    FINAL_DB -->|"CNAF/CNAF_AAH_AEEH/\nMSA/MSA_AAH_AEEH"| e1
+    FINAL_DB -->|"CNAF/CNAF_AAH_AEEH/CNAF_AEEH/\nMSA/MSA_AAH_AEEH"| e1
     e3 -->|"allocataire = benef"| CAMP_B[("Campaign CSV B\ndirect beneficiaries")]:::campaignFile
     e3 -->|"allocataire ≠ benef"| CAMP_BA[("Campaign CSV B+A\nindirect beneficiaries")]:::campaignFile
 

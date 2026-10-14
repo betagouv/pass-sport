@@ -150,10 +150,43 @@ def test_set_organisme_and_situation_maps_cnaf_origin():
     assert pd.isna(result['situation'].iloc[3])
 
 
-def test_drop_raw_address_columns():
-    df = pd.DataFrame({column: ['x'] for column in lib.RAW_ADDRESS_COLUMNS_TO_DROP})
+def test_drop_raw_columns():
+    df = pd.DataFrame({column: ['x'] for column in lib.RAW_COLUMNS_TO_DROP})
     df['nom'] = ['DUPONT']
 
-    result = lib.drop_raw_address_columns(df)
+    result = lib.drop_raw_columns(df)
+
+    assert result.columns.tolist() == ['nom']
+
+
+def test_read_raw_cnaf_csv_10_06_2026_format(tmp_path):
+    # No PASSPORT row, and a header repeating 'presta' (once per AEEH/ARS block)
+    csv_file = tmp_path / "cnaf_10_06_2026.csv"
+    columns = lib.CNAF_RAW_COLUMNS_10_06_2026
+    header = ';'.join(column.removesuffix('_aeeh').removesuffix('_ars') for column in columns)
+    values = {column: '' for column in columns} | {'NUMIN': '14047', 'DRT': 'AEEH'}
+    csv_file.write_text(f"{header}\r\n{';'.join(values[column] for column in columns)}\r\n", newline='')
+
+    result = lib.read_raw_cnaf_csv(str(csv_file), columns=columns, skiprows=1)
+
+    assert list(result.columns) == columns
+    assert result['NUMIN'].tolist() == ['14047']
+    assert result['DRT'].tolist() == ['AEEH']
+
+
+def test_map_cnaf_columns_10_06_2026():
+    df = pd.DataFrame({'matricul': ['123'], 'DRT': ['ARS'], 'NUMIN': ['14047'], 'nomenf': ['DUPONT']})
+
+    result = lib.map_cnaf_columns(df, lib.CNAF_COLUMN_MAPPING_10_06_2026)
+
+    assert result.columns.tolist() == [
+        'allocataire-matricule', 'situation_origine', 'adresse_allocataire-code_insee', 'nom']
+
+
+def test_drop_raw_columns_10_06_2026():
+    df = pd.DataFrame({column: ['x'] for column in lib.RAW_COLUMNS_TO_DROP_10_06_2026})
+    df['nom'] = ['DUPONT']
+
+    result = lib.drop_raw_columns(df, lib.RAW_COLUMNS_TO_DROP_10_06_2026)
 
     assert result.columns.tolist() == ['nom']

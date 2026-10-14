@@ -1,5 +1,5 @@
 export const AUTHORIZED_VENDORS_KEY = 'tarteaucitron';
-export const SUPPORT_COOKIE_NAME = `Support utilisateur - Données formulaire d'éligibilité`;
+export const SUPPORT_COOKIE_NAME = `Support utilisateur - Données de demande du pass Sport (formulaire et FranceConnect)`;
 export const SUPPORT_COOKIE_READ_MORE_URL =
   'https://www.pass.sports.gouv.fr/v2/politique-de-confidentialite';
 export const SUPPORT_COOKIE_KEY = 'pass-sport_eligibility-form-support-data';

@@ -5,6 +5,7 @@
 import { fetchCode, fetchEligible } from '@/app/services/eligibility-test';
 import { enqueueLcaJob } from '@/app/services/queue';
 import { POST } from '@/app/api/eligibility-test/verdict/route';
+import { handleSupportCookie } from '@/utils/cookie';
 import {
   buildConfirmResponseBody,
   buildSearchResponseBody,
@@ -27,6 +28,7 @@ jest.mock('../../../../utils/cookie', () => ({
 const mockedFetchEligible = fetchEligible as jest.Mock;
 const mockedFetchCode = fetchCode as jest.Mock;
 const mockedEnqueue = enqueueLcaJob as jest.Mock;
+const mockedHandleSupportCookie = handleSupportCookie as jest.Mock;
 
 const post = (body: Record<string, unknown>) =>
   POST(
@@ -125,6 +127,33 @@ describe('POST /api/eligibility-test/verdict', () => {
         email: 'fake_email@test.fr',
       }),
     );
+  });
+
+  it('writes the same support attempt whatever LCA answers', async () => {
+    mockedFetchEligible.mockResolvedValueOnce(buildSearchResponseBody());
+    mockedFetchCode.mockResolvedValueOnce(buildConfirmResponseBody({}));
+    await post(YOUNG_MSA_REQUEST);
+
+    mockedFetchEligible.mockResolvedValueOnce(buildSearchResponseBody());
+    mockedFetchCode.mockResolvedValueOnce([]);
+    await post(YOUNG_MSA_REQUEST);
+
+    mockedFetchEligible.mockResolvedValueOnce([]);
+    await post(YOUNG_MSA_REQUEST);
+
+    const attempts = mockedHandleSupportCookie.mock.calls.map(([attempt]) => attempt);
+
+    expect(attempts).toHaveLength(3);
+    expect(attempts[0]).toEqual(
+      expect.objectContaining({
+        beneficiaryLastname: 'DUPOND',
+        recipientFirstname: 'BABETTE',
+        recipientEmail: 'babette@example.test',
+      }),
+    );
+    expect(attempts[0]).not.toHaveProperty('id');
+    expect(attempts[1]).toEqual(attempts[0]);
+    expect(attempts[2]).toEqual(attempts[0]);
   });
 
   it('carries the collected address even when LCA knows nobody', async () => {

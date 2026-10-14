@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { ALLOWANCE } from '../types/types';
+import { CAF, MSA } from '@/app/v2/accueil/components/acronymes/Acronymes';
 import EligibilityTestForms from '../eligibility-test-forms/EligibilityTestForms';
 import CrousEligibilityTestForms from '../crous-eligibility-test-forms/CrousEligibilityTestForms';
 import EligibilityTestContext from '@/store/eligibilityTestContext';
@@ -325,7 +326,8 @@ const AllowanceStep = () => {
                   {
                     label: (
                       <p className="fr-text--bold">
-                        Quotient familial du foyer allocataire inférieur ou égal à 699 €
+                        Quotient familial de l’allocataire principal (<CAF /> ou <MSA />) inférieur
+                        ou égal à 699 €
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0"></span>
                       </p>

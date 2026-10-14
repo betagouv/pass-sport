@@ -3,8 +3,6 @@ import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { CAISSE } from '@/utils/eligibility-test';
 
 // Form step, search being the first step & confirm being the final step
-export type FormStep = 'search' | 'confirm';
-
 /**
  * Every field the two-step form can render, all branches confounded. Each step-two form
  * picks the subset LCA reads for its situation + organisme.

@@ -178,7 +178,8 @@ export function AccordionsFaq() {
           <ul className="fr-pl-4w">
             <li>
               Jeunes de 6 à 17 ans révolus faisant partie d&apos;un foyer allocataire dont le
-              quotient familial (<CAF /> ou <MSA />) est inférieur ou égal à 699 € ;
+              quotient familial de l&apos;allocataire principal (<CAF /> ou <MSA />) est inférieur
+              ou égal à 699 € ;
             </li>
             <li>
               Jeunes en situation de handicap :

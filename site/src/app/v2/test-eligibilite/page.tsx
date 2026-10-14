@@ -148,7 +148,15 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
               severity="info"
               className="fr-mb-3w"
               title="Connectez-vous avec FranceConnect"
-              description="Nous vérifierons votre situation et celle de vos enfants directement auprès des administrations en charge, sans rien vous demander d'autre. Si l'information est disponible, vous n'aurez pas de justificatifs à fournir."
+              description={
+                <>
+                  Nous vérifierons votre situation et celle de vos enfants directement auprès des
+                  administrations en charge, sans rien vous demander d&apos;autre. Si
+                  l&apos;information est disponible, vous n&apos;aurez pas de justificatifs à
+                  fournir. <br /> À savoir : pour un bénéficiaire de l’AAH ou un étudiant boursier,
+                  utilisez votre propre compte FranceConnect, et non celui de vos parents.
+                </>
+              }
             />
           )}
 
@@ -156,9 +164,10 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             <div className={`fr-col-12 fr-col-md-8 ${styles.choices}`}>
               <h2 className="fr-h4">S&apos;authentifier avec FranceConnect</h2>
               <p className="fr-mb-1w">
-                Nous vérifions vos droits directement auprès des administrations : aucun
-                justificatif à fournir.
+                Pour obtenir un code pass Sport, vous devez vous connecter avec le compte
+                FranceConnect de la personne qui bénéficie de l&apos;aide.
               </p>
+
               {/* Wording imposed by the FranceConnect FS qualification (criterion 1):
                   it must appear verbatim, directly above the button. */}
               <p className="fr-mb-3w">

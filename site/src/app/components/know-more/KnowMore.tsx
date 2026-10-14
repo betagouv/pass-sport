@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { Heading } from '@/app/components/heading/Heading';
 
 type KnowMoreProps = {
-  variant: 'purple' | 'yellow';
+  variant: 'purple' | 'yellow' | 'blue';
   knowMore: {
     title: string;
     description: string | ReactNode;

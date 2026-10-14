@@ -233,7 +233,7 @@ def _write_raw_cnaf_csv(path):
     )
 
 
-def _run_phase_1(filepath, filter_rows_missing_required_fields, drop_raw_address_columns,
+def _run_phase_1(filepath, filter_rows_missing_required_fields, drop_raw_columns,
                  prepare_qf_identity_columns=lambda df: df):
     """clean_cnaf_1_before_qf_batch.ipynb, minus the qf-batch input it writes.
 
@@ -253,7 +253,7 @@ def _run_phase_1(filepath, filter_rows_missing_required_fields, drop_raw_address
     df = cnaf.set_organisme_and_situation(df)
     df = partners.parse_beneficiary_birthdate(df)
     df = prepare_qf_identity_columns(df)
-    df = drop_raw_address_columns(df)
+    df = drop_raw_columns(df)
     df = filter_rows_missing_required_fields(df)
     df = partners.normalize_identity_casing(df)
     df = partners.normalize_email_casing(df)
@@ -284,7 +284,7 @@ def test_the_codes_of_a_real_run_all_find_their_raw_row_again(tmp_path):
     df_phase_1 = _run_phase_1(
         raw_filepath,
         filter_rows_missing_required_fields=partners.filter_rows_missing_required_fields,
-        drop_raw_address_columns=cnaf.drop_raw_address_columns)
+        drop_raw_columns=cnaf.drop_raw_columns)
     df_export = _write_aeeh_export(df_phase_1, tmp_path / "cnaf_export.csv")
     assert len(df_export) == 2
 
@@ -303,7 +303,7 @@ def test_the_codes_of_a_real_run_all_find_their_raw_row_again(tmp_path):
     df_full = _run_phase_1(
         raw_filepath,
         filter_rows_missing_required_fields=lib.filter_rows_missing_required_fields,
-        drop_raw_address_columns=lambda df: df,
+        drop_raw_columns=lambda df: df,
         prepare_qf_identity_columns=lambda df: lib.prepare_qf_identity_columns(df, cog_lookup)[0])
     df_full = lib.format_date_naissance_as_exported(df_full)
     df_full, collision_count = lib.drop_merge_key_collisions(df_full)
