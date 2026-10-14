@@ -67,11 +67,63 @@ CNAF_COLUMN_MAPPING = {
     'PRENOMENF': 'prenom',
 }
 
+# Raw CNAF export format as of 2026-10-06. The file's header repeats 'presta' (once per
+# AEEH/ARS block), suffixed here since pandas rejects duplicate names.
+CNAF_RAW_COLUMNS_10_06_2026 = [
+    'numorg', 'matricul', 'nomenf', 'prenomen', 'dtnaienf', 'sexeenf', 'QUALDOS', 'RESPDOS',
+    'NOMNAIDOS', 'PRENOMDOS', 'DTNAIDOS', 'SEXDOS', 'COMMUNENAIDOS', 'PAYSNAIDOS', 'NOMCOMPLET',
+    'ADRLIG1DESTDOS', 'ADRLIG2DESTDOS', 'ADRLIG3DESTDOS', 'ADRLIG4DESTDOS', 'ADRLIG5DESTDOS',
+    'ADRLIG6DESTDOS', 'NUMIN', 'EMAIL', 'TEL', 'DRT', 'moisdrov_aeeh', 'natdro_aeeh',
+    'presta_aeeh', 'moisdrov_ars', 'natdro_ars', 'presta_ars', 'mtqfcnaf', 'nuinpenf',
+]
+
+CNAF_COLUMN_MAPPING_10_06_2026 = {
+    # infos about allocataire
+    'matricul': 'allocataire-matricule',
+    'numorg': 'allocataire-code_organisme',
+    'QUALDOS': 'allocataire-qualite',
+    'RESPDOS': 'allocataire-nom',
+    'PRENOMDOS': 'allocataire-prenom',
+    'EMAIL': 'allocataire-courriel',
+    'TEL': 'allocataire-telephone',
+
+    # allocataire pivot identity for the quotient_familial API call
+    'NOMNAIDOS': 'allocataire-nom_naissance',
+    'DTNAIDOS': 'allocataire-date_naissance',
+    'SEXDOS': 'allocataire-genre',
+    'COMMUNENAIDOS': 'allocataire-code_insee_naissance',
+    'PAYSNAIDOS': 'allocataire-pays_naissance',
+
+    # adresse allocataire
+    'CODE_POSTAL': 'adresse_allocataire-code_postal',
+    'NUMIN': 'adresse_allocataire-code_insee',
+    'COMMUNE': 'adresse_allocataire-commune',
+
+    # infos about beneficiary
+    'dtnaienf': 'date_naissance',
+    'sexeenf': 'genre',
+    'nomenf': 'nom',
+    'prenomen': 'prenom',
+    'nuinpenf': 'numero_interne_enfant',
+
+    # replaces ORIGINESELECTION
+    'DRT': 'situation_origine',
+
+    # rights computed by the CNAF for this request (natdro_*: real or theoretical right)
+    'moisdrov_aeeh': 'mois_droit_aeeh',
+    'natdro_aeeh': 'nature_droit_aeeh',
+    'presta_aeeh': 'droit_aeeh_juillet',
+    'moisdrov_ars': 'mois_droit_ars',
+    'natdro_ars': 'nature_droit_ars',
+    'presta_ars': 'droit_ars_aout',
+    'mtqfcnaf': 'quotient_familial',
+}
+
 ORGANISME = 'CAF'
 
 SITUATION_BY_ORIGIN = {'ARS': 'jeune', 'AAH': 'AAH', 'AEEH': 'AEEH'}
 
-RAW_ADDRESS_COLUMNS_TO_DROP = [
+RAW_COLUMNS_TO_DROP = [
     'NOMCOMPLET',
     'ADRLIG1DESTDOS',
     'ADRLIG2DESTDOS',
@@ -81,9 +133,21 @@ RAW_ADDRESS_COLUMNS_TO_DROP = [
     'ADRLIG6DESTDOS',
 ]
 
+RAW_COLUMNS_TO_DROP_10_06_2026 = [
+    *RAW_COLUMNS_TO_DROP,
+    'numero_interne_enfant',
+    'mois_droit_aeeh',
+    'nature_droit_aeeh',
+    'droit_aeeh_juillet',
+    'mois_droit_ars',
+    'nature_droit_ars',
+    'droit_ars_aout',
+    'quotient_familial',
+]
 
-def read_raw_cnaf_csv(filepath: str) -> pd.DataFrame:
-    """Read the raw CNAF export, ascii-encoded and semicolon-separated.
+
+def read_raw_cnaf_csv(filepath: str, columns: list = None, skiprows: int = 2) -> pd.DataFrame:
+    """Read the raw CNAF export, semicolon-separated (ascii, optionally with a UTF-8 BOM).
 
     Column names are supplied positionally (`names=CNAF_RAW_COLUMNS`, `header=None`) instead
     of being read from the file's own header row, because that header row is unreliable:
@@ -95,11 +159,14 @@ def read_raw_cnaf_csv(filepath: str) -> pd.DataFrame:
     268, or any other number of characters.
 
     skiprows=2 drops the PASSPORT metadata row and the header row itself (never parsed).
+    The 2026-10-06 export has no PASSPORT row: read it with
+    columns=CNAF_RAW_COLUMNS_10_06_2026, skiprows=1.
     """
+    columns = CNAF_RAW_COLUMNS if columns is None else columns
     return pd.read_csv(
-        filepath, encoding='ascii', on_bad_lines='skip', sep=';', quoting=csv.QUOTE_NONE,
-        dtype={column: 'str' for column in CNAF_RAW_COLUMNS}, engine='c',
-        keep_default_na=False, names=CNAF_RAW_COLUMNS, header=None, skiprows=2,
+        filepath, encoding='utf-8-sig', on_bad_lines='skip', sep=';', quoting=csv.QUOTE_NONE,
+        dtype={column: 'str' for column in columns}, engine='c',
+        keep_default_na=False, names=columns, header=None, skiprows=skiprows,
     )
 
 
@@ -123,9 +190,9 @@ def normalize_full_name_spacing(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def map_cnaf_columns(df: pd.DataFrame) -> pd.DataFrame:
+def map_cnaf_columns(df: pd.DataFrame, mapping: dict = None) -> pd.DataFrame:
     """Rename the raw CNAF columns to the PSP schema."""
-    return df.rename(columns=CNAF_COLUMN_MAPPING)
+    return df.rename(columns=CNAF_COLUMN_MAPPING if mapping is None else mapping)
 
 
 def build_allocataire_address_fields(df: pd.DataFrame) -> pd.DataFrame:
@@ -141,6 +208,6 @@ def set_organisme_and_situation(df: pd.DataFrame) -> pd.DataFrame:
     return partners.set_organisme_and_situation(df, ORGANISME, SITUATION_BY_ORIGIN)
 
 
-def drop_raw_address_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Remove the raw name/address columns, now that they have been exploded and mapped."""
-    return df.drop(columns=RAW_ADDRESS_COLUMNS_TO_DROP)
+def drop_raw_columns(df: pd.DataFrame, columns: list = None) -> pd.DataFrame:
+    """Remove the raw columns (name/address by default), now that they have been exploded and mapped."""
+    return df.drop(columns=RAW_COLUMNS_TO_DROP if columns is None else columns)

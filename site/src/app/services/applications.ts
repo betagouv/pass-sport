@@ -1,5 +1,5 @@
-import { Pool } from 'pg';
 import * as Sentry from '@sentry/nextjs';
+import { getPool } from './database';
 
 export type ExistingApplication = {
   // When this pseudonym first applied in the window.
@@ -51,35 +51,6 @@ const campaignStart = (): Date => {
   }
 
   return new Date(Date.now() - 365 * 24 * 3600 * 1000);
-};
-
-const globalForPool = globalThis as unknown as { __applicationsPool?: Pool };
-
-const getPool = (): Pool => {
-  if (!globalForPool.__applicationsPool) {
-    const connectionString = process.env.APPLICATIONS_DATABASE_URL;
-    if (!connectionString) {
-      throw new Error('APPLICATIONS_DATABASE_URL is missing');
-    }
-    const pool = new Pool({
-      connectionString,
-      // A page render must never hang on this lookup.
-      connectionTimeoutMillis: 2_000,
-      max: 4,
-      ssl: process.env.PGSSL_DISABLE === 'true' ? undefined : { rejectUnauthorized: false },
-    });
-
-    pool.on('connect', () => {
-      console.log('[pass-sport] applications database connection successful');
-    });
-
-    pool.on('error', (err) => {
-      console.log(`[pass-sport] applications database connection failed: ${err.message}`);
-    });
-    globalForPool.__applicationsPool = pool;
-  }
-
-  return globalForPool.__applicationsPool;
 };
 
 export const findApplicationForSub = async (sub: string): Promise<ExistingApplication | null> => {

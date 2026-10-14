@@ -35,6 +35,21 @@
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]
 
+# Loads the LCA dashboards the LCA host drops around 05:00 (Paris) into the site database, which the
+# public page /tableau-de-bord reads. 07:15 system time is after that drop whether the machine
+# runs on UTC or Paris time, and falls between two FranceConnect runs; the two scripts use
+# distinct tunnel ports anyway. Posted disabled until pass_sport_tdb_cron_enabled is set.
+- name: Chargement quotidien du tableau de bord LCA
+  become: true
+  ansible.builtin.cron:
+    name: pass-sport-tableaux-de-bord
+    user: "{{ pass_sport_user }}"
+    minute: '15'
+    hour: '7'
+    job: "{{ pass_sport_repo }}/data/2026/dashboard/run_dashboard.sh"
+    disabled: "{{ not pass_sport_tdb_cron_enabled }}"
+  tags: [tdb-cron]
+
 # Retire l'ancienne entrée qui appelait worker/src/scripts/run-lca-checks.sh, supprimé depuis
 # que run_fc_pipeline.sh pose lui-même le job courriel : laissée en place, elle échouerait
 # toutes les 30 minutes. Sans effet sur une machine qui ne l'a jamais eue.

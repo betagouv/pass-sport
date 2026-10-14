@@ -19,6 +19,7 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
   '/v2/structures': 'Structures sportives',
   '/v2/test-eligibilite': 'Demande du code pass Sport',
   '/v2/test-eligibilite/hors-france-connect': 'Demander mon pass Sport',
+  '/tableau-de-bord': 'Tableau de bord',
 };
 
 const CLUB_DETAILS_ROUTE_PREFIX = '/v2/trouver-un-club/';

@@ -1,0 +1,27 @@
+# WAF in front of the app, as in production. Run with:
+#   docker compose -f compose.yml -f compose.waf.yml up
+services:
+  nginx-waf:
+    image: owasp/modsecurity-crs:4.23-nginx-alpine-202602250702
+    environment:
+      - PARANOIA=1
+      - BACKEND=http://app:3000
+      # Allowed content types come from waf_rules.conf (rule 900220), as in production;
+      # setting ALLOWED_REQUEST_CONTENT_TYPE here would redefine the same rule id.
+      # Limit Body Size to 10MB
+      - MODSEC_REQ_BODY_LIMIT=10485760
+      - MAX_FILE_SIZE=10485760
+      # Block PHP extensions via CRS Restricted Extensions
+      - RESTRICTED_EXTENSIONS=.asa/ .asax/ .ascx/ .axd/ .backup/ .bak/ .bat/ .cdx/ .cer/ .cfg/ .cmd/ .com/ .config/ .conf/ .cs/ .csproj/ .csr/ .dat/ .db/ .dbf/ .dll/ .dos/ .htr/ .htw/ .ida/ .idc/ .idq/ .inc/ .ini/ .key/ .licx/ .lnk/ .log/ .mdb/ .old/ .pass/ .pdb/ .pol/ .printer/ .pwd/ .rdb/ .resources/ .resx/ .sql/ .swp/ .sys/ .vb/ .vbs/ .vbproj/ .vsdisco/ .webinfo/ .xsd/ .xsx/ .php/
+    ports:
+      - '3000:8080'
+    volumes:
+      # The image only loads custom rules through this file, included before CRS.
+      - ./proxy/waf_rules.conf:/etc/modsecurity.d/owasp-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf:ro
+    depends_on:
+      app:
+        condition: service_started
+  app:
+    # The WAF takes 3000; the app stays reachable directly for comparison.
+    ports: !override
+      - '3001:3000'

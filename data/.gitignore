@@ -17,6 +17,7 @@
 !2026/partners/franceconnect/writeback_confirmed.sql
 !2026/partners/franceconnect/check_writeback.sql
 !2026/partners/franceconnect/check_confirmed.sql
+!2026/dashboard/load_dashboard.sql
 !2026/partners/v_pays_territoire_2026.csv
 
 ignored/
@@ -29,3 +30,6 @@ logs/
 
 # Un dossier par passage de run_fc_pipeline.sh : CSV nominatifs et journaux.
 2026/partners/franceconnect/run/
+
+# One directory per run_dashboard.sh run: logs only.
+2026/dashboard/run/

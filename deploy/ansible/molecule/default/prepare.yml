@@ -63,3 +63,10 @@
         path: /tmp/fc-drop
         state: directory
         mode: '0755'
+
+    # Stands in for /nfs/stats, which the LCA host creates: lamp-setup.yml only checks it is readable.
+    - name: Dossier du tableau de bord de test (tient lieu de /nfs/stats)
+      ansible.builtin.file:
+        path: /tmp/stats
+        state: directory
+        mode: '0755'

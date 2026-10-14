@@ -44,6 +44,10 @@ SOURCE_INPUT_ENV_VAR = {
     # qf-batch — see cnaf/clean_cnaf_2a_aah_aeeh.ipynb. The QF-route CNAF source above never
     # recomputes them, so each beneficiary still goes through this step exactly once.
     'CNAF_AAH_AEEH': 'DB_CNAF_EXPORT_2026_AAH_AEEH',
+    # AEEH beneficiaries of the 2026-10-06 CNAF export (ARS/AEEH only, no AAH), minus the
+    # ones LAMP already holds — see cnaf/10_06_2026_clean_cnaf_aeeh.ipynb, then
+    # cnaf/10_06_2026_cnaf_aeeh_deduplication.ipynb.
+    'CNAF_AEEH': 'DB_CNAF_EXPORT_2026_AEEH_DEDUPLICATED',
     'MSA': 'DB_MSA_EXPORT_2026',
     'MSA_AAH_AEEH': 'DB_MSA_EXPORT_2026_AAH_AEEH',
     # CNOUS is absent on purpose: being the one partner with no qf-batch checkpoint, its
