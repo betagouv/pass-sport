@@ -1,0 +1,2 @@
+ALTER TABLE "lca_tableaux_de_bord" DROP CONSTRAINT "lca_tableaux_de_bord_tableau_check";--> statement-breakpoint
+ALTER TABLE "lca_tableaux_de_bord" ADD CONSTRAINT "lca_tableaux_de_bord_tableau_check" CHECK ("lca_tableaux_de_bord"."tableau" in ('genre', 'situation', 'organisme', 'region', 'departement', 'age', 'federation'));

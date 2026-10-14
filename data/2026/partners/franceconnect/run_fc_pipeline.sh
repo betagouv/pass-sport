@@ -81,6 +81,10 @@ LAMP_INJECT="$(dirname "$DATA_DIR")/lamp01/inject_csv.sh"
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { RUN_ERROR="$*"; log "ERREUR : $*" >&2; exit 1; }
 
+# open_tunnel, close_tunnels, tunnel_database_url
+# shellcheck source=../../../utils/scalingo_tunnel.sh
+. "$DATA_DIR/utils/scalingo_tunnel.sh"
+
 DRY_RUN=0
 for arg in "$@"; do
   case "$arg" in
@@ -198,23 +202,11 @@ RUN_DETAIL=""
 RUN_STEP="préparation"
 RUN_ERROR=""
 CODES_DRAWN=0
-TUNNEL_PIDS=()
 DRY_RUN_CODES_COPY=""
 
 step() {
   RUN_STEP="$1"
   log "étape $1 — $2"
-}
-
-close_tunnels() {
-  local pid
-  for pid in "${TUNNEL_PIDS[@]}"; do
-    if kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-      wait "$pid" 2>/dev/null || true
-      log "tunnel refermé"
-    fi
-  done
 }
 
 on_exit() {
@@ -319,39 +311,8 @@ fi
 # Deux tunnels, sur deux ports : Postgres pour les étapes 1, 4 et 6, Redis pour la mise en file
 # du job courriel en fin de passage. on_exit les referme.
 
-# db-tunnel monte sa propre connexion SSH, indépendante de `scalingo login` : sans -i, elle
-# retombe sur l'agent SSH puis sur ~/.ssh/id_rsa, qui peut ne pas exister sur cette machine.
-open_tunnel() {
-  local addon_url_var="$1" port="$2" pid
-  local tunnel_args=(--app "$SCALINGO_APP" db-tunnel -p "$port")
-  [[ -n "${SCALINGO_SSH_IDENTITY:-}" ]] && tunnel_args+=(-i "$SCALINGO_SSH_IDENTITY")
-  tunnel_args+=("$addon_url_var")
-
-  log "ouverture du tunnel $addon_url_var vers $SCALINGO_APP, port local $port"
-  scalingo "${tunnel_args[@]}" >>"$LOG_FILE" 2>&1 &
-  pid=$!
-  TUNNEL_PIDS+=("$pid")
-
-  for _ in $(seq 1 30); do
-    if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
-      log "tunnel ouvert"
-      return 0
-    fi
-    kill -0 "$pid" 2>/dev/null || die "le tunnel s'est arrêté — voir le journal"
-    sleep 1
-  done
-  die "le port $port ne répond toujours pas"
-}
-
 open_tunnel SCALINGO_POSTGRESQL_URL "$FC_TUNNEL_PORT"
-
-# L'URL de la base, hôte et port remplacés par ceux du tunnel, et les options de la requête
-# par le sslmode que le tunnel impose. Jamais journalisée : elle porte le mot de passe.
-# [^@/]+ et non [^/]+ : un mot de passe contenant une arobase serait sinon avalé avec l'hôte.
-REMOTE_URL="$(scalingo --app "$SCALINGO_APP" env-get SCALINGO_POSTGRESQL_URL)"
-[[ -n "$REMOTE_URL" ]] || die "SCALINGO_POSTGRESQL_URL introuvable sur $SCALINGO_APP"
-FC_DATABASE_URL="$(printf '%s' "$REMOTE_URL" \
-  | sed -E "s#@[^@/]+/#@127.0.0.1:$FC_TUNNEL_PORT/#; s#\\?.*\$##")?sslmode=disable"
+tunnel_database_url "$FC_TUNNEL_PORT" FC_DATABASE_URL
 
 run_psql() { psql "$FC_DATABASE_URL" -v ON_ERROR_STOP=1 "$@"; }
 
