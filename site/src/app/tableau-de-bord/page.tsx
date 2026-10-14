@@ -43,6 +43,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Tableau de bord - pass Sport',
   description: `Les chiffres du pass Sport ${CAMPAGNE}, jour par jour ou semaine par semaine : public éligible, codes activés et taux de recours par genre, âge, situation, organisme, région et département.`,
+  robots: { index: false, follow: false },
 };
 
 type Props = {
