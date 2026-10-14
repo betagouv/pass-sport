@@ -26,7 +26,8 @@
 #   TDB_LOCK_FILE          overlap lock                              (default /tmp/pass-sport-tdb.lock)
 
 set -Eeuo pipefail
-umask 027
+# Group-writable: operators and the passsport service account share run/ (setgid group).
+umask 007
 # The extraction names and "today" are both Paris wall clock.
 export TZ=Europe/Paris
 
