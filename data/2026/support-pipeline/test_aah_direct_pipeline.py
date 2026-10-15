@@ -59,6 +59,16 @@ def test_reads_a_cp1252_export(tmp_path):
     assert pipeline.read_support_csv(path)['prenom'].tolist() == ['Élyra']
 
 
+def test_reads_a_comma_separated_file_with_technical_header_names(tmp_path):
+    path = write_input(tmp_path, 'M, Tozal , MERVIK ,07/08/2006,tozal@example.org,aah',
+                       header='genre,prenom,nom,date_naissance,email,critere')
+    df = pipeline.read_support_csv(path)
+    assert df.to_dict('records') == [{
+        'ligne': 2, 'genre': 'M', 'prenom': 'Tozal', 'nom': 'MERVIK',
+        'date_naissance': '07/08/2006', 'email': 'tozal@example.org', 'critere': 'aah',
+    }]
+
+
 def test_refuses_a_file_missing_a_column(tmp_path):
     path = write_input(tmp_path, 'M;Tozal;MERVIK;07/08/2006;aah', header='genre;Prénom;Nom;Date de naissance;Critère')
     with pytest.raises(ValueError, match='email'):

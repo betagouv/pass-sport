@@ -47,6 +47,10 @@ INPUT_COLUMNS = {
     'email': 'email',
     "critere d'eligibilite": 'critere',
 }
+HEADER_ALIASES = {
+    'date naissance': 'date_naissance',
+    'critere': 'critere',
+}
 
 DEDUPLICATION_KEY_COLUMNS = ['nom', 'prenom', 'date_naissance', 'genre']
 
@@ -69,14 +73,19 @@ EMAIL_PATTERN = re.compile(r'^[^@\s;]+@[^@\s;]+\.[^@\s;]+$')
 
 def _fold_header(name: str) -> str:
     folded = unicodedata.normalize('NFKD', str(name)).encode('ascii', 'ignore').decode()
-    return ' '.join(folded.replace('’', "'").lower().split())
+    return ' '.join(folded.replace('’', "'").replace('_', ' ').lower().split())
+
+
+def _column_name(header_cell: str) -> str:
+    folded = _fold_header(header_cell)
+    return INPUT_COLUMNS.get(folded) or HEADER_ALIASES.get(folded) or header_cell
 
 
 def read_support_csv(input_filepath) -> pd.DataFrame:
     """The support CSV as stripped text, columns renamed to INPUT_COLUMNS values.
 
-    Spreadsheet exports come as UTF-8 (with or without BOM) or cp1252, often with spaces
-    around the separators.
+    Spreadsheet exports come as UTF-8 (with or without BOM) or cp1252, separated by ';' or ',',
+    often with spaces around the separators.
     """
     raw = Path(input_filepath).read_bytes()
     try:
@@ -84,10 +93,12 @@ def read_support_csv(input_filepath) -> pd.DataFrame:
     except UnicodeDecodeError:
         text = raw.decode('cp1252')
 
-    rows = [[cell.strip() for cell in row] for row in csv.reader(text.splitlines(), delimiter=';')]
+    lines = text.splitlines()
+    delimiter = ';' if ';' in lines[0] else ','
+    rows = [[cell.strip() for cell in row] for row in csv.reader(lines, delimiter=delimiter)]
     header, body = rows[0], rows[1:]
 
-    columns = [INPUT_COLUMNS.get(_fold_header(name), name) for name in header]
+    columns = [_column_name(name) for name in header]
     missing = [column for column in INPUT_COLUMNS.values() if column not in columns]
     if missing:
         raise ValueError(f"colonnes absentes du CSV : {', '.join(missing)} (en-tête lu : {header})")
