@@ -457,6 +457,20 @@ copy (
 ) to stdout with (format csv, header, delimiter ';');
 \o
 
+-- Optional: the non-matched candidates some strategy did reach. The FC cron mints them a code
+-- anyway; data/2026/support-pipeline sets them aside for a human to look at instead.
+\if :{?inconcluants}
+\o :inconcluants
+copy (
+	select distinct e.eligibility_result_id
+	from fc_essais e
+	where not exists (select 1 from fc_apparies a
+	                   where a.eligibility_result_id = e.eligibility_result_id)
+	order by e.eligibility_result_id
+) to stdout with (format csv, header, delimiter ';');
+\o
+\endif
+
 -- Ce qu'un humain lit dans le journal de la cron : combien par stratégie, combien
 -- d'inconcluants (des lignes atteintes, mais pas exactement une), et combien restent.
 select
