@@ -11,8 +11,10 @@ cd /srv/pass-sport/data/2026/support-pipeline
 
 ## Fichier d'entrée
 
-Séparateur `;`, une ligne d'en-tête. Les espaces autour des séparateurs sont tolérés, et le fichier
-peut être en UTF-8 (avec ou sans BOM) ou en cp1252.
+Séparateur `;` ou `,` (détecté sur l'en-tête), une ligne d'en-tête. Les espaces autour des
+séparateurs sont tolérés, et le fichier peut être en UTF-8 (avec ou sans BOM) ou en cp1252.
+L'en-tête est reconnu sans tenir compte des accents ni de la casse. Les noms techniques
+`genre,prenom,nom,date_naissance,email,critere` sont aussi acceptés.
 
 ```csv
 genre;Prénom;Nom;Date de naissance;email;Critère d'éligibilité
