@@ -30,6 +30,8 @@ logs/
 
 # Un dossier par passage de run_fc_pipeline.sh : CSV nominatifs et journaux.
 2026/partners/franceconnect/run/
+# Same for run_aah_direct.sh.
+2026/support-pipeline/run/
 
 # One directory per run_dashboard.sh run: logs only.
 2026/dashboard/run/
