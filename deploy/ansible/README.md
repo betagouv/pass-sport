@@ -1,11 +1,15 @@
 # Provisioning de la machine de traitement
 
 Ce playbook installe ce que la machine de traitement doit porter pour `qf-batch`
-([worker/src/scripts/qf-batch.ts](../../worker/src/scripts/qf-batch.ts)) et le passage
+([worker/src/scripts/qf-batch.ts](../../worker/src/scripts/qf-batch.ts)), le passage
 FranceConnect
-([data/2026/partners/franceconnect/run_fc_pipeline.sh](../../data/2026/partners/franceconnect/run_fc_pipeline.sh)) :
-paquets système, CLI Scalingo, Node par apt/NodeSource, le virtualenv `data/.venv` et son kernel Jupyter,
-l'unité systemd `qf-batch@` et l'entrée crontab de FC.
+([data/2026/partners/franceconnect/run_fc_pipeline.sh](../../data/2026/partners/franceconnect/run_fc_pipeline.sh))
+et le passage Grist + Démarches Numériques
+([data/2026/grist-dn-pipeline/run_grist_dn.sh](../../data/2026/grist-dn-pipeline/run_grist_dn.sh)) :
+paquets système (`psql`, `flock`), CLI Scalingo, Node par apt/NodeSource et les dépendances du
+worker (mails de code), le virtualenv `data/.venv` (dont `requests` pour les API Grist et DN) et
+son kernel Jupyter, l'unité systemd `qf-batch@` et les entrées crontab. Le provisioning échoue si
+le pipeline Grist + DN ne peut pas importer ses modules (tasks/venv.yml).
 
 `lamp-setup.yml` n'est qu'un sommaire : il définit les variables et importe, dans l'ordre où
 elles sont jouées, les tâches réparties par sujet dans [tasks/](tasks/) (comptes, paquets,
@@ -109,7 +113,8 @@ C'est une garantie du playbook, pas un oubli à corriger :
   Chaque passage se déclenche à la main, un partenaire à la fois :
   `systemctl start pass-sport-qf-batch@msa`. Rien ne le lance au démarrage de la machine ni à
   l'issue du playbook ;
-- **l'entrée crontab `pass-sport-fc`** est posée **activée** par défaut (toutes les 30 minutes),
+- **l'entrée crontab `pass-sport-fc`** est posée **activée** par défaut (toutes les 30 minutes de
+  6 h à minuit, `*/30 6-23 * * *` : aucun passage entre minuit et 6 h),
   les deux prérequis suivants ayant été validés : l'empreinte SSH Scalingo amorcée (ci-dessous)
   et un passage à blanc réussi
   (`./run_fc_pipeline.sh --dry-run`, son journal
@@ -131,6 +136,14 @@ C'est une garantie du playbook, pas un oubli à corriger :
   `./run_dashboard.sh --dry-run` est passé dessus. La tâche qui vérifie que
   `tdb_drop_dir` est lisible porte le tag `tdb-cron` : `--skip-tags tdb-cron` la saute tant
   que l'hébergeur de la base LCA n'a pas créé le dossier.
+- **l'entrée crontab `pass-sport-grist-dn`** (chaque nuit à 3 h, `0 3 * * *`, pendant la pause
+  de FranceConnect) est posée
+  **désactivée** tant que `pass_sport_grist_dn_cron_enabled` vaut `false`, sa valeur par défaut.
+  Elle code les bénéficiaires que le support recense dans Grist et Démarches Numériques, les
+  dépose dans `/nfs/run`, attend que l'injecteur de production range le fichier dans
+  `/nfs/run/succes/`, leur envoie leur code et met à jour Grist et les dossiers DN (voir le
+  [README de grist-dn-pipeline/](../../data/2026/grist-dn-pipeline/README.md)). On l'active une
+  fois que des passages à la main, `--dry-run` d'abord, ont été validés. Tag `grist-dn-cron`.
 
 ### Reporter tout le volet FC (crontab Scalingo/tunnel)
 
@@ -257,13 +270,15 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
    `changed` si une nouvelle version a été publiée entre les deux passages (comportement
    voulu, pas un défaut).
 2. `scalingo --version`, `psql --version`, `data/.venv/bin/jupyter kernelspec list` (doit
-   lister `python3`), `systemctl cat pass-sport-qf-batch@`,
+   lister `python3`), `data/2026/grist-dn-pipeline/apercu_grist_dn.sh` (accès Grist et DN, une
+   fois `data/.env` rempli), `systemctl cat pass-sport-qf-batch@`,
    `test ! -e /etc/default/pass-sport-fc` (retiré par le playbook — voir tasks/config.yml).
 3. `crontab -l -u <utilisateur> | grep -E 'pass-sport-fc|pass-sport-lca-checks'` : seule la ligne
    `pass-sport-fc` doit apparaître, **active** tant que `pass_sport_fc_cron_enabled` (`true` par
    défaut) n'a pas été repassé à `false`.
    `crontab -l -u <utilisateur> | grep pass-sport-tableaux-de-bord` : la ligne est commentée tant
-   que `pass_sport_tdb_cron_enabled` vaut `false`.
+   que `pass_sport_tdb_cron_enabled` vaut `false`. Idem pour `pass-sport-grist-dn` tant que
+   `pass_sport_grist_dn_cron_enabled` vaut `false`.
 4. `systemctl list-units 'pass-sport-qf-batch@*'` doit être vide : aucune instance active tant
    que personne n'a lancé `systemctl start pass-sport-qf-batch@<partenaire>`.
 5. Aucun secret n'est parti dans le dépôt public :

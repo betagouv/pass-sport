@@ -28,7 +28,8 @@
 # déposée mais jamais activée (`systemctl enable`) ni démarrée — chaque passage se déclenche à
 # la main, `systemctl start qf-batch@<partenaire>`.
 #
-# L'entrée crontab de FranceConnect, elle, est posée ACTIVÉE par défaut (toutes les 2 heures) :
+# L'entrée crontab de FranceConnect, elle, est posée ACTIVÉE par défaut (toutes les 30 minutes,
+# de 6 h à minuit ; rien entre minuit et 6 h, plage laissée au passage Grist + DN de 3 h) :
 # les prérequis (empreinte SSH Scalingo amorcée à la main, passage à blanc
 # run_fc_pipeline.sh --dry-run validé) ont été vérifiés. Repasser
 # `pass_sport_fc_cron_enabled` à `false` pour redésactiver le passage automatique.
@@ -87,6 +88,11 @@
     # set to true once a --dry-run on a real extraction has passed.
     tdb_drop_dir: /nfs/stats
     pass_sport_tdb_cron_enabled: false
+    # Grist + Démarches Numériques support pipeline (data/2026/grist-dn-pipeline/run_grist_dn.sh):
+    # mints codes, drops them in /nfs/run, waits for production's injector to file them in
+    # succes/, mails them and writes back to Grist and DN. Posted disabled: set to true once
+    # manual runs (--dry-run first) have been validated.
+    pass_sport_grist_dn_cron_enabled: false
 
   tasks:
     - name: Groupe d'exploitation et comptes

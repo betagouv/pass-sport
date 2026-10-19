@@ -5,7 +5,7 @@
 # en file du job fc_code_emails du worker, qui envoie leur code aux bénéficiaires confirmés.
 #
 #   crontab -e
-#   30 4 * * * /chemin/vers/data/2026/partners/franceconnect/run_fc_pipeline.sh
+#   */30 6-23 * * * /chemin/vers/data/2026/partners/franceconnect/run_fc_pipeline.sh
 #
 # Le script est fait pour être rejoué : s'il n'y a aucun `eligible_pending` à traiter, il
 # sort en 0 sans rien produire. Toute autre sortie non nulle est une anomalie, et cron

@@ -1,5 +1,6 @@
 ---
-# psql pour les 3 .sql de franceconnect, util-linux pour le flock du script,
+# psql pour les .sql de franceconnect et de grist-dn-pipeline (rapprochement, injection lamp01),
+# util-linux pour le flock de leurs scripts (run_fc_pipeline.sh, run_grist_dn.sh),
 # openssh-client parce que scalingo db-tunnel monte une connexion SSH.
 # `acl` n'est pas décoratif : sans lui, toute tâche en become_user vers un compte non
 # privilégié échoue sur « Failed to set permissions on the temporary files ». Il est

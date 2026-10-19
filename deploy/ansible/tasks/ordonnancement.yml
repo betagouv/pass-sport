@@ -24,13 +24,16 @@
 #
 # Le passage finit en posant le job BullMQ fc_code_emails, que le worker Scalingo exécute
 # (worker/src/jobs/fc-code-emails.ts) : aucune autre cron n'est nécessaire pour les courriels.
-- name: Passage FranceConnect toutes les 30 minutes
+#
+# No run between midnight and 06:00: the first one is at 06:00, the last one at 23:30. That
+# night window is left to the Grist + Démarches Numériques run below.
+- name: Passage FranceConnect toutes les 30 minutes, de 6 h à minuit
   become: true
   ansible.builtin.cron:
     name: pass-sport-fc
     user: "{{ pass_sport_user }}"
     minute: '*/30'
-    hour: '*'
+    hour: '6-23'
     job: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run_fc_pipeline.sh"
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]
@@ -49,6 +52,22 @@
     job: "{{ pass_sport_repo }}/data/2026/dashboard/run_dashboard.sh"
     disabled: "{{ not pass_sport_tdb_cron_enabled }}"
   tags: [tdb-cron]
+
+# Codes the beneficiaries the support team collects in Grist and Démarches Numériques
+# (data/2026/grist-dn-pipeline/run_grist_dn.sh), once a night at 03:00, while FranceConnect is
+# paused: its lock is free and its last drop (23:30) has had time to leave /nfs/run. A run that
+# still finds either is postponed to the next night. Posted disabled until
+# pass_sport_grist_dn_cron_enabled is set.
+- name: Passage Grist + Démarches Numériques chaque nuit à 3 h
+  become: true
+  ansible.builtin.cron:
+    name: pass-sport-grist-dn
+    user: "{{ pass_sport_user }}"
+    minute: '0'
+    hour: '3'
+    job: "{{ pass_sport_repo }}/data/2026/grist-dn-pipeline/run_grist_dn.sh"
+    disabled: "{{ not pass_sport_grist_dn_cron_enabled }}"
+  tags: [grist-dn-cron]
 
 # Retire l'ancienne entrée qui appelait worker/src/scripts/run-lca-checks.sh, supprimé depuis
 # que run_fc_pipeline.sh pose lui-même le job courriel : laissée en place, elle échouerait

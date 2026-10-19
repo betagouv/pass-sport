@@ -6,6 +6,7 @@ import {
   type JournalEntry,
   parseRecipients,
   type Recipient,
+  recipientVariables,
   run,
   sentIds,
 } from "../../src/scripts/send-code-direct-aah";
@@ -17,8 +18,29 @@ const recipient = (over: Partial<Recipient> = {}): Recipient => ({
   nom: "MERVIK",
   prenom: "Élyra",
   date_naissance: "2006-08-07",
+  kind: "code_direct_aah",
   ...over,
 });
+
+const SUPPORT_HEADER =
+  "id;code;email;nom;prenom;date_naissance;situation;allocataire_prenom;allocataire_nom";
+
+// recipient()'s beneficiary, as the Grist + DN pipeline writes it.
+const supportCsv = (...rows: [id: string, situation: string, allocataire?: string][]): string =>
+  [
+    SUPPORT_HEADER,
+    ...rows.map(
+      ([id, situation, allocataire = "DORVANE;quillan"]) =>
+        `${id};26-ABCD-EFGH;tozal@example.org;MERVIK;Élyra;2006-08-07;${situation};${allocataire}`,
+    ),
+  ].join("\n");
+
+const beneficiaryVariables = {
+  BENEFICIAIRE_PRENOM: "Élyra",
+  BENEFICIAIRE_NOM: "Mervik",
+  DATE_NAISSANCE_BENEFICIAIRE: "07/08/2006",
+  CODE: "26-ABCD-EFGH",
+};
 
 const accepted: SendEmailResult = { sent: true, httpStatus: 200, campaignId: 42 };
 
@@ -44,11 +66,59 @@ const scriptedSend = (...answers: (SendEmailResult | Error)[]) => {
 const noSleep = { sleep: async () => {}, retryDelayMs: 0 };
 
 describe("parseRecipients", () => {
-  it("reads the CSV aah_direct_pipeline.py writes", () => {
+  it("reads the CSV aah_direct_pipeline.py writes, every row as code_direct_aah", () => {
     const rows = parseRecipients(
       "﻿id;code;email;nom;prenom;date_naissance\nid-1;26-ABCD-EFGH;tozal@example.org;MERVIK;Élyra;2006-08-07\n",
     );
     expect(rows).toEqual([recipient()]);
+  });
+
+  it.each([
+    ["AAH", "code_direct_aah"],
+    ["boursier", "code_direct_boursier"],
+    ["AEEH", "code_indirect"],
+    ["jeune", "code_indirect"],
+  ])("reads the situation %s as %s", (situation, kind) => {
+    expect(parseRecipients(supportCsv(["id-1", situation]))[0].kind).toBe(kind);
+  });
+
+  it("names the allocataire in code_indirect alone", () => {
+    const [boursier, aeeh] = parseRecipients(supportCsv(["a", "boursier"], ["b", "AEEH"]));
+
+    expect(recipientVariables(boursier)).toEqual({
+      kind: "code_direct_boursier",
+      ...beneficiaryVariables,
+    });
+    expect(recipientVariables(aeeh)).toEqual({
+      kind: "code_indirect",
+      ...beneficiaryVariables,
+      ALLOCATAIRE_PRENOM: "Dorvane",
+      ALLOCATAIRE_NOM: "Quillan",
+    });
+  });
+
+  it("requires the allocataire on code_indirect rows only", () => {
+    expect(() => parseRecipients(supportCsv(["id-1", "jeune", "DORVANE;"]))).toThrow(
+      /ligne 2 : champ\(s\) vide\(s\) allocataire_nom/,
+    );
+    expect(parseRecipients(supportCsv(["id-1", "AAH", ";"]))).toEqual([recipient()]);
+  });
+
+  it("refuses an unknown situation", () => {
+    expect(() => parseRecipients(supportCsv(["id-1", "aah"]))).toThrow(/situation "aah" inconnue/);
+    expect(() => parseRecipients(supportCsv(["id-1", "QF"]))).toThrow(/situation "QF" inconnue/);
+    expect(() => parseRecipients(supportCsv(["id-1", ""]))).toThrow(/situation "" inconnue/);
+  });
+
+  it("refuses any other header", () => {
+    expect(() =>
+      parseRecipients(
+        "id;code;email;nom;prenom;date_naissance;situation\nid-1;C;a@example.org;N;P;2006-08-07;AAH\n",
+      ),
+    ).toThrow(/en-tête .* inattendu/);
+    expect(() =>
+      parseRecipients("id;email;code;nom;prenom;date_naissance\nid-1;a@example.org;C;N;P;2006-08-07\n"),
+    ).toThrow(/en-tête .* inattendu/);
   });
 
   it("refuses a non-ISO birthdate", () => {
@@ -98,6 +168,23 @@ describe("deliver", () => {
         },
       },
     ]);
+  });
+
+  it("sends the code_indirect merge fields, allocataire included", async () => {
+    const { calls, send } = scriptedSend(accepted);
+    const indirect = recipient({
+      kind: "code_indirect",
+      allocataire_prenom: "DORVANE",
+      allocataire_nom: "quillan",
+    });
+
+    expect((await deliver(indirect, send, noSleep)).statut).toBe("envoye");
+    expect(calls[0].vars).toEqual({
+      kind: "code_indirect",
+      ...beneficiaryVariables,
+      ALLOCATAIRE_PRENOM: "Dorvane",
+      ALLOCATAIRE_NOM: "Quillan",
+    });
   });
 
   it("retries a rate-limit rejection", async () => {
@@ -164,5 +251,33 @@ describe("run", () => {
     expect(bilan.simules).toBe(1);
     expect(journal[0].statut).toBe("simule");
     expect(JSON.parse(journal[0].message)).toMatchObject({ CODE: "26-ABCD-EFGH" });
+  });
+
+  it("journals each row with its own template in a mixed dry run", async () => {
+    const { calls, send } = scriptedSend(accepted);
+    const journal: JournalEntry[] = [];
+    const recipients = parseRecipients(
+      supportCsv(["a", "AAH"], ["b", "boursier"], ["c", "AEEH"], ["d", "jeune"]),
+    );
+
+    const bilan = await run(recipients, {
+      alreadySent: new Set(["b"]),
+      dryRun: true,
+      send,
+      record: (e) => journal.push(e),
+    });
+
+    expect(calls).toHaveLength(0);
+    expect(bilan).toEqual({ envoyes: 0, refuses: 0, erreurs: 0, deja_envoyes: 1, simules: 3 });
+    expect(journal.map((e) => [e.id, e.statut, JSON.parse(e.message).kind])).toEqual([
+      ["a", "simule", "code_direct_aah"],
+      ["c", "simule", "code_indirect"],
+      ["d", "simule", "code_indirect"],
+    ]);
+    expect(JSON.parse(journal[0].message)).not.toHaveProperty("ALLOCATAIRE_PRENOM");
+    expect(JSON.parse(journal[2].message)).toMatchObject({
+      ALLOCATAIRE_PRENOM: "Dorvane",
+      ALLOCATAIRE_NOM: "Quillan",
+    });
   });
 });
