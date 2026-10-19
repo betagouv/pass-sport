@@ -116,11 +116,14 @@
 
     - name: Virtualenv data/.venv
       ansible.builtin.import_tasks: tasks/venv.yml
+      tags: [venv]
 
     # Après Node et venv, pas avant : voir tasks/permissions.yml pour pourquoi cet ordre
     # compte aussi (le miroir exact de la raison qui garde tasks/depot.yml tôt).
+    # Tagged venv too: `--tags venv` must end with this sweep, like a full run.
     - name: Balayage final des permissions du dépôt
       ansible.builtin.import_tasks: tasks/permissions.yml
+      tags: [venv]
 
     - name: Configuration (pass-sport-fc, dossier de dépôt FC)
       ansible.builtin.import_tasks: tasks/config.yml

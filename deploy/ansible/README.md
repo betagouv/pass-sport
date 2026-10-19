@@ -212,6 +212,26 @@ ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
   --extra-vars @~/pass-sport-secrets.yml --check --diff
 ```
 
+### Ne rejouer que ce qui a changé
+
+Après un `git pull` qui ne touche que quelques volets, `--tags` limite le passage à leurs
+tâches :
+
+| Tag | Ce qu'il rejoue |
+|---|---|
+| `venv` | `data/requirements.txt` dans `data/.venv`, le contrôle d'import du pipeline Grist + DN, puis le balayage final des permissions |
+| `fc-cron` | la crontab `pass-sport-fc` et le contrôle d'écriture de `/nfs/run` |
+| `tdb-cron` | la crontab `pass-sport-tableaux-de-bord` et le contrôle de lecture de `/nfs/stats` |
+| `grist-dn-cron` | la crontab `pass-sport-grist-dn` |
+| `qf-batch-systemd` | l'unité `pass-sport-qf-batch@` |
+
+Par exemple, pour l'arrivée du pipeline Grist + DN :
+
+```bash
+ansible-playbook -i localhost, -c local deploy/ansible/lamp-setup.yml \
+  --extra-vars @~/pass-sport-secrets.yml --tags venv,fc-cron,grist-dn-cron
+```
+
 ## Secrets — rien dans ce dépôt, il est public
 
 `SCALINGO_APP` et `SCALINGO_API_TOKEN` ne sont **pas** gérés par le playbook : ils vont
