@@ -98,7 +98,8 @@ TOUCHED_COLUMNS = [
 INVESTIGATION_COLUMNS = [
     'verdict', 'type', 'reference', 'lien', 'saisie_nom', 'saisie_prenom',
     'saisie_date_naissance', 'saisie_genre', 'saisie_situation', 'saisie_caisse',
-    'saisie_allocataire', 'saisie_allocataire_genre', 'saisie_email', 'saisie_commentaire',
+    'saisie_allocataire_nom', 'saisie_allocataire_prenom', 'saisie_allocataire_genre',
+    'saisie_email', 'saisie_commentaire',
     *(f'lamp01_{column}' for column in TOUCHED_COLUMNS),
 ]
 JOURNAL_COLUMNS = ['reference', 'action', 'statut', 'detail', 'horodatage']
@@ -701,7 +702,8 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
         'saisie_genre': investigation['genre'],
         'saisie_situation': investigation['situation'],
         'saisie_caisse': investigation['caisse'],
-        'saisie_allocataire': investigation['allocataire_prenom'] + ' ' + investigation['allocataire_nom'],
+        'saisie_allocataire_nom': investigation['allocataire_nom'],
+        'saisie_allocataire_prenom': investigation['allocataire_prenom'],
         'saisie_allocataire_genre': investigation['allocataire_genre'],
         'saisie_email': investigation['email'],
         'saisie_commentaire': investigation['commentaire'],

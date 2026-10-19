@@ -577,8 +577,9 @@ def test_split_exact_is_a_doublon_close_or_same_parent_only_is_to_review_and_the
         ['grist:2', 'a_verifier', 'proche', '26-CCCC-CCCC'],
         ['grist:5', 'a_verifier', 'parent', '26-DDDD-DDDD'],
     ]
-    assert investigation[['saisie_allocataire', 'saisie_allocataire_genre']].iloc[0].tolist() == [
-        'Tozal Quistane', 'M']
+    assert investigation[[
+        'saisie_allocataire_nom', 'saisie_allocataire_prenom', 'saisie_allocataire_genre',
+    ]].iloc[0].tolist() == ['Quistane', 'Tozal', 'M']
 
 
 def test_split_a_loose_boursier_identity_is_to_review_with_its_own_reason(tmp_path):
