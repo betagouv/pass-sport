@@ -195,8 +195,8 @@ importers:
         version: 8.22.0
     devDependencies:
       '@testcontainers/postgresql':
-        specifier: ^12.0.4
-        version: 12.0.4
+        specifier: ^12.2.0
+        version: 12.2.0
       '@testcontainers/redis':
         specifier: ^12.1.0
         version: 12.1.0
@@ -711,8 +711,8 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@testcontainers/postgresql@12.0.4':
-    resolution: {integrity: sha512-a/pLU6j5lpKKAlUTPwqweqMGhOSjgTSb6HBX69TOrXn32ifU37nnQDmNFTj8ddOAw+BQL9oTRkeOxVbZkqhgZA==}
+  '@testcontainers/postgresql@12.2.0':
+    resolution: {integrity: sha512-14oNBbKdqIkWTiw8XwP6YqWnuBebiij8m4fF03WTSHvNt5FfvQpGTLwIV3p07UpDnqWRFvY50YFzbiYdB+SWuA==}
 
   '@testcontainers/redis@12.1.0':
     resolution: {integrity: sha512-WRiS1Lhc+e/DHXDnCmMZtm8Wv64zYlRGNV04rvtn8kxIS2aVz5lgsP+Su/cfBzHJ0/vwdVKW+YJ3nUrXYbQxqw==}
@@ -2408,7 +2408,7 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@testcontainers/postgresql@12.0.4':
+  '@testcontainers/postgresql@12.2.0':
     dependencies:
       testcontainers: 12.2.0
     transitivePeerDependencies:
