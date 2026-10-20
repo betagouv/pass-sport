@@ -8,31 +8,39 @@ import type {
   Tableau,
 } from '@/app/tableau-de-bord/model';
 
-// The table changes once a day and the page is public: an hour of cache keeps the database out
-// of reach of the traffic. unstable_cache serialises to JSON, hence dates read as strings.
+// Entries are keyed by extraction (lireExtraction): the hour only bounds how long a fix made in
+// place, without a new load, takes to show. unstable_cache serialises to JSON, hence dates read
+// as strings.
 const REVALIDATE_SECONDS = 3600;
 
+// Each load replaces the whole table in one transaction, so every row carries the same
+// extrait_le. Read on every request and passed to the cached lookups as their first argument, it
+// keys their entries by extraction: every container switches to a new load at once, and a page
+// never mixes two extractions. Its own cost is a single row.
+const lireExtraction = async (): Promise<string | null> => {
+  const { rows } = await getPool().query<{ extrait_le: string }>(
+    `SELECT to_char(extrait_le AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS extrait_le
+     FROM lca_tableaux_de_bord_publies
+     LIMIT 1`,
+  );
+  return rows[0]?.extrait_le ?? null;
+};
+
 const lireEtat = unstable_cache(
-  async (): Promise<EtatTableauxDeBord | null> => {
+  async (extraitLe: string): Promise<EtatTableauxDeBord | null> => {
     const { rows } = await getPool().query<{
       premier_jour: string | null;
       dernier_jour: string | null;
-      extrait_le: string | null;
     }>(
       `SELECT to_char(min(jour), 'YYYY-MM-DD') AS premier_jour,
-              to_char(max(jour), 'YYYY-MM-DD') AS dernier_jour,
-              to_char(max(extrait_le) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS extrait_le
+              to_char(max(jour), 'YYYY-MM-DD') AS dernier_jour
        FROM lca_tableaux_de_bord_publies`,
     );
     const [etat] = rows;
-    if (!etat?.premier_jour || !etat.dernier_jour || !etat.extrait_le) {
+    if (!etat?.premier_jour || !etat.dernier_jour) {
       return null;
     }
-    return {
-      premierJour: etat.premier_jour,
-      dernierJour: etat.dernier_jour,
-      extraitLe: etat.extrait_le,
-    };
+    return { premierJour: etat.premier_jour, dernierJour: etat.dernier_jour, extraitLe };
   },
   ['tableaux-de-bord-etat'],
   { revalidate: REVALIDATE_SECONDS },
@@ -40,7 +48,7 @@ const lireEtat = unstable_cache(
 
 // Every dashboard's daily rows over a period, in day order then display order.
 const lireLignesDeLaPeriode = unstable_cache(
-  async (debut: string, fin: string): Promise<LigneJour[]> => {
+  async (_extraitLe: string, debut: string, fin: string): Promise<LigneJour[]> => {
     const { rows } = await getPool().query<{
       tableau: Tableau;
       jour: string;
@@ -79,7 +87,7 @@ const lireLignesDeLaPeriode = unstable_cache(
 );
 
 const lireSeries = unstable_cache(
-  async (): Promise<PointSerie[]> => {
+  async (_extraitLe: string): Promise<PointSerie[]> => {
     const { rows } = await getPool().query<{
       tableau: PointSerie['tableau'];
       jour: string;
@@ -125,6 +133,9 @@ const sansErreur =
     }
   };
 
-export const getEtatTableauxDeBord = sansErreur(lireEtat, 'tableaux_de_bord_etat');
+export const getEtatTableauxDeBord = sansErreur(async () => {
+  const extraitLe = await lireExtraction();
+  return extraitLe ? lireEtat(extraitLe) : null;
+}, 'tableaux_de_bord_etat');
 export const getLignesDeLaPeriode = sansErreur(lireLignesDeLaPeriode, 'tableaux_de_bord_periode');
 export const getSeries = sansErreur(lireSeries, 'tableaux_de_bord_series');
