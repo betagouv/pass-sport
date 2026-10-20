@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Loads today's LCA dashboard extraction, dropped on the NFS by the LCA host (specs/dashboard/),
-# into the site database on Scalingo, which the public page /tableau-de-bord reads.
+# into the site database on Scalingo, which the page /tableau-de-bord/<key> reads.
 #
 #   crontab -e
 #   15 7 * * * /path/to/data/2026/dashboard/run_dashboard.sh

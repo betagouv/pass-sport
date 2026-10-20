@@ -2,17 +2,25 @@
 import init, { push } from '@socialgouv/matomo-next';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
+import { DASHBOARD_URL_PATTERN, maskDashboardKey } from '@/utils/dashboard-url';
 
 export default function Matomo() {
   const pathname = usePathname();
   const previousUrl = useRef<string | null>(null);
 
-  // init() also sends the page view of the landing page
+  // init() also sends the page view of the landing page. The dashboard URL is its access key: the
+  // dashboard is not tracked, and only its masked URL may reach Matomo (outlink tracking)
   useEffect(() => {
     init({
       url: process.env.NEXT_PUBLIC_MATOMO_URL || '',
       siteId: process.env.NEXT_PUBLIC_MATOMO_SITE_ID || '',
       disableCookies: true,
+      excludeUrlsPatterns: [DASHBOARD_URL_PATTERN],
+      onInitialization: () => {
+        if (DASHBOARD_URL_PATTERN.test(window.location.pathname)) {
+          push(['setCustomUrl', maskDashboardKey(window.location.href)]);
+        }
+      },
     });
   }, []);
 
@@ -26,9 +34,13 @@ export default function Matomo() {
       return;
     }
 
-    push(['setReferrerUrl', previousUrl.current]);
-    push(['setCustomUrl', currentUrl]);
+    push(['setReferrerUrl', maskDashboardKey(previousUrl.current)]);
+    push(['setCustomUrl', maskDashboardKey(currentUrl)]);
     previousUrl.current = currentUrl;
+
+    if (DASHBOARD_URL_PATTERN.test(window.location.pathname)) {
+      return;
+    }
 
     const pageViewTimeout = setTimeout(() => {
       push(['setDocumentTitle', document.title]);

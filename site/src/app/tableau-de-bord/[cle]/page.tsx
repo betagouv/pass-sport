@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import PageTitle from '@/components/PageTitle/PageTitle';
 import { SKIP_LINKS_ID } from '@/app/constants/skip-links';
-import { DASHBOARD_ENABLED } from '@/app/constants/env';
+import { isDashboardKey } from '@/app/services/dashboard-access';
 import { getEtatTableauxDeBord, getLignesDeLaPeriode, getSeries } from '@/app/services/dashboard';
 import {
   COULEUR_SERIE_UNIQUE,
@@ -28,10 +28,10 @@ import {
   periodes,
   seriesParModalite,
   serieTotal,
-} from './model';
-import { Barres, Colonnes, Courbes, DonneesGraphique } from './components/Graphiques';
-import TableauDetail, { TITRES } from './components/TableauDetail';
-import styles from './style.module.scss';
+} from '../model';
+import { Barres, Colonnes, Courbes, DonneesGraphique } from '../components/Graphiques';
+import TableauDetail, { TITRES } from '../components/TableauDetail';
+import styles from '../style.module.scss';
 
 // The exercice the LCA export is fixed to (specs/dashboard/).
 const CAMPAGNE = '2026';
@@ -43,10 +43,11 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Tableau de bord - pass Sport',
   description: `Les chiffres du pass Sport ${CAMPAGNE}, jour par jour ou semaine par semaine : public éligible, codes activés et taux de recours par genre, âge, situation, organisme, région et département.`,
-  robots: { index: false, follow: false },
+  robots: { index: false, follow: false, nocache: true },
 };
 
 type Props = {
+  params: Promise<{ cle: string }>;
   searchParams: Promise<{ pas?: string | string[]; periode?: string | string[] }>;
 };
 
@@ -66,9 +67,10 @@ const pourcentAxe = (v: number) => `${formaterNombre(v)} %`;
 // Long lists, folded so the page stays readable.
 const REPLIES: Tableau[] = ['federation', 'departement'];
 
-export default async function TableauxDeBord({ searchParams }: Props) {
+export default async function TableauxDeBord({ params: routeParams, searchParams }: Props) {
   // The proxy already answers 404; this keeps the figures out of reach if it is bypassed.
-  if (!DASHBOARD_ENABLED) {
+  const { cle } = await routeParams;
+  if (!isDashboardKey(cle)) {
     notFound();
   }
   const etat = await getEtatTableauxDeBord();

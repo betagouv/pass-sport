@@ -1,13 +1,13 @@
 # Tableau de bord LCA
 
-Ce dossier charge dans la base du site les statistiques de la page publique `/tableau-de-bord`.
+Ce dossier charge dans la base du site les statistiques de la page `/tableau-de-bord/<clé>`.
 Ces statistiques se calculent sur la base LCA. pass Sport n'y a pas accès : c'est son hébergeur qui exécute
 les requêtes chaque jour, avec le kit [specs/dashboard/](../../../specs/dashboard/README.md).
 
 ```text
 Hébergeur LCA, 05:00   export_dashboard.sh   base LCA → /nfs/stats/<AAAA-MM-JJTHH-MM-SS>/*.csv
 lamp01, 07:15          run_dashboard.sh      /nfs/stats → tunnel Scalingo → table lca_tableaux_de_bord
-site                   /tableau-de-bord      vue lca_tableaux_de_bord_publies (rôle site_readonly)
+site                   /tableau-de-bord/<clé>  vue lca_tableaux_de_bord_publies (rôle site_readonly)
 ```
 
 Le contrat de fichier (dossier par extraction, format et colonnes des CSV) est décrit dans le
@@ -73,6 +73,21 @@ depuis l'environnement :
 ```bash
 TDB_DROP_DIR=/tmp/stats ./run_dashboard.sh --dry-run
 ```
+
+## Accès à la page
+
+La page n'a pas de login : elle n'est servie qu'à l'URL `/tableau-de-bord/<clé>`, où la clé est
+la variable `DASHBOARD_URL_KEY` de l'application Scalingo du site. Toute autre URL répond 404,
+`/tableau-de-bord` seul compris, et sans clé valide la page est fermée. Quiconque détient l'URL
+voit les chiffres : on ne la diffuse qu'à des destinataires nommés, et on ne l'écrit jamais dans
+ce dépôt, qui est public.
+
+Pour changer la clé, à chaque campagne ou dès qu'elle a circulé au-delà de ses destinataires :
+
+1. en générer une : `openssl rand -base64 32 | tr '+/' '-_' | tr -d '='` ;
+2. la poser dans `DASHBOARD_URL_KEY` (dashboard Scalingo, ou `scalingo env-set`) ;
+3. redémarrer l'application, sans rebuild : la clé est lue à l'exécution ;
+4. envoyer la nouvelle URL aux destinataires. L'ancienne répond 404.
 
 ## Tests
 
