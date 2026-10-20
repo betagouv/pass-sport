@@ -91,9 +91,9 @@ export default async function TableauxDeBord({ params: routeParams, searchParams
   const liste = periodes(etat.premierJour, etat.dernierJour, pas);
   const periode = choisirPeriode(params.periode, liste);
   const [lignesDernierJour, lignesPeriode, points] = await Promise.all([
-    getLignesDeLaPeriode(etat.dernierJour, etat.dernierJour),
-    getLignesDeLaPeriode(periode.debut, periode.fin),
-    getSeries(),
+    getLignesDeLaPeriode(etat.extraitLe, etat.dernierJour, etat.dernierJour),
+    getLignesDeLaPeriode(etat.extraitLe, periode.debut, periode.fin),
+    getSeries(etat.extraitLe),
   ]);
   const sousTitre = `Données au ${formaterJour(etat.dernierJour)}, extraites le ${formaterHorodatage(etat.extraitLe)}`;
 

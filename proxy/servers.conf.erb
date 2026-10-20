@@ -166,7 +166,9 @@ server {
     access_log /dev/stdout upstream_failure_no_query if=$is_upstream_failure;
   }
 
-  location /tableau-de-bord/ {
+  # No trailing slash: with one, nginx answers /tableau-de-bord itself with a 301 to its internal
+  # port, which hangs, instead of letting the app answer 404.
+  location /tableau-de-bord {
     proxy_pass http://app_backend;
     limit_req zone=next_v2_nav_req_limit burst=150 nodelay;
     access_log /dev/stdout dashboard;
