@@ -25,14 +25,15 @@ export const NAVIGATION_ITEM_MAP: { [key: string]: string } = {
 const CLUB_DETAILS_ROUTE_PREFIX = '/v2/trouver-un-club/';
 
 export default function PassSportBreadcrumbStandard() {
-  const paths = usePathname();
+  // The dashboard segment is its access key: never display it.
+  const paths = usePathname()?.replace(/^\/tableau-de-bord\/.*/, '/tableau-de-bord');
 
   const internalRoutes = ['/', '/v2/accueil'].filter((route): route is string => route !== null);
 
   const notFound = useIsNotFound({
     internalRoutes,
     navigationItemsMap: Object.keys(NAVIGATION_ITEM_MAP),
-    dynamicRoutePrefixes: [CLUB_DETAILS_ROUTE_PREFIX],
+    dynamicRoutePrefixes: [CLUB_DETAILS_ROUTE_PREFIX, '/tableau-de-bord/'],
   });
 
   if (!paths || internalRoutes.includes(paths) || notFound) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isPasSportClosed } from '@/utils/date';
-import { CODES_OBTAINABLE, DASHBOARD_ENABLED, FC_ENABLED_FOR_DEBUGGING } from '@/app/constants/env';
+import { CODES_OBTAINABLE, FC_ENABLED_FOR_DEBUGGING } from '@/app/constants/env';
+import { DASHBOARD_PATH, isDashboardKey } from '@/app/services/dashboard-access';
 
 // /api/eligibility-test/ used to sit behind a shared secret. It bought nothing: the form
 // is a public page, so whatever calls that route on its behalf is reachable by anyone too —
@@ -61,11 +62,26 @@ export function proxy(request: NextRequest) {
     '/v2/partenaires',
     ...(franceConnectPageReachable ? [] : ['/v2/test-eligibilite']),
     ...(CODES_OBTAINABLE ? [] : ['/v2/test-eligibilite/hors-france-connect']),
-    ...(DASHBOARD_ENABLED ? [] : ['/tableau-de-bord']),
   ];
 
+  const notFound = () =>
+    NextResponse.rewrite(new URL('/v2/not-found', request.url), { status: 404 });
+
   if (disabledRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
-    return NextResponse.rewrite(new URL('/v2/not-found', request.url), { status: 404 });
+    return notFound();
+  }
+
+  const { pathname } = request.nextUrl;
+  if (pathname === DASHBOARD_PATH || pathname.startsWith(`${DASHBOARD_PATH}/`)) {
+    const segments = pathname.slice(DASHBOARD_PATH.length + 1).split('/');
+    if (segments.length !== 1 || !isDashboardKey(segments[0])) {
+      return notFound();
+    }
+    // The URL is the secret: never hand it over as a Referer, nor let a cache or an archive keep it.
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
   }
 
   // When pass sport is closed, we want to redirect from certain pages to the homepage
