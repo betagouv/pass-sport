@@ -11,7 +11,6 @@ import { useUpdateHeadings } from '@/app/hooks/accessibility/use-update-headings
 import { FOOTER_CLASSES } from '@/app/constants/dsfr-classes';
 import { isPasSportClosed, shouldDisplayChatbot } from '@/utils/date';
 import { CHATBOT_EXTERNAL_URL, CHATBOT_EXTERNAL_URL_TITLE } from '@/app/constants/urls';
-import { DASHBOARD_ENABLED } from '@/app/constants/env';
 
 export default function PassSportFooter() {
   const footerRef = useRef<HTMLDivElement>(null);
@@ -258,16 +257,6 @@ export default function PassSportFooter() {
             href: '/v2/une-question',
           },
         },
-        ...((DASHBOARD_ENABLED
-          ? [
-              {
-                text: 'Tableau de bord',
-                linkProps: {
-                  href: '/tableau-de-bord',
-                },
-              },
-            ]
-          : []) as [FooterProps.LinkList.Link]),
       ],
     },
     {

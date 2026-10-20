@@ -25,19 +25,19 @@
     "@sentry/node": "^10.75.0",
     "bullmq": "^5.81.2",
     "csv-parse": "^7.0.2",
-    "csv-stringify": "^6.8.1",
+    "csv-stringify": "^6.9.0",
     "drizzle-orm": "^0.45.3",
     "ioredis": "^5.11.1",
     "pg": "^8.22.0"
   },
   "devDependencies": {
-    "@testcontainers/postgresql": "^12.0.4",
+    "@testcontainers/postgresql": "^12.2.0",
     "@testcontainers/redis": "^12.1.0",
     "@types/node": "^20",
     "@types/pg": "^8.15.0",
     "drizzle-kit": "^0.31.11",
     "testcontainers": "^12.2.0",
-    "tsc-alias": "^1.9.5",
+    "tsc-alias": "^1.9.7",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

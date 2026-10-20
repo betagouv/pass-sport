@@ -52,4 +52,25 @@ describe('Matomo', () => {
       [['trackPageView']],
     ]);
   });
+
+  it('never hands the dashboard key over, nor tracks the dashboard', () => {
+    const { rerender } = render(<Matomo />);
+
+    navigateTo('/tableau-de-bord/AbCdEfGhIjKlMnOpQrStUvWxYz012345', 'Tableau de bord - pass Sport');
+    rerender(<Matomo />);
+    jest.runAllTimers();
+
+    navigateTo('/v2/une-question', 'Une question - pass Sport');
+    rerender(<Matomo />);
+    jest.runAllTimers();
+
+    expect(jest.mocked(push).mock.calls).toEqual([
+      [['setReferrerUrl', `${window.location.origin}/v2/accueil`]],
+      [['setCustomUrl', `${window.location.origin}/tableau-de-bord/***`]],
+      [['setReferrerUrl', `${window.location.origin}/tableau-de-bord/***`]],
+      [['setCustomUrl', `${window.location.origin}/v2/une-question`]],
+      [['setDocumentTitle', 'Une question - pass Sport']],
+      [['trackPageView']],
+    ]);
+  });
 });

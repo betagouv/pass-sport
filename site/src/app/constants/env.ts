@@ -5,8 +5,6 @@ export const CODES_OBTAINABLE_FOR_CROUS =
 export const IS_PRODUCTION_ENV = process.env.NEXT_PUBLIC_ENV === 'production';
 export const IS_LOCAL_ENV = process.env.NEXT_PUBLIC_ENV === 'local';
 export const CHATBOT_IS_ACTIVATED = process.env.NEXT_PUBLIC_CHATBOT_IS_ACTIVATED === 'yes';
-// Off: /tableau-de-bord answers 404 and its links are hidden.
-export const DASHBOARD_ENABLED = process.env.NEXT_PUBLIC_DASHBOARD_ENABLED === 'yes';
 
 export const PARCOURS_HORS_FC_ENABLED = process.env.PARCOURS_HORS_FC_ENABLED === 'yes';
 export const PARCOURS_FC_ENABLED = process.env.PARCOURS_FC_ENABLED === 'yes';

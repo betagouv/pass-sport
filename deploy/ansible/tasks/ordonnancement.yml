@@ -36,7 +36,7 @@
   tags: [fc-cron]
 
 # Loads the LCA dashboards the LCA host drops around 05:00 (Paris) into the site database, which the
-# public page /tableau-de-bord reads. 07:15 system time is after that drop whether the machine
+# page /tableau-de-bord/<key> reads. 07:15 system time is after that drop whether the machine
 # runs on UTC or Paris time, and falls between two FranceConnect runs; the two scripts use
 # distinct tunnel ports anyway. Posted disabled until pass_sport_tdb_cron_enabled is set.
 - name: Chargement quotidien du tableau de bord LCA
