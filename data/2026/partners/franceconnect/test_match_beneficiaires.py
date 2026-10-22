@@ -130,12 +130,15 @@ def candidat(**overrides) -> dict:
     return row
 
 
-def rapprocher(pg, base=(), candidats=(), extra=(), exercices=()):
+def rapprocher(pg, base=(), candidats=(), extra=(), exercices=(), avec_inconcluants=False):
     """Seed the tables, run match_beneficiaires.sql, return (apparies, non_apparies, recap).
 
     `apparies` maps eligibility_result_id to id_psp, `non_apparies` is a list of ids and
     `recap` the counters of the closing SELECT. A guard failure (duplicate id_psp) raises
     through psql's exit code instead — see the dedicated test.
+
+    `avec_inconcluants` also asks for the optional inconclusive output, appended as a fourth
+    element: the list of ids some strategy reached without concluding.
     """
     graine = ['truncate table public.beneficiaire_cnaf_extra_field, public.beneficiaires;']
     for exercice in exercices:
@@ -168,9 +171,11 @@ def rapprocher(pg, base=(), candidats=(), extra=(), exercices=()):
         ['docker', 'exec', '-i', pg, 'sh', '-c', f'cat > {dossier}/match_beneficiaires.sql'],
         input=(FC_DIR / 'match_beneficiaires.sql').read_text(), text=True, check=True)
 
+    option_inconcluants = ['-v', 'inconcluants=fc_2026_inconcluants.csv'] if avec_inconcluants else []
     passage = subprocess.run(
         ['docker', 'exec', '-w', dossier, pg, 'psql', '-U', 'u_passsport', '-d', 'passsport',
-         '-v', 'ON_ERROR_STOP=1', '-q', '-A', '-t', '-f', 'match_beneficiaires.sql'],
+         '-v', 'ON_ERROR_STOP=1', *option_inconcluants, '-q', '-A', '-t',
+         '-f', 'match_beneficiaires.sql'],
         capture_output=True, text=True)
     if passage.returncode != 0:
         raise RuntimeError(passage.stderr)
@@ -187,6 +192,10 @@ def rapprocher(pg, base=(), candidats=(), extra=(), exercices=()):
 
     bilan = [ligne for ligne in passage.stdout.splitlines() if '|' in ligne][-1]
     recap = dict(zip(RECAP_COLONNES, (int(v) for v in bilan.split('|'))))
+
+    if avec_inconcluants:
+        inconcluants = [ligne['eligibility_result_id'] for ligne in lire('fc_2026_inconcluants.csv')]
+        return apparies, non_apparies, recap, inconcluants
 
     return apparies, non_apparies, recap
 
@@ -296,6 +305,18 @@ def test_aah_deux_homonymes_dans_la_meme_caisse_restent_inconcluants(pg):
     assert apparies == {}
     assert non_apparies == ['c1']
     assert recap['inconcluants'] == 1
+
+
+def test_les_inconcluants_sont_ecrits_a_part_sur_demande(pg):
+    homonyme = ligne_base(**{**BASE_AAH_MSA, 'id_psp': 'PSP-A2'})
+    inconnu = candidat(**{**CANDIDAT_AAH, 'eligibility_result_id': 'c2',
+                          'beneficiaire_nom': 'QUILVORE'})
+    apparies, non_apparies, _, inconcluants = rapprocher(
+        pg, base=[ligne_base(**BASE_AAH_MSA), homonyme],
+        candidats=[candidat(**CANDIDAT_AAH), inconnu], avec_inconcluants=True)
+    assert apparies == {}
+    assert non_apparies == ['c1', 'c2']
+    assert inconcluants == ['c1']
 
 
 # --- AEEH : allocataire + bénéficiaire, la date de l'allocataire côté MSA seulement --
