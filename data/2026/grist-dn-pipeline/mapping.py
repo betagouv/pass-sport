@@ -37,6 +37,7 @@ GRIST_COLUMNS = {
     'eligibilite': 'Eligibilité',
     'commentaire': 'Commentaire',
     'statut': 'Statut',
+    'code': 'Code',
 }
 
 # Values of the `Eligibilité` choice column that let a row in (Oui / Non / empty met).

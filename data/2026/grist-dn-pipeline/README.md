@@ -120,7 +120,9 @@ même rapprochement (pas encore de forçage).
    programmés à +30 min (`GRIST_DN_EMAIL_DELAY_MIN`).
 11. **Retours** (`retours`) :
     - Grist : `Statut` = `Code envoyé`, `Doublon`, `À vérifier` ou `Rejeté`, et le motif dans la
-      colonne `GRIST_COLONNE_MOTIF` (sinon ajouté au statut).
+      colonne `GRIST_COLONNE_MOTIF` (sinon ajouté au statut). Sur une ligne `Code envoyé`, la
+      colonne `Code` reçoit le code tiré ; jamais sur un doublon (venu de lamp01, il pourrait être
+      celui d'un homonyme).
     - DN, par dossier :
       1. l'**annotation privée** `Codes pass Sport` (instructeurs seulement) reçoit une ligne
          `Prénom Nom : code` par code de ce passage, à la suite de ce qu'elle contenait ;
@@ -243,7 +245,8 @@ le nom de la page).
   - l'annotation privée `Codes pass Sport`, de type **Texte long**. Sans elle, le passage
     s'arrête dès la lecture de DN.
 - Dans Grist : une colonne `Statut` de type Choix, valeurs exactes `Code envoyé`, `Doublon`,
-  `À vérifier`, `Rejeté` ; et une colonne `Motif` de type Texte, avec
+  `À vérifier`, `Rejeté` ; une colonne `Code` de type Texte (sans elle, le passage s'arrête dès
+  la lecture de Grist) ; et une colonne `Motif` de type Texte, avec
   `GRIST_COLONNE_MOTIF=Motif` (sans elle, le motif s'ajoute au statut, hors des choix prévus).
 - `DN_INSTRUCTEUR_ID`, l'instructeur au nom duquel partent messages et acceptations :
 

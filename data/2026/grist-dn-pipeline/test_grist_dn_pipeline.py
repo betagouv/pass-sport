@@ -83,7 +83,7 @@ def dn_dossier(number=34778465, beneficiaire_de="L'Allocation aux adultes handic
 
 
 def raw_grist(*records):
-    return {'table': 'Beneficiaires', 'columns': {'statut': 'Statut', 'motif': 'Motif'},
+    return {'table': 'Beneficiaires', 'columns': {'statut': 'Statut', 'motif': 'Motif', 'code': 'Code'},
             'records': list(records)}
 
 
@@ -674,7 +674,7 @@ def run_retours(tmp_path, grist=None, dn=None, dry_run=False, refused_drop=''):
                             refused_drop=refused_drop)
 
 
-def test_retours_tags_grist_rows_with_status_and_reason(tmp_path):
+def test_retours_tags_grist_rows_with_status_reason_and_the_drawn_code(tmp_path):
     write_verdicts(tmp_path, [grist_line(1, 'a_coder', 'e1'), grist_line(2, 'rejete', motif='genre inconnu : X'),
                               grist_line(3, 'doublon', 'e3', 'déjà connu'), grist_line(4, 'a_verifier', 'e4', 'proche')])
     write_envois(tmp_path, ('e1', 'envoye'))
@@ -684,7 +684,7 @@ def test_retours_tags_grist_rows_with_status_and_reason(tmp_path):
 
     assert stats['erreurs'] == 0
     assert grist.updates == [[
-        {'id': 1, 'fields': {'Statut': 'Code envoyé', 'Motif': ''}},
+        {'id': 1, 'fields': {'Statut': 'Code envoyé', 'Motif': '', 'Code': code_of('e1')}},
         {'id': 2, 'fields': {'Statut': 'Rejeté', 'Motif': 'genre inconnu : X'}},
         {'id': 3, 'fields': {'Statut': 'Doublon', 'Motif': 'déjà connu'}},
         {'id': 4, 'fields': {'Statut': 'À vérifier', 'Motif': 'proche'}},
@@ -695,6 +695,12 @@ def test_retours_without_motif_column_appends_the_reason_to_the_status():
     row = pd.Series({'statut': 'rejete', 'motif': 'email invalide', 'grist_row_id': '2'})
     assert pipeline.grist_update(row, {'statut': 'Statut'}) == {
         'id': 2, 'fields': {'Statut': 'Rejeté : email invalide'}}
+
+
+def test_retours_of_a_run_fetched_before_the_code_column_leave_it_alone():
+    row = pd.Series({'statut': 'code_envoye', 'motif': '', 'code': '26-ABCD-0001', 'grist_row_id': '1'})
+    assert pipeline.grist_update(row, {'statut': 'Statut', 'motif': 'Motif'}) == {
+        'id': 1, 'fields': {'Statut': 'Code envoyé', 'Motif': ''}}
 
 
 def test_retours_isolates_a_grist_row_deleted_meanwhile(tmp_path):

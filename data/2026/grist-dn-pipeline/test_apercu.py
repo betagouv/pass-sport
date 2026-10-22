@@ -69,7 +69,7 @@ def test_grist_overview_compares_columns_and_reads_the_values_met(capsys):
     apercu.grist_overview(client, 'Beneficiaires', 'Motif')
 
     out = capsys.readouterr().out
-    assert 'table Beneficiaires : accès OK (14 colonnes, 3 lignes)' in out
+    assert 'table Beneficiaires : accès OK (15 colonnes, 3 lignes)' in out
     assert 'ABSENT  commentaire' in out and 'ABSENT  motif' in out
     assert 'ok      caisse' in out
     assert '-> AEEH' in out and '-> INCONNUE : ligne rejetée' in out

@@ -809,6 +809,10 @@ def grist_update(row, columns: dict) -> dict:
         fields = {columns['statut']: statut, columns['motif']: row['motif']}
     else:
         fields = {columns['statut']: f"{statut} : {row['motif']}" if row['motif'] else statut}
+    # Only a code this run drew: a doublon's comes from lamp01 and could be a homonym's.
+    # columns.get: a run fetched before the Code column existed has none.
+    if columns.get('code') and row['statut'] == 'code_envoye':
+        fields[columns['code']] = row['code']
     return {'id': int(row['grist_row_id']), 'fields': fields}
 
 

@@ -57,7 +57,7 @@ GRIST_COLUMN_IDS = {
     'situation': 'Situation', 'allocataire_genre': 'Genre_allocataire',
     'allocataire_prenom': 'Prenom_parent', 'allocataire_nom': 'Nom_parent',
     'matricule': 'Matricule', 'email': 'Email', 'code_insee': 'Code_INSEE',
-    'eligibilite': 'Eligibilite', 'commentaire': 'Commentaire', 'statut': 'Statut',
+    'eligibilite': 'Eligibilite', 'commentaire': 'Commentaire', 'statut': 'Statut', 'code': 'Code',
 }
 
 
@@ -340,6 +340,8 @@ def test_real_run_reports_back_only_once_the_injector_filed_the_drop_in_succes(w
     assert injector.injected_at < min(apis.mail_times)
     assert sorted(mail['message'][0] for mail in apis.mails) == ['1006', '1008', '1008']
     assert statuts(apis) == {1: 'Code envoyé', 2: 'Rejeté', 3: 'Doublon', 4: None}
+    assert apis.grist_rows[0]['fields']['Code'] in injected_codes
+    assert 'Code' not in apis.grist_rows[2]['fields']
     assert [field for field, _ in apis.dn_mutations] == [
         'dossierModifierAnnotations', 'dossierEnvoyerMessage', 'dossierAjouterLabel', 'dossierAccepter']
     annotation = dict(line.split(' : ') for line in apis.dossiers[0]['annotations'][0]['stringValue'].splitlines())
