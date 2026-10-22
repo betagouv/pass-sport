@@ -103,7 +103,8 @@ même rapprochement (pas encore de forçage).
 7. **Dépôt dans `/nfs/run`** : `beneficiaires-insertion-<N>-<horodatage>.csv`, atomique.
 8. **Attente de la production** : toutes les 30 s (`GRIST_DN_ATTENTE_PAS_S`), au plus 2 h
    (`GRIST_DN_ATTENTE_PROD_MIN`). Le passage continue quand l'injecteur de production a rangé le
-   fichier dans `/nfs/run/succes/`, et seulement là.
+   fichier dans `/nfs/run/succes/`, et seulement là : `succes/<nom sans .csv>/<nom>.csv`, à côté
+   de son `.log` (un fichier rangé à plat, `succes/<nom>.csv`, est reconnu aussi).
    - Fichier rangé dans `/nfs/run/failed/` : **jamais rejoué**. Rien n'entre dans lamp01, aucun
      mail ne part. Ses lignes passent à `Rejeté` dans Grist (motif « refusé par l'injecteur de
      production (fichier) ») et ses dossiers DN reçoivent le label `À vérifier`, sans message à

@@ -280,11 +280,20 @@ inject_lamp01() {
     "$LAMP_INJECT" "${args[@]}" "$LAMP_CSV"
 }
 
+# Where the injector filed drop $2 in $1: <name without .csv>/<name>, next to its .log, or <name>.
+filed_drop() {
+  local path
+  for path in "$1/${2%.csv}/$2" "$1/$2"; do
+    if [[ -e "$path" ]]; then printf '%s\n' "$path"; return 0; fi
+  done
+  return 1
+}
+
 # Production's injector drains /nfs/run on its own and moves each drop to succes/ once injected,
 # or to failed/ when it refuses it: sets PROD_OUTCOME to succes or failed. Still nowhere after
 # GRIST_DN_ATTENTE_PROD_MIN, the run stops to be resumed: production may still take the drop.
 wait_for_production() {
-  local depose nom etat fin
+  local depose nom etat fin rangement
   PROD_OUTCOME=succes
   if (( GRIST_DN_ATTENTE_PROD_MIN == 0 )); then
     log "ATTENTION : production non vérifiée (GRIST_DN_ATTENTE_PROD_MIN=0), lamp01, mails et retours suivent quand même — recette seulement"
@@ -294,11 +303,11 @@ wait_for_production() {
   nom="$(basename "$depose")"
   step 8/11 "attente de l'injection en production de $nom (au plus $GRIST_DN_ATTENTE_PROD_MIN min)"
   fin=$(( SECONDS + GRIST_DN_ATTENTE_PROD_MIN * 60 ))
-  while [[ ! -e "$PROD_SUCCESS_DIR/$nom" ]]; do
-    if [[ -e "$PROD_FAILED_DIR/$nom" ]]; then
+  until rangement="$(filed_drop "$PROD_SUCCESS_DIR" "$nom")"; do
+    if rangement="$(filed_drop "$PROD_FAILED_DIR" "$nom")"; then
       PROD_OUTCOME=failed
-      printf '%s\n' "$PROD_FAILED_DIR/$nom" >"$REFUSED_MARKER"
-      log "ATTENTION : $nom refusé par l'injecteur de production ($PROD_FAILED_DIR)"
+      printf '%s\n' "$rangement" >"$REFUSED_MARKER"
+      log "ATTENTION : $nom refusé par l'injecteur de production ($rangement)"
       return
     fi
     if [[ -e "$depose" ]]; then
@@ -311,7 +320,7 @@ wait_for_production() {
     sleep "$GRIST_DN_ATTENTE_PAS_S"
   done
   printf '%s\n' "$depose" >"$INJECTED_MARKER"
-  log "injecté en production : $PROD_SUCCESS_DIR/$nom"
+  log "injecté en production : $rangement"
 }
 
 # Production refused the drop: nothing reached lamp01 nor anyone's mailbox, and replaying it

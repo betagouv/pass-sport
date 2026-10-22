@@ -195,8 +195,8 @@ class FakeApis:
 
 
 class FakeInjector:
-    """Production's /nfs/run injector: moves each drop to succes/ (mode 'succes') or failed/
-    (mode 'failed'), or leaves it alone (mode 'off')."""
+    """Production's /nfs/run injector: files each drop, next to its log, in succes/<name>/
+    (mode 'succes') or failed/<name>/ (mode 'failed'), or leaves it alone (mode 'off')."""
 
     def __init__(self, drop: Path):
         self.drop = drop
@@ -211,8 +211,10 @@ class FakeInjector:
             if self.mode == 'off':
                 continue
             for path in sorted(self.drop.glob('beneficiaires-insertion-*.csv')):
-                (self.drop / self.mode).mkdir(exist_ok=True)
-                path.rename(self.drop / self.mode / path.name)
+                filed = self.drop / self.mode / path.stem
+                filed.mkdir(parents=True)
+                path.rename(filed / path.name)
+                (filed / f'{path.stem}.log').write_text('')
                 if self.mode == 'succes':
                     self.injected_at = time.monotonic()
 
@@ -332,7 +334,7 @@ def test_real_run_reports_back_only_once_the_injector_filed_the_drop_in_succes(w
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert psql('select count(*) from public.beneficiaires') == '4'
-    injected, = (tmp_path / 'drop' / 'succes').glob('beneficiaires-insertion-3-*.csv')
+    injected, = (tmp_path / 'drop' / 'succes').glob('*/beneficiaires-insertion-3-*.csv')
     with injected.open(encoding='utf-8', newline='') as handle:
         injected_codes = {row['id_psp'] for row in csv.DictReader(handle, delimiter=';')}
     assert injector.injected_at < min(apis.mail_times)
@@ -384,7 +386,7 @@ def test_a_run_stopped_after_lamp01_blocks_the_next_ones_until_resumed(workspace
     assert len(apis.mails) == 3
     assert statuts(apis)[1] == 'Code envoyé'
     assert [field for field, _ in apis.dn_mutations][-1] == 'dossierAccepter'
-    assert len(list((tmp_path / 'drop' / 'succes').glob('beneficiaires-insertion-*.csv'))) == 1
+    assert len(list((tmp_path / 'drop' / 'succes').glob('*/beneficiaires-insertion-*.csv'))) == 1
 
 
 def test_a_drop_refused_by_production_is_never_replayed(workspace, apis, injector):
