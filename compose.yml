@@ -5,7 +5,7 @@ services:
     # Debian rather than alpine: musl gives worker threads a 128 KB stack where glibc gives
     # 8 MB, and Next's CSS pipeline overflows it parsing dsfr.min.css — 737 KB on a single
     # line — as an intermittent "Maximum call stack size exceeded".
-    image: node:25
+    image: node:26
     working_dir: /site
     ports:
       - '3000:3000'

@@ -7,7 +7,7 @@
 ## Node version
 
 Before running **any** `node`, `npm`, `npx`, `yarn` or `pnpm` command, switch to the
-version pinned in `.nvmrc` (currently `25`). The shell used by tools is
+version pinned in `.nvmrc` (currently `26`). The shell used by tools is
 non-interactive, so nvm must be sourced explicitly in the same command:
 
 ```bash

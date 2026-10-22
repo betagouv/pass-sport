@@ -1,5 +1,6 @@
-FROM node:22-alpine AS base
-RUN corepack enable pnpm
+FROM node:26-alpine AS base
+# Node 25+ images no longer ship corepack.
+RUN npm install -g pnpm@12.5.1
 
 # Dev stage: `tsx watch` restarts the worker on source changes (hot reload).
 # compose bind-mounts worker/ over /app and provides empty node_modules + pnpm-store
@@ -12,18 +13,17 @@ RUN corepack enable pnpm
 # It is --inspect, not --inspect-brk, so nothing waits for a debugger to show up.
 FROM base AS dev
 WORKDIR /app
-ENV NODE_ENV=development \
-    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+ENV NODE_ENV=development
 CMD ["sh", "-c", "pnpm install --frozen-lockfile --store-dir /pnpm-store && exec pnpm dev:debug"]
 
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 FROM base AS builder
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 # tsconfig.build.json is what `pnpm build` compiles with — tsconfig.json also covers
 # test/, which is not copied into the image.
