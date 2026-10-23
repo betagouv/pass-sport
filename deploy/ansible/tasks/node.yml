@@ -67,6 +67,8 @@
     # main sur la machine. Sous Ansible, sans TTY, ça bloque ou échoue selon le module.
     COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
 
+# Elles servent aussi aux mails de code des pipelines support et Grist + DN
+# (`pnpm codes:aah-emails`, `pnpm codes:support-emails`, lancés depuis data/2026/).
 - name: Dépendances du worker
   ansible.builtin.shell: |
     set -euo pipefail

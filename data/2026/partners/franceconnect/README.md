@@ -153,7 +153,7 @@ L'entrée de crontab n'est plus posée à la main : elle l'est par
 `pass-sport-fc` — rejouer le playbook ne la duplique donc pas.
 
 ```crontab
-30 0,6,12,18 * * * /chemin/vers/data/2026/partners/franceconnect/run_fc_pipeline.sh
+*/30 6-23 * * * /chemin/vers/data/2026/partners/franceconnect/run_fc_pipeline.sh
 ```
 
 ⚠️ **Elle est posée désactivée (commentée) par défaut.** Le passage dépose un CSV en

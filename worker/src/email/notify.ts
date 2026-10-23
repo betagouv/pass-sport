@@ -86,7 +86,7 @@ export const EMAIL_TEMPLATES: Record<EmailKind, EmailTemplate> = {
   },
 };
 
-const templateIdFor = (kind: EmailKind): number => {
+export const templateIdFor = (kind: EmailKind): number => {
   const { templateEnv } = EMAIL_TEMPLATES[kind];
   const raw = process.env[templateEnv];
 
