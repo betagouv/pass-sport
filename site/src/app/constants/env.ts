@@ -14,6 +14,8 @@ export const FC_DEBUGGING_ONLY = FC_ENABLED_FOR_DEBUGGING && !CODES_OBTAINABLE;
 export const FC_RELANCE_ENABLED = process.env.FC_RELANCE_ENABLED === 'yes';
 export const FC_RELANCE_ALLOWLIST_ONLY = process.env.FC_RELANCE_ALLOWLIST_ONLY === 'yes';
 
+export const FC_DN_DOSSIER_ENABLED = process.env.FC_DN_DOSSIER_ENABLED === 'yes';
+
 const DEFAULT_FC_RELANCE_COOLDOWN_DAYS = 2;
 
 const readCooldownDays = (): number => {

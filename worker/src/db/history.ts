@@ -4,7 +4,7 @@ import { eligibilityHistory } from "./schema";
 
 // Who performed the action. 'cron' is emitted from raw SQL by the code write-back under
 // data/2026/partners/franceconnect, never through this recorder.
-export type HistoryActor = "api_particulier" | "lca" | "worker" | "cron";
+export type HistoryActor = "api_particulier" | "lca" | "worker" | "cron" | "demarche_numerique";
 
 export type HistoryStatus =
   | "success"

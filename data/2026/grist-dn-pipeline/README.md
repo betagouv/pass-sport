@@ -235,6 +235,15 @@ catégorie seulement. `GRIST_API_URL` se termine par `/api` (`https://grist.nume
 `GRIST_DOC_ID` est l'identifiant du document dans son URL, `GRIST_TABLE_ID` l'id de la table (pas
 le nom de la page).
 
+### Dossiers pré-remplis depuis l'espace FranceConnect
+
+Le worker pré-remplit aussi des dossiers de cette démarche. Il le fait quand un usager
+FranceConnect refusé clique sur « Vous pensez être éligible ? » (voir
+[worker/README.md](../../../worker/README.md#dossier-démarche-numérique-pré-rempli)). Il retrouve
+les champs par les mêmes libellés que `mapping.py`, recopiés dans
+`worker/src/demarche-numerique/champs-resolver.ts`. Un libellé renommé ici doit l'être là aussi,
+puis `pnpm dn:champs` relancé dans `worker/`.
+
 ### À faire une fois, à la main
 
 - Dans la démarche DN (interface d'administration, l'API ne sait pas les créer) :

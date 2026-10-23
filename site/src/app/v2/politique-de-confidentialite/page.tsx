@@ -304,6 +304,20 @@ export default function PolitiqueDeConfidentialite() {
                     </td>
                   </tr>
                   <tr>
+                    <td>Démarche Numérique (DINUM)</td>
+                    <td>Union européenne</td>
+                    <td>Dossier de vérification pré-rempli, à la demande de l&apos;usager</td>
+                    <td>
+                      <Link
+                        href="https://doc.demarche.numerique.gouv.fr/politique-de-confidentialite"
+                        target="_blank"
+                        aria-label="Ouvrir une nouvelle fenêtre vers le site Démarche Numérique sur le traitement des données personnelles"
+                      >
+                        https://doc.demarche.numerique.gouv.fr/politique-de-confidentialite
+                      </Link>
+                    </td>
+                  </tr>
+                  <tr>
                     <td>Vimeo</td>
                     <td>États-Unis</td>
                     <td>
@@ -323,6 +337,12 @@ export default function PolitiqueDeConfidentialite() {
                 </tbody>
               </table>
             </div>
+            <p className="fr-mb-2w">
+              Lorsque vous demandez, depuis votre espace FranceConnect, la vérification d&apos;une
+              situation jugée non éligible, les informations transmises par FranceConnect et par les
+              organismes consultés (CNAF, CCMSA, CNOUS) sont communiquées à Démarche Numérique pour
+              pré-remplir votre dossier de vérification.
+            </p>
             <p className="fr-mb-2w">
               Des cookies et traceurs sont déposés si vous décidez de l&apos;accepter pour consulter
               les vidéos proposées par Vimeo sur la page d&apos;accueil du site ainsi que la page

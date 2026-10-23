@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import {
   boolean,
   check,
@@ -12,6 +12,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import type { OutcomeEmailKind } from "../email/notify";
@@ -327,7 +328,7 @@ export const eligibilityHistory = pgTable(
     // is recognised by its status sequence instead.
     attempt: integer("attempt").notNull().default(0),
 
-    // 'api_particulier' | 'lca' | 'worker' | 'cron'
+    // 'api_particulier' | 'lca' | 'worker' | 'cron' | 'demarche_numerique'
     actor: text("actor").notNull(),
 
     // 'dss.quotient_familial' | 'dss.aah' | 'cnous.etudiant_boursier' | 'dss.aeeh'
@@ -355,6 +356,10 @@ export const eligibilityHistory = pgTable(
     //   (jobs/fc-relance.ts). Une ligne par bénéficiaire re-jugé, plus une ligne job-level quand
     //   la relance est refusée d'emblée (quota, aucune cible). C'est aussi cette
     //   action que lit le garde-fou du quota, via la vue fc_relance_last_by_sub.
+    // | 'dn.dossier_prefill' — dossier Démarche Numérique pré-rempli à la demande de l'usager
+    //   (jobs/fc-dn-dossier.ts) : body_payload porte les valeurs envoyées, jamais le lien ni
+    //   son jeton.
+    // | 'dn.dossier_etat' — état de ce dossier relu sur Démarche Numérique.
     action: text("action").notNull(),
 
     // 'success' | 'not_found' | 'error' | 'rate_limited' | 'skipped'
@@ -430,6 +435,58 @@ export const fcRelanceLastBySub = pgView("fc_relance_last_by_sub").as((qb) =>
         and ${eligibilityHistory.allocataireFcSub} is not null`,
     )
     .groupBy(eligibilityHistory.allocataireFcSub),
+);
+
+// The Démarche Numérique dossier pre-filled for a FranceConnect user who contests a refusal
+// (jobs/fc-dn-dossier.ts). One live row per user and démarche; a dossier DN no longer lists is
+// set to 'gone' and replaced by a new row, never deleted.
+export const fcDnDossiers = pgTable(
+  "fc_dn_dossiers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    allocataireFcSub: text("allocataire_fc_sub").notNull(),
+    demarcheNumber: integer("demarche_number").notNull(),
+    dossierNumber: integer("dossier_number").notNull(),
+    dossierId: text("dossier_id").notNull(),
+
+    // Bearer secrets: until the dossier is claimed, whoever holds the URL takes it, with the
+    // data pre-filled in it. Never logged, never journaled.
+    prefillToken: text("prefill_token").notNull(),
+    dossierUrl: text("dossier_url").notNull(),
+
+    // DN's vocabulary ('prefilled' while unclaimed, then brouillon, en_construction,
+    // en_instruction, accepte, refuse, sans_suite), plus 'gone'. No CHECK: DN owns the list.
+    state: text("state").notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    // Also when DN was last asked about the dossier: every lookup updates the row.
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("fc_dn_dossiers_dossier_number_idx").on(t.dossierNumber),
+    uniqueIndex("fc_dn_dossiers_live_sub_idx")
+      .on(t.allocataireFcSub, t.demarcheNumber)
+      .where(sql`${t.state} <> 'gone'`),
+  ],
+);
+
+// The dossier the site offers a FranceConnect user: their latest live one. The prefill URL is
+// projected because the site hands it to its owner while the dossier is still unclaimed.
+export const fcDnDossierBySub = pgView("fc_dn_dossier_by_sub").as((qb) =>
+  qb
+    .selectDistinctOn([fcDnDossiers.allocataireFcSub], {
+      sub: sql<string>`${fcDnDossiers.allocataireFcSub}`.as("sub"),
+      dossierNumber: fcDnDossiers.dossierNumber,
+      dossierUrl: fcDnDossiers.dossierUrl,
+      state: fcDnDossiers.state,
+      submittedAt: fcDnDossiers.submittedAt,
+      createdAt: fcDnDossiers.createdAt,
+    })
+    .from(fcDnDossiers)
+    .where(sql`${fcDnDossiers.state} <> 'gone'`)
+    .orderBy(fcDnDossiers.allocataireFcSub, desc(fcDnDossiers.createdAt)),
 );
 
 // The public LCA dashboards, as the LCA host extracts them every day (specs/dashboard/). Each
