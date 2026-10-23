@@ -144,17 +144,19 @@ export default function PassSportNavigation({ pocUserName, pocUserEmail }: Props
           text: item.text,
         }))}
       />
-      <Notice
-        severity="info"
-        title="La campagne pass Sport 2026-2027 est ouverte jusqu’au 31 décembre 2026."
-        // link={{
-        //   linkProps: {
-        //     href: '/v2/une-question',
-        //     title: "Plus d'informations - nouvelle fenêtre",
-        //   },
-        //   text: "Plus d'informations",
-        // }}
-      />
+      {isActive('/v2/une-question') ? (
+        <Notice
+          severity="warning"
+          title="Interruption temporaire du Compte Asso"
+          description="Suite à une faille de sécurité mondiale, la plateforme Le Compte Asso est temporairement fermée, empêchant les clubs de saisir les codes pass Sport. Le service sera rétabli dès que possible."
+          classes={{ description: styles['notice-description'] }}
+        />
+      ) : (
+        <Notice
+          severity="info"
+          title="La campagne pass Sport 2026-2027 est ouverte jusqu’au 31 décembre 2026."
+        />
+      )}
     </div>
   );
 }
