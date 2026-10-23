@@ -2,6 +2,7 @@
 // other module loads. Only initializes when SENTRY_DSN and ENV are both set, so
 // local/dev (neither set) is a no-op and captures elsewhere silently drop.
 import * as Sentry from "@sentry/node";
+import { isDnPrefillRequest, scrubHttpBreadcrumb } from "./sentry-scrub";
 
 if (process.env.SENTRY_DSN && process.env.ENV) {
   Sentry.init({
@@ -12,6 +13,10 @@ if (process.env.SENTRY_DSN && process.env.ENV) {
     // Identities flow through this process; never let Sentry attach them.
     // Captures must stay PII-free at the call site too.
     sendDefaultPii: false,
+    beforeBreadcrumb: scrubHttpBreadcrumb,
+    integrations: [
+      Sentry.nativeNodeFetchIntegration({ ignoreOutgoingRequests: isDnPrefillRequest }),
+    ],
   });
   console.info("[pass-sport-worker] Sentry initialized for " + process.env.ENV);
 }

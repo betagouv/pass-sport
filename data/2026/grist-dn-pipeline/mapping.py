@@ -54,6 +54,8 @@ GRIST_STATUT = {
 
 # --- Démarches Numériques ---------------------------------------------------------
 
+# Also read by the worker, which pre-fills dossiers from the espace FranceConnect: keep
+# worker/src/demarche-numerique/champs-resolver.ts in step, then run `pnpm dn:champs` there.
 DN_CHAMPS = {
     'allocataire_genre': "Genre de l'allocataire",
     'adresse': 'Adresse de résidence',

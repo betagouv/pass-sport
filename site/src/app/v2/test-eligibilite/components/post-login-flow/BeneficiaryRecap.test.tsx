@@ -369,4 +369,55 @@ describe('BeneficiaryRecap', () => {
       });
     });
   });
+
+  describe('dossier Démarche Numérique', () => {
+    const DN_LABEL = 'Vous pensez être éligible ?';
+
+    const renderWithDn = (
+      beneficiaries: BeneficiaryResult[],
+      dnDossierEnabled: boolean | undefined,
+      hasDnDossier = false,
+    ) =>
+      render(
+        <BeneficiaryRecap
+          beneficiaries={beneficiaries}
+          allocataireIdentity={ALLOCATAIRE_IDENTITY}
+          dnDossierEnabled={dnDossierEnabled}
+          hasDnDossier={hasDnDossier}
+        />,
+      );
+
+    it('est proposé dès qu’un bénéficiaire est refusé', () => {
+      renderWithDn(
+        [
+          beneficiary({ verdict: 'eligible_pending' }),
+          beneficiary({ source: 'enfant', verdict: 'not_eligible' }),
+        ],
+        true,
+      );
+
+      expect(screen.getByRole('button', { name: DN_LABEL })).toBeInTheDocument();
+    });
+
+    it.each([
+      ['le drapeau est baissé', false],
+      ['le drapeau est absent', undefined],
+    ])('est absent quand %s, même avec un refus', (_label, dnDossierEnabled) => {
+      renderWithDn([beneficiary({ verdict: 'not_eligible' })], dnDossierEnabled);
+
+      expect(screen.queryByRole('button', { name: DN_LABEL })).not.toBeInTheDocument();
+    });
+
+    it('est absent sans refus ni dossier', () => {
+      renderWithDn([beneficiary({ verdict: 'eligible_confirmed' })], true);
+
+      expect(screen.queryByRole('button', { name: DN_LABEL })).not.toBeInTheDocument();
+    });
+
+    it('rend le dossier existant, même sans refus', () => {
+      renderWithDn([beneficiary({ verdict: 'eligible_confirmed' })], true, true);
+
+      expect(screen.getByRole('button', { name: 'Accéder à mon dossier' })).toBeInTheDocument();
+    });
+  });
 });
