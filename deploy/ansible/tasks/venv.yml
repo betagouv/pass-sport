@@ -15,6 +15,18 @@
   become: true
   become_user: "{{ pass_sport_user }}"
 
+# Le pipeline Grist + Démarches Numériques (data/2026/grist-dn-pipeline/) ne demande rien de plus
+# que data/requirements.txt (requests pour ses clients d'API, python-dotenv, pandas). Son import
+# complet, sous le compte qui le lance en cron, le prouve ici plutôt qu'à 3 h du matin. Il ne
+# lit ni data/.env ni aucune API ; `-B` n'écrit aucun __pycache__ dans le dépôt.
+- name: Dépendances Python du pipeline Grist + DN
+  become: true
+  become_user: "{{ pass_sport_user }}"
+  ansible.builtin.command:
+    cmd: "{{ pass_sport_repo }}/data/.venv/bin/python -B -c 'import grist_dn_pipeline, apercu'"
+    chdir: "{{ pass_sport_repo }}/data/2026/grist-dn-pipeline"
+  changed_when: false
+
 # Sans ce kernelspec, `nbconvert --execute` échoue sur « No such kernel named python3 » :
 # les 13 notebooks déclarent ce nom, et pip seul n'enregistre rien.
 #
