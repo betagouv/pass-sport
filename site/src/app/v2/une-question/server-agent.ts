@@ -1,6 +1,6 @@
 'use server';
 
-import { getCrispArticles, getFormattedCategories } from '@/utils/faq';
+import { getFormattedCategories } from '@/utils/faq';
 import { initCrispClient } from '@/utils/crisp';
 import * as Sentry from '@sentry/nextjs';
 import { CATEGORY_IDENTIFIERS, CATEGORY_IDENTIFIER_TYPE, CategoryWithArticles } from '@/types/Faq';
@@ -21,15 +21,9 @@ export const getCategoriesWithArticles = async ({
   }
 
   try {
-    const articles = await getCrispArticles({
+    return await getFormattedCategories({
       crispClient,
       crispIdentifier: CRISP_WEBSITE,
-    });
-
-    return getFormattedCategories({
-      crispClient,
-      crispIdentifier: CRISP_WEBSITE,
-      articles,
       categoryIdentifier,
     });
   } catch (err) {

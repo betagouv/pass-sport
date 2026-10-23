@@ -1,14 +1,14 @@
-import Crisp from 'crisp-api';
-import { CrispArticle, CrispCategory, CrispFullArticle } from '@/types/Crisp';
-import { Article, CATEGORY_IDENTIFIER_TYPE, CategoryWithArticles } from '@/types/Faq';
+import Crisp, { HelpdeskContentType, type HelpdeskTreeEntry } from 'crisp-api';
+import type { Article, CATEGORY_IDENTIFIER_TYPE, CategoryWithArticles } from '@/types/Faq';
 import NodeCache from 'node-cache';
 
-type Locale = 'fr' | 'en';
 const LOCALE = 'fr';
+const CONTENT_TYPE = HelpdeskContentType.Articles;
 
 const CACHE_DURATION = 7_200; // 2 hours in seconds
 const CHECK_PERIOD = 3_600; // 1 hour in seconds
-const HIGHEST_ORDER = 999; // the articles/categories that have this order will be displayed last
+const CACHE_KEY = 'KNOWLEDGE-BASE';
+const MAX_PAGES = 20; // guards against a listing that never returns an empty page
 
 const cache = new NodeCache({
   checkperiod: CHECK_PERIOD,
@@ -16,192 +16,113 @@ const cache = new NodeCache({
   stdTTL: CACHE_DURATION,
 });
 
-export enum CacheKey {
-  ARTICLES = 'ARTICLES',
-  FULL_ARTICLE = 'FULL-ARTICLE',
+type NamedTreeEntry = HelpdeskTreeEntry & { slug: string; title: string };
+
+const isDirectory = (entry: HelpdeskTreeEntry): entry is NamedTreeEntry =>
+  entry.type === 'directory' && !!entry.slug && !!entry.title;
+
+const isPublishedFile = (entry: HelpdeskTreeEntry): entry is NamedTreeEntry =>
+  entry.type === 'file' &&
+  !!entry.slug &&
+  !!entry.title &&
+  entry.state?.published === true &&
+  !entry.state.hidden;
+
+// Crisp listings are paginated, an empty page marks the end
+async function listAllPages<T>(listPage: (pageNumber: number) => Promise<T[]>): Promise<T[]> {
+  const entries: T[] = [];
+
+  for (let pageNumber = 1; pageNumber <= MAX_PAGES; pageNumber++) {
+    const page = await listPage(pageNumber);
+
+    if (!page?.length) break;
+
+    entries.push(...page);
+  }
+
+  return entries;
+}
+
+// Top-level directories of the knowledge base are the FAQ categories, their published files the
+// articles, both in the order set in Crisp
+async function getKnowledgeBase(
+  crispClient: Crisp,
+  crispIdentifier: string,
+): Promise<CategoryWithArticles[]> {
+  const cachedCategories = cache.get<CategoryWithArticles[]>(CACHE_KEY);
+
+  if (cachedCategories) return cachedCategories;
+
+  const listTree = (subPath?: string) =>
+    listAllPages((pageNumber) =>
+      crispClient.website.listHelpdeskTree(
+        crispIdentifier,
+        LOCALE,
+        CONTENT_TYPE,
+        pageNumber,
+        subPath,
+      ),
+    );
+
+  const [rootEntries, pages] = await Promise.all([
+    listTree(),
+    listAllPages((pageNumber) =>
+      crispClient.website.listHelpdeskPages(crispIdentifier, LOCALE, CONTENT_TYPE, pageNumber),
+    ),
+  ]);
+  const entityIdByTreePath = new Map(pages.map((page) => [page.tree_path, page.entity_id]));
+
+  const categories = await Promise.all(
+    rootEntries.filter(isDirectory).map(async (directory) => {
+      const files = (await listTree(directory.slug)).filter(isPublishedFile);
+
+      const articles = await Promise.all(
+        files.map(async (file): Promise<Article> => {
+          const treePath = `${directory.slug}/${file.slug}`;
+          const { content } = await crispClient.website.resolveHelpdeskTreeContent(
+            crispIdentifier,
+            LOCALE,
+            CONTENT_TYPE,
+            treePath,
+          );
+
+          return {
+            id: entityIdByTreePath.get(treePath) ?? treePath,
+            title: file.title,
+            content: content ?? '',
+          };
+        }),
+      );
+
+      return { id: directory.slug, name: directory.title, articles };
+    }),
+  );
+
+  cache.set(CACHE_KEY, categories);
+
+  return categories;
 }
 
 export async function getFormattedCategories({
   crispClient,
-  articles,
   crispIdentifier,
   categoryIdentifier,
 }: {
   crispClient: Crisp;
-  articles: CrispArticle[];
   crispIdentifier: string;
   categoryIdentifier: CATEGORY_IDENTIFIER_TYPE;
 }): Promise<CategoryWithArticles[]> {
-  const categories = new Map<string, CategoryWithArticles>();
-  const fullArticlePromises = articles
-    .filter((article) => article.category?.category_id)
-    .map((article, _) =>
-      getCrispFullArticle({
-        crispClient,
-        articleId: article.article_id,
-        crispIdentifier,
-        locale: LOCALE,
-      })
-        .then((fullArticle) => ({
-          article,
-          fullArticle,
-        }))
-        .catch(() => {
-          return {
-            article: null,
-            fullArticle: null,
-          };
-        }),
-    );
+  const categories = await getKnowledgeBase(crispClient, crispIdentifier);
 
-  const fullArticles = await Promise.all(fullArticlePromises);
-  const fullListOfCategories = await getCrispCategories({ crispClient, crispIdentifier });
-
-  fullArticles
+  return categories
     .filter(
-      ({ article, fullArticle }) =>
-        article !== null && fullArticle !== null && fullArticle?.visibility === 'visible',
+      (category) =>
+        category.articles.length > 0 && category.name.toLowerCase().includes(categoryIdentifier),
     )
-    .forEach(({ article, fullArticle }) => {
-      // Type narrowing despite filter above
-      if (!article || !fullArticle || !article.category) return;
-
-      const isWithinCategory = article.category?.name.toLowerCase().includes(categoryIdentifier);
-
-      if (!isWithinCategory) return;
-
-      // category cannot be null with the code above that does the filtering
-      const categoryId = article.category.category_id;
-
-      const formattedArticle = getFormattedArticleWithContent(article, fullArticle.content);
-      const category = categories.get(categoryId);
-
-      if (category) {
-        category.articles.push(formattedArticle);
-      } else {
-        categories.set(categoryId, {
-          id: categoryId,
-          order:
-            fullListOfCategories.find((category) => category.category_id === categoryId)?.order ||
-            HIGHEST_ORDER,
-          // category cannot be null with the code above that does the filtering
-          name: stripCategoryIdentifier(article.category.name, categoryIdentifier),
-          articles: [formattedArticle],
-        });
-      }
-    });
-
-  // Sort categories & articles by order
-  return Array.from(categories.values())
-    .sort((categoryA, categoryB) => categoryA.order - categoryB.order)
     .map((category) => ({
       ...category,
-      articles: category.articles.sort((a, b) => a.order - b.order),
+      name: stripCategoryIdentifier(category.name, categoryIdentifier),
     }));
-}
-
-export async function getCrispCategories({
-  crispClient,
-  crispIdentifier,
-  locale = LOCALE,
-}: {
-  crispClient: Crisp;
-  crispIdentifier: string;
-  locale?: Locale;
-}): Promise<CrispCategory[]> {
-  try {
-    return (await crispClient.website.listHelpdeskLocaleCategories(
-      crispIdentifier,
-      locale,
-    )) as unknown as CrispCategory[];
-  } catch (err) {
-    console.error('Error while trying to get list of categories', err);
-    return [];
-  }
-}
-
-// Get list of articles, but these don't contain the "content" attribute
-export async function getCrispArticles({
-  crispClient,
-  crispIdentifier,
-  locale = LOCALE,
-}: {
-  crispClient: Crisp;
-  crispIdentifier: string;
-  locale?: Locale;
-}): Promise<CrispArticle[]> {
-  try {
-    let articles: CrispArticle[] | undefined = cache.get(CacheKey.ARTICLES);
-
-    // todo: quick fix, need to iterate through all the pages with the crisp sdk
-    if (articles === undefined) {
-      articles = [
-        ...((await crispClient.website.listHelpdeskLocaleArticles(
-          crispIdentifier,
-          locale,
-          1,
-        )) as CrispArticle[]),
-        ...((await crispClient.website.listHelpdeskLocaleArticles(
-          crispIdentifier,
-          locale,
-          2,
-        )) as CrispArticle[]),
-        ...((await crispClient.website.listHelpdeskLocaleArticles(
-          crispIdentifier,
-          locale,
-          3,
-        )) as CrispArticle[]),
-      ];
-
-      cache.set(CacheKey.ARTICLES, articles);
-    }
-
-    return articles;
-  } catch (err) {
-    console.error('Error occured while trying to get list of articles', err);
-
-    return [];
-  }
-}
-
-// Get a full article that contains the "content" attribute
-export async function getCrispFullArticle({
-  crispClient,
-  articleId,
-  crispIdentifier,
-  locale = LOCALE,
-}: {
-  crispClient: Crisp;
-  articleId: string;
-  crispIdentifier: string;
-  locale?: Locale;
-}) {
-  const cacheKey = `${CacheKey.FULL_ARTICLE}-${articleId}`;
-  let fullArticle: CrispFullArticle | undefined = cache.get(cacheKey);
-
-  if (fullArticle === undefined) {
-    fullArticle = (await crispClient.website.resolveHelpdeskLocaleArticle(
-      crispIdentifier,
-      locale,
-      articleId,
-    )) as unknown as CrispFullArticle;
-
-    cache.set(cacheKey, fullArticle);
-  }
-
-  return fullArticle;
-}
-
-export function getFormattedArticleWithContent(article: CrispArticle, content: string): Article {
-  return {
-    id: article.article_id,
-    title: article.title,
-    order: article.order || HIGHEST_ORDER,
-    url: article.url,
-    createdAt: article.created_at,
-    updatedAt: article.updated_at,
-    content,
-  };
 }
 
 function stripCategoryIdentifier(title: string, categoryIdentifier: CATEGORY_IDENTIFIER_TYPE) {
