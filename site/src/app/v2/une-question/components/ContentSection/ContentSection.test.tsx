@@ -16,15 +16,10 @@ const CATEGORIES: CategoryWithArticles[] = [
   {
     id: 'category-1',
     name: 'Obtenir son code',
-    order: 1,
     articles: [
       {
         id: 'article-1',
         title: 'Comment obtenir mon code ?',
-        order: 1,
-        url: '',
-        createdAt: 0,
-        updatedAt: 0,
         content: 'En faisant une demande sur le site.',
       },
     ],

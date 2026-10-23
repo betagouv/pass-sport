@@ -66,13 +66,6 @@ export default function ContentSection({ categoriesWithArticles, isFromMainPage 
                 <div className={styles['faq__markdown']}>
                   <Markdown remarkPlugins={[remarkBreaks]}>{article.content}</Markdown>
                 </div>
-
-                <footer
-                  className={cn(styles['arkdown__feedback-date'], 'fr-text--sm')}
-                  suppressHydrationWarning
-                >
-                  Mis à jour le : {new Date(article.updatedAt).toLocaleDateString()}
-                </footer>
               </article>
             </Accordion>
           ))}
