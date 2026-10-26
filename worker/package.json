@@ -43,7 +43,7 @@
     "drizzle-kit": "^0.31.11",
     "testcontainers": "^12.2.1",
     "tsc-alias": "^1.9.7",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }
