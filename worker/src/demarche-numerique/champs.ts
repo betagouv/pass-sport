@@ -1,7 +1,7 @@
 // Prefill ids of the support démarche's champs, per démarche number. Written and checked by
 // `pnpm dn:champs` (scripts/dn-champs.ts), never by hand: DN silently drops a value sent under an
 // unknown id or outside a champ's options. Their labels are the ones
-// data/2026/grist-dn-pipeline/mapping.py reads submitted dossiers by.
+// data/2026/dn-pipeline/mapping.py reads submitted dossiers by.
 
 export type DnChamp = { id: string };
 

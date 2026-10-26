@@ -99,7 +99,7 @@ The offline `qf:batch` runs on the processing machine with its own in-memory pac
 
 A FranceConnect household with at least one `not_eligible` beneficiary gets a « Vous pensez être
 éligible ? » button on the site. The click asks this worker for a dossier on the support démarche
-that the [grist-dn pipeline](../data/2026/grist-dn-pipeline/) processes, through its own queue
+that the [DN pipeline](../data/2026/dn-pipeline/) processes, through its own queue
 `codes-queue-dn-dossiers` (never behind the FranceConnect backlog). The job
 ([src/jobs/fc-dn-dossier.ts](src/jobs/fc-dn-dossier.ts)):
 
@@ -120,7 +120,7 @@ What goes in the dossier is
 - the AEEH answer for each child;
 - the foyer and children questions.
 
-A « non » is only sent when an answer says so: grist-dn grants on these answers. The values sent
+A « non » is only sent when an answer says so: the DN pipeline grants on these answers. The values sent
 are journaled as `dn.dossier_prefill` (`body_payload`), and state lookups as `dn.dossier_etat`.
 With `HISTORY_PAYLOAD=0` the journal holds no API data, and the dossier carries the FranceConnect
 identity alone.
@@ -145,7 +145,7 @@ after every change to the démarche:
 pnpm dn:champs 159278    # reads DN_API_TOKEN from the environment or ../data/.env
 ```
 
-The script lists the démarche's champs and resolves them by the labels grist-dn reads them by
+The script lists the démarche's champs and resolves them by the labels the DN pipeline reads them by
 (`mapping.py`). It prints the entry `champs.ts` must hold, and exits 1 when that entry differs or
 a champ cannot be resolved. The token stays on the machine that runs it: the prefill API needs
 none, and it never goes on Scalingo.

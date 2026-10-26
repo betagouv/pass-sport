@@ -6,7 +6,7 @@
 -- (clean_fc_lib.build_cnaf_extra_field_rows): its beneficiaires row holds the birth name in
 -- `nom`, where the CAF strategies of match_beneficiaires.sql expect the CNAF usage name, so
 -- this table is the only place they can find that code again. FranceConnect rows always
--- carry the birth name, birthdate and genre.
+-- carry the birth name, birthdate and genre. dn-pipeline writes the same row for its CAF codes.
 --
 -- A side table rather than more beneficiaires columns: only CAF rows carry these, and only
 -- in lamp01. inject_csv.sh fills both from one CSV - its beneficiaires columns (the

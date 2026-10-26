@@ -1,10 +1,10 @@
-"""Source vocabularies of the Grist table and the DN démarche, and the texts sent back.
+"""Vocabulary of the DN démarche, and the texts sent back.
 
 Every label is compared folded (no accents, no case, single spaces, see `fold`), so a
-renamed column only needs its new label here. Situations and caisses are recognised by
-keyword, the sources spelling them out in full (« AAH (allocation aux adultes handicapés) »).
+renamed champ only needs its new label here. Situations and caisses are recognised by
+keyword, the démarche spelling them out in full (« AAH (allocation aux adultes handicapés) »).
 
-Checked against the real sources with apercu_grist.sh and apercu_dn.sh (2026-10-16).
+Checked against the real démarche with apercu_dn.sh (2026-10-16).
 """
 
 import re
@@ -17,40 +17,6 @@ def fold(value) -> str:
     folded = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode()
     return ' '.join(folded.replace('_', ' ').lower().split())
 
-
-# --- Grist ------------------------------------------------------------------------
-
-# Internal name -> column label in the Grist UI (resolved to column ids at runtime).
-GRIST_COLUMNS = {
-    'caisse': 'Caisse',
-    'genre': 'Genre',
-    'prenom': "Prénom de l'enfant",
-    'nom': "Nom de l'enfant",
-    'date_naissance': 'Date de naissance',
-    'situation': 'Situation',
-    'allocataire_genre': 'Genre allocataire',
-    'allocataire_prenom': 'Prénom du parent allocataire',
-    'allocataire_nom': 'Nom du parent allocataire',
-    'matricule': 'n° allocataire ou INE',
-    'email': 'Email',
-    'code_insee': 'Code INSEE',
-    'eligibilite': 'Eligibilité',
-    'commentaire': 'Commentaire',
-    'statut': 'Statut',
-    'code': 'Code',
-}
-
-# Values of the `Eligibilité` choice column that let a row in (Oui / Non / empty met).
-GRIST_ELIGIBLE_VALUES = {'oui'}
-
-GRIST_STATUT = {
-    'code_envoye': 'Code envoyé',
-    'doublon': 'Doublon',
-    'a_verifier': 'À vérifier',
-    'rejete': 'Rejeté',
-    # Coded, but production's injector filed the drop in failed/.
-    'refuse_prod': 'Rejeté',
-}
 
 # --- Démarches Numériques ---------------------------------------------------------
 
@@ -103,12 +69,10 @@ DN_LABELS = {
 DN_ANNOTATION_CODES = 'Codes pass Sport'
 DN_ANNOTATION_TYPE = 'TextareaChampDescriptor'
 
-# --- Shared vocabularies ------------------------------------------------------------
+# --- Vocabularies -------------------------------------------------------------------
 
-# Words (folded, matched whole) naming each PSP situation, as Grist's `Situation` and DN's
-# `Bénéficiaire de` spell them: « Quotient familial inférieur ou égal à 699 € »,
-# « AEEH (allocation d'éducation de l'enfant handicapé) », « AAH (allocation aux adultes
-# handicapés) ».
+# Words (folded, matched whole) naming each PSP situation, as `Bénéficiaire de` spells them:
+# « L'Allocation aux adultes handicapés (AAH) ».
 SITUATION_WORDS = {
     'AAH': ('aah', 'adultes handicapes'),
     'AEEH': ('aeeh', "education de l'enfant handicape"),
@@ -124,7 +88,7 @@ def _named(folded: str, words_by_value: dict) -> str | None:
 
 
 def situation_of_label(label) -> str | None:
-    """AAH, AEEH, jeune or boursier from a source's label; None when none or several match."""
+    """AAH, AEEH, jeune or boursier from a label; None when none or several match."""
     return _named(fold(label), SITUATION_WORDS)
 
 
@@ -156,7 +120,7 @@ NO = {'non', 'false', 'no'}
 # --- DN message to the applicant ------------------------------------------------------
 
 DN_MESSAGE_LINE = {
-    'code_envoye': "{prenom} {nom} : code pass Sport {code}, envoyé aussi par courriel à {email}.",
+    'code_envoye': "{prenom} {nom} : code pass Sport {code}.",
     'doublon': "{prenom} {nom} : un code pass Sport a déjà été attribué.",
     'a_verifier': "{prenom} {nom} : la demande est en cours de vérification par nos équipes.",
     'rejete': "{prenom} {nom} : demande non retenue ({motif}).",

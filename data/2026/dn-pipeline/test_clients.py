@@ -1,6 +1,6 @@
-"""Tests of grist_client and dn_client against fake HTTP servers.
+"""Tests of dn_client against fake HTTP servers.
 
-Run from data/ : source .venv/bin/activate && pytest 2026/grist-dn-pipeline/test_clients.py
+Run from data/ : source .venv/bin/activate && pytest 2026/dn-pipeline/test_clients.py
 """
 
 import json
@@ -12,7 +12,6 @@ import pytest
 import requests
 
 from dn_client import DnApiError, DnClient, DnMutationError
-from grist_client import GristClient
 
 
 @pytest.fixture
@@ -35,7 +34,7 @@ def server():
             self.end_headers()
             self.wfile.write(json.dumps(payload).encode())
 
-        do_GET = do_POST = do_PATCH = _answer
+        do_GET = do_POST = _answer
 
         def log_message(self, *args):
             pass
@@ -45,54 +44,6 @@ def server():
     state['url'] = f'http://127.0.0.1:{httpd.server_port}'
     yield state
     httpd.shutdown()
-
-
-# --- Grist ------------------------------------------------------------------------------
-
-def test_grist_maps_labels_to_column_ids_and_lists_records(server):
-    server['answers'] += [
-        (200, {'columns': [{'id': 'Prenom_de_l_enfant', 'fields': {'label': "Prénom de l'enfant"}}]}),
-        (200, {'records': [{'id': 3, 'fields': {'Prenom_de_l_enfant': 'Ola'}}]}),
-    ]
-    client = GristClient(f"{server['url']}/api", 'secret', 'doc1')
-
-    assert client.columns('Table1') == {"Prénom de l'enfant": 'Prenom_de_l_enfant'}
-    assert client.records('Table1') == [{'id': 3, 'fields': {'Prenom_de_l_enfant': 'Ola'}}]
-    method, path, headers, _ = server['received'][1]
-    assert (method, path) == ('GET', '/api/docs/doc1/tables/Table1/records')
-    assert headers['Authorization'] == 'Bearer secret'
-
-
-def test_grist_lists_tables_and_column_types(server):
-    server['answers'] += [
-        (200, {'tables': [{'id': 'Beneficiaires', 'fields': {}}, {'id': 'Table2', 'fields': {}}]}),
-        (200, {'columns': [{'id': 'Date', 'fields': {'label': 'Date de naissance', 'type': 'Date'}}]}),
-    ]
-    client = GristClient(server['url'], 'secret', 'doc1')
-
-    assert client.tables() == ['Beneficiaires', 'Table2']
-    assert client.column_specs('Beneficiaires') == [
-        {'id': 'Date', 'label': 'Date de naissance', 'type': 'Date'}]
-    assert [path for _, path, _, _ in server['received']] == [
-        '/docs/doc1/tables', '/docs/doc1/tables/Beneficiaires/columns']
-
-
-def test_grist_patches_in_batches_and_retries_a_busy_server(server):
-    server['answers'] += [(503, {}), (200, {}), (200, {})]
-    client = GristClient(server['url'], 'secret', 'doc1', backoff_factor=0)
-    records = [{'id': i, 'fields': {'Statut': 'Doublon'}} for i in range(501)]
-
-    client.update_records('Table1', records)
-
-    patches = [body for method, _, _, body in server['received'] if method == 'PATCH']
-    assert [len(body['records']) for body in patches] == [500, 500, 1]
-
-
-def test_grist_raises_on_a_refused_update(server):
-    server['answers'] += [(400, {'error': 'Invalid row id'})]
-    client = GristClient(server['url'], 'secret', 'doc1')
-    with pytest.raises(requests.HTTPError):
-        client.update_records('Table1', [{'id': 404, 'fields': {}}])
 
 
 # --- Démarches Numériques ---------------------------------------------------------------

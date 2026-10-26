@@ -109,7 +109,7 @@ describe("resolveChamps", () => {
   });
 });
 
-// What grist-dn will read back from each pre-filled answer.
+// What the DN pipeline will read back from each pre-filled answer.
 const GENRES = new Set([...Object.keys(GENRE_BY_LABEL), "m.", "mme"]);
 const BOOLEANS = new Set(["oui", "non", "true", "false"]);
 
@@ -133,7 +133,7 @@ const checkConfigured = (champs: DnChamps) => {
 };
 
 describe("CHAMPS_BY_DEMARCHE", () => {
-  it("only holds answers the grist-dn pipeline reads back as meant", () => {
+  it("only holds answers the DN pipeline reads back as meant", () => {
     checkConfigured(resolveChamps(DESCRIPTORS).champs);
     for (const champs of Object.values(CHAMPS_BY_DEMARCHE)) checkConfigured(champs);
   });

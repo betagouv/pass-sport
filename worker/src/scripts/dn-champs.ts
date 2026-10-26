@@ -1,6 +1,6 @@
 // Reads the support démarche's champs from the DN GraphQL API, prints the entry champs.ts must
 // hold for it and checks the one it holds. Read-only, run by hand: the DN token belongs to the
-// grist-dn pipeline (data/.env) and never goes on the worker.
+// DN pipeline (data/.env) and never goes on the worker.
 //
 //   pnpm dn:champs            # démarche DN_DEMARCHE_NUMBER
 //   pnpm dn:champs 159278

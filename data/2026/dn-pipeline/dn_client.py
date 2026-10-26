@@ -39,6 +39,8 @@ query dossiers($numero: Int!, $state: DossierState, $after: String) {
         usager { email }
         demandeur { __typename ... on PersonnePhysique { civilite nom prenom email } }
         labels { id name }
+        traitements { event emailAgentTraitant dateTraitement }
+        groupeInstructeur { instructeurs { id email } }
         champs {
           ...ChampValeur
           ... on RepetitionChamp { rows { champs { ...ChampValeur } } }

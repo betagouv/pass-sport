@@ -1,14 +1,14 @@
--- Rapprochement des bénéficiaires Grist / Démarches Numériques avec la base bénéficiaires du
--- lamp (lamp01). Indépendant de franceconnect/match_beneficiaires.sql : ce parcours n'a ni la
--- date de naissance du parent, ni la garantie que la situation ou la caisse déclarées soient
--- celles sous lesquelles l'enfant est déjà connu. On compare donc le bénéficiaire, sur TOUTES
--- les situations et caisses de l'exercice, et pour un enfant son parent en plus (type parent),
--- jamais en condition des autres types. Le n° allocataire n'entre jamais en jeu.
+-- Rapprochement des bénéficiaires Démarches Numériques avec la base bénéficiaires du
+-- lamp (lamp01). Indépendant de franceconnect/match_beneficiaires.sql : rien ne garantit que la
+-- situation ou la caisse déclarées soient celles sous lesquelles l'enfant est déjà connu. On
+-- compare donc le bénéficiaire, sur TOUTES les situations et caisses de l'exercice, et pour un
+-- enfant son parent en plus (type parent), jamais en condition des autres types. Le n°
+-- allocataire n'entre jamais en jeu.
 --
---   cd <dossier du passage>     # \copy lit grist_dn_candidats.csv dans le dossier courant
+--   cd <dossier du passage>     # \copy lit dn_candidats.csv dans le dossier courant
 --   psql "$LAMP_DATABASE_URL" -v ON_ERROR_STOP=1 -v exercice=5 \
 --        -v correspondances=/chemin/correspondances.csv -v touchees=/chemin/lamp01-touchees.csv \
---        -f match_grist_dn.sql
+--        -f match_dn.sql
 --
 -- Types de correspondance (une ligne par couple candidat / ligne lamp01) :
 --
@@ -24,9 +24,15 @@
 --                (MARTIN / MARTIN DUPONT)
 --            Deux jumeaux (même nom, même date, aucun prénom commun) ne sont pas proches.
 --   parent   enfant (AEEH, jeune) : même date de naissance et même parent, c'est-à-dire
---            mêmes nom et prénom de l'allocataire, et même genre quand les deux côtés le
---            connaissent (M / Mme). Rattrape un enfant dont le nom ou le prénom a été saisi
---            autrement (LEAH / LEA, nom de l'autre parent). Des jumeaux en relèvent aussi.
+--              - même nom de l'allocataire : celui de lamp01 (le nom d'usage côté CNAF), ou
+--                son nom de naissance de beneficiaire_cnaf_extra_field, celui que donne DN ;
+--              - prénoms contenus les uns dans les autres : la CNAF n'en garde qu'un,
+--                FranceConnect, et donc DN, les donne tous (CLAIRE / CLAIRE YSOLDE) ;
+--              - même genre (M / Mme) et même date de naissance quand les deux côtés les
+--                connaissent. La date écarte un parent homonyme ; lamp01 l'a pour la MSA, les
+--                lignes ARS et les codes FranceConnect et DN, pas pour l'AEEH de la CNAF.
+--            Rattrape un enfant dont le nom ou le prénom a été saisi autrement (LEAH / LEA,
+--            nom de l'autre parent). Des jumeaux en relèvent aussi : jamais un doublon.
 --            Seulement pour un couple que ine, exacte et proche n'ont pas déjà trouvé.
 --
 -- Le genre du bénéficiaire n'est comparé que pour un boursier sans INE : ailleurs, une erreur
@@ -34,7 +40,7 @@
 -- l'investigation.
 --
 -- Le verdict (doublon pour exacte/ine, à vérifier pour identite, proche ou parent seuls) est
--- posé par grist_dn_pipeline.py split.
+-- posé par dn_pipeline.py split.
 
 \set ON_ERROR_STOP on
 
@@ -53,7 +59,7 @@
 
 begin;
 
-create temp table gd_candidats (
+create temp table dn_candidats (
 	eligibility_result_id text not null,
 	situation text,
 	ine text,
@@ -63,13 +69,14 @@ create temp table gd_candidats (
 	genre text,
 	allocataire_genre text,
 	allocataire_nom text,
-	allocataire_prenom text
+	allocataire_prenom text,
+	allocataire_date_naissance text
 ) on commit drop;
 
--- `header match`: names and order of grist_dn_pipeline.MATCH_COLUMNS.
-\copy gd_candidats (eligibility_result_id, situation, ine, nom, prenom, date_naissance, genre, allocataire_genre, allocataire_nom, allocataire_prenom) from 'grist_dn_candidats.csv' with (format csv, header match, delimiter ';')
+-- `header match`: names and order of dn_pipeline.MATCH_COLUMNS.
+\copy dn_candidats (eligibility_result_id, situation, ine, nom, prenom, date_naissance, genre, allocataire_genre, allocataire_nom, allocataire_prenom, allocataire_date_naissance) from 'dn_candidats.csv' with (format csv, header match, delimiter ';')
 
-create temp table gd_norm on commit drop as
+create temp table dn_norm on commit drop as
 select
 	eligibility_result_id,
 	situation,
@@ -83,13 +90,14 @@ select
 	-- A boursier without INE: nothing but their identity to tell them from a namesake.
 	coalesce(situation = 'boursier', false) and nullif(btrim(ine), '') is null as boursier_sans_ine,
 	nullif(public.normalise_recherche(allocataire_nom), '') as parent_nom,
-	nullif(public.normalise_recherche(allocataire_prenom), '') as parent_prenom,
-	-- M or F, as grist_dn_pipeline writes it.
-	nullif(btrim(allocataire_genre), '') as parent_genre
-from gd_candidats;
+	string_to_array(nullif(public.normalise_recherche(allocataire_prenom), ''), ' ') as parent_prenoms,
+	-- M or F, as dn_pipeline writes it.
+	nullif(btrim(allocataire_genre), '') as parent_genre,
+	nullif(public.normalise_date_recherche(allocataire_date_naissance), '')::date as parent_naissance
+from dn_candidats;
 
 -- Only the lamp01 rows born on some candidate's birth date, names normalised once.
-create temp table gd_base on commit drop as
+create temp table dn_base on commit drop as
 select
 	b.id_psp,
 	public.normalise_recherche(b.nom) as nom,
@@ -100,26 +108,30 @@ select
 	b.genre::text as genre,
 	b.situation::text as situation,
 	nullif(public.normalise_recherche(b.allocataire_nom), '') as parent_nom,
-	nullif(public.normalise_recherche(b.allocataire_prenom), '') as parent_prenom,
+	nullif(public.normalise_recherche(x.cnaf_allocataire_nom_naissance), '') as parent_nom_naissance,
+	string_to_array(nullif(public.normalise_recherche(b.allocataire_prenom), ''), ' ') as parent_prenoms,
 	-- The civilité partners and FranceConnect write (M / Mme), raw spellings included.
 	case upper(btrim(b.allocataire_qualite))
 		when 'M' then 'M' when 'MR' then 'M' when 'MONSIEUR' then 'M'
 		when 'MME' then 'F' when 'MLLE' then 'F' when 'MADAME' then 'F' when 'MADEMOISELLE' then 'F'
-	end as parent_genre
+	end as parent_genre,
+	coalesce(nullif(public.normalise_date_recherche(b.allocataire_date_naissance), '')::date,
+	         x.cnaf_allocataire_date_naissance) as parent_naissance
 from public.beneficiaires b
+left join public.beneficiaire_cnaf_extra_field x on x.id_psp = b.id_psp
 where b.exercice_id = :exercice
   and b.id_psp is not null
-  and b.date_naissance::date in (select naissance from gd_norm where naissance is not null);
+  and b.date_naissance::date in (select naissance from dn_norm where naissance is not null);
 
-create temp table gd_correspondances (
+create temp table dn_correspondances (
 	eligibility_result_id text not null,
 	id_psp text not null,
 	type text not null
 ) on commit drop;
 
-insert into gd_correspondances (eligibility_result_id, id_psp, type)
+insert into dn_correspondances (eligibility_result_id, id_psp, type)
 select distinct n.eligibility_result_id, b.id_psp, 'ine'
-from gd_norm n
+from dn_norm n
 join public.beneficiaires b
   on b.allocataire_matricule = n.ine
  and b.organisme = 'cnous'
@@ -128,36 +140,37 @@ join public.beneficiaires b
 where n.situation = 'boursier'
   and n.ine is not null;
 
-insert into gd_correspondances (eligibility_result_id, id_psp, type)
+insert into dn_correspondances (eligibility_result_id, id_psp, type)
 select distinct n.eligibility_result_id, b.id_psp,
 	case when n.boursier_sans_ine
 	      and not coalesce(b.situation = 'boursier' and b.genre = n.genre, false)
 	     then 'identite' else 'exacte' end
-from gd_norm n
-join gd_base b
+from dn_norm n
+join dn_base b
   on b.naissance = n.naissance
  and b.nom = n.nom
  and b.prenom = n.prenom;
 
-insert into gd_correspondances (eligibility_result_id, id_psp, type)
+insert into dn_correspondances (eligibility_result_id, id_psp, type)
 select distinct n.eligibility_result_id, b.id_psp, 'proche'
-from gd_norm n
-join gd_base b
+from dn_norm n
+join dn_base b
   on b.naissance = n.naissance
 where ((b.nom = n.nom and b.prenoms && n.prenoms)
     or (b.prenom = n.prenom and b.noms && n.noms))
   and not (b.nom = n.nom and b.prenom = n.prenom);
 
-insert into gd_correspondances (eligibility_result_id, id_psp, type)
+insert into dn_correspondances (eligibility_result_id, id_psp, type)
 select distinct n.eligibility_result_id, b.id_psp, 'parent'
-from gd_norm n
-join gd_base b
+from dn_norm n
+join dn_base b
   on b.naissance = n.naissance
- and b.parent_nom = n.parent_nom
- and b.parent_prenom = n.parent_prenom
+ and n.parent_nom in (b.parent_nom, b.parent_nom_naissance)
+ and (b.parent_prenoms <@ n.parent_prenoms or n.parent_prenoms <@ b.parent_prenoms)
 where n.situation in ('AEEH', 'jeune')
   and (n.parent_genre is null or b.parent_genre is null or b.parent_genre = n.parent_genre)
-  and not exists (select 1 from gd_correspondances c
+  and (n.parent_naissance is null or b.parent_naissance is null or b.parent_naissance = n.parent_naissance)
+  and not exists (select 1 from dn_correspondances c
                   where c.eligibility_result_id = n.eligibility_result_id
                     and c.id_psp = b.id_psp);
 
@@ -167,7 +180,7 @@ where n.situation in ('AEEH', 'jeune')
 \o :correspondances
 copy (
 	select eligibility_result_id, id_psp, type
-	from gd_correspondances
+	from dn_correspondances
 	order by eligibility_result_id, type, id_psp
 ) to stdout with (format csv, header, delimiter ';');
 \o
@@ -186,27 +199,30 @@ copy (
 		b.allocataire_qualite,
 		b.allocataire_nom,
 		b.allocataire_prenom,
+		coalesce(nullif(public.normalise_date_recherche(b.allocataire_date_naissance), ''),
+		         to_char(x.cnaf_allocataire_date_naissance, 'YYYY-MM-DD')) as allocataire_date_naissance,
 		b.allocataire_courriel,
 		b.adresse_allocataire_code_insee,
 		to_char(b.created_at, 'YYYY-MM-DD"T"HH24:MI:SS') as created_at
 	from public.beneficiaires b
-	where b.id_psp in (select id_psp from gd_correspondances)
+	left join public.beneficiaire_cnaf_extra_field x on x.id_psp = b.id_psp
+	where b.id_psp in (select id_psp from dn_correspondances)
 	order by b.id_psp
 ) to stdout with (format csv, header, delimiter ';');
 \o
 
 select
-	(select count(*) from gd_candidats) as candidats,
-	(select count(distinct eligibility_result_id) from gd_correspondances where type = 'ine') as par_ine,
-	(select count(distinct eligibility_result_id) from gd_correspondances where type = 'exacte') as par_exacte,
-	(select count(distinct eligibility_result_id) from gd_correspondances where type = 'parent') as par_parent,
-	(select count(distinct eligibility_result_id) from gd_correspondances c
+	(select count(*) from dn_candidats) as candidats,
+	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'ine') as par_ine,
+	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'exacte') as par_exacte,
+	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'parent') as par_parent,
+	(select count(distinct eligibility_result_id) from dn_correspondances c
 	  where type in ('identite', 'proche', 'parent')
-	    and not exists (select 1 from gd_correspondances d
+	    and not exists (select 1 from dn_correspondances d
 	                     where d.eligibility_result_id = c.eligibility_result_id
 	                       and d.type in ('exacte', 'ine'))) as a_verifier,
-	(select count(*) from gd_candidats c
-	  where not exists (select 1 from gd_correspondances d
+	(select count(*) from dn_candidats c
+	  where not exists (select 1 from dn_correspondances d
 	                     where d.eligibility_result_id = c.eligibility_result_id)) as sans_correspondance;
 
 commit;

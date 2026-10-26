@@ -20,7 +20,7 @@ export type ChampDescriptor = {
   champDescriptors?: ChampDescriptor[] | null;
 };
 
-// The champs of data/2026/grist-dn-pipeline/mapping.py DN_CHAMPS and DN_ENFANT_CHAMPS the worker
+// The champs of data/2026/dn-pipeline/mapping.py DN_CHAMPS and DN_ENFANT_CHAMPS the worker
 // pre-fills: the address is not one, no API answer carries it. Change them together.
 export const DN_CHAMP_LABELS = {
   allocataireGenre: "Genre de l'allocataire",
