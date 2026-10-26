@@ -29,7 +29,7 @@
     "scripts:add-note-to-conversations": "node --env-file=.env.local scripts/add-note-to-conversations-for-non-existing-qf.mjs"
   },
   "dependencies": {
-    "@codegouvfr/react-dsfr": "^1.33.0",
+    "@codegouvfr/react-dsfr": "^1.36.0",
     "@react-pdf/renderer": "^4.9.0",
     "@sentry/nextjs": "^10.71.0",
     "@socialgouv/matomo-next": "1.9.2",
