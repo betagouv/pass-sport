@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.2.0",
-    "@testcontainers/redis": "^12.1.0",
+    "@testcontainers/redis": "^12.2.1",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.15.0",
     "drizzle-kit": "^0.31.11",
