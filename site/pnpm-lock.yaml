@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@codegouvfr/react-dsfr':
-        specifier: ^1.33.0
-        version: 1.33.0
+        specifier: ^1.36.0
+        version: 1.36.0
       '@react-pdf/renderer':
         specifier: ^4.9.0
         version: 4.9.0(react@19.2.8)
@@ -358,8 +358,8 @@ packages:
   '@bcoe/v8-coverage@0.2.3':
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
 
-  '@codegouvfr/react-dsfr@1.33.0':
-    resolution: {integrity: sha512-hn+rMeAvVOyc4L7NGCZA8/WiS1GHRsVxVOYRNT79LSL1mJiOA7/JAidT3IuCE1BmdS487z5ZlHv7tAuf6ZfrEg==}
+  '@codegouvfr/react-dsfr@1.36.0':
+    resolution: {integrity: sha512-+rhqdCynxyzWTeNmUbBTzsnikiTsx5IRvahlMRohObrJEReiZowAs2x8qW/OeewaNLCwyTWzRGg7fbY3Sw1qnw==}
     hasBin: true
     peerDependencies:
       '@gouvfr/dsfr-chart': ^1.0.0
@@ -5276,7 +5276,7 @@ snapshots:
 
   '@bcoe/v8-coverage@0.2.3': {}
 
-  '@codegouvfr/react-dsfr@1.33.0':
+  '@codegouvfr/react-dsfr@1.36.0':
     dependencies:
       tsafe: 1.8.12
       yargs-parser: 21.1.1
