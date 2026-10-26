@@ -16,5 +16,5 @@ playwright==1.52.0
 matplotlib==3.10.6
 matplotlib-inline==0.1.6
 pyarrow==23.0.1
-nbconvert==7.17.1
+nbconvert==7.17.2
 pytest==9.0.3  # GHSA-6w46-j5rx-g56g: world-writable tmpdir reuse
