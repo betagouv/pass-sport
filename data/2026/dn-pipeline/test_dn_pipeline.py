@@ -60,8 +60,11 @@ def instruction(number):
 
 
 def dn_dossier(number=34778465, beneficiaire_de="L'Allocation aux adultes handicapés (AAH)",
-               enfants=None, foyer='Oui', date_naissance='2000-05-04', caisse='CAF',
-               allocataire_genre='M.', code_insee='69052', ine=None, **overrides):
+               enfants=None, foyer='Oui', enfants_aeeh='Oui', date_naissance='2000-05-04',
+               caisse='CAF', caisse_enfants=None, allocataire_genre='M.', code_insee='69052',
+               ine=None, **overrides):
+    """`caisse` answers both caisse champs, the applicant's and the children's, unless
+    `caisse_enfants` is given."""
     enfants = [enfant()] if enfants is None else enfants
     return {
         'id': f'RG9zc2llci0{number}', 'number': number, 'state': 'en_instruction',
@@ -77,10 +80,12 @@ def dn_dossier(number=34778465, beneficiaire_de="L'Allocation aux adultes handic
                            'streetAddress': '4 place du Lac'}),
             champ(mapping.DN_CHAMPS['beneficiaire_de'], beneficiaire_de),
             champ(mapping.DN_CHAMPS['ine'], ine),
-            champ(mapping.DN_CHAMPS['foyer_qf_aeeh'], foyer, 'YesNoChamp'),
             champ(mapping.DN_CHAMPS['caisse'], caisse),
             champ(mapping.DN_CHAMPS['date_naissance'], '4 mai 2000', 'DateChamp',
                   date=date_naissance),
+            champ(mapping.DN_CHAMPS['caisse_enfants'], caisse if caisse_enfants is None else caisse_enfants),
+            champ(mapping.DN_CHAMPS['foyer_qf'], foyer, 'YesNoChamp'),
+            champ(mapping.DN_CHAMPS['enfants_aeeh'], enfants_aeeh, 'YesNoChamp'),
             champ(mapping.DN_CHAMPS['enfants'], '', 'RepetitionChamp', rows=enfants),
         ],
         'annotations': [{'id': f'A{number}', 'label': mapping.DN_ANNOTATION_CODES, 'stringValue': None}],
@@ -265,6 +270,24 @@ def test_dn_child_without_aeeh_outside_a_qf_household_is_rejected():
     assert "ni bénéficiaire de l'AEEH" in rows[0]['motif']
 
 
+@pytest.mark.parametrize('foyer, situation', [('Oui', 'jeune'), ('Non', '')])
+def test_dn_child_aeeh_answer_is_ignored_once_the_foyer_answered_no_aeeh(foyer, situation):
+    rows = pipeline.dn_rows(raw_dn(child_dossier(foyer=foyer, enfants_aeeh='Non', child={'aeeh': 'Oui'})))
+    assert rows[0]['situation'] == situation
+
+
+def test_dn_applicant_and_children_each_read_their_own_caisse():
+    applicant, child = pipeline.dn_rows(raw_dn(dn_dossier(caisse='MSA', caisse_enfants='CAF')))
+    assert (applicant['situation'], applicant['caisse']) == ('AAH', 'MSA')
+    assert (child['situation'], child['caisse']) == ('AEEH', 'CAF')
+
+
+def test_dn_children_only_option_gives_the_applicant_no_line():
+    rows = pipeline.dn_rows(raw_dn(dn_dossier(
+        beneficiaire_de="Seuls mes enfants sont bénéficiaires d'une aide donnant droit au Pass Sport")))
+    assert [row['reference'] for row in rows] == ['dn:34778465:enfant-1']
+
+
 def test_identities_carry_the_allocataire_of_each_beneficiary(tmp_path):
     _, paths = run_clean(tmp_path, dn=raw_dn(dn_dossier(enfants=[enfant('Ola')])))
 
@@ -287,7 +310,7 @@ def test_dn_children_typed_before_answering_no_children_are_ignored():
     ('MSA Ardèche', 'MSA'), ('Mutualité sociale agricole', 'MSA'),
     ('CAF ou MSA', None), ('CAFE', None), ('', None),
 ])
-def test_free_text_caisse(caisse, organisme):
+def test_caisse_is_recognised_by_keyword(caisse, organisme):
     assert mapping.organisme_of_caisse(caisse) == organisme
 
 

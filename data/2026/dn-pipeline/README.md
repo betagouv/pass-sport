@@ -29,17 +29,20 @@ dossier passé en instruction automatiquement, ou par quelqu'un qui n'est plus i
 groupe, est ignoré (`sans instructeur`) : il n'est pas codé, faute de pouvoir lui répondre.
 
 Les libellés des champs et les valeurs reconnues (situations, caisses, genres) sont dans
-[mapping.py](mapping.py). Ils sont comparés sans accents ni casse. **TODO** : les valeurs
-exactes de `Bénéficiaire de` sont à reprendre sur les exemples du support.
+[mapping.py](mapping.py). Ils sont comparés sans accents ni casse.
 
 ### Bénéficiaires d'un dossier
 
-- **Le demandeur** s'il est lui-même bénéficiaire : `Bénéficiaire de` = AAH (situation `AAH`,
-  organisme = la caisse) ou une bourse (situation `boursier`, organisme `cnous`, INE facultatif).
-  Sa date de naissance vient du champ `Votre date de naissance`.
-- **Chaque enfant** du bloc `Enfants` : `AEEH` = Oui → `AEEH` ; sinon `jeune` (QF) si la question
-  « foyer au QF ≤ 699 € et/ou AEEH » vaut Oui ; sinon la ligne est rejetée.
-- L'allocataire des enfants est le demandeur : nom, prénom, `Genre de l'allocataire`, date de
+- **Le demandeur** s'il est lui-même bénéficiaire : `Je suis bénéficiaire de :` = AAH (situation
+  `AAH`, organisme = `À quelle caisse êtes vous rattaché ?`) ou une bourse (situation `boursier`,
+  organisme `cnous`, INE facultatif). « Seuls mes enfants sont bénéficiaires… » ne lui donne pas
+  de ligne. Sa date de naissance vient du champ `Votre date de naissance`.
+- **Chaque enfant** du bloc `Pour chaque enfant…`, si `Est ce qu'un ou plusieurs de vos enfants
+  sont éligibles…` ne vaut pas Non : `Est il bénéficiaire de l'AEEH` = Oui → `AEEH`, sauf si la
+  question du foyer `Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH…` vaut Non ;
+  sinon `jeune` (QF) si `Font ils partie d'un foyer dont le quotient familial…` vaut Oui ; sinon
+  la ligne est rejetée. Organisme = `A quelle caisse sont ils rattachés ?`.
+- L'allocataire des enfants est le demandeur : nom, prénom, `Votre civilité :`, date de
   naissance (`Votre date de naissance`, obligatoire dans la démarche), adresse de résidence (dont
   le code INSEE) et email.
 - Les colonnes du **mandataire** (dépôt pour un tiers) ne sont **jamais** utilisées. Sur un

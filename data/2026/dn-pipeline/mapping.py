@@ -4,7 +4,7 @@ Every label is compared folded (no accents, no case, single spaces, see `fold`),
 renamed champ only needs its new label here. Situations and caisses are recognised by
 keyword, the démarche spelling them out in full (« AAH (allocation aux adultes handicapés) »).
 
-Checked against the real démarche with apercu_dn.sh (2026-10-16).
+Checked against the real démarche with apercu_dn.sh and `pnpm dn:champs` (2026-10-27).
 """
 
 import re
@@ -23,22 +23,24 @@ def fold(value) -> str:
 # Also read by the worker, which pre-fills dossiers from the espace FranceConnect: keep
 # worker/src/demarche-numerique/champs-resolver.ts in step, then run `pnpm dn:champs` there.
 DN_CHAMPS = {
-    'allocataire_genre': "Genre de l'allocataire",
+    'allocataire_genre': 'Votre civilité :',
     'adresse': 'Adresse de résidence',
-    'beneficiaire_de': 'Bénéficiaire de',
+    'beneficiaire_de': 'Je suis bénéficiaire de :',
     'ine': 'Numéro INE (Identification Nationale Étudiant)',
-    'foyer_qf_aeeh': (
-        "Faites-vous parti d'un foyer dont le quotient familial est inférieur ou égal à 699 € "
-        "et/ou votre enfant est-il bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant "
-        "handicapé) ?"),
-    'caisse': 'À quelle caisse appartenez-vous ?',
+    # The applicant's own caisse, for their AAH.
+    'caisse': 'À quelle caisse êtes vous rattaché ?',
     'date_naissance': 'Votre date de naissance',
-    'a_des_enfants': 'Avez-vous des enfants',
-    'enfants': 'Enfants',
+    'a_des_enfants': "Est ce qu'un ou plusieurs de vos enfants sont éligibles au Pass Sport ?",
+    'caisse_enfants': 'A quelle caisse sont ils rattachés ?',
+    'foyer_qf': "Font ils partie d'un foyer dont le quotient familial est inférieur ou égal à 699 € ?",
+    'enfants_aeeh': (
+        "Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH (Allocation d'éducation "
+        "de l'enfant handicapé) ?"),
+    'enfants': 'Pour chaque enfant, merci de remplir les champs suivants :',
 }
 
 DN_ENFANT_CHAMPS = {
-    'aeeh': "Bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant handicapé)",
+    'aeeh': "Est il bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant handicapé)",
     'genre': "Genre de l'enfant",
     'prenom': "Prénom de l'enfant",
     'nom': "Nom de l'enfant",
@@ -71,7 +73,7 @@ DN_ANNOTATION_TYPE = 'TextareaChampDescriptor'
 
 # --- Vocabularies -------------------------------------------------------------------
 
-# Words (folded, matched whole) naming each PSP situation, as `Bénéficiaire de` spells them:
+# Words (folded, matched whole) naming each PSP situation, as `Je suis bénéficiaire de :` spells them:
 # « L'Allocation aux adultes handicapés (AAH) ».
 SITUATION_WORDS = {
     'AAH': ('aah', 'adultes handicapes'),
@@ -99,7 +101,7 @@ ORGANISME_BY_CAISSE_WORDS = {
 
 
 def organisme_of_caisse(label) -> str | None:
-    """CAF or MSA from a free-text caisse (DN asks it as plain text): 'CAF du Rhône' is CAF.
+    """CAF or MSA from a caisse answer, by keyword: 'CAF du Rhône' is CAF.
 
     None when neither or both are named.
     """

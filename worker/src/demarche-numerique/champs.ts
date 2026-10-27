@@ -27,15 +27,18 @@ export type DnChamps = {
   allocataireGenre?: DnChoiceChamp<DnGender>;
   beneficiaireDe?: DnChoiceChamp<DnAide>;
   ine?: DnChamp;
-  foyerQfAeeh?: DnChoiceChamp<DnYesNo>;
   caisse?: DnChoiceChamp<DnCaisse>;
   dateNaissance?: DnChamp;
   aDesEnfants?: DnChoiceChamp<DnYesNo>;
+  caisseEnfants?: DnChoiceChamp<DnCaisse>;
+  foyerQf?: DnChoiceChamp<DnYesNo>;
+  enfantsAeeh?: DnChoiceChamp<DnYesNo>;
   enfants?: DnChamp & { champs: DnEnfantChamps };
 };
 
 const YES_NO = { yes: "true", no: "false" };
 const CIVILITE = { male: "M.", female: "Mme" };
+const CAISSES = { CAF: "CAF", MSA: "MSA" };
 
 export const CHAMPS_BY_DEMARCHE: Record<number, DnChamps> = {
   // « Demande de code pass Sport 2026 », production and staging alike.
@@ -50,10 +53,12 @@ export const CHAMPS_BY_DEMARCHE: Record<number, DnChamps> = {
       },
     },
     ine: { id: "Q2hhbXAtNzA4MjEwMw==" },
-    foyerQfAeeh: { id: "Q2hhbXAtNzA4NzM1MQ==", values: YES_NO },
-    caisse: { id: "Q2hhbXAtNzA4NzgxMQ==", values: { CAF: "CAF", MSA: "MSA" } },
+    caisse: { id: "Q2hhbXAtNzA4NzgxMQ==", values: CAISSES },
     dateNaissance: { id: "Q2hhbXAtNzA4ODY3Nw==" },
     aDesEnfants: { id: "Q2hhbXAtNzA4MjEyOA==", values: YES_NO },
+    caisseEnfants: { id: "Q2hhbXAtNzEyNDA5Nw==", values: CAISSES },
+    foyerQf: { id: "Q2hhbXAtNzA4NzM1MQ==", values: YES_NO },
+    enfantsAeeh: { id: "Q2hhbXAtNzEyMzU3Nw==", values: YES_NO },
     enfants: {
       id: "Q2hhbXAtNzA3Nzk2Mw==",
       champs: {

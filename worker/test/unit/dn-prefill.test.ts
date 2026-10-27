@@ -21,10 +21,12 @@ const CHAMPS: DnChamps = {
   allocataireGenre: { id: "GENRE", values: { male: "Masculin", female: "Féminin" } },
   beneficiaireDe: { id: "BENEF", values: { aah: "AAH", bourse: "Bourse" } },
   ine: { id: "INE" },
-  foyerQfAeeh: { id: "FOYER", values: { yes: "true", no: "false" } },
   caisse: { id: "CAISSE", values: { CAF: "CAF", MSA: "MSA" } },
   dateNaissance: { id: "NAISSANCE" },
   aDesEnfants: { id: "ENFANTS_OUI", values: { yes: "true", no: "false" } },
+  caisseEnfants: { id: "CAISSE_ENFANTS", values: { CAF: "CAF", MSA: "MSA" } },
+  foyerQf: { id: "FOYER_QF", values: { yes: "true", no: "false" } },
+  enfantsAeeh: { id: "ENFANTS_AEEH", values: { yes: "true", no: "false" } },
   enfants: {
     id: "ENFANTS",
     champs: {
@@ -121,6 +123,7 @@ describe("buildPrefill", () => {
       champ_GENRE: "Féminin",
       champ_NAISSANCE: "1985-04-02",
       champ_CAISSE: "CAF",
+      champ_CAISSE_ENFANTS: "CAF",
       champ_ENFANTS: [
         {
           champ_E_NOM: "QUISTANE",
@@ -138,15 +141,18 @@ describe("buildPrefill", () => {
         },
       ],
       champ_ENFANTS_OUI: "true",
-      champ_FOYER: "false",
+      champ_FOYER_QF: "false",
+      champ_ENFANTS_AEEH: "false",
     });
     expect(filled).toEqual([
       "allocataireGenre",
       "dateNaissance",
       "caisse",
+      "caisseEnfants",
       "enfants",
       "aDesEnfants",
-      "foyerQfAeeh",
+      "foyerQf",
+      "enfantsAeeh",
     ]);
   });
 
@@ -163,10 +169,10 @@ describe("buildPrefill", () => {
     // The relance swept on after the month that opened the right.
     const { body } = build([qf([DORVAT], 650), qf([DORVAT], 900)]);
 
-    expect(body.champ_FOYER).toBe("true");
+    expect(body.champ_FOYER_QF).toBe("true");
   });
 
-  it("does not answer the foyer question when a child of the foyer has the AEEH", () => {
+  it("answers the AEEH question yes when a child of the foyer has the AEEH", () => {
     // Tozal is already eligible through the AEEH, so only Élyra is contested.
     const lastRun = [
       refusedChild(ELYRA, "2015-03-12"),
@@ -175,7 +181,8 @@ describe("buildPrefill", () => {
 
     const { body } = build([qf([ELYRA, TOZAL]), aeeh(0, null), aeeh(1, "allocataire")], lastRun);
 
-    expect(body.champ_FOYER).toBeUndefined();
+    expect(body.champ_ENFANTS_AEEH).toBe("true");
+    expect(body.champ_FOYER_QF).toBe("false");
   });
 
   it("does not answer for a child the AEEH said nothing about", () => {
@@ -189,7 +196,7 @@ describe("buildPrefill", () => {
         champ_E_GENRE: "Féminin",
       },
     ]);
-    expect(body.champ_FOYER).toBeUndefined();
+    expect(body.champ_ENFANTS_AEEH).toBeUndefined();
   });
 
   it("answers no children when the quotient lists none", () => {
@@ -197,7 +204,7 @@ describe("buildPrefill", () => {
 
     expect(body.champ_ENFANTS_OUI).toBe("false");
     expect(body.champ_ENFANTS).toBeUndefined();
-    expect(body.champ_FOYER).toBe("false");
+    expect(body.champ_FOYER_QF).toBe("false");
   });
 
   it("leaves the children question open when none of them is contested", () => {
@@ -229,8 +236,9 @@ describe("buildPrefill", () => {
     const { body } = build([qf([pivotAsChild, ELYRA], 650, { allocataires: [] })]);
 
     expect(body.champ_CAISSE).toBeUndefined();
+    expect(body.champ_CAISSE_ENFANTS).toBeUndefined();
     expect(body.champ_ENFANTS).toBeUndefined();
-    expect(body.champ_FOYER).toBeUndefined();
+    expect(body.champ_FOYER_QF).toBeUndefined();
   });
 
   it("names the applicant's own aid and INE when their own row was refused", () => {

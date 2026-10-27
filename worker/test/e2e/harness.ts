@@ -386,10 +386,12 @@ export const DN_TEST_CHAMPS: DnChamps = {
   allocataireGenre: { id: "GENRE", values: { male: "M.", female: "Mme" } },
   beneficiaireDe: { id: "BENEF", values: { aah: "AAH", bourse: "Bourse" } },
   ine: { id: "INE" },
-  foyerQfAeeh: { id: "FOYER", values: yesNo },
   caisse: { id: "CAISSE", values: { CAF: "CAF", MSA: "MSA" } },
   dateNaissance: { id: "NAISSANCE" },
   aDesEnfants: { id: "ENFANTS_OUI", values: yesNo },
+  caisseEnfants: { id: "CAISSE_ENFANTS", values: { CAF: "CAF", MSA: "MSA" } },
+  foyerQf: { id: "FOYER_QF", values: yesNo },
+  enfantsAeeh: { id: "ENFANTS_AEEH", values: yesNo },
   enfants: {
     id: "ENFANTS",
     champs: {

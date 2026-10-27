@@ -145,7 +145,10 @@ export const buildPrefill = (
   // about those children either. No API answer carries an address: the usager types it.
   if (!qf || pivotIsHouseholdChild(qf, identity.birthdate)) return { body, filled };
 
-  set("caisse", champs.caisse, choice(champs.caisse, readCaisse(results)));
+  // The user is an allocataire of this foyer: its caisse is theirs and their children's.
+  const caisse = readCaisse(results);
+  set("caisse", champs.caisse, choice(champs.caisse, caisse));
+  set("caisseEnfants", champs.caisseEnfants, choice(champs.caisseEnfants, caisse));
 
   const enfants = Array.isArray(qf.enfants) ? qf.enfants : [];
   const aeehVerdicts = enfants.map((_, childIndex) =>
@@ -176,22 +179,23 @@ export const buildPrefill = (
     choice(champs.aDesEnfants, rows.length > 0 ? "yes" : enfants.length === 0 ? "no" : null),
   );
 
-  // Asked about the whole foyer: "yes" on any campaign month under the threshold, "no" only
-  // when every month answered above it and no answer gives a child the AEEH.
+  // Asked about the whole foyer: "yes" on any campaign month under the threshold, "no" when
+  // every month answered above it.
   const anyMonthCovers = results.some(
     (r) =>
       r.resource === RESOURCE_META.qf.resource &&
       r.success &&
       householdQfCovers(r.data as QuotientFamilialData | null),
   );
-  const noAeeh =
-    !aeehVerdicts.some((verdict) => verdict === true) &&
-    contested.every((child) => child.aeeh === false);
+  set("foyerQf", champs.foyerQf, choice(champs.foyerQf, anyMonthCovers ? "yes" : "no"));
 
+  // "no" only when every contested child's AEEH answer says so.
+  const anyAeeh = aeehVerdicts.some((verdict) => verdict === true);
+  const noAeeh = !anyAeeh && contested.every((child) => child.aeeh === false);
   set(
-    "foyerQfAeeh",
-    champs.foyerQfAeeh,
-    choice(champs.foyerQfAeeh, anyMonthCovers ? "yes" : noAeeh ? "no" : null),
+    "enfantsAeeh",
+    champs.enfantsAeeh,
+    choice(champs.enfantsAeeh, anyAeeh ? "yes" : noAeeh ? "no" : null),
   );
 
   return { body, filled };

@@ -115,10 +115,11 @@ that the [DN pipeline](../data/2026/dn-pipeline/) processes, through its own que
 What goes in the dossier is
 [src/demarche-numerique/prefill.ts](src/demarche-numerique/prefill.ts):
 - the FranceConnect identity;
-- the caisse from the quotient answer (no API answer carries an address: the usager types it);
+- the caisse from the quotient answer, the applicant's and the children's (no API answer carries
+  an address: the usager types it);
 - the children a campaign window could carry and the last run refused;
 - the AEEH answer for each child;
-- the foyer and children questions.
+- the children, foyer quotient and foyer AEEH questions.
 
 A « non » is only sent when an answer says so: the DN pipeline grants on these answers. The values sent
 are journaled as `dn.dossier_prefill` (`body_payload`), and state lookups as `dn.dossier_etat`.

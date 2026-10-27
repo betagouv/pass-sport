@@ -103,13 +103,15 @@ describe("un foyer refusé", () => {
       champ_GENRE: "Mme",
       champ_NAISSANCE: "1985-04-02",
       champ_CAISSE: "CAF",
+      champ_CAISSE_ENFANTS: "CAF",
       champ_ENFANTS: [
         child("Aine", "2008-01-01", "Masculin"),
         child("Milieu", "2009-01-01", "Féminin"),
         child("Cadet", "2012-01-01", "Féminin"),
       ],
       champ_ENFANTS_OUI: "true",
-      champ_FOYER: "false",
+      champ_FOYER_QF: "false",
+      champ_ENFANTS_AEEH: "false",
     });
 
     const [row] = await dossiers(sub);

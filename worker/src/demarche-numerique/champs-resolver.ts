@@ -23,21 +23,23 @@ export type ChampDescriptor = {
 // The champs of data/2026/dn-pipeline/mapping.py DN_CHAMPS and DN_ENFANT_CHAMPS the worker
 // pre-fills: the address is not one, no API answer carries it. Change them together.
 export const DN_CHAMP_LABELS = {
-  allocataireGenre: "Genre de l'allocataire",
-  beneficiaireDe: "Bénéficiaire de",
+  allocataireGenre: "Votre civilité :",
+  beneficiaireDe: "Je suis bénéficiaire de :",
   ine: "Numéro INE (Identification Nationale Étudiant)",
-  foyerQfAeeh:
-    "Faites-vous parti d'un foyer dont le quotient familial est inférieur ou égal à 699 € " +
-    "et/ou votre enfant est-il bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant " +
-    "handicapé) ?",
-  caisse: "À quelle caisse appartenez-vous ?",
+  caisse: "À quelle caisse êtes vous rattaché ?",
   dateNaissance: "Votre date de naissance",
-  aDesEnfants: "Avez-vous des enfants",
-  enfants: "Enfants",
+  aDesEnfants: "Est ce qu'un ou plusieurs de vos enfants sont éligibles au Pass Sport ?",
+  caisseEnfants: "A quelle caisse sont ils rattachés ?",
+  foyerQf:
+    "Font ils partie d'un foyer dont le quotient familial est inférieur ou égal à 699 € ?",
+  enfantsAeeh:
+    "Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH (Allocation d'éducation " +
+    "de l'enfant handicapé) ?",
+  enfants: "Pour chaque enfant, merci de remplir les champs suivants :",
 } as const;
 
 export const DN_ENFANT_CHAMP_LABELS = {
-  aeeh: "Bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant handicapé)",
+  aeeh: "Est il bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant handicapé)",
   genre: "Genre de l'enfant",
   prenom: "Prénom de l'enfant",
   nom: "Nom de l'enfant",
@@ -207,10 +209,12 @@ const MAIN_RESOLVERS: Record<Exclude<keyof DnChamps, "enfants">, Resolver> = {
   allocataireGenre: gender,
   beneficiaireDe: aide,
   ine: textual,
-  foyerQfAeeh: yesNo,
   caisse,
   dateNaissance: date,
   aDesEnfants: yesNo,
+  caisseEnfants: caisse,
+  foyerQf: yesNo,
+  enfantsAeeh: yesNo,
 };
 
 const ENFANT_RESOLVERS: Record<keyof DnEnfantChamps, Resolver> = {

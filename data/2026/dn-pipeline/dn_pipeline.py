@@ -277,14 +277,15 @@ def _enfant_rows(dossier: dict, champs: dict) -> list[dict]:
     return enfants.get('rows') or []
 
 
-def _enfant_row(row: dict, common: dict, number: str, index: int, foyer: bool) -> dict:
+def _enfant_row(row: dict, common: dict, number: str, index: int, foyer: dict) -> dict:
     enfant = _champs_by_label(row.get('champs'))
     labels = mapping.DN_ENFANT_CHAMPS
-    aeeh = _champ_yes(_champ(enfant, labels['aeeh']))
-    situation = 'AEEH' if aeeh else ('jeune' if foyer else '')
+    aeeh = foyer['aeeh'] and _champ_yes(_champ(enfant, labels['aeeh']))
+    situation = 'AEEH' if aeeh else ('jeune' if foyer['qf'] else '')
     return {
         **common,
         'reference': f'dn:{number}:enfant-{index}',
+        'caisse': foyer['caisse'],
         'prenom': _champ_text(_champ(enfant, labels['prenom'])),
         'nom': _champ_text(_champ(enfant, labels['nom'])),
         'date_naissance': _champ_date(_champ(enfant, labels['date_naissance'])),
@@ -310,7 +311,6 @@ def _dossier_rows(dossier: dict, demarche) -> list[dict]:
         'dossier_number': number,
         'lien': DN_DOSSIER_URL.format(demarche=demarche, dossier=number),
         'email': _text(email),
-        'caisse': _champ_text(_champ(champs, labels['caisse'])),
         'code_insee': _text(address.get('cityCode')),
         'code_postal': _text(address.get('postalCode')),
         'commune': _text(address.get('cityName')),
@@ -339,13 +339,19 @@ def _dossier_rows(dossier: dict, demarche) -> list[dict]:
             'date_naissance': common['allocataire_date_naissance'],
             'situation_label': beneficiaire_de,
             'situation': self_situation,
+            'caisse': _champ_text(_champ(champs, labels['caisse'])),
             'ine': ine,
             'allocataire_matricule': ine,
         })
 
-    # A block answered "no children" may still carry rows typed before that answer.
+    # A block answered "no children" may still carry rows typed before that answer, and a
+    # child's AEEH answer may predate the foyer's "no".
     if not _champ_no(_champ(champs, labels['a_des_enfants'])):
-        foyer = _champ_yes(_champ(champs, labels['foyer_qf_aeeh']))
+        foyer = {
+            'caisse': _champ_text(_champ(champs, labels['caisse_enfants'])),
+            'qf': _champ_yes(_champ(champs, labels['foyer_qf'])),
+            'aeeh': not _champ_no(_champ(champs, labels['enfants_aeeh'])),
+        }
         found += [_enfant_row(row, common, number, index, foyer)
                   for index, row in enumerate(_enfant_rows(dossier, champs), start=1)]
 
