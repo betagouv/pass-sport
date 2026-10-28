@@ -100,7 +100,7 @@ def child_dossier(number=34778465, child=None, **dossier):
 
 
 def raw_dn(*dossiers):
-    return {'demarche': 1234, 'labels': {'traite': 'L1', 'a_verifier': 'L2', 'rejete': 'L3'},
+    return {'demarche': 1234, 'labels': {'traite': 'L1', 'a_verifier': 'L2', 'rejete': 'L3', 'doublon': 'L4'},
             'dossiers': list(dossiers)}
 
 
@@ -169,7 +169,8 @@ def test_fetch_dn_skips_dossiers_already_labelled_by_the_pipeline():
     raw = pipeline.fetch_dn(FakeDn([dn_dossier(1), labelled, other_label]), 1234)
 
     assert [dossier['number'] for dossier in raw['dossiers']] == [1, 3]
-    assert raw['labels'] == {'traite': 'L-traite', 'a_verifier': 'L-a_verifier', 'rejete': 'L-rejete'}
+    assert raw['labels'] == {'traite': 'L-traite', 'a_verifier': 'L-a_verifier', 'rejete': 'L-rejete',
+                             'doublon': 'L-doublon'}
     assert raw['ignores'] == 1
 
 
@@ -672,12 +673,28 @@ def test_retours_annotates_messages_labels_and_accepts_a_fully_coded_dossier(tmp
 
     assert stats['dossiers_dn_acceptes'] == 1
     assert [call[:2] for call in dn.calls] == [
-        ('annotation', 'D7'), ('message', 'D7'), ('label', 'D7'), ('accepter', 'D7')]
+        ('annotation', 'D7'), ('message', 'D7'), ('label', 'D7'), ('label', 'D7'), ('accepter', 'D7')]
     assert dn.calls[0][2:] == ('A7', 'Ola Dorvat : 26-TEST-E1')
     message = dn.calls[1][2]
     assert 'Ola Dorvat : code pass Sport 26-TEST-E1.' in message
     assert 'Lio Dorvat : un code pass Sport a déjà été attribué.' in message
-    assert dn.calls[2][2] == 'L1'
+    assert [dn.calls[2][2], dn.calls[3][2]] == ['L1', 'L4']
+
+
+@pytest.mark.parametrize('verdicts, labels', [
+    (['a_coder'], ['L1']),
+    (['doublon'], ['L1', 'L4']),
+    (['doublon', 'a_verifier'], ['L2', 'L4']),
+    (['doublon', 'rejete'], ['L3', 'L4']),
+])
+def test_retours_adds_the_doublon_label_on_top_of_the_dossier_label(tmp_path, verdicts, labels):
+    write_verdicts(tmp_path, [dn_line(7, index, verdict, f'e{index}')
+                              for index, verdict in enumerate(verdicts, start=1)])
+    dn = FakeDn([])
+
+    run_retours(tmp_path, dn=dn)
+
+    assert [call[2] for call in dn.calls if call[0] == 'label'] == labels
 
 
 def test_retours_answers_each_dossier_as_the_instructeur_who_put_it_en_instruction(tmp_path):
@@ -741,13 +758,13 @@ def test_retours_of_a_drop_refused_by_production(tmp_path):
     stats = run_retours(tmp_path, dn=dn, refused_drop='beneficiaires-insertion-1-x.csv')
 
     assert (stats['refusees_par_la_production'], stats['erreurs']) == (1, 0)
-    # A dossier holding a refused line gets its label only: no codes, no message, no acceptance.
-    assert [call for call in dn.calls if call[1] == 'D7'] == [('label', 'D7', 'L2')]
-    assert [call[0] for call in dn.calls if call[1] == 'D8'] == ['message', 'label', 'accepter']
+    # A dossier holding a refused line gets its labels only: no codes, no message, no acceptance.
+    assert [call for call in dn.calls if call[1] == 'D7'] == [('label', 'D7', 'L2'), ('label', 'D7', 'L4')]
+    assert [call[0] for call in dn.calls if call[1] == 'D8'] == ['message', 'label', 'label', 'accepter']
     journal = read(tmp_path / 'retours.csv')
     assert journal[['reference', 'action', 'statut']].values.tolist() == [
-        ['dn:7', 'label', 'fait'], ['dn:8', 'message', 'fait'], ['dn:8', 'label', 'fait'],
-        ['dn:8', 'accepter', 'fait']]
+        ['dn:7', 'label', 'fait'], ['dn:7', 'label-doublon', 'fait'], ['dn:8', 'message', 'fait'],
+        ['dn:8', 'label', 'fait'], ['dn:8', 'label-doublon', 'fait'], ['dn:8', 'accepter', 'fait']]
 
 
 def test_retours_replay_skips_what_was_done_and_retries_a_refused_action(tmp_path):
@@ -759,7 +776,7 @@ def test_retours_replay_skips_what_was_done_and_retries_a_refused_action(tmp_pat
 
     assert first['erreurs'] == 1
     assert [call[:2] for call in dn.calls] == [
-        ('message', 'D7'), ('message', 'D8'), ('label', 'D8'), ('accepter', 'D8')]
+        ('message', 'D7'), ('message', 'D8'), ('label', 'D8'), ('label', 'D8'), ('accepter', 'D8')]
     journal = read(tmp_path / 'retours.csv')
     assert 'refusé par DN : label inconnu' in journal.loc[journal['statut'] == 'erreur', 'detail'].iloc[0]
 
@@ -768,7 +785,7 @@ def test_retours_replay_skips_what_was_done_and_retries_a_refused_action(tmp_pat
     second = run_retours(tmp_path, dn=dn)
 
     assert second['erreurs'] == 0
-    assert [call[:2] for call in dn.calls] == [('label', 'D7'), ('accepter', 'D7')]
+    assert [call[:2] for call in dn.calls] == [('label', 'D7'), ('label', 'D7'), ('accepter', 'D7')]
 
 
 def test_retours_never_retries_a_message_dn_did_not_answer_within_the_run(tmp_path):

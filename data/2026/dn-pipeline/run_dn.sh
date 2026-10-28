@@ -3,7 +3,7 @@
 # Codes pass Sport for the beneficiaries of the Démarches Numériques dossiers, end to end: DN
 # read, lamp01 lookup, code drawing, lamp01 injection check, /nfs/run drop, wait for
 # production's injector, lamp01 injection, then, per dossier, the codes annotation, a message
-# (the only channel its codes go out by), a label and the acceptance.
+# (the only channel its codes go out by), its labels and the acceptance.
 #
 #   ./run_dn.sh [--dry-run]
 #   ./run_dn.sh --reprendre <dossier de passage>

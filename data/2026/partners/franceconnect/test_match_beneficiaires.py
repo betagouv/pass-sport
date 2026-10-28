@@ -58,10 +58,11 @@ def pg():
 
     try:
         # Ready means the init scripts ran to completion, not just that postgres answers:
-        # the image starts a temporary server while loading db-init, then restarts it.
+        # the image starts a temporary server while loading db-init, then restarts it. That
+        # one only listens on the Unix socket, hence TCP.
         for _ in range(120):
             pret = subprocess.run(
-                ['docker', 'exec', name, 'psql', '-U', 'u_passsport', '-d', 'passsport',
+                ['docker', 'exec', name, 'psql', '-h', '127.0.0.1', '-U', 'u_passsport', '-d', 'passsport',
                  '-Atc', 'select 1 from public.beneficiaires limit 1'],
                 capture_output=True)
             if pret.returncode == 0:

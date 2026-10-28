@@ -19,8 +19,8 @@ cd /srv/pass-sport/data/2026/dn-pipeline
 ## Ce qui est lu
 
 Les dossiers **en instruction**, déposés via FranceConnect ou non : l'état « En instruction »
-fait foi. Seuls ceux qui ne portent aucun des trois labels du pipeline (`Traité`, `À vérifier`,
-`Rejeté`) sont pris. Pour faire repasser un dossier, lui retirer son label.
+fait foi. Seuls ceux qui ne portent aucun des labels du pipeline (`Traité`, `À vérifier`, `Rejeté`,
+`Doublon`) sont pris. Pour faire repasser un dossier, lui retirer ses labels.
 
 Chaque dossier reçoit ses réponses (annotation, message, acceptation) **au nom de l'instructeur
 qui l'a passé en instruction** : le dernier passage en instruction de ses `traitements`
@@ -134,7 +134,7 @@ rapprochement (pas encore de forçage).
        créé. Le code d'un doublon n'est jamais donné : venu de lamp01, il pourrait être celui
        d'un homonyme ;
     3. un **label** : `À vérifier` si un bénéficiaire l'est, sinon `Rejeté` si un bénéficiaire
-       l'est, sinon `Traité` ;
+       l'est, sinon `Traité`. En plus, `Doublon` si un bénéficiaire est un doublon de lamp01 ;
     4. **`dossierAccepter`** si le dossier est `Traité` (tous codés ou déjà détenteurs d'un code).
        Un dossier `À vérifier` ou `Rejeté` reste en instruction : l'instructeur le clôt.
 
@@ -242,7 +242,7 @@ puis `pnpm dn:champs` relancé dans `worker/`.
 ### À faire une fois, à la main
 
 - Dans la démarche DN (interface d'administration, l'API ne sait pas les créer) :
-  - les labels `Traité`, `À vérifier`, `Rejeté` (comparés sans casse ni accents, noms dans
+  - les labels `Traité`, `À vérifier`, `Rejeté`, `Doublon` (comparés sans casse ni accents, noms dans
     `mapping.py`). Un dossier qui porte l'un de ces labels, même posé à la main, n'est plus pris
     par le pipeline ;
   - le champ `Votre date de naissance`, obligatoire : celle du bénéficiaire AAH ou boursier, et

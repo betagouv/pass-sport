@@ -60,6 +60,8 @@ DN_LABELS = {
     'traite': 'Traité',
     'a_verifier': 'À vérifier',
     'rejete': 'Rejeté',
+    # Added on top of the others to a dossier holding a beneficiary lamp01 already knows.
+    'doublon': 'Doublon',
 }
 
 # Private annotation (instructeurs only) receiving the codes each run hands out, created by hand

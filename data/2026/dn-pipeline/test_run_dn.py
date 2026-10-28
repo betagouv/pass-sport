@@ -115,9 +115,11 @@ def lamp():
     if started.returncode != 0:
         pytest.skip(f'conteneur postgres impossible à lancer : {started.stderr.strip()}')
     try:
+        # Over TCP: the temporary server the image runs while loading db-init only listens on
+        # the Unix socket, and answering there is no sign it will not shut down next.
         for _ in range(120):
             ready = subprocess.run(
-                ['docker', 'exec', name, 'psql', '-U', 'u_passsport', '-d', 'passsport',
+                ['docker', 'exec', name, 'psql', '-h', '127.0.0.1', '-U', 'u_passsport', '-d', 'passsport',
                  '-Atc', 'select 1 from public.beneficiaires limit 1'], capture_output=True)
             if ready.returncode == 0:
                 break
@@ -275,7 +277,7 @@ ANSWERED = [
     ('dossierAjouterLabel', 'D501', 'L-traite'), ('dossierAccepter', 'D501', None),
     ('dossierEnvoyerMessage', 'D502', None), ('dossierAjouterLabel', 'D502', 'L-rejete'),
     ('dossierEnvoyerMessage', 'D503', None), ('dossierAjouterLabel', 'D503', 'L-traite'),
-    ('dossierAccepter', 'D503', None),
+    ('dossierAjouterLabel', 'D503', 'L-doublon'), ('dossierAccepter', 'D503', None),
 ]
 
 
@@ -375,7 +377,7 @@ def test_a_drop_refused_by_production_is_never_replayed(workspace, dn, injector)
         ('dossierAjouterLabel', 'D501', 'L-a_verifier'),
         ('dossierEnvoyerMessage', 'D502', None), ('dossierAjouterLabel', 'D502', 'L-rejete'),
         ('dossierEnvoyerMessage', 'D503', None), ('dossierAjouterLabel', 'D503', 'L-traite'),
-        ('dossierAccepter', 'D503', None),
+        ('dossierAjouterLabel', 'D503', 'L-doublon'), ('dossierAccepter', 'D503', None),
     ]
     assert not (tmp_path / 'run' / 'a-reprendre').exists()
 

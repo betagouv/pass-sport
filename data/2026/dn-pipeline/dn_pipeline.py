@@ -762,7 +762,7 @@ def _failure(error: Exception) -> str:
 
 def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, instructeurs: dict,
             journal: Journal, client, dry_run: bool) -> int:
-    """Codes annotation, message, label, then acceptance, per dossier; returns how many were
+    """Codes annotation, message, labels, then acceptance, per dossier; returns how many were
     accepted. annotations: dossier number -> its codes annotation as fetched (None: missing);
     instructeurs: dossier number -> the instructeur it is answered as."""
     accepted = 0
@@ -778,6 +778,8 @@ def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, instructeurs: 
         if not dossier['statut'].eq('refuse_prod').any():
             steps.append(('message', dn_message(dossier)))
         steps.append(('label', mapping.DN_LABELS[label_key]))
+        if dossier['statut'].eq('doublon').any():
+            steps.append(('label-doublon', mapping.DN_LABELS['doublon']))
         if accept:
             steps.append(('accepter', mapping.DN_ACCEPT_MOTIVATION))
 
@@ -798,6 +800,8 @@ def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, instructeurs: 
                     client.envoyer_message(dossier_id, instructeur_id, detail)
                 elif action == 'label':
                     client.ajouter_label(dossier_id, labels[label_key])
+                elif action == 'label-doublon':
+                    client.ajouter_label(dossier_id, labels['doublon'])
                 else:
                     client.accepter(dossier_id, instructeur_id, mapping.DN_ACCEPT_MOTIVATION)
             except Exception as error:  # noqa: BLE001 - one dossier never stops the others
