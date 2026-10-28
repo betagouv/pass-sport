@@ -22,6 +22,14 @@ default-column and code-drawing functions at the end. It seeds the drawing with
 `EXISTING_CODES_PATHFILE_2026` and rewrites it exactly as ③ does, so codes stay unique across
 the campaign whichever notebook drew them.
 
+The CNOUS/MSE delivery of 2026-10-27 — seven files, many boursiers already coded in September —
+goes through [partners/cnous/run_cnous_boursiers.sh](partners/cnous/run_cnous_boursiers.sh)
+instead, a one-shot run (stop the FranceConnect and Grist/DN crons first). Its notebook cleans
+each file like ④ (`clean_cnous_lib.clean_cnous_rows`), completes the birth countries MSE left
+empty from `v_pays_territoire_2026.csv`, and sets aside the boursiers lamp01 already holds (INE,
+courriel or identity). The script then drops the coded file in `/nfs/run` and injects lamp01 once
+production holds it, as `run_grist_dn.sh` does.
+
 Steps ⑩ ③ ⑪ are also driven unattended, by
 [partners/franceconnect/run_fc_pipeline.sh](partners/franceconnect/run_fc_pipeline.sh) — the
 only source whose input is a live table rather than a frozen export, hence a cron rather than

@@ -467,6 +467,16 @@ def test_add_allocataire_json_column_carries_the_partner_extra_fields():
     assert 'pays_naissance' not in allocataire
 
 
+def test_json_columns_accept_a_frame_without_rows():
+    """Every beneficiary of a file can already be known: zero rows left to serialize."""
+    df = pd.DataFrame(columns=[*_beneficiary_row(), *_address_row()])
+
+    result = lib.add_adresse_allocataire_json_column(lib.add_allocataire_json_column(df))
+
+    assert result.empty
+    assert {'allocataire', 'adresse_allocataire'} <= set(result.columns)
+
+
 def _address_row(**overrides):
     row = {
         'adresse_allocataire-voie': '12 RUE DES FLEURS',
