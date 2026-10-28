@@ -139,9 +139,10 @@ def test_normalize_country_label_folds_accents_and_spacing():
 
 def _cog_reference_frame():
     return pd.DataFrame({
-        'COG': ['99100', '99350', '99999'],
-        'LIBCOG': ['France', 'Maroc', ''],
-        'LIBENR': ['République française', 'Royaume du Maroc', ''],
+        'COG': ['99100', '99350', '99161', '99999'],
+        'LIBCOG': ['France', 'Maroc', 'Dépendances de la Couronne britannique', ''],
+        'LIBENR': ['République française', 'Royaume du Maroc', '', ''],
+        'CODEISO2': ['FR', 'MA', '', ''],
     })
 
 
@@ -158,3 +159,12 @@ def test_build_country_cog_lookup_skips_empty_labels():
 
     assert '' not in lookup.index
     assert '99999' not in lookup.tolist()
+
+
+def test_build_country_cog_lookup_can_map_to_the_iso_code():
+    lookup = build_country_cog_lookup(_cog_reference_frame(), value_column='CODEISO2')
+
+    assert lookup['MAROC'] == 'MA'
+    assert lookup['REPUBLIQUE FRANCAISE'] == 'FR'
+    # a territory without an ISO code is left out rather than mapped to ''
+    assert 'DEPENDANCES DE LA COURONNE BRITANNIQUE' not in lookup.index
