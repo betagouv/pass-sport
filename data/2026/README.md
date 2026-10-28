@@ -24,7 +24,8 @@ the campaign whichever notebook drew them.
 
 The CNOUS/MSE delivery of 2026-10-27 — seven files, many boursiers already coded in September —
 goes through [partners/cnous/run_cnous_boursiers.sh](partners/cnous/run_cnous_boursiers.sh)
-instead, a one-shot run (stop the FranceConnect and Grist/DN crons first). Its notebook cleans
+instead, a one-shot run (stop the FranceConnect and Grist/DN crons first). Its Python script,
+[27_10_2026_clean_cnous_boursiers.py](partners/cnous/27_10_2026_clean_cnous_boursiers.py), cleans
 each file like ④ (`clean_cnous_lib.clean_cnous_rows`), completes the birth countries MSE left
 empty from `v_pays_territoire_2026.csv`, and sets aside the boursiers lamp01 already holds (INE,
 courriel or identity). The script then drops the coded file in `/nfs/run` and injects lamp01 once

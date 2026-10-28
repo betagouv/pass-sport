@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # One-shot run for the CNOUS/MSE boursiers delivered on 2026-10-27: lamp01 export, the
-# notebook (cleaning, lamp01 deduplication, codes), lamp01 injection check, /nfs/run drop,
+# Python script (cleaning, lamp01 deduplication, codes), lamp01 injection check, /nfs/run drop,
 # wait for production's injector, lamp01 injection.
 #
 #   ./run_cnous_boursiers.sh [--dry-run]
@@ -20,8 +20,8 @@
 # DRY RUN: codes drawn on a copy of EXISTING_CODES_PATHFILE_2026, lamp01 injection rolled
 # back, nothing dropped.
 #
-# Each run gets run/<AAAA-MM-JJTHH-MM-SS>[-dry-run]/: the lamp01 export, the executed
-# notebook, the coded CSV, deja-en-base.csv and run.log.
+# Each run gets run/<AAAA-MM-JJTHH-MM-SS>[-dry-run]/: the lamp01 export, the coded CSV,
+# deja-en-base.csv and run.log, which holds the script's report.
 #
 # Variables (data/.env, the caller's environment wins):
 #   CNOUS_BOURSIERS_27_10_2026_DIR  folder holding the boursiers_*.csv      (required)
@@ -39,8 +39,8 @@ umask 007
 
 CNOUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="$(cd "$CNOUS_DIR/../../.." && pwd)"
-NOTEBOOK="$CNOUS_DIR/27_10_2026_clean_cnous_boursiers.ipynb"
-JUPYTER="$DATA_DIR/.venv/bin/jupyter"
+SCRIPT="$CNOUS_DIR/27_10_2026_clean_cnous_boursiers.py"
+PYTHON="$DATA_DIR/.venv/bin/python"
 LAMP_INJECT="$(dirname "$DATA_DIR")/lamp01/inject_csv.sh"
 RUNS_DIR="$CNOUS_DIR/run"
 RESUME_MARKER="$RUNS_DIR/a-reprendre"
@@ -101,7 +101,7 @@ export LAMP_DB_NAME="${LAMP_DB_NAME:-passsport}"
 [[ -n "${LAMP_DB_PASSWORD:-}" ]] || die "LAMP_DB_PASSWORD manquant — voir lamp01/README.md"
 [[ "$FC_EXERCICE_ID" =~ ^[0-9]+$ ]] || die "FC_EXERCICE_ID invalide : $FC_EXERCICE_ID"
 command -v psql >/dev/null || die "psql introuvable"
-[[ -x "$JUPYTER" ]] || die "virtualenv absent : $JUPYTER"
+[[ -x "$PYTHON" ]] || die "virtualenv absent : $PYTHON"
 [[ -x "$LAMP_INJECT" ]] || die "injecteur de la base bénéficiaires absent : $LAMP_INJECT"
 
 INPUT_DIR="$(resolve_path "$CNOUS_BOURSIERS_27_10_2026_DIR")"
@@ -155,7 +155,7 @@ PGPASSWORD="$LAMP_DB_PASSWORD" psql -h "$LAMP_DB_HOST" -p "$LAMP_DB_PORT" -U "$L
   -c "\copy ($export_query) to '$LAMP_EXPORT_CSV' with (format csv, header true, delimiter ';')"
 log "$(rows "$LAMP_EXPORT_CSV") bénéficiaire(s) exporté(s)"
 
-# --- 2: notebook ---------------------------------------------------------------------
+# --- 2: script -----------------------------------------------------------------------
 
 codes_memory="$CODES_CSV"
 if (( DRY_RUN )); then
@@ -163,18 +163,17 @@ if (( DRY_RUN )); then
   if [[ -f "$CODES_CSV" ]]; then cp "$CODES_CSV" "$codes_memory"; fi
 fi
 
-log "étape 2/6 — notebook : nettoyage, dédoublonnage, codes -> $OUTPUT_CSV"
+log "étape 2/6 — script : nettoyage, dédoublonnage, codes -> $OUTPUT_CSV"
 CNOUS_BOURSIERS_27_10_2026_DIR="$INPUT_DIR" \
 LAMP_BENEFICIAIRES_EXPORT_PATHFILE_2026="$LAMP_EXPORT_CSV" \
 DB_CNOUS_EXPORT_27_10_2026="$OUTPUT_CSV" \
 EXISTING_CODES_PATHFILE_2026="$codes_memory" \
-  "$JUPYTER" nbconvert --to notebook --execute --ExecutePreprocessor.timeout=-1 \
-  --output-dir "$RUN_DIR" "$NOTEBOOK"
+  "$PYTHON" "$SCRIPT"
 
 if (( DRY_RUN )); then rm -f "$codes_memory"; fi
 
 nb_codes="$(rows "$OUTPUT_CSV")"
-log "$nb_codes code(s) tiré(s), rapport : $RUN_DIR/$(basename "$NOTEBOOK")"
+log "$nb_codes code(s) tiré(s)"
 if (( nb_codes == 0 )); then
   log "=== rien à déposer"
   exit 0
