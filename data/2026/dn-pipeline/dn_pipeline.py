@@ -187,13 +187,11 @@ def dn_instructeur_id(dossier: dict) -> str:
 
 
 def dn_skip_reason(dossier: dict) -> str:
-    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, filed
-    through FranceConnect, holding none of its labels, and put en instruction by an instructeur
+    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, through
+    FranceConnect or not, holding none of its labels, and put en instruction by an instructeur
     of its groupe."""
     if dossier['state'] != 'en_instruction':
         return 'pas en instruction'
-    if dossier.get('connectionUsager') != mapping.DN_CONNECTION_USAGER:
-        return 'sans FranceConnect'
     ours = {mapping.fold(name) for name in mapping.DN_LABELS.values()}
     if any(mapping.fold(label['name']) in ours for label in dossier['labels']):
         return 'déjà labellisé'
@@ -203,8 +201,8 @@ def dn_skip_reason(dossier: dict) -> str:
 
 
 def fetch_dn(client: DnClient, numero: int, only: set[int] | None = None) -> dict:
-    """The dossiers en instruction, filed through FranceConnect, without the pipeline's labels,
-    put en instruction by an instructeur of their groupe; with `only`, among those numbers."""
+    """The dossiers en instruction without the pipeline's labels, put en instruction by an
+    instructeur of their groupe; with `only`, among those numbers."""
     label_id_by_name = {mapping.fold(name): label_id for name, label_id in client.labels(numero).items()}
     missing = [name for name in mapping.DN_LABELS.values() if mapping.fold(name) not in label_id_by_name]
     if missing:

@@ -18,9 +18,9 @@ cd /srv/pass-sport/data/2026/dn-pipeline
 
 ## Ce qui est lu
 
-Les dossiers **en instruction**, **déposés via FranceConnect** (`connectionUsager` =
-`france_connect`), qui ne portent aucun des trois labels du pipeline (`Traité`, `À vérifier`,
-`Rejeté`). Pour faire repasser un dossier, lui retirer son label.
+Les dossiers **en instruction**, déposés via FranceConnect ou non : l'état « En instruction »
+fait foi. Seuls ceux qui ne portent aucun des trois labels du pipeline (`Traité`, `À vérifier`,
+`Rejeté`) sont pris. Pour faire repasser un dossier, lui retirer son label.
 
 Chaque dossier reçoit ses réponses (annotation, message, acceptation) **au nom de l'instructeur
 qui l'a passé en instruction** : le dernier passage en instruction de ses `traitements`
@@ -80,8 +80,9 @@ Le parent n'est jamais exigé par les autres correspondances : un enfant redécl
 parent reste un **Doublon**. Il rattrape ce qu'elles laissent passer, comme un prénom mal saisi
 (LEAH / LEA) ou l'enfant inscrit sous le nom de l'autre parent.
 
-Le demandeur DN arrive avec son identité FranceConnect : nom de naissance et tous ses prénoms.
-lamp01 garde, pour la CNAF, le nom d'usage et un seul prénom. Le parent est donc reconnu :
+Le demandeur DN arrive avec son identité FranceConnect (nom de naissance et tous ses prénoms),
+ou, sans FranceConnect, avec celle qu'il a saisie. lamp01 garde, pour la CNAF, le nom d'usage
+et un seul prénom. Le parent est donc reconnu :
 - par son nom tel que lamp01 l'a, ou par son nom de naissance de
   `beneficiaire_cnaf_extra_field` (DORVAT saisi, MARTIN dans lamp01) ;
 - par des prénoms contenus les uns dans les autres (CLAIRE YSOLDE saisi, CLAIRE dans lamp01) ;

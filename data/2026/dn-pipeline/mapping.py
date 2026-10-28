@@ -54,10 +54,6 @@ def situation_of_beneficiaire_de(label) -> str | None:
     return situation if situation in ('AAH', 'boursier') else None
 
 
-# Only the dossiers whose usager logged in through FranceConnect are taken
-# (Dossier.connectionUsager: france_connect, password or deleted).
-DN_CONNECTION_USAGER = 'france_connect'
-
 # Labels the démarche administrators create by hand (the API cannot create them); a dossier
 # holding any is skipped.
 DN_LABELS = {

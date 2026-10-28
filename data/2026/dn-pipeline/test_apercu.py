@@ -53,19 +53,20 @@ def test_dn_overview_flags_a_missing_or_mistyped_codes_annotation(capsys, annota
     assert shown in capsys.readouterr().out
 
 
-def test_dn_to_process_keeps_france_connect_dossiers_en_instruction_without_pipeline_label():
+def test_dn_to_process_keeps_dossiers_en_instruction_without_pipeline_label():
     labelled = dn_dossier(2, labels=[{'id': 'L1', 'name': 'traité'}])
     accepted = dn_dossier(3, state='accepte')
     password = dn_dossier(4, connectionUsager='password')
-    assert [d['number'] for d in apercu.dn_to_process([dn_dossier(1), labelled, accepted, password])] == [1]
+    assert [d['number'] for d in apercu.dn_to_process([dn_dossier(1), labelled, accepted, password])] == [1, 4]
 
 
 def test_dn_overview_counts_the_dossiers_to_process(capsys):
-    apercu.dn_overview(FakeDn([dn_dossier(1), dn_dossier(2, connectionUsager='password')], labels={}), 1234)
+    apercu.dn_overview(FakeDn([dn_dossier(1), dn_dossier(2, connectionUsager='password'),
+                               dn_dossier(3, state='accepte')], labels={}), 1234)
     out = capsys.readouterr().out
-    assert 'connexion : france_connect 1, password 1' in out
-    assert ('à traiter (en instruction par un instructeur, FranceConnect, sans label) : 1 ; '
-            'ignorés : sans FranceConnect 1') in out
+    assert 'connexion : france_connect 2, password 1' in out
+    assert ('à traiter (en instruction par un instructeur, sans label) : 2 ; '
+            'ignorés : pas en instruction 1') in out
 
 
 def test_dn_extraction_shows_the_fetched_dossiers(tmp_path, capsys):
@@ -97,12 +98,13 @@ def test_the_dossiers_to_process_are_cleaned_together_as_a_run_does(tmp_path, mo
     first = dn_dossier(1, beneficiaire_de='', enfants=[enfant('Ola', 'Dorvat')])
     second = dn_dossier(2, beneficiaire_de='', enfants=[enfant('Ola', 'Dorvat'), enfant('Lio', 'Dorvat')])
     password = dn_dossier(3, beneficiaire_de='', connectionUsager='password', enfants=[enfant('Eli', 'Dorvat')])
+    en_construction = dn_dossier(4, beneficiaire_de='', state='en_construction', enfants=[enfant('Ema', 'Dorvat')])
 
-    work = apercu.preview(FakeDn([first, second, password], labels={}), 1234, 'extraction')
+    work = apercu.preview(FakeDn([first, second, password, en_construction], labels={}), 1234, 'extraction')
 
     identites = apercu._read(work, 'identites.csv')
     assert identites[['reference', 'prenom']].values.tolist() == [
-        ['dn:1:enfant-1', 'Ola'], ['dn:2:enfant-2', 'Lio']]
+        ['dn:1:enfant-1', 'Ola'], ['dn:2:enfant-2', 'Lio'], ['dn:3:enfant-1', 'Eli']]
     rejets = apercu._read(work, 'rejets.csv')
     assert rejets[['reference', 'motif']].values.tolist() == [['dn:2:enfant-1', 'doublon de dn:1:enfant-1']]
     assert f'{work}/dn-brut.json' in capsys.readouterr().out

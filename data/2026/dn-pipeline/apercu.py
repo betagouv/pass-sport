@@ -65,7 +65,7 @@ def dn_overview(client: DnClient, numero: int) -> list[dict]:
     print(f"connexion : {', '.join(f'{c} {n}' for c, n in sorted(connections.items()))}")
     skipped = Counter(pipeline.dn_skip_reason(dossier) for dossier in dossiers)
     to_process = skipped.pop('', 0)
-    print(f"à traiter (en instruction par un instructeur, FranceConnect, sans label) : {to_process}"
+    print(f"à traiter (en instruction par un instructeur, sans label) : {to_process}"
           + (f" ; ignorés : {', '.join(f'{r} {n}' for r, n in sorted(skipped.items()))}" if skipped else ''))
 
     # Labels only, in first-seen order, over every dossier: a conditional champ may be missing

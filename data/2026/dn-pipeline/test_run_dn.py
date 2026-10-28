@@ -76,14 +76,15 @@ DN_DOSSIERS = [
     # The AAH applicant and their AEEH child, both coded.
     dossier(501, {'nom': 'Mervik', 'prenom': 'Tozal'}, ('Ola', 'Mervik', 'Mme', '2016-01-02'),
             beneficiaire_de="L'Allocation aux adultes handicapés (AAH)"),
-    # Rejected: unknown gender.
-    dossier(502, {'nom': 'Dorvat', 'prenom': 'Tozal'}, ('Pim', 'Dorvat', 'X', '2015-03-12')),
+    # Rejected: unknown gender. Filed without FranceConnect, taken all the same.
+    dossier(502, {'nom': 'Dorvat', 'prenom': 'Tozal'}, ('Pim', 'Dorvat', 'X', '2015-03-12'),
+            connectionUsager='password'),
     # Already in lamp01 (seeded by the test), under another situation and caisse: doublon.
     dossier(503, {'nom': 'Ker', 'prenom': 'Ana', 'civilite': 'Mme'}, ('Lio', 'Ker', 'M', '2015-03-12'),
             caisse='MSA'),
-    # Filed without FranceConnect: ignored.
+    # Still en construction: ignored.
     dossier(504, {'nom': 'Sorel', 'prenom': 'Eli'}, ('Ema', 'Sorel', 'Mme', '2015-03-12'),
-            connectionUsager='password'),
+            state='en_construction'),
     # Put en instruction by DN itself, no instructeur to answer it as: ignored.
     dossier(505, {'nom': 'Varn', 'prenom': 'Ilo'}, ('Rem', 'Varn', 'M', '2015-03-12'),
             instruction_event='passe_en_instruction_automatiquement'),

@@ -173,16 +173,17 @@ def test_fetch_dn_skips_dossiers_already_labelled_by_the_pipeline():
     assert raw['ignores'] == 1
 
 
-def test_fetch_dn_takes_only_dossiers_filed_through_france_connect():
+def test_fetch_dn_takes_dossiers_en_instruction_through_france_connect_or_not():
     password = dn_dossier(2, connectionUsager='password')
     deleted = dn_dossier(3, connectionUsager='deleted')
     labelled = dn_dossier(4, labels=[{'id': 'L', 'name': mapping.DN_LABELS['rejete']}])
+    en_construction = dn_dossier(5, connectionUsager='password', state='en_construction')
 
-    raw = pipeline.fetch_dn(FakeDn([dn_dossier(1), password, deleted, labelled]), 1234)
+    raw = pipeline.fetch_dn(FakeDn([dn_dossier(1), password, deleted, labelled, en_construction]), 1234)
 
-    assert [dossier['number'] for dossier in raw['dossiers']] == [1]
-    assert raw['ignores'] == 3
-    assert raw['ignores_par_motif'] == {'sans FranceConnect': 2, 'déjà labellisé': 1}
+    assert [dossier['number'] for dossier in raw['dossiers']] == [1, 2, 3]
+    assert raw['ignores'] == 2
+    assert raw['ignores_par_motif'] == {'déjà labellisé': 1, 'pas en instruction': 1}
 
 
 def test_fetch_dn_takes_only_the_listed_dossiers():
@@ -210,7 +211,7 @@ def test_dossier_numbers_refuses_anything_but_numbers():
 @pytest.mark.parametrize('overrides, reason', [
     ({}, ''),
     ({'state': 'en_construction'}, 'pas en instruction'),
-    ({'connectionUsager': 'password'}, 'sans FranceConnect'),
+    ({'connectionUsager': 'password'}, ''),
     ({'labels': [{'id': 'L', 'name': 'à vérifier'}]}, 'déjà labellisé'),
     ({'traitements': [traitement('passe_en_instruction_automatiquement')]}, 'sans instructeur'),
 ])
