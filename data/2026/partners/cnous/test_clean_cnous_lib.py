@@ -3,7 +3,7 @@
 Everything the CNOUS shares with the CNAF and the MSA is tested one folder up, in
 ../test_partners_lib.py; the code drawing and its bookkeeping in ../test_generate_codes_lib.py
 and ../../utils/test_codes_utils.py. What is checked here is what the CNOUS file alone
-brings: its 20 delivered fields against 19 header names, its two date formats, its ISO
+brings: its 19 positional columns, its two date formats, its ISO
 birth-country code and the leading zeros its export drops.
 
 All data are invented syllable by syllable rather than taken from any
@@ -41,18 +41,19 @@ def mapped_frame(**columns) -> pd.DataFrame:
 
 # --- Reading the file -------------------------------------------------------------
 
-CNOUS_HEADER_LINE = ';'.join(lib.CNOUS_RAW_COLUMNS[:-1])
+CNOUS_HEADER_LINE = ';'.join(lib.CNOUS_RAW_COLUMNS)
+
+CNOUS_ROW = (
+    "2003-05-14;VORNIDEL;Kalisse;F;Mme;999990001ZZ;VORNIDEL;Kalisse;"
+    "kalisse.vornidel@example.org;14/05/2003;54395;morbelac;FR;7 RUE DES BRAVELINES;"
+    "54600;Vardele-les-Morbin;54578;;")
 
 
-def test_read_raw_cnous_csv_does_not_shift_columns_on_the_unnamed_echelon(tmp_path):
-    """19 header names for 20 fields must not push the first column into the index."""
+@pytest.mark.parametrize('row', [CNOUS_ROW, f"{CNOUS_ROW};0Bis"], ids=['19 fields', 'echelon'])
+def test_read_raw_cnous_csv_loads_the_19_columns_only(tmp_path, row):
+    """With or without the trailing échelon, the 19 columns and nothing shifted."""
     filepath = tmp_path / 'cnous.csv'
-    filepath.write_text(
-        f"{CNOUS_HEADER_LINE}\n"
-        "2003-05-14;VORNIDEL;Kalisse;F;Mme;999990001ZZ;VORNIDEL;Kalisse;"
-        "kalisse.vornidel@example.org;14/05/2003;54395;morbelac;FR;7 RUE DES BRAVELINES;"
-        "54600;Vardele-les-Morbin;54578;;;0Bis\n",
-        encoding='utf-8')
+    filepath.write_text(f"{CNOUS_HEADER_LINE}\n{row}\n", encoding='utf-8')
 
     df = lib.read_raw_cnous_csv(filepath)
 
@@ -61,7 +62,7 @@ def test_read_raw_cnous_csv_does_not_shift_columns_on_the_unnamed_echelon(tmp_pa
     assert df.loc[0, 'date_naissance'] == '2003-05-14'
     assert df.loc[0, 'allocataire-matricule'] == '999990001ZZ'
     assert df.loc[0, 'adresse-allocataire_code_insee'] == '54578'
-    assert df.loc[0, 'echelon'] == '0Bis'
+    assert pd.isna(df.loc[0, 'allocataire-courriel_2'])
 
 
 # --- Mapping ----------------------------------------------------------------------

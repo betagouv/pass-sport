@@ -3,7 +3,7 @@
 Everything the CNOUS shares with the other partners lives one folder up, in
 partners_lib.py: whitespace stripping, required-field filtering, identity/email casing,
 birthdate shifting, JSON serialization. What is left here is what only the CNOUS file
-looks like - its 20 positional columns for 19 header names, its two date formats, its ISO
+looks like - its 19 positional columns, its two date formats, its ISO
 birth-country code, and the leading zeros its export drops from INSEE codes.
 
 CNOUS is the one partner where the beneficiary *is* the allocataire: a boursier applies for
@@ -33,11 +33,8 @@ from utils.data_utils import (
     unaccent_and_upper,
 )
 
-# The columns the CNOUS export delivers, in order. Read positionally (`names=` + `header=0`,
-# see read_raw_cnous_csv) rather than from the file's own header row, which names only the
-# first 19 of them: the trailing bourse échelon has no name. Handed to pandas as-is, that
-# one missing name is enough to silently turn the first column into an index and shift every
-# value one column to the left.
+# The columns read from the CNOUS export, in order, by position (see read_raw_cnous_csv)
+# rather than from the file's own header row.
 CNOUS_RAW_COLUMNS = [
     'date_naissance',
     'nom',
@@ -60,9 +57,6 @@ CNOUS_RAW_COLUMNS = [
     'adresse-allocataire_code_insee',
     'adresse-allocataire_cplt_adresse',
     'allocataire-courriel_2',
-    # the 20th column, unnamed in the header row: the bourse échelon (0Bis, 1, 2... 7). Read
-    # so the columns line up, then dropped - it is not an eligibility criterion.
-    'echelon',
 ]
 
 CNOUS_COLUMN_MAPPING = {
@@ -154,19 +148,14 @@ CNOUS_OUTPUT_COLUMNS = [
 def read_raw_cnous_csv(filepath) -> pd.DataFrame:
     """Read the raw CNOUS export, utf-8 and semicolon-separated.
 
-    Column names are supplied positionally (`names=CNOUS_RAW_COLUMNS`, `header=0`) rather
-    than read from the file's own header row: that row names 19 columns for 20 delivered
-    fields, and pandas answers a short header by promoting the surplus leading column to an
-    index instead of raising, which shifts every value one column to the left. `header=0`
-    still skips the row itself.
-
-    on_bad_lines='warn' rather than 'skip': a row whose field count does not match is a
-    real problem now that the count is pinned, and the warning names its line number in the
-    run report instead of losing a beneficiary silently.
+    Only the first 19 fields are loaded (`usecols`): the September export adds an unnamed
+    20th, the bourse échelon, which is not an eligibility criterion; the 2026-10-27 files do
+    not carry it. Left to pandas, that unnamed field would turn the first column into an
+    index and shift every value one column to the left.
     """
     return pd.read_csv(
         filepath, encoding='utf-8', sep=';', engine='c', dtype=str,
-        names=CNOUS_RAW_COLUMNS, header=0, on_bad_lines='warn',
+        names=CNOUS_RAW_COLUMNS, header=0, usecols=range(len(CNOUS_RAW_COLUMNS)),
     )
 
 
