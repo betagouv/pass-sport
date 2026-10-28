@@ -185,6 +185,28 @@ def test_fetch_dn_takes_only_dossiers_filed_through_france_connect():
     assert raw['ignores_par_motif'] == {'sans FranceConnect': 2, 'déjà labellisé': 1}
 
 
+def test_fetch_dn_takes_only_the_listed_dossiers():
+    dossiers = [dn_dossier(1), dn_dossier(2), dn_dossier(3, state='en_construction')]
+
+    raw = pipeline.fetch_dn(FakeDn(dossiers), 1234, only={1, 3})
+
+    assert [dossier['number'] for dossier in raw['dossiers']] == [1]
+    assert raw['ignores_par_motif'] == {'hors DN_DOSSIERS': 1, 'pas en instruction': 1}
+
+
+@pytest.mark.parametrize('value, numbers', [
+    (None, None), ('', None), ('  ', None),
+    ('123', {123}), ('123, 456', {123, 456}), ('123 456,', {123, 456}),
+])
+def test_dossier_numbers(value, numbers):
+    assert pipeline.dossier_numbers(value) == numbers
+
+
+def test_dossier_numbers_refuses_anything_but_numbers():
+    with pytest.raises(ValueError, match='DN_DOSSIERS'):
+        pipeline.dossier_numbers('123;abc')
+
+
 @pytest.mark.parametrize('overrides, reason', [
     ({}, ''),
     ({'state': 'en_construction'}, 'pas en instruction'),

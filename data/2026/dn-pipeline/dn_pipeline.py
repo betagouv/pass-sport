@@ -202,9 +202,9 @@ def dn_skip_reason(dossier: dict) -> str:
     return ''
 
 
-def fetch_dn(client: DnClient, numero: int) -> dict:
+def fetch_dn(client: DnClient, numero: int, only: set[int] | None = None) -> dict:
     """The dossiers en instruction, filed through FranceConnect, without the pipeline's labels,
-    put en instruction by an instructeur of their groupe."""
+    put en instruction by an instructeur of their groupe; with `only`, among those numbers."""
     label_id_by_name = {mapping.fold(name): label_id for name, label_id in client.labels(numero).items()}
     missing = [name for name in mapping.DN_LABELS.values() if mapping.fold(name) not in label_id_by_name]
     if missing:
@@ -217,7 +217,8 @@ def fetch_dn(client: DnClient, numero: int) -> dict:
 
     dossiers, skipped = [], Counter()
     for dossier in client.iter_dossiers(numero):
-        reason = dn_skip_reason(dossier)
+        reason = ('hors DN_DOSSIERS' if only is not None and dossier['number'] not in only
+                  else dn_skip_reason(dossier))
         if reason:
             skipped[reason] += 1
         else:
@@ -232,9 +233,20 @@ def fetch_dn(client: DnClient, numero: int) -> dict:
     }
 
 
+def dossier_numbers(value) -> set[int] | None:
+    """DN_DOSSIERS, '123, 456': the only dossiers a run takes; None when empty (every dossier)."""
+    if not (value or '').strip():
+        return None
+    try:
+        return {int(number) for number in value.replace(',', ' ').split()}
+    except ValueError:
+        raise ValueError(f"DN_DOSSIERS attend des numéros de dossier séparés par des virgules : {value}") from None
+
+
 def fetch(dn_out) -> dict:
     client = DnClient(os.environ.get('DN_API_URL') or DEFAULT_API_URL, _required_env('DN_API_TOKEN'))
-    dn = fetch_dn(client, int(_required_env('DN_DEMARCHE_NUMBER')))
+    dn = fetch_dn(client, int(_required_env('DN_DEMARCHE_NUMBER')),
+                  dossier_numbers(os.environ.get('DN_DOSSIERS')))
     _write_json(dn, dn_out)
     return {
         'dn_dossiers': len(dn['dossiers']),

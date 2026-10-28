@@ -211,6 +211,7 @@ reporté à la nuit suivante. Passage inachevé : sortie 1 chaque nuit, jusqu'à
 | `DN_API_URL` | `data/.env` | `https://demarche.numerique.gouv.fr/api/v2/graphql` |
 | `DN_RUN_DIR` | `data/.env` | `run/` dans ce dossier |
 | `DN_ATTENTE_PROD_MIN`, `DN_ATTENTE_PAS_S` | `data/.env` | `120` (0 : pas de vérification, recette seulement), `30` |
+| `DN_DOSSIERS` | environnement | vide : tous les dossiers ; `123,456` : ceux-là seulement (recette) |
 | `EXISTING_CODES_PATHFILE_2026`, `LAMP_DB_*`, `FC_PROD_DROP_DIR`, `FC_LOCK_FILE`, `FC_EXERCICE_ID` | `data/.env` | comme `support-pipeline` |
 
 Les variables déjà présentes dans l'environnement l'emportent. Le dépôt est public : le jeton ne

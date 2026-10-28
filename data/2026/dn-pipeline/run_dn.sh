@@ -37,6 +37,7 @@
 #   DN_ATTENTE_PROD_MIN          longest wait for production (default 120; 0 = no check, rehearsals only)
 #   DN_ATTENTE_PAS_S             seconds between two checks (default 30)
 #   DN_RUN_DIR                   run directories         (default <this dir>/run)
+#   DN_DOSSIERS                  only these dossier numbers, comma separated (rehearsals only)
 
 set -Eeuo pipefail
 # The files below carry identities and email addresses.
@@ -85,7 +86,7 @@ resolve_path() {
 CONFIG_VARS=(
   DN_API_URL DN_API_TOKEN DN_DEMARCHE_NUMBER
   EXISTING_CODES_PATHFILE_2026 FC_PROD_DROP_DIR FC_LOCK_FILE FC_EXERCICE_ID
-  DN_RUN_DIR DN_ATTENTE_PROD_MIN DN_ATTENTE_PAS_S
+  DN_RUN_DIR DN_ATTENTE_PROD_MIN DN_ATTENTE_PAS_S DN_DOSSIERS
   LAMP_DB_HOST LAMP_DB_PORT LAMP_DB_USER LAMP_DB_NAME LAMP_DB_PASSWORD
 )
 
@@ -418,6 +419,9 @@ fi
 
 if (( DN_ATTENTE_PROD_MIN == 0 )); then
   log "ATTENTION : DN_ATTENTE_PROD_MIN=0, la production ne sera pas vérifiée avant les retours — recette seulement"
+fi
+if [[ -n "${DN_DOSSIERS:-}" ]]; then
+  log "ATTENTION : seuls les dossiers DN_DOSSIERS=$DN_DOSSIERS sont pris"
 fi
 
 # --- 1: DN read --------------------------------------------------------------------
