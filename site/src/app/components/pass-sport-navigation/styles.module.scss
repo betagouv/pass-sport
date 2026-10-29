@@ -43,12 +43,6 @@
   }
 }
 
-// Puts the notice description on its own line, under the title
-.notice-description {
-  display: block;
-  margin-top: 0.5rem;
-}
-
 // For printing, the text is overlapping the logo, it needs a margin to fix that
 .service {
   @media print {
