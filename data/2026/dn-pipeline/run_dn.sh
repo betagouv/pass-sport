@@ -3,7 +3,9 @@
 # Codes pass Sport for the beneficiaries of the Démarches Numériques dossiers, end to end: DN
 # read, lamp01 lookup, code drawing, lamp01 injection check, /nfs/run drop, wait for
 # production's injector, lamp01 injection, then, per dossier, the codes annotation, a message
-# (the only channel its codes go out by), its labels and the acceptance.
+# (the only channel its codes go out by), its labels and the acceptance. Also labels
+# « FranceConnect » the deposited dossiers the worker pre-filled from the espace FranceConnect or
+# whose usager logged in to DN through FranceConnect.
 #
 #   ./run_dn.sh [--dry-run]
 #   ./run_dn.sh --reprendre <dossier de passage>
@@ -428,6 +430,14 @@ fi
 
 step 1/10 "lecture de Démarches Numériques"
 "$PYTHON" "$PIPELINE" fetch --dn-out "$DN_RAW"
+
+# Never stops the run: the codes matter more than this label.
+LABEL_FC_CSV="$RUN_DIR/label-franceconnect.csv"
+label_fc_args=(label-fc --journal "$LABEL_FC_CSV")
+if (( DRY_RUN )); then label_fc_args+=(--dry-run); fi
+log "label « FranceConnect » des dossiers déposés pré-remplis par le worker ou via FranceConnect"
+"$PYTHON" "$PIPELINE" "${label_fc_args[@]}" | tee "$RUN_DIR/label-franceconnect.log" \
+  || log "ATTENTION : label « FranceConnect » pas posé partout, détail dans $LABEL_FC_CSV et run.log"
 
 # --- 2: cleaning -------------------------------------------------------------------
 

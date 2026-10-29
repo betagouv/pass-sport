@@ -103,7 +103,9 @@ rapprochement (pas encore de forçage).
 
 1. **Contrôles** : verrou partagé avec la cron FranceConnect (`FC_LOCK_FILE`), passage inachevé
    (`run/a-reprendre`), dépôt en attente dans `/nfs/run`.
-2. **Lecture** de DN (`fetch`), réponse brute gardée dans le dossier du passage.
+2. **Lecture** de DN (`fetch`), réponse brute gardée dans le dossier du passage. Puis label
+   `FranceConnect` des dossiers pré-remplis (`label-fc`, voir
+   [plus bas](#dossiers-pré-remplis-depuis-lespace-franceconnect)).
 3. **Nettoyage** (`clean`) : une ligne par bénéficiaire au schéma PSP, rejets.
 4. **Rapprochement** (`match_dn.sql`, puis `split`).
 5. **Codes** : `fc_pipeline.py codes`, sur `EXISTING_CODES_PATHFILE_2026`, puis les fichiers de
@@ -239,12 +241,22 @@ les champs par les mêmes libellés que `mapping.py`, recopiés dans
 `worker/src/demarche-numerique/champs-resolver.ts`. Un libellé renommé ici doit l'être là aussi,
 puis `pnpm dn:champs` relancé dans `worker/`.
 
+Chaque passage pose le label `FranceConnect` sur ces dossiers (`prefilled` dans l'API, le worker
+étant le seul à pré-remplir cette démarche), ainsi que sur ceux dont l'usager s'est connecté à DN
+via FranceConnect (`connectionUsager` = `france_connect`). Seulement une fois déposés : en
+construction ou en instruction. DN refuse un label sur un brouillon, le worker ne peut donc pas
+le poser à la création. Ce n'est pas un label du pipeline : le dossier reste pris. Journal :
+`label-franceconnect.csv` du passage (`simule` en dry-run). Un échec n'arrête pas le passage,
+il est signalé par un `ATTENTION` dans `run.log`.
+
 ### À faire une fois, à la main
 
 - Dans la démarche DN (interface d'administration, l'API ne sait pas les créer) :
   - les labels `Traité`, `À vérifier`, `Rejeté`, `Doublon` (comparés sans casse ni accents, noms dans
     `mapping.py`). Un dossier qui porte l'un de ces labels, même posé à la main, n'est plus pris
     par le pipeline ;
+  - le label `FranceConnect`, posé sur les dossiers pré-remplis par le worker ou déposés via
+    FranceConnect ;
   - le champ `Votre date de naissance`, obligatoire : celle du bénéficiaire AAH ou boursier, et
     celle du parent pour ses enfants ;
   - l'annotation privée `Codes pass Sport`, de type **Texte long**. Sans elle, le passage

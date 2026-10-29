@@ -52,6 +52,17 @@ query dossiers($numero: Int!, $state: DossierState, $after: String) {
 }
 ''' % PAGE_SIZE + _CHAMP_FIELDS
 
+DOSSIER_LABELS_QUERY = '''
+query dossierLabels($numero: Int!, $state: DossierState, $after: String) {
+  demarche(number: $numero) {
+    dossiers(state: $state, first: %d, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { id number prefilled connectionUsager labels { id name } }
+    }
+  }
+}
+''' % PAGE_SIZE
+
 LABELS_QUERY = '''
 query labels($numero: Int!) {
   demarche(number: $numero) { labels { id name } }
@@ -142,9 +153,16 @@ class DnClient:
                 for descriptor in data['demarche']['activeRevision']['annotationDescriptors']}
 
     def iter_dossiers(self, numero: int, state: str = 'en_instruction'):
+        yield from self._paginate(DOSSIERS_QUERY, numero, state)
+
+    def iter_dossier_labels(self, numero: int, state: str):
+        """Id, number, prefilled, connectionUsager and labels only: no champ, nothing personal."""
+        yield from self._paginate(DOSSIER_LABELS_QUERY, numero, state)
+
+    def _paginate(self, query: str, numero: int, state: str | None):
         after = None
         while True:
-            data = self._post(DOSSIERS_QUERY, {'numero': numero, 'state': state, 'after': after},
+            data = self._post(query, {'numero': numero, 'state': state, 'after': after},
                               is_mutation=False)
             dossiers = data['demarche']['dossiers']
             yield from dossiers['nodes']

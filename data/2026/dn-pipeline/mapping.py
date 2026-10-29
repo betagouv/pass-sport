@@ -64,6 +64,13 @@ DN_LABELS = {
     'doublon': 'Doublon',
 }
 
+# Put by each run on the deposited dossiers the worker pre-filled from the espace FranceConnect
+# (DN refuses a label on a brouillon, so not at creation) or whose usager logged in to DN through
+# FranceConnect. Not one of DN_LABELS: still taken.
+DN_LABEL_FRANCECONNECT = 'FranceConnect'
+# Dossier.connectionUsager: france_connect, password or deleted.
+DN_CONNECTION_FRANCECONNECT = 'france_connect'
+
 # Private annotation (instructeurs only) receiving the codes each run hands out, created by hand
 # in the démarche as « Texte long ».
 DN_ANNOTATION_CODES = 'Codes pass Sport'

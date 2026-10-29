@@ -140,6 +140,9 @@ class FakeDn:
     def iter_dossiers(self, numero, state='en_instruction'):
         yield from self._dossiers
 
+    def iter_dossier_labels(self, numero, state):
+        yield from (dossier for dossier in self._dossiers if dossier['state'] == state)
+
     def _call(self, name, dossier_id, *args):
         if self.refuse.get((name, dossier_id)):
             raise self.refuse[(name, dossier_id)]
@@ -818,3 +821,85 @@ def test_retours_without_any_line_touches_no_dossier(tmp_path):
     stats = run_retours(tmp_path, dn=FakeDn([]))
 
     assert (stats['lignes'], stats['actions_faites'], stats['erreurs']) == (0, 0, 0)
+
+
+# --- FranceConnect label ----------------------------------------------------------------
+
+FC_LABELS = {**{name: f'L-{key}' for key, name in mapping.DN_LABELS.items()},
+             mapping.DN_LABEL_FRANCECONNECT: 'L-fc'}
+
+
+def listed(number, state='en_construction', prefilled=True, connection='password', labels=()):
+    """A dossier as iter_dossier_labels lists it."""
+    return {'id': f'D{number}', 'number': number, 'state': state, 'prefilled': prefilled,
+            'connectionUsager': connection,
+            'labels': [{'id': f'L-{name}', 'name': name} for name in labels]}
+
+
+def run_label_fc(tmp_path, dn, dry_run=False, only=None):
+    journal = pipeline.Journal(tmp_path / 'label-franceconnect.csv')
+    return pipeline.label_franceconnect(dn, 1234, journal, dry_run, only), journal
+
+
+def test_label_fc_labels_the_deposited_pre_filled_or_franceconnect_dossiers_without_it(tmp_path):
+    dn = FakeDn([
+        listed(1), listed(2, state='en_instruction', labels=['Traité']),
+        listed(3, prefilled=False), listed(4, state='brouillon'), listed(5, state='accepte'),
+        listed(6, labels=['franceconnect']),
+        listed(7, state='en_instruction', prefilled=False, connection='france_connect'),
+    ], labels=FC_LABELS)
+
+    found, journal = run_label_fc(tmp_path, dn)
+
+    assert found == 4
+    assert dn.calls == [('label', 'D1', 'L-fc'), ('label', 'D2', 'L-fc'), ('label', 'D7', 'L-fc')]
+    assert journal.counts == {'fait': 3, 'simule': 0, 'erreur': 0}
+    assert read(tmp_path / 'label-franceconnect.csv')[['reference', 'action', 'statut']].values.tolist() == [
+        ['dn:1', 'label-franceconnect', 'fait'], ['dn:2', 'label-franceconnect', 'fait'],
+        ['dn:7', 'label-franceconnect', 'fait']]
+
+
+def test_label_fc_labels_once_a_dossier_put_en_instruction_between_the_two_reads(tmp_path):
+    dn = FakeDn([listed(7), listed(7, state='en_instruction')], labels=FC_LABELS)
+
+    run_label_fc(tmp_path, dn)
+
+    assert dn.calls == [('label', 'D7', 'L-fc')]
+
+
+def test_label_fc_takes_only_the_listed_dossiers(tmp_path):
+    dn = FakeDn([listed(1), listed(2)], labels=FC_LABELS)
+
+    run_label_fc(tmp_path, dn, only={2})
+
+    assert dn.calls == [('label', 'D2', 'L-fc')]
+
+
+def test_label_fc_dry_run_writes_nothing(tmp_path):
+    dn = FakeDn([listed(1)], labels=FC_LABELS)
+
+    _, journal = run_label_fc(tmp_path, dn, dry_run=True)
+
+    assert dn.calls == []
+    assert journal.counts['simule'] == 1
+
+
+def test_label_fc_refuses_a_demarche_without_the_label(tmp_path):
+    dn = FakeDn([listed(1)])
+
+    with pytest.raises(ValueError, match='FranceConnect'):
+        run_label_fc(tmp_path, dn)
+    assert dn.calls == []
+
+
+def test_label_fc_refusal_for_one_dossier_never_stops_the_others(tmp_path, monkeypatch):
+    monkeypatch.setenv('DN_DEMARCHE_NUMBER', '1234')
+    monkeypatch.delenv('DN_DOSSIERS', raising=False)
+    dn = FakeDn([listed(1), listed(2)], labels=FC_LABELS)
+    dn.refuse[('label', 'D1')] = DnMutationError('Ce label est déjà associé au dossier')
+
+    stats = pipeline.franceconnect(tmp_path / 'label-franceconnect.csv', dn_client=dn)
+
+    assert (stats['dossiers_franceconnect'], stats['actions_faites'], stats['erreurs']) == (2, 1, 1)
+    assert dn.calls == [('label', 'D2', 'L-fc')]
+    assert 'refusé par DN' in read(tmp_path / 'label-franceconnect.csv')['detail'].iloc[0]

@@ -65,6 +65,17 @@ def test_dn_paginates_the_dossiers_en_instruction(server):
     assert server['received'][0][2]['Authorization'] == 'Bearer jeton'
 
 
+def test_dn_lists_the_dossier_labels_without_any_champ(server):
+    server['answers'] += [page([1], True, 'c1'), page([2], False)]
+    client = DnClient(server['url'], 'jeton')
+
+    assert [d['number'] for d in client.iter_dossier_labels(1234, 'en_construction')] == [1, 2]
+    query = server['received'][0][3]['query']
+    assert all(field in query for field in ('prefilled', 'connectionUsager', 'labels'))
+    assert 'champs' not in query
+    assert [body['variables']['state'] for _, _, _, body in server['received']] == ['en_construction'] * 2
+
+
 def test_dn_retries_a_query_on_server_errors(server):
     server['answers'] += [(502, {}), (200, {'data': {'demarche': {'labels': [{'id': 'L1', 'name': 'a'}]}}})]
     client = DnClient(server['url'], 'jeton', retry_delay=0)

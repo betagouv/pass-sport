@@ -4,6 +4,7 @@
     python dn_pipeline.py clean     # raw JSON -> PSP schema, match candidates, rejects
     python dn_pipeline.py split     # match_dn.sql output -> doublons / à vérifier / à coder
     python dn_pipeline.py retours   # verdicts -> codes annotation, message, label, acceptance
+    python dn_pipeline.py label-fc  # « FranceConnect » label on the deposited FranceConnect dossiers
 
 Code drawing and the prod/lamp01 split are the FranceConnect ones (fc_pipeline.py codes and
 writeback), called directly by the shell script. Matching is NOT the FranceConnect one: see
@@ -846,6 +847,61 @@ def retours(verdicts_filepath, codes_filepath, dn_filepath, journal_filepath, dr
     }
 
 
+# --- FranceConnect label ----------------------------------------------------------------
+
+# Deposited only: DN refuses a label on a brouillon.
+FRANCECONNECT_LABEL_STATES = ('en_construction', 'en_instruction')
+
+
+def label_franceconnect(client, numero: int, journal: Journal, dry_run: bool,
+                        only: set[int] | None = None) -> int:
+    """Labels « FranceConnect » the deposited dossiers the worker pre-filled from the espace
+    FranceConnect (the démarche's only pre-filled ones) or whose usager logged in to DN through
+    FranceConnect; returns how many there are."""
+    wanted = mapping.fold(mapping.DN_LABEL_FRANCECONNECT)
+    label_id = next((label_id for name, label_id in client.labels(numero).items()
+                     if mapping.fold(name) == wanted), None)
+    if label_id is None:
+        raise ValueError(f"label « {mapping.DN_LABEL_FRANCECONNECT} » absent de la démarche {numero}")
+
+    # By number: a dossier put en instruction between the two reads is seen once.
+    dossiers = {dossier['number']: dossier for state in FRANCECONNECT_LABEL_STATES
+                for dossier in client.iter_dossier_labels(numero, state)
+                if (dossier['prefilled']
+                    or dossier['connectionUsager'] == mapping.DN_CONNECTION_FRANCECONNECT)
+                and (only is None or dossier['number'] in only)}
+
+    for number, dossier in sorted(dossiers.items()):
+        if any(mapping.fold(label['name']) == wanted for label in dossier['labels']):
+            continue
+        reference = f'dn:{number}'
+        if dry_run:
+            journal.record(reference, 'label-franceconnect', 'simule', mapping.DN_LABEL_FRANCECONNECT)
+            continue
+        try:
+            client.ajouter_label(dossier['id'], label_id)
+        except Exception as error:  # noqa: BLE001 - one dossier never stops the others
+            journal.record(reference, 'label-franceconnect', 'erreur', _failure(error))
+            continue
+        journal.record(reference, 'label-franceconnect', 'fait', mapping.DN_LABEL_FRANCECONNECT)
+    return len(dossiers)
+
+
+def franceconnect(journal_filepath, dry_run=False, dn_client=None) -> dict:
+    client = dn_client or DnClient(os.environ.get('DN_API_URL') or DEFAULT_API_URL,
+                                   _required_env('DN_API_TOKEN'))
+    journal = Journal(journal_filepath)
+    found = label_franceconnect(client, int(_required_env('DN_DEMARCHE_NUMBER')), journal,
+                                dry_run, dossier_numbers(os.environ.get('DN_DOSSIERS')))
+    return {
+        'dossiers_franceconnect': found,
+        'actions_faites': journal.counts['fait'],
+        'actions_simulees': journal.counts['simule'],
+        'erreurs': journal.counts['erreur'],
+        'journal': str(journal_filepath),
+    }
+
+
 # --- CLI --------------------------------------------------------------------------------
 
 def print_stats(stats: dict) -> None:
@@ -895,10 +951,15 @@ def main(argv=None) -> int:
     retours_parser.set_defaults(func=lambda a: retours(
         a.verdicts, a.codes, a.dn_in, a.journal, a.dry_run, refused_drop=a.refus_production))
 
+    label_parser = subparsers.add_parser('label-fc', help="label FranceConnect des dossiers FranceConnect")
+    label_parser.add_argument('--journal', required=True)
+    label_parser.add_argument('--dry-run', action='store_true')
+    label_parser.set_defaults(func=lambda a: franceconnect(a.journal, a.dry_run))
+
     args = parser.parse_args(argv)
     stats = args.func(args)
     print_stats(stats)
-    if args.command == 'retours' and stats['erreurs']:
+    if args.command in ('retours', 'label-fc') and stats['erreurs']:
         return 1
     return 0
 

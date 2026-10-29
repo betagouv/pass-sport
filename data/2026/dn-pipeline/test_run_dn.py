@@ -41,7 +41,7 @@ def dossier(number, demandeur, child, beneficiaire_de='', caisse='CAF',
     agent = None if instruction_event.endswith('automatiquement') else f'agent{number}@example.org'
     return {
         'id': f'D{number}', 'number': number, 'state': 'en_instruction',
-        'connectionUsager': 'france_connect', 'deposeParUnTiers': False,
+        'connectionUsager': 'france_connect', 'deposeParUnTiers': False, 'prefilled': False,
         'usager': {'email': f"{demandeur['nom'].lower()}@example.org"},
         'demandeur': {'__typename': 'PersonnePhysique', 'civilite': 'M', 'email': None, **demandeur},
         'labels': [],
@@ -73,23 +73,25 @@ def dossier(number, demandeur, child, beneficiaire_de='', caisse='CAF',
 
 
 DN_DOSSIERS = [
-    # The AAH applicant and their AEEH child, both coded.
+    # The AAH applicant and their AEEH child, both coded. Pre-filled by the worker.
     dossier(501, {'nom': 'Mervik', 'prenom': 'Tozal'}, ('Ola', 'Mervik', 'Mme', '2016-01-02'),
-            beneficiaire_de="L'Allocation aux adultes handicapés (AAH)"),
+            beneficiaire_de="L'Allocation aux adultes handicapés (AAH)", prefilled=True),
     # Rejected: unknown gender. Filed without FranceConnect, taken all the same.
     dossier(502, {'nom': 'Dorvat', 'prenom': 'Tozal'}, ('Pim', 'Dorvat', 'X', '2015-03-12'),
             connectionUsager='password'),
     # Already in lamp01 (seeded by the test), under another situation and caisse: doublon.
     dossier(503, {'nom': 'Ker', 'prenom': 'Ana', 'civilite': 'Mme'}, ('Lio', 'Ker', 'M', '2015-03-12'),
             caisse='MSA'),
-    # Still en construction: ignored.
+    # Still en construction: ignored, but labelled FranceConnect, pre-filled by the worker though
+    # claimed with a DN password.
     dossier(504, {'nom': 'Sorel', 'prenom': 'Eli'}, ('Ema', 'Sorel', 'Mme', '2015-03-12'),
-            state='en_construction'),
+            state='en_construction', prefilled=True, connectionUsager='password'),
     # Put en instruction by DN itself, no instructeur to answer it as: ignored.
     dossier(505, {'nom': 'Varn', 'prenom': 'Ilo'}, ('Rem', 'Varn', 'M', '2015-03-12'),
             instruction_event='passe_en_instruction_automatiquement'),
 ]
 DN_LABELS = [{'id': f'L-{key}', 'name': name} for key, name in mapping.DN_LABELS.items()]
+DN_LABELS.append({'id': 'L-franceconnect', 'name': mapping.DN_LABEL_FRANCECONNECT})
 DN_ANNOTATIONS = [{'__typename': mapping.DN_ANNOTATION_TYPE, 'id': 'AD1', 'label': mapping.DN_ANNOTATION_CODES}]
 
 
@@ -138,6 +140,7 @@ class FakeDn:
 
     def __init__(self):
         self.dossiers = copy.deepcopy(DN_DOSSIERS)
+        self.labels = copy.deepcopy(DN_LABELS)
         self.mutations = []
         self.mutation_times = []
         # Mutations DN answers with an error, as (field, dossier id).
@@ -146,7 +149,7 @@ class FakeDn:
     def answer(self, body):
         query = body['query']
         if 'labels {' in query and 'dossiers' not in query:
-            return {'data': {'demarche': {'labels': DN_LABELS}}}
+            return {'data': {'demarche': {'labels': self.labels}}}
         if 'annotationDescriptors' in query:
             return {'data': {'demarche': {'activeRevision': {'annotationDescriptors': DN_ANNOTATIONS}}}}
         if 'dossiers(' in query:
@@ -161,7 +164,7 @@ class FakeDn:
         self.mutation_times.append(time.monotonic())
         dossier = next(d for d in self.dossiers if d['id'] == payload['dossierId'])
         if field == 'dossierAjouterLabel':
-            dossier['labels'].append(next(label for label in DN_LABELS if label['id'] == payload['labelId']))
+            dossier['labels'].append(next(label for label in self.labels if label['id'] == payload['labelId']))
         if field == 'dossierAccepter':
             dossier['state'] = 'accepte'
         if field == 'dossierModifierAnnotations':
@@ -272,6 +275,10 @@ def sha1(path: Path) -> str:
     return hashlib.sha1(path.read_bytes()).hexdigest()
 
 
+# Right after the DN read, before any code: the deposited dossiers the worker pre-filled or
+# filed through FranceConnect, D502 excepted.
+LABELLED_FC = [('dossierAjouterLabel', f'D{number}', 'L-franceconnect') for number in (501, 503, 504, 505)]
+
 ANSWERED = [
     ('dossierModifierAnnotations', 'D501', None), ('dossierEnvoyerMessage', 'D501', None),
     ('dossierAjouterLabel', 'D501', 'L-traite'), ('dossierAccepter', 'D501', None),
@@ -296,6 +303,7 @@ def test_dry_run_reads_dn_and_writes_nothing(workspace, dn):
     run_dir = (tmp_path / 'run' / 'latest').resolve()
     assert run_dir.name.endswith('-dry-run')
     assert (run_dir / 'retours.csv').read_text().count(';simule;') == len(ANSWERED)
+    assert (run_dir / 'label-franceconnect.csv').read_text().count(';simule;') == len(LABELLED_FC)
     assert not (tmp_path / 'run' / 'a-reprendre').exists()
 
 
@@ -309,15 +317,15 @@ def test_real_run_answers_the_dossiers_only_once_the_injector_filed_the_drop_in_
     injected, = (tmp_path / 'drop' / 'succes').glob('*/beneficiaires-insertion-2-*.csv')
     with injected.open(encoding='utf-8', newline='') as handle:
         injected_codes = {row['id_psp'] for row in csv.DictReader(handle, delimiter=';')}
-    assert injector.injected_at < min(dn.mutation_times)
-    assert dn.calls() == ANSWERED
+    assert injector.injected_at < min(dn.mutation_times[len(LABELLED_FC):])
+    assert dn.calls() == LABELLED_FC + ANSWERED
     # Each dossier answered as the instructeur who put it en instruction.
     assert all(payload['instructeurId'] == payload['dossierId'].replace('D', 'I')
                for field, payload in dn.mutations if field != 'dossierAjouterLabel')
     annotation = dict(line.split(' : ') for line in dn.dossiers[0]['annotations'][0]['stringValue'].splitlines())
     assert sorted(annotation) == ['Ola Mervik', 'Tozal Mervik']
     assert set(annotation.values()) == injected_codes
-    message = dn.mutations[1][1]['body']
+    message = dn.mutations[len(LABELLED_FC) + 1][1]['body']
     assert all(code in message for code in annotation.values())
     # The doublon's code comes from lamp01: never handed out.
     assert all('26-KNWN-0001' not in json.dumps(payload) for _, payload in dn.mutations)
@@ -328,7 +336,7 @@ def test_real_run_answers_the_dossiers_only_once_the_injector_filed_the_drop_in_
 
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
     assert 'rien-a-faire' in (tmp_path / 'run' / 'latest' / 'STATUT').read_text()
-    assert len(dn.mutations) == len(ANSWERED)
+    assert len(dn.mutations) == len(LABELLED_FC) + len(ANSWERED)
 
 
 def test_a_run_stopped_after_lamp01_blocks_the_next_ones_until_resumed(workspace, dn):
@@ -345,7 +353,7 @@ def test_a_run_stopped_after_lamp01_blocks_the_next_ones_until_resumed(workspace
     assert psql('select count(*) from public.beneficiaires') == '3'
     # The refused acceptance leaves its dossier labelled Traité but en instruction; the other
     # dossiers are answered.
-    assert dn.calls() == [call for call in ANSWERED if call != ('dossierAccepter', 'D501', None)]
+    assert dn.calls() == LABELLED_FC + [call for call in ANSWERED if call != ('dossierAccepter', 'D501', None)]
     assert dn.dossiers[0]['state'] == 'en_instruction'
 
     blocked = run()
@@ -358,7 +366,7 @@ def test_a_run_stopped_after_lamp01_blocks_the_next_ones_until_resumed(workspace
     assert resumed.returncode == 0, resumed.stdout + resumed.stderr
     assert not marker.exists()
     assert psql('select count(*) from public.beneficiaires') == '3'
-    assert dn.calls()[len(ANSWERED) - 1:] == [('dossierAccepter', 'D501', None)]
+    assert dn.calls()[len(LABELLED_FC) + len(ANSWERED) - 1:] == [('dossierAccepter', 'D501', None)]
     assert dn.dossiers[0]['state'] == 'accepte'
     assert len(list((tmp_path / 'drop' / 'succes').glob('*/beneficiaires-insertion-*.csv'))) == 1
 
@@ -373,7 +381,7 @@ def test_a_drop_refused_by_production_is_never_replayed(workspace, dn, injector)
     assert 'refusé par la production' in refused.stdout + refused.stderr
     # lamp01 never got the codes, the coded dossier hears nothing: its label only.
     assert psql('select count(*) from public.beneficiaires') == '1'
-    assert dn.calls() == [
+    assert dn.calls() == LABELLED_FC + [
         ('dossierAjouterLabel', 'D501', 'L-a_verifier'),
         ('dossierEnvoyerMessage', 'D502', None), ('dossierAjouterLabel', 'D502', 'L-rejete'),
         ('dossierEnvoyerMessage', 'D503', None), ('dossierAjouterLabel', 'D503', 'L-traite'),
@@ -399,3 +407,14 @@ def test_a_pending_drop_postpones_the_run(workspace, dn, injector):
     assert 'reporte' in (tmp_path / 'run' / 'passages.log').read_text()
     assert psql('select count(*) from public.beneficiaires') == '1'
     assert dn.mutations == []
+
+
+def test_a_demarche_without_the_franceconnect_label_still_codes_and_answers(workspace, dn):
+    tmp_path, run, psql = workspace
+    dn.labels = [label for label in dn.labels if label['id'] != 'L-franceconnect']
+
+    result = run()
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'ATTENTION : label « FranceConnect » pas posé partout' in result.stdout
+    assert dn.calls() == ANSWERED
