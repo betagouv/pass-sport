@@ -4,6 +4,7 @@
 
 import { getPool } from '@/app/services/database';
 import { dnDossierUrl, findDnDossierForSub } from '@/app/services/dn-dossier';
+import { stableDossierLink } from '@/app/services/dn-dossier-rules';
 
 jest.mock('../../src/app/services/database', () => ({ getPool: jest.fn() }));
 jest.mock('@sentry/nextjs', () => ({ withScope: jest.fn() }));
@@ -28,6 +29,35 @@ describe('dnDossierUrl', () => {
       );
     },
   );
+});
+
+describe('stableDossierLink', () => {
+  const OWNER_URL = 'https://demarche.numerique.gouv.fr/dossiers/9001';
+  const dossier = (state: string, url = OWNER_URL) => ({
+    number: 9001,
+    state,
+    url,
+    submittedAt: null,
+  });
+
+  it.each(['en_construction', 'en_instruction', 'accepte', 'refuse', 'sans_suite'])(
+    'links a %s dossier straight away',
+    (state) => {
+      expect(stableDossierLink(dossier(state))).toEqual({ number: 9001, url: OWNER_URL });
+    },
+  );
+
+  it('looks a prefilled dossier up anew: its URL is the key to it', () => {
+    expect(stableDossierLink(dossier('prefilled', PREFILL_URL))).toBeNull();
+  });
+
+  it('looks a draft up anew: DN may have purged it', () => {
+    expect(stableDossierLink(dossier('brouillon'))).toBeNull();
+  });
+
+  it('answers null without a dossier', () => {
+    expect(stableDossierLink(null)).toBeNull();
+  });
 });
 
 describe('findDnDossierForSub', () => {

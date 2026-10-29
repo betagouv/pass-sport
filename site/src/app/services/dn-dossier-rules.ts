@@ -15,5 +15,15 @@ export type DnDossier = {
 export const DN_SUBMITTED_STATES = ['en_construction', 'en_instruction'];
 export const DN_CLOSED_STATES = ['accepte', 'refuse', 'sans_suite'];
 
+export type DnDossierLink = Pick<DnDossier, 'number' | 'url'>;
+
+// A submitted or closed dossier lives at DN's own /dossiers/<n> page: a stable, token-free link
+// the page can show at once. A prefilled one (its URL is the key to it, and dead once claimed)
+// or a draft (DN purges abandoned ones) is looked up anew.
+export const stableDossierLink = (dossier: DnDossier | null): DnDossierLink | null =>
+  dossier && [...DN_SUBMITTED_STATES, ...DN_CLOSED_STATES].includes(dossier.state)
+    ? { number: dossier.number, url: dossier.url }
+    : null;
+
 export const hasRefusal = (beneficiaries: BeneficiaryResult[]): boolean =>
   beneficiaries.some(({ verdict }) => verdict === 'not_eligible');

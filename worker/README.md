@@ -127,8 +127,10 @@ With `HISTORY_PAYLOAD=0` the journal holds no API data, and the dossier carries 
 identity alone.
 
 The dossier URL carries a bearer token: until the dossier is claimed, whoever opens it takes it,
-along with the data pre-filled in it. It is stored in `fc_dn_dossiers` and nowhere else. It is
-never logged or journaled, and Sentry spans and breadcrumbs skip it
+along with the data pre-filled in it. It is stored in `fc_dn_dossiers`, and in the job's data
+until the job ends (a failed one is kept a day). It is never logged or journaled: Sentry spans
+and breadcrumbs skip it, a failed query loses its bound values before the job fails, and every
+Sentry event is redacted of `prefill_token` and query values
 ([src/sentry-scrub.ts](src/sentry-scrub.ts)).
 
 | var | default | role |

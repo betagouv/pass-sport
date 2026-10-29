@@ -76,10 +76,30 @@ describe('DnDossierButton', () => {
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 
-  it('hands back a dossier the usager already holds', () => {
+  it('hands back a dossier the usager already holds, saying it is looked up first', async () => {
+    respond(pending, ready());
     render(<DnDossierButton hasDossier />);
 
-    expect(screen.getByRole('button', { name: 'Accéder à mon dossier' })).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Retrouver mon dossier' });
+    expect(button).toHaveAccessibleDescription(/puis vous donnons le lien pour l’ouvrir/);
+
+    await click('Retrouver mon dossier');
+    expect(screen.getByRole('button', { name: 'Recherche de votre dossier…' })).toBeDisabled();
+  });
+
+  it('links a submitted or closed dossier at once, without asking DN', () => {
+    const url = 'https://demarche.numerique.gouv.fr/dossiers/9001';
+    render(<DnDossierButton hasDossier link={{ number: 9001, url }} />);
+
+    expect(screen.getByRole('heading', { name: 'Votre dossier n° 9001' })).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Suivre mon dossier sur Démarche Numérique' });
+    expect(link).toHaveAttribute('href', url);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.click(link);
+    expect(matomoNames()).toEqual(['ouvert']);
   });
 
   it('asks for the dossier, polls, then shows its personal link', async () => {
@@ -94,7 +114,7 @@ describe('DnDossierButton', () => {
 
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('Votre dossier n° 9001 est prêt');
-    expect(status).toHaveTextContent('avec FranceConnect');
+    expect(status).toHaveTextContent('de préférence avec FranceConnect');
     expect(status).toHaveTextContent('ne le partagez pas');
 
     const link = screen.getByRole('link', { name: 'Compléter mon dossier sur Démarche Numérique' });
@@ -122,7 +142,7 @@ describe('DnDossierButton', () => {
     respond(ready(submitted));
     render(<DnDossierButton hasDossier />);
 
-    await click('Accéder à mon dossier');
+    await click('Retrouver mon dossier');
 
     expect(screen.getByRole('status')).toHaveTextContent('Votre dossier n° 9001 a été déposé');
     expect(screen.getByRole('status')).not.toHaveTextContent('ne le partagez pas');

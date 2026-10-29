@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import { push } from '@socialgouv/matomo-next';
 import BeneficiaryRecap from '@/app/v2/test-eligibilite/components/post-login-flow/BeneficiaryRecap';
 import type { BeneficiaryResult } from '@/app/services/applications';
+import type { DnDossierLink } from '@/app/services/dn-dossier-rules';
 
 jest.mock('@socialgouv/matomo-next', () => ({ push: jest.fn() }));
 
@@ -377,6 +378,7 @@ describe('BeneficiaryRecap', () => {
       beneficiaries: BeneficiaryResult[],
       dnDossierEnabled: boolean | undefined,
       hasDnDossier = false,
+      dnDossierLink: DnDossierLink | null = null,
     ) =>
       render(
         <BeneficiaryRecap
@@ -384,6 +386,7 @@ describe('BeneficiaryRecap', () => {
           allocataireIdentity={ALLOCATAIRE_IDENTITY}
           dnDossierEnabled={dnDossierEnabled}
           hasDnDossier={hasDnDossier}
+          dnDossierLink={dnDossierLink}
         />,
       );
 
@@ -417,7 +420,19 @@ describe('BeneficiaryRecap', () => {
     it('rend le dossier existant, même sans refus', () => {
       renderWithDn([beneficiary({ verdict: 'eligible_confirmed' })], true, true);
 
-      expect(screen.getByRole('button', { name: 'Accéder à mon dossier' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Retrouver mon dossier' })).toBeInTheDocument();
+    });
+
+    it('donne directement le lien d’un dossier déposé', () => {
+      const url = 'https://demarche.numerique.gouv.fr/dossiers/9001';
+      renderWithDn([beneficiary({ verdict: 'not_eligible' })], true, true, { number: 9001, url });
+
+      expect(
+        screen.queryByRole('button', { name: 'Retrouver mon dossier' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Suivre mon dossier sur Démarche Numérique' }),
+      ).toHaveAttribute('href', url);
     });
   });
 });

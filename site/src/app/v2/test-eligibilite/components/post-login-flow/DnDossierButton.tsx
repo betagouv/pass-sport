@@ -8,6 +8,7 @@ import {
   DN_CLOSED_STATES,
   DN_SUBMITTED_STATES,
   type DnDossier,
+  type DnDossierLink,
 } from '@/app/services/dn-dossier-rules';
 import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
@@ -52,6 +53,38 @@ const poll = async (): Promise<PollAnswer | 'transient' | 'expired'> => {
   }
 };
 
+const DossierAnchor = ({ url, label }: { url: string; label: string }) =>
+  SAFE_URL.test(url) ? (
+    // matomo_ignore: until the dossier is claimed, its URL is the key to it.
+    <a
+      className="fr-btn matomo_ignore fr-mt-1w"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`${label} sur Démarche Numérique - nouvelle fenêtre`}
+      onClick={() => trackEvent(MATOMO_CATEGORY.franceConnectRequest, MATOMO_ACTION, 'ouvert')}
+    >
+      {label} sur Démarche Numérique
+    </a>
+  ) : null;
+
+// Its state may have moved on since the page read it: the title leaves it to DN's page.
+const KnownDossier = ({ link }: { link: DnDossierLink }) => (
+  <Alert
+    severity="info"
+    as="h3"
+    // Shown on load: nothing to announce.
+    role={undefined}
+    title={`Votre dossier n° ${link.number}`}
+    description={
+      <>
+        <p className="fr-mb-0">Suivez son avancement sur Démarche Numérique.</p>
+        <DossierAnchor url={link.url} label="Suivre mon dossier" />
+      </>
+    }
+  />
+);
+
 const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
   const submitted = DN_SUBMITTED_STATES.includes(dossier.state);
   const closed = DN_CLOSED_STATES.includes(dossier.state);
@@ -82,8 +115,8 @@ const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
             <>
               <ol className="fr-mb-2w">
                 <li>
-                  Connectez-vous à Démarche Numérique <strong>avec FranceConnect</strong> : votre
-                  dossier ne sera traité que s’il est déposé avec FranceConnect.
+                  Connectez-vous à Démarche Numérique, de préférence{' '}
+                  <strong>avec FranceConnect</strong>.
                 </li>
                 <li>Vérifiez et complétez les informations pré-remplies.</li>
                 <li>Joignez vos justificatifs.</li>
@@ -92,21 +125,7 @@ const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
               <p className="fr-mb-2w">Ce lien vous est personnel : ne le partagez pas.</p>
             </>
           )}
-          {SAFE_URL.test(dossier.url) && (
-            // matomo_ignore: until the dossier is claimed, its URL is the key to it.
-            <a
-              className="fr-btn matomo_ignore"
-              href={dossier.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`${label} sur Démarche Numérique - nouvelle fenêtre`}
-              onClick={() =>
-                trackEvent(MATOMO_CATEGORY.franceConnectRequest, MATOMO_ACTION, 'ouvert')
-              }
-            >
-              {label} sur Démarche Numérique
-            </a>
-          )}
+          <DossierAnchor url={dossier.url} label={label} />
         </>
       }
     />
@@ -116,9 +135,11 @@ const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
 interface Props {
   // The usager already holds a dossier: the button hands it back rather than announcing one.
   hasDossier: boolean;
+  // Its stable link, when it has one: shown at once, without asking DN again.
+  link?: DnDossierLink | null;
 }
 
-export default function DnDossierButton({ hasDossier }: Props) {
+export default function DnDossierButton({ hasDossier, link = null }: Props) {
   const [state, setState] = useState<State>({ kind: 'idle' });
   const descriptionId = useId();
   const mounted = useRef(true);
@@ -174,14 +195,24 @@ export default function DnDossierButton({ hasDossier }: Props) {
     fail('délai dépassé', TOO_LONG);
   };
 
+  if (link) {
+    return (
+      <div className="fr-mb-6w">
+        <KnownDossier link={link} />
+      </div>
+    );
+  }
+
   const showButton = state.kind !== 'ready' && !(state.kind === 'error' && !state.retry);
   const buttonLabel =
     state.kind === 'loading'
-      ? 'Préparation de votre dossier…'
+      ? hasDossier
+        ? 'Recherche de votre dossier…'
+        : 'Préparation de votre dossier…'
       : state.kind === 'error'
         ? 'Réessayer'
         : hasDossier
-          ? 'Accéder à mon dossier'
+          ? 'Retrouver mon dossier'
           : 'Vous pensez être éligible ?';
 
   return (
@@ -197,7 +228,7 @@ export default function DnDossierButton({ hasDossier }: Props) {
           </Button>
           <p id={descriptionId} className="fr-mt-1w fr-text--sm">
             {hasDossier
-              ? 'Retrouvez sur Démarche Numérique le dossier de vérification déjà préparé pour vous.'
+              ? 'Nous recherchons votre dossier de vérification sur Démarche Numérique, puis vous donnons le lien pour l’ouvrir.'
               : 'Nous vous préparons un dossier de vérification sur Démarche Numérique, pré-rempli avec les informations transmises par FranceConnect et par les organismes consultés (CAF ou MSA, CNOUS). Vous pourrez le vérifier, le compléter et joindre vos justificatifs avant de le déposer.'}
           </p>
         </>

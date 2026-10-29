@@ -12,6 +12,7 @@ import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
 import { relanceAvailableAtForSub } from '@/app/services/relance-availability';
 import { findDnDossierForSub } from '@/app/services/dn-dossier';
+import { stableDossierLink } from '@/app/services/dn-dossier-rules';
 import {
   FC_DEBUGGING_ONLY,
   FC_DN_DOSSIER_ENABLED,
@@ -88,8 +89,10 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
   const results = result ? await findResultsForSub(result.sub) : [];
   const relanceAvailableAt =
     result && FC_RELANCE_ENABLED ? await relanceAvailableAtForSub(result.sub) : null;
-  const hasDnDossier =
-    result && FC_DN_DOSSIER_ENABLED ? (await findDnDossierForSub(result.sub)) !== null : false;
+  const dnDossier = result && FC_DN_DOSSIER_ENABLED ? await findDnDossierForSub(result.sub) : null;
+  const hasDnDossier = dnDossier !== null;
+  // Never the dossier itself: a prefilled one's URL is the key to it.
+  const dnDossierLink = stableDossierLink(dnDossier);
 
   // Raw FranceConnect identity + API Particulier response dumps (including their
   // errors) are debug-only and restricted to the local environment.
@@ -245,6 +248,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
                 dnDossierEnabled={FC_DN_DOSSIER_ENABLED}
                 hasDnDossier={hasDnDossier}
+                dnDossierLink={dnDossierLink}
               />
             ) : (
               <ResultPanel
@@ -255,6 +259,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
                 dnDossierEnabled={FC_DN_DOSSIER_ENABLED}
                 hasDnDossier={hasDnDossier}
+                dnDossierLink={dnDossierLink}
               />
             )
           ) : (

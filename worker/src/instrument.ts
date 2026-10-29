@@ -2,7 +2,7 @@
 // other module loads. Only initializes when SENTRY_DSN and ENV are both set, so
 // local/dev (neither set) is a no-op and captures elsewhere silently drop.
 import * as Sentry from "@sentry/node";
-import { isDnPrefillRequest, scrubHttpBreadcrumb } from "./sentry-scrub";
+import { isDnPrefillRequest, scrubEvent, scrubHttpBreadcrumb } from "./sentry-scrub";
 
 if (process.env.SENTRY_DSN && process.env.ENV) {
   Sentry.init({
@@ -14,6 +14,7 @@ if (process.env.SENTRY_DSN && process.env.ENV) {
     // Captures must stay PII-free at the call site too.
     sendDefaultPii: false,
     beforeBreadcrumb: scrubHttpBreadcrumb,
+    beforeSend: scrubEvent,
     integrations: [
       Sentry.nativeNodeFetchIntegration({ ignoreOutgoingRequests: isDnPrefillRequest }),
     ],

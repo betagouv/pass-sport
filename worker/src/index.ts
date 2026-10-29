@@ -28,6 +28,7 @@ import {
   LCA_QUEUE_NAME,
   retryBackoff,
 } from "./queues";
+import { withoutQueryValues } from "./sentry-scrub";
 
 // Scalingo injects SCALINGO_REDIS_URL for the Redis addon.
 const SCALINGO_REDIS_URL = process.env.SCALINGO_REDIS_URL ?? "redis://localhost:6379";
@@ -56,7 +57,16 @@ async function startFlow<TData extends object>(opts: {
   // worker to avoid race conditions)
   await queue.setGlobalConcurrency(1);
 
-  const worker = new Worker<TData>(opts.queueName, async (job) => opts.process(job, queue), {
+  // What a job throws is logged, kept in Redis as its failedReason and sent to Sentry.
+  const processJob = async (job: Job<TData>) => {
+    try {
+      return await opts.process(job, queue);
+    } catch (e) {
+      throw withoutQueryValues(e);
+    }
+  };
+
+  const worker = new Worker<TData>(opts.queueName, processJob, {
     connection: createRedisConnection(),
     settings: { backoffStrategy: retryBackoff },
     ...opts.workerOptions,
