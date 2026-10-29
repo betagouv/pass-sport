@@ -29,7 +29,7 @@
     "@api-gouv-dinum/api-particulier": "^0.1.1",
     "@sentry/node": "^10.75.0",
     "bullmq": "^5.81.2",
-    "csv-parse": "^7.0.2",
+    "csv-parse": "^7.0.3",
     "csv-stringify": "^6.9.0",
     "drizzle-orm": "^0.45.3",
     "ioredis": "^5.11.1",
@@ -37,13 +37,13 @@
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^12.2.0",
-    "@testcontainers/redis": "^12.1.0",
+    "@testcontainers/redis": "^12.2.1",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.15.0",
     "drizzle-kit": "^0.31.11",
-    "testcontainers": "^12.2.0",
+    "testcontainers": "^12.2.1",
     "tsc-alias": "^1.9.7",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }

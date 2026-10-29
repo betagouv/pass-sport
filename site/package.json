@@ -29,7 +29,7 @@
     "scripts:add-note-to-conversations": "node --env-file=.env.local scripts/add-note-to-conversations-for-non-existing-qf.mjs"
   },
   "dependencies": {
-    "@codegouvfr/react-dsfr": "^1.33.0",
+    "@codegouvfr/react-dsfr": "^1.36.0",
     "@react-pdf/renderer": "^4.9.0",
     "@sentry/nextjs": "^10.71.0",
     "@socialgouv/matomo-next": "1.9.2",
@@ -54,7 +54,7 @@
     "react-select": "^5.10.2",
     "remark-breaks": "^4.0.0",
     "server-only": "^0.0.1",
-    "zod": "^4.6.6",
+    "zod": "^4.6.7",
     "zod-form-data": "^3.0.3"
   },
   "devDependencies": {
@@ -79,7 +79,7 @@
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.1",
     "prettier": "^3.9.9",
-    "sass": "^1.103.1",
+    "sass": "^1.105.2",
     "typescript": "^5.9.3",
     "webpack": "^5.110.1"
   },
