@@ -27,7 +27,7 @@ pnpm db:migrate   # apply migrations
 pnpm db:reset     # empty the local dev tables (schema and migrations untouched)
 ```
 
-`db:reset` truncates `audit`, `eligibility_history`, `eligibility_results` and `email_verifications` in the compose `db` service. Prefer it over `docker compose down -v`, which also removes the `node_modules` and pnpm store volumes and turns a data wipe into a full dependency reinstall.
+`db:reset` truncates `audit`, `eligibility_history`, `eligibility_results` and `fc_dn_dossiers` in the compose `db` service. Prefer it over `docker compose down -v`, which also removes the `node_modules` and pnpm store volumes and turns a data wipe into a full dependency reinstall.
 
 ## Cadence API Particulier
 
@@ -94,6 +94,71 @@ pause et requeue le job. Même plafond, deux façons d'attendre.
 
 The offline `qf:batch` runs on the processing machine with its own in-memory pacer
 ([src/scripts/rate-pacer.ts](src/scripts/rate-pacer.ts)) and does **not** consume these counters.
+
+## Dossier Démarche Numérique pré-rempli
+
+A FranceConnect household with at least one `not_eligible` beneficiary gets a « Vous pensez être
+éligible ? » button on the site. The click asks this worker for a dossier on the support démarche
+that the [DN pipeline](../data/2026/dn-pipeline/) processes, through its own queue
+`codes-queue-dn-dossiers` (never behind the FranceConnect backlog). The job
+([src/jobs/fc-dn-dossier.ts](src/jobs/fc-dn-dossier.ts)):
+
+1. looks up the user's live dossier on DN by its prefill token. If DN still lists it, the job
+   updates its state and stops there: one dossier per FranceConnect user and démarche;
+2. if DN no longer lists it, the row is set to `gone`. Otherwise, with no dossier yet, it rebuilds
+   the household from the API Particulier answers already in `eligibility_history`. It never
+   calls API Particulier;
+3. pre-fills a new dossier through DN's public prefill API (`POST
+   /api/public/v1/demarches/<n>/dossiers`, no authentication) and stores it in `fc_dn_dossiers`.
+   The site reads that table through the `fc_dn_dossier_by_sub` view.
+
+What goes in the dossier is
+[src/demarche-numerique/prefill.ts](src/demarche-numerique/prefill.ts):
+- the FranceConnect identity;
+- the caisse from the quotient answer, the applicant's and the children's (no API answer carries
+  an address: the usager types it);
+- the children a campaign window could carry and the last run refused;
+- the AEEH answer for each child;
+- the children, foyer quotient and foyer AEEH questions.
+
+A « non » is only sent when an answer says so: the DN pipeline grants on these answers. The values sent
+are journaled as `dn.dossier_prefill` (`body_payload`), and state lookups as `dn.dossier_etat`.
+With `HISTORY_PAYLOAD=0` the journal holds no API data, and the dossier carries the FranceConnect
+identity alone.
+
+The dossier URL carries a bearer token: until the dossier is claimed, whoever opens it takes it,
+along with the data pre-filled in it. It is stored in `fc_dn_dossiers`, and in the job's data
+until the job ends (a failed one is kept a day). It is never logged or journaled: Sentry spans
+and breadcrumbs skip it, a failed query loses its bound values before the job fails, and every
+Sentry event is redacted of `prefill_token` and query values
+([src/sentry-scrub.ts](src/sentry-scrub.ts)).
+
+| var | default | role |
+|---|---|---|
+| `DN_DEMARCHE_NUMBER` | none | the démarche to pre-fill; unset, or without champ ids, every dossier job fails and the rest of the worker runs on |
+| `DN_BASE_URL` | `https://demarche.numerique.gouv.fr` | DN instance |
+| `DN_REQUEST_TIMEOUT_MS` | `8000` | per call to DN |
+
+The champ ids live in
+[src/demarche-numerique/champs.ts](src/demarche-numerique/champs.ts), one entry per démarche.
+DN silently drops a value sent under an unknown id or outside a champ's options. Rerun the check
+after every change to the démarche:
+
+```bash
+pnpm dn:champs 159278    # reads DN_API_TOKEN from the environment or ../data/.env
+```
+
+The script lists the démarche's champs and resolves them by the labels the DN pipeline reads them by
+(`mapping.py`). It prints the entry `champs.ts` must hold, and exits 1 when that entry differs or
+a champ cannot be resolved. The token stays on the machine that runs it: the prefill API needs
+none, and it never goes on Scalingo.
+
+Finding someone's dossier, through the tunnel:
+
+```sql
+select dossier_number, state, submitted_at, created_at, updated_at
+  from fc_dn_dossiers where allocataire_fc_sub = '<sub>' order by created_at;
+```
 
 ## Scripts
 

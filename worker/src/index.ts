@@ -14,12 +14,21 @@ import { processFcRelanceJob } from "./jobs/fc-relance";
 import { processLcaJob, type LcaDeps } from "./jobs/lca";
 import { processFcCodeEmailsJob, type FcCodeEmailsJobData } from "./jobs/fc-code-emails";
 import {
+  processFcDnDossierJob,
+  type FcDnDossierDeps,
+  type FcDnDossierJobData,
+} from "./jobs/fc-dn-dossier";
+import { createDnClient } from "./demarche-numerique/client";
+import { readDnConfig } from "./demarche-numerique/config";
+import {
+  DN_DOSSIERS_QUEUE_NAME,
   FC_RELANCE_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
   FC_CODE_EMAILS_QUEUE_NAME,
   LCA_QUEUE_NAME,
   retryBackoff,
 } from "./queues";
+import { withoutQueryValues } from "./sentry-scrub";
 
 // Scalingo injects SCALINGO_REDIS_URL for the Redis addon.
 const SCALINGO_REDIS_URL = process.env.SCALINGO_REDIS_URL ?? "redis://localhost:6379";
@@ -48,7 +57,16 @@ async function startFlow<TData extends object>(opts: {
   // worker to avoid race conditions)
   await queue.setGlobalConcurrency(1);
 
-  const worker = new Worker<TData>(opts.queueName, async (job) => opts.process(job, queue), {
+  // What a job throws is logged, kept in Redis as its failedReason and sent to Sentry.
+  const processJob = async (job: Job<TData>) => {
+    try {
+      return await opts.process(job, queue);
+    } catch (e) {
+      throw withoutQueryValues(e);
+    }
+  };
+
+  const worker = new Worker<TData>(opts.queueName, processJob, {
     connection: createRedisConnection(),
     settings: { backoffStrategy: retryBackoff },
     ...opts.workerOptions,
@@ -143,7 +161,27 @@ async function main(): Promise<void> {
     workerOptions: { lockDuration: 10 * 60_000 },
   });
 
-  const flows = [franceConnect, lca, fcCodeEmails];
+  // Not fatal: the rest of the worker keeps running, and each dossier job fails on its own.
+  const dnConfig = readDnConfig();
+  if ("error" in dnConfig) {
+    console.warn(`[pass-sport-worker] Démarche Numérique disabled: ${dnConfig.error}`);
+  } else {
+    console.log(
+      `[pass-sport-worker] Démarche Numérique: démarche ${dnConfig.config.demarcheNumber} on ${dnConfig.config.baseUrl}`,
+    );
+  }
+
+  const dnDeps: FcDnDossierDeps =
+    "config" in dnConfig
+      ? { db, config: dnConfig.config, dn: createDnClient(dnConfig.config) }
+      : { db, config: null, dn: null };
+
+  const dnDossiers = await startFlow<FcDnDossierJobData>({
+    queueName: DN_DOSSIERS_QUEUE_NAME,
+    process: (job) => processFcDnDossierJob(job, job.data, dnDeps),
+  });
+
+  const flows = [franceConnect, lca, fcCodeEmails, dnDossiers];
 
   console.log("[pass-sport-worker] standalone worker started");
 

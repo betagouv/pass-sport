@@ -20,10 +20,10 @@
     "fc:code-emails:enqueue": "tsx src/scripts/enqueue-fc-code-emails.ts",
     "email:test": "tsx src/scripts/send-test-email.ts",
     "codes:aah-emails": "tsx src/scripts/send-code-direct-aah.ts",
-    "codes:support-emails": "tsx src/scripts/send-code-direct-aah.ts --all-kinds",
     "redis:decode": "tsx src/scripts/redis-decode.ts",
     "apip:rate": "tsx src/scripts/rate-config.ts",
-    "apip:rate:probe": "tsx src/scripts/rate-gate-probe.ts"
+    "apip:rate:probe": "tsx src/scripts/rate-gate-probe.ts",
+    "dn:champs": "tsx src/scripts/dn-champs.ts"
   },
   "dependencies": {
     "@api-gouv-dinum/api-particulier": "^0.1.1",

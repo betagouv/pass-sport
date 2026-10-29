@@ -8,7 +8,9 @@ import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import type { AlertProps } from '@codegouvfr/react-dsfr/Alert';
 import CodePdfDownloadLink from './CodePdfDownloadLink';
 import RelanceButton from './RelanceButton';
+import DnDossierButton from './DnDossierButton';
 import { canRerun } from '@/app/services/relance';
+import { hasRefusal, type DnDossierLink } from '@/app/services/dn-dossier-rules';
 import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
 import { MATOMO_CATEGORY } from '@/utils/matomo-category';
 
@@ -140,6 +142,10 @@ interface Props {
   relanceAvailableAt?: string | null;
   relanceEnabled?: boolean;
   relanceAllowlistOnly?: boolean;
+  dnDossierEnabled?: boolean;
+  // A Démarche Numérique dossier was already pre-filled for this usager.
+  hasDnDossier?: boolean;
+  dnDossierLink?: DnDossierLink | null;
 }
 
 export default function BeneficiaryRecap({
@@ -149,6 +155,9 @@ export default function BeneficiaryRecap({
   relanceAvailableAt = null,
   relanceEnabled = false,
   relanceAllowlistOnly = false,
+  dnDossierEnabled = false,
+  hasDnDossier = false,
+  dnDossierLink = null,
 }: Props) {
   if (beneficiaries.length === 0) {
     return (
@@ -198,6 +207,11 @@ export default function BeneficiaryRecap({
           end={downloadLink(b, i)}
         />
       ))}
+
+      {/* Still offered once every verdict turned eligible, so the usager can follow it. */}
+      {dnDossierEnabled && (hasRefusal(beneficiaries) || hasDnDossier) && (
+        <DnDossierButton hasDossier={hasDnDossier} link={dnDossierLink} />
+      )}
 
       {relanceEnabled && canRerun(beneficiaries, relanceAllowlistOnly) && (
         <RelanceButton availableAt={relanceAvailableAt} />

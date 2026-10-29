@@ -18,7 +18,7 @@
 !2026/partners/franceconnect/check_writeback.sql
 !2026/partners/franceconnect/check_confirmed.sql
 !2026/dashboard/load_dashboard.sql
-!2026/grist-dn-pipeline/match_grist_dn.sql
+!2026/dn-pipeline/match_dn.sql
 !2026/partners/v_pays_territoire_2026.csv
 
 ignored/
@@ -33,8 +33,10 @@ logs/
 2026/partners/franceconnect/run/
 # Same for run_aah_direct.sh.
 2026/support-pipeline/run/
-# Same for run_grist_dn.sh, raw API answers included.
-2026/grist-dn-pipeline/run/
+# Same for run_dn.sh, raw API answers included.
+2026/dn-pipeline/run/
 
 # One directory per run_dashboard.sh run: logs only.
 2026/dashboard/run/
+
+2026/grist-dn-pipeline/run/

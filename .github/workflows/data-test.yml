@@ -18,7 +18,8 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
           cache-dependency-path: './data/requirements.txt'
+      # The run_*.sh pipelines, run end to end by the tests, call data/.venv/bin/python as on the lamp.
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: python -m venv .venv && .venv/bin/pip install -r requirements.txt
       - name: Tests
-        run: python -m pytest
+        run: .venv/bin/python -m pytest

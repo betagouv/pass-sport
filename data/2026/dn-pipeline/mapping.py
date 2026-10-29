@@ -1,10 +1,10 @@
-"""Source vocabularies of the Grist table and the DN démarche, and the texts sent back.
+"""Vocabulary of the DN démarche, and the texts sent back.
 
 Every label is compared folded (no accents, no case, single spaces, see `fold`), so a
-renamed column only needs its new label here. Situations and caisses are recognised by
-keyword, the sources spelling them out in full (« AAH (allocation aux adultes handicapés) »).
+renamed champ only needs its new label here. Situations and caisses are recognised by
+keyword, the démarche spelling them out in full (« AAH (allocation aux adultes handicapés) »).
 
-Checked against the real sources with apercu_grist.sh and apercu_dn.sh (2026-10-16).
+Checked against the real démarche with apercu_dn.sh and `pnpm dn:champs` (2026-10-27).
 """
 
 import re
@@ -18,59 +18,29 @@ def fold(value) -> str:
     return ' '.join(folded.replace('_', ' ').lower().split())
 
 
-# --- Grist ------------------------------------------------------------------------
-
-# Internal name -> column label in the Grist UI (resolved to column ids at runtime).
-GRIST_COLUMNS = {
-    'caisse': 'Caisse',
-    'genre': 'Genre',
-    'prenom': "Prénom de l'enfant",
-    'nom': "Nom de l'enfant",
-    'date_naissance': 'Date de naissance',
-    'situation': 'Situation',
-    'allocataire_genre': 'Genre allocataire',
-    'allocataire_prenom': 'Prénom du parent allocataire',
-    'allocataire_nom': 'Nom du parent allocataire',
-    'matricule': 'n° allocataire ou INE',
-    'email': 'Email',
-    'code_insee': 'Code INSEE',
-    'eligibilite': 'Eligibilité',
-    'commentaire': 'Commentaire',
-    'statut': 'Statut',
-    'code': 'Code',
-}
-
-# Values of the `Eligibilité` choice column that let a row in (Oui / Non / empty met).
-GRIST_ELIGIBLE_VALUES = {'oui'}
-
-GRIST_STATUT = {
-    'code_envoye': 'Code envoyé',
-    'doublon': 'Doublon',
-    'a_verifier': 'À vérifier',
-    'rejete': 'Rejeté',
-    # Coded, but production's injector filed the drop in failed/.
-    'refuse_prod': 'Rejeté',
-}
-
 # --- Démarches Numériques ---------------------------------------------------------
 
+# Also read by the worker, which pre-fills dossiers from the espace FranceConnect: keep
+# worker/src/demarche-numerique/champs-resolver.ts in step, then run `pnpm dn:champs` there.
 DN_CHAMPS = {
-    'allocataire_genre': "Genre de l'allocataire",
+    'allocataire_genre': 'Votre civilité :',
     'adresse': 'Adresse de résidence',
-    'beneficiaire_de': 'Bénéficiaire de',
+    'beneficiaire_de': 'Je suis bénéficiaire de :',
     'ine': 'Numéro INE (Identification Nationale Étudiant)',
-    'foyer_qf_aeeh': (
-        "Faites-vous parti d'un foyer dont le quotient familial est inférieur ou égal à 699 € "
-        "et/ou votre enfant est-il bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant "
-        "handicapé) ?"),
-    'caisse': 'À quelle caisse appartenez-vous ?',
+    # The applicant's own caisse, for their AAH.
+    'caisse': 'À quelle caisse êtes vous rattaché ?',
     'date_naissance': 'Votre date de naissance',
-    'a_des_enfants': 'Avez-vous des enfants',
-    'enfants': 'Enfants',
+    'a_des_enfants': "Est ce qu'un ou plusieurs de vos enfants sont éligibles au Pass Sport ?",
+    'caisse_enfants': 'A quelle caisse sont ils rattachés ?',
+    'foyer_qf': "Font ils partie d'un foyer dont le quotient familial est inférieur ou égal à 699 € ?",
+    'enfants_aeeh': (
+        "Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH (Allocation d'éducation "
+        "de l'enfant handicapé) ?"),
+    'enfants': 'Pour chaque enfant, merci de remplir les champs suivants :',
 }
 
 DN_ENFANT_CHAMPS = {
-    'aeeh': "Bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant handicapé)",
+    'aeeh': "Est il bénéficiaire de l'AEEH (Allocation d'éducation de l'enfant handicapé)",
     'genre': "Genre de l'enfant",
     'prenom': "Prénom de l'enfant",
     'nom': "Nom de l'enfant",
@@ -84,29 +54,32 @@ def situation_of_beneficiaire_de(label) -> str | None:
     return situation if situation in ('AAH', 'boursier') else None
 
 
-# Only the dossiers whose usager logged in through FranceConnect are taken
-# (Dossier.connectionUsager: france_connect, password or deleted).
-DN_CONNECTION_USAGER = 'france_connect'
-
 # Labels the démarche administrators create by hand (the API cannot create them); a dossier
 # holding any is skipped.
 DN_LABELS = {
     'traite': 'Traité',
     'a_verifier': 'À vérifier',
     'rejete': 'Rejeté',
+    # Added on top of the others to a dossier holding a beneficiary lamp01 already knows.
+    'doublon': 'Doublon',
 }
+
+# Put by each run on the deposited dossiers the worker pre-filled from the espace FranceConnect
+# (DN refuses a label on a brouillon, so not at creation) or whose usager logged in to DN through
+# FranceConnect. Not one of DN_LABELS: still taken.
+DN_LABEL_FRANCECONNECT = 'FranceConnect'
+# Dossier.connectionUsager: france_connect, password or deleted.
+DN_CONNECTION_FRANCECONNECT = 'france_connect'
 
 # Private annotation (instructeurs only) receiving the codes each run hands out, created by hand
 # in the démarche as « Texte long ».
 DN_ANNOTATION_CODES = 'Codes pass Sport'
 DN_ANNOTATION_TYPE = 'TextareaChampDescriptor'
 
-# --- Shared vocabularies ------------------------------------------------------------
+# --- Vocabularies -------------------------------------------------------------------
 
-# Words (folded, matched whole) naming each PSP situation, as Grist's `Situation` and DN's
-# `Bénéficiaire de` spell them: « Quotient familial inférieur ou égal à 699 € »,
-# « AEEH (allocation d'éducation de l'enfant handicapé) », « AAH (allocation aux adultes
-# handicapés) ».
+# Words (folded, matched whole) naming each PSP situation, as `Je suis bénéficiaire de :` spells them:
+# « L'Allocation aux adultes handicapés (AAH) ».
 SITUATION_WORDS = {
     'AAH': ('aah', 'adultes handicapes'),
     'AEEH': ('aeeh', "education de l'enfant handicape"),
@@ -122,7 +95,7 @@ def _named(folded: str, words_by_value: dict) -> str | None:
 
 
 def situation_of_label(label) -> str | None:
-    """AAH, AEEH, jeune or boursier from a source's label; None when none or several match."""
+    """AAH, AEEH, jeune or boursier from a label; None when none or several match."""
     return _named(fold(label), SITUATION_WORDS)
 
 
@@ -133,7 +106,7 @@ ORGANISME_BY_CAISSE_WORDS = {
 
 
 def organisme_of_caisse(label) -> str | None:
-    """CAF or MSA from a free-text caisse (DN asks it as plain text): 'CAF du Rhône' is CAF.
+    """CAF or MSA from a caisse answer, by keyword: 'CAF du Rhône' is CAF.
 
     None when neither or both are named.
     """
@@ -154,7 +127,7 @@ NO = {'non', 'false', 'no'}
 # --- DN message to the applicant ------------------------------------------------------
 
 DN_MESSAGE_LINE = {
-    'code_envoye': "{prenom} {nom} : code pass Sport {code}, envoyé aussi par courriel à {email}.",
+    'code_envoye': "{prenom} {nom} : code pass Sport {code}.",
     'doublon': "{prenom} {nom} : un code pass Sport a déjà été attribué.",
     'a_verifier': "{prenom} {nom} : la demande est en cours de vérification par nos équipes.",
     'rejete': "{prenom} {nom} : demande non retenue ({motif}).",

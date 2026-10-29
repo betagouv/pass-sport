@@ -1,49 +1,45 @@
 #!/usr/bin/env bash
 #
-# Codes pass Sport for the beneficiaries collected in Grist and Démarches Numériques, end to
-# end: API reads, lamp01 lookup, code drawing, lamp01 injection check, /nfs/run drop, wait for
-# production's injector, lamp01 injection, one mail per code, then Grist `Statut` and, per DN
-# dossier, the codes annotation, a message, a label and the acceptance.
+# Codes pass Sport for the beneficiaries of the Démarches Numériques dossiers, end to end: DN
+# read, lamp01 lookup, code drawing, lamp01 injection check, /nfs/run drop, wait for
+# production's injector, lamp01 injection, then, per dossier, the codes annotation, a message
+# (the only channel its codes go out by), its labels and the acceptance. Also labels
+# « FranceConnect » the deposited dossiers the worker pre-filled from the espace FranceConnect or
+# whose usager logged in to DN through FranceConnect.
 #
-#   ./run_grist_dn.sh [--dry-run]
-#   ./run_grist_dn.sh --reprendre <dossier de passage>
+#   ./run_dn.sh [--dry-run]
+#   ./run_dn.sh --reprendre <dossier de passage>
 #
-# ORDER — /nfs/run, then production, then lamp01, then the mail, then the feedback: lamp01
-# never holds a code production does not, nobody hears of a code before production's injector
-# has moved the drop to succes/, and no Grist row nor DN dossier is told "code envoyé" before
-# its mail left. A drop the injector moves to failed/ is never replayed: its lines are marked
-# (Grist « Rejeté », DN « À vérifier » without a message) and the run ends in error.
+# ORDER — /nfs/run, then production, then lamp01, then the feedback: lamp01 never holds a code
+# production does not, and nobody hears of a code before production's injector has moved the
+# drop to succes/. A drop the injector moves to failed/ is never replayed: its dossiers are
+# labelled « À vérifier » without a message and the run ends in error.
 #
 # A real run that fails once its drop is in /nfs/run leaves run/a-reprendre: every later run
 # refuses to start until `--reprendre` has replayed the drop, the wait for production, the
-# lamp01 injection, the mails and the feedback from that run's own files (markers and
-# journals skip what was already done). Removing run/a-reprendre by hand closes a run whose
-# remaining errors were handled outside the pipeline.
+# lamp01 injection and the feedback from that run's own files (markers and journal skip what
+# was already done). Removing run/a-reprendre by hand closes a run whose remaining errors were
+# handled outside the pipeline.
 #
-# DRY RUN reads both APIs (read only) and plays every step without leaving anything outside
-# its run directory: codes are drawn on a copy of EXISTING_CODES_PATHFILE_2026, the lamp01
-# injection is rolled back, nothing is dropped nor waited for, Link Mobility is never called
-# and no Grist / DN write happens (envois.csv and retours.csv list what would have been sent).
+# DRY RUN reads DN (read only) and plays every step without leaving anything outside its run
+# directory: codes are drawn on a copy of EXISTING_CODES_PATHFILE_2026, the lamp01 injection is
+# rolled back, nothing is dropped nor waited for and no DN write happens (retours.csv lists what
+# would have been sent).
 #
 # Cron friendly: no work, a lock already held or a pending /nfs/run drop end in 0.
 #
 # Variables (data/.env, the caller's environment wins):
-#   GRIST_API_URL, GRIST_API_KEY, GRIST_DOC_ID, GRIST_TABLE_ID, GRIST_COLONNE_MOTIF (optional)
-#   DN_API_URL (optional), DN_API_TOKEN, DN_DEMARCHE_NUMBER, DN_INSTRUCTEUR_ID
-#   GRIST_DN_SOURCES             sources read            (default grist,dn)
+#   DN_API_URL (optional), DN_API_TOKEN, DN_DEMARCHE_NUMBER
 #   EXISTING_CODES_PATHFILE_2026 codes already handed out                  (required)
 #   LAMP_DB_PASSWORD             lamp01 database                           (required)
 #   LAMP_DB_HOST/PORT/USER/NAME  (defaults 127.0.0.1 / 55432 / u_passsport / passsport)
 #   FC_EXERCICE_ID               campaign exercice       (default 5)
 #   FC_PROD_DROP_DIR             drop directory          (default /nfs/run)
 #   FC_LOCK_FILE                 lock shared with the FranceConnect cron (default /tmp/pass-sport-fc.lock)
-#   GRIST_DN_ATTENTE_PROD_MIN    longest wait for production (default 120; 0 = no check, rehearsals only)
-#   GRIST_DN_ATTENTE_PAS_S       seconds between two checks (default 30)
-#   GRIST_DN_RUN_DIR             run directories         (default <this dir>/run)
-#   GRIST_DN_EMAIL_DELAY_MIN     mail scheduled N minutes later (default 30)
-#
-# Mail configuration lives in worker/.env.local: LINK_MOBILITY_API_KEY and the
-# LINK_MOBILITY_TEMPLATE_CODE_* templates (one per situation).
+#   DN_ATTENTE_PROD_MIN          longest wait for production (default 120; 0 = no check, rehearsals only)
+#   DN_ATTENTE_PAS_S             seconds between two checks (default 30)
+#   DN_RUN_DIR                   run directories         (default <this dir>/run)
+#   DN_DOSSIERS                  only these dossier numbers, comma separated (rehearsals only)
 
 set -Eeuo pipefail
 # The files below carry identities and email addresses.
@@ -53,10 +49,9 @@ PIPELINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="$(cd "$PIPELINE_DIR/../.." && pwd)"
 FC_DIR="$DATA_DIR/2026/partners/franceconnect"
 PYTHON="$DATA_DIR/.venv/bin/python"
-PIPELINE="$PIPELINE_DIR/grist_dn_pipeline.py"
+PIPELINE="$PIPELINE_DIR/dn_pipeline.py"
 FC_PIPELINE="$FC_DIR/fc_pipeline.py"
-MATCH_SQL="$PIPELINE_DIR/match_grist_dn.sql"
-WORKER_DIR="$(dirname "$DATA_DIR")/worker"
+MATCH_SQL="$PIPELINE_DIR/match_dn.sql"
 LAMP_INJECT="$(dirname "$DATA_DIR")/lamp01/inject_csv.sh"
 
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
@@ -91,10 +86,9 @@ resolve_path() {
 # --- Environment -------------------------------------------------------------------
 
 CONFIG_VARS=(
-  GRIST_API_URL GRIST_API_KEY GRIST_DOC_ID GRIST_TABLE_ID GRIST_COLONNE_MOTIF
-  DN_API_URL DN_API_TOKEN DN_DEMARCHE_NUMBER DN_INSTRUCTEUR_ID GRIST_DN_SOURCES
+  DN_API_URL DN_API_TOKEN DN_DEMARCHE_NUMBER
   EXISTING_CODES_PATHFILE_2026 FC_PROD_DROP_DIR FC_LOCK_FILE FC_EXERCICE_ID
-  GRIST_DN_RUN_DIR GRIST_DN_EMAIL_DELAY_MIN GRIST_DN_ATTENTE_PROD_MIN GRIST_DN_ATTENTE_PAS_S
+  DN_RUN_DIR DN_ATTENTE_PROD_MIN DN_ATTENTE_PAS_S DN_DOSSIERS
   LAMP_DB_HOST LAMP_DB_PORT LAMP_DB_USER LAMP_DB_NAME LAMP_DB_PASSWORD
 )
 
@@ -115,18 +109,15 @@ for var in "${!caller_env[@]}"; do
   export "${var?}"
 done
 
-GRIST_DN_SOURCES="${GRIST_DN_SOURCES:-grist,dn}"
 FC_PROD_DROP_DIR="${FC_PROD_DROP_DIR:-/nfs/run}"
 FC_LOCK_FILE="${FC_LOCK_FILE:-/tmp/pass-sport-fc.lock}"
 FC_EXERCICE_ID="${FC_EXERCICE_ID:-5}"
-GRIST_DN_RUN_DIR="$(resolve_path "${GRIST_DN_RUN_DIR:-$PIPELINE_DIR/run}")"
-GRIST_DN_EMAIL_DELAY_MIN="${GRIST_DN_EMAIL_DELAY_MIN:-30}"
-GRIST_DN_ATTENTE_PROD_MIN="${GRIST_DN_ATTENTE_PROD_MIN:-120}"
-GRIST_DN_ATTENTE_PAS_S="${GRIST_DN_ATTENTE_PAS_S:-30}"
+DN_RUN_DIR="$(resolve_path "${DN_RUN_DIR:-$PIPELINE_DIR/run}")"
+DN_ATTENTE_PROD_MIN="${DN_ATTENTE_PROD_MIN:-120}"
+DN_ATTENTE_PAS_S="${DN_ATTENTE_PAS_S:-30}"
 # Where production's injector moves a drop once handled.
 PROD_SUCCESS_DIR="$FC_PROD_DROP_DIR/succes"
 PROD_FAILED_DIR="$FC_PROD_DROP_DIR/failed"
-export GRIST_DN_SOURCES
 
 TS_ISO="$(date '+%Y-%m-%dT%H:%M:%S')"
 TS_COMPACT="${TS_ISO//:/-}"
@@ -134,10 +125,10 @@ RUN_NAME="$TS_COMPACT"
 if (( DRY_RUN )); then RUN_NAME+="-dry-run"; fi
 if [[ -n "$RESUME_DIR" ]]; then RUN_NAME+="-reprise"; fi
 
-RUNS_INDEX="$GRIST_DN_RUN_DIR/passages.log"
+RUNS_INDEX="$DN_RUN_DIR/passages.log"
 # Holds the run directory of a real run that stopped after lamp01 was filled.
-RESUME_MARKER="$GRIST_DN_RUN_DIR/a-reprendre"
-mkdir -p "$GRIST_DN_RUN_DIR"
+RESUME_MARKER="$DN_RUN_DIR/a-reprendre"
+mkdir -p "$DN_RUN_DIR"
 
 record_run() {
   local status="$1" exit_code="$2" summary="${3//$'\n'/ }" line
@@ -170,9 +161,9 @@ fi
 
 # --- Run directory -----------------------------------------------------------------
 
-RUN_DIR="${RESUME_DIR:-$GRIST_DN_RUN_DIR/$RUN_NAME}"
+RUN_DIR="${RESUME_DIR:-$DN_RUN_DIR/$RUN_NAME}"
 [[ -n "$RESUME_DIR" ]] || mkdir "$RUN_DIR"
-ln -sfn "$(basename "$RUN_DIR")" "$GRIST_DN_RUN_DIR/latest"
+ln -sfn "$(basename "$RUN_DIR")" "$DN_RUN_DIR/latest"
 
 exec > >(tee -a "$RUN_DIR/run.log" 9>&-) 2>&1
 
@@ -198,7 +189,7 @@ on_exit() {
   fi
 
   record_run echec "$exit_code" "étape $RUN_STEP — ${RUN_ERROR:-sortie en erreur}"
-  ln -sfn "$(basename "$RUN_DIR")" "$GRIST_DN_RUN_DIR/derniere-erreur"
+  ln -sfn "$(basename "$RUN_DIR")" "$DN_RUN_DIR/derniere-erreur"
   if [[ -f "$RESUME_MARKER" ]]; then
     log "=== passage inachevé, à reprendre : $0 --reprendre $(cat "$RESUME_MARKER")"
   fi
@@ -208,14 +199,13 @@ on_exit() {
 trap 'RUN_ERROR="${RUN_ERROR:-échec (code $?) ligne $LINENO : $BASH_COMMAND}"' ERR
 trap on_exit EXIT
 
-GRIST_RAW="$RUN_DIR/grist-brut.json"
 DN_RAW="$RUN_DIR/dn-brut.json"
 CLEANED_CSV="$RUN_DIR/beneficiaires-clean.csv"
 REJECTS_CSV="$RUN_DIR/rejets.csv"
 IDENTITIES_CSV="$RUN_DIR/identites.csv"
 CNAF_EXTRA_CSV="$RUN_DIR/cnaf-extra.csv"
-# Fixed name, read by match_grist_dn.sql from the current directory.
-MATCH_CANDIDATES_CSV="$RUN_DIR/grist_dn_candidats.csv"
+# Fixed name, read by match_dn.sql from the current directory.
+MATCH_CANDIDATES_CSV="$RUN_DIR/dn_candidats.csv"
 CORRESPONDENCES_CSV="$RUN_DIR/correspondances.csv"
 TOUCHED_CSV="$RUN_DIR/lamp01-touchees.csv"
 VERDICTS_CSV="$RUN_DIR/verdicts.csv"
@@ -225,8 +215,6 @@ WITH_CODES_CSV="$RUN_DIR/with-codes.csv"
 WRITEBACK_CSV="$RUN_DIR/writeback.csv"
 PROD_CSV="$RUN_DIR/prod.csv"
 LAMP_CSV="$RUN_DIR/lamp01.csv"
-EMAILS_CSV="$RUN_DIR/emails.csv"
-JOURNAL_CSV="$RUN_DIR/envois.csv"
 RETOURS_CSV="$RUN_DIR/retours.csv"
 # Written once the drop is in /nfs/run: what a resume must not drop twice.
 DROPPED_MARKER="$RUN_DIR/depose"
@@ -240,8 +228,6 @@ LAMP_MARKER="$RUN_DIR/lamp01"
 rows() { echo $(( $(wc -l < "$1") - 1 )); }
 
 [[ -x "$PYTHON" ]] || die "virtualenv absent : $PYTHON"
-command -v pnpm >/dev/null || die "pnpm introuvable"
-[[ -d "$WORKER_DIR/node_modules" ]] || die "dépendances du worker absentes : pnpm install dans $WORKER_DIR"
 
 drop_production_csv() {
   local nb="$1" nom_depose depose temporaire replay
@@ -258,7 +244,7 @@ drop_production_csv() {
     return
   fi
 
-  local not_dropped="codes tirés mais NON déposés, rien dans lamp01, aucun mail n'est parti — à reprendre : $replay"
+  local not_dropped="codes tirés mais NON déposés, rien dans lamp01, aucun retour — à reprendre : $replay"
   [[ -d "$FC_PROD_DROP_DIR" && -w "$FC_PROD_DROP_DIR" ]] \
     || die "dossier de dépôt absent ou non inscriptible : $FC_PROD_DROP_DIR — $not_dropped"
   cp "$PROD_CSV" "$temporaire" || die "$not_dropped"
@@ -291,18 +277,18 @@ filed_drop() {
 
 # Production's injector drains /nfs/run on its own and moves each drop to succes/ once injected,
 # or to failed/ when it refuses it: sets PROD_OUTCOME to succes or failed. Still nowhere after
-# GRIST_DN_ATTENTE_PROD_MIN, the run stops to be resumed: production may still take the drop.
+# DN_ATTENTE_PROD_MIN, the run stops to be resumed: production may still take the drop.
 wait_for_production() {
   local depose nom etat fin rangement
   PROD_OUTCOME=succes
-  if (( GRIST_DN_ATTENTE_PROD_MIN == 0 )); then
-    log "ATTENTION : production non vérifiée (GRIST_DN_ATTENTE_PROD_MIN=0), lamp01, mails et retours suivent quand même — recette seulement"
+  if (( DN_ATTENTE_PROD_MIN == 0 )); then
+    log "ATTENTION : production non vérifiée (DN_ATTENTE_PROD_MIN=0), lamp01 et retours suivent quand même — recette seulement"
     return
   fi
   depose="$(cat "$DROPPED_MARKER")"
   nom="$(basename "$depose")"
-  step 8/11 "attente de l'injection en production de $nom (au plus $GRIST_DN_ATTENTE_PROD_MIN min)"
-  fin=$(( SECONDS + GRIST_DN_ATTENTE_PROD_MIN * 60 ))
+  step 8/10 "attente de l'injection en production de $nom (au plus $DN_ATTENTE_PROD_MIN min)"
+  fin=$(( SECONDS + DN_ATTENTE_PROD_MIN * 60 ))
   until rangement="$(filed_drop "$PROD_SUCCESS_DIR" "$nom")"; do
     if rangement="$(filed_drop "$PROD_FAILED_DIR" "$nom")"; then
       PROD_OUTCOME=failed
@@ -316,30 +302,30 @@ wait_for_production() {
       etat="introuvable dans $FC_PROD_DROP_DIR, succes/ et failed/"
     fi
     (( SECONDS < fin )) \
-      || die "$nom $etat au bout de $GRIST_DN_ATTENTE_PROD_MIN min — rien dans lamp01, ni mail ni retour, à reprendre : $0 --reprendre $RUN_DIR"
-    sleep "$GRIST_DN_ATTENTE_PAS_S"
+      || die "$nom $etat au bout de $DN_ATTENTE_PROD_MIN min — rien dans lamp01, aucun retour, à reprendre : $0 --reprendre $RUN_DIR"
+    sleep "$DN_ATTENTE_PAS_S"
   done
   printf '%s\n' "$depose" >"$INJECTED_MARKER"
   log "injecté en production : $rangement"
 }
 
-# Production refused the drop: nothing reached lamp01 nor anyone's mailbox, and replaying it
-# would fail the same way. Its lines are told so, the other lines get their usual feedback,
-# and the run ends in error with nothing left to resume.
+# Production refused the drop: nothing reached lamp01 nor any usager, and replaying it would
+# fail the same way. Its dossiers are told so, the other dossiers get their usual feedback, and
+# the run ends in error with nothing left to resume.
 feedback_refused() {
   local fichier
   fichier="$(basename "$(cat "$REFUSED_MARKER")")"
-  step 11/11 "retours : $fichier refusé par la production"
-  "$PYTHON" "$PIPELINE" retours --verdicts "$VERDICTS_CSV" --grist-in "$GRIST_RAW" --dn-in "$DN_RAW" \
+  step 10/10 "retours : $fichier refusé par la production"
+  "$PYTHON" "$PIPELINE" retours --verdicts "$VERDICTS_CSV" --dn-in "$DN_RAW" \
     --journal "$RETOURS_CSV" --codes "$WRITEBACK_CSV" --refus-production "$fichier" \
     | tee "$RUN_DIR/retours.log" \
     || die "$fichier refusé par la production, retours incomplets (détail dans $RETOURS_CSV) — à reprendre : $0 --reprendre $RUN_DIR"
   rm -f "$RESUME_MARKER"
-  die "$fichier refusé par la production ($PROD_FAILED_DIR) : rien dans lamp01, aucun mail ; ses lignes sont marquées « Rejeté » dans Grist et « À vérifier » dans DN, à corriger avant de les relancer"
+  die "$fichier refusé par la production ($PROD_FAILED_DIR) : rien dans lamp01, aucun code envoyé ; ses dossiers portent le label « À vérifier », à corriger avant de les relancer"
 }
 
-# After the drop: production's verdict, then lamp01, the mails and the feedback; or, when
-# production refused the drop, the feedback alone.
+# After the drop: production's verdict, then lamp01 and the feedback; or, when production
+# refused the drop, the feedback alone.
 finish_after_drop() {
   if [[ -f "$REFUSED_MARKER" ]]; then
     PROD_OUTCOME=failed
@@ -353,46 +339,29 @@ finish_after_drop() {
   fi
 
   if [[ ! -f "$LAMP_MARKER" ]]; then
-    step 9/11 "injection dans la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
+    step 9/10 "injection dans la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
     inject_lamp01 \
-      || die "injection lamp01 refusée alors que la production détient les codes — aucun mail ; corriger, puis : $0 --reprendre $RUN_DIR"
+      || die "injection lamp01 refusée alors que la production détient les codes — aucun retour ; corriger, puis : $0 --reprendre $RUN_DIR"
     : >"$LAMP_MARKER"
   fi
-  send_mails_and_feedback
+  send_feedback
 }
 
-# Mails then feedback. Feedback runs even when some mails failed: the lines whose mail did
-# not leave stay pending (and so do their DN dossiers) until a resume sends it.
-send_mails_and_feedback() {
-  local mails_ok=1 email_args retours_args
-
-  if [[ -f "$EMAILS_CSV" ]] && (( $(rows "$EMAILS_CSV") > 0 )); then
-    step 10/11 "envoi des mails, un gabarit par situation (programmés à +$GRIST_DN_EMAIL_DELAY_MIN min)"
-    email_args=("$EMAILS_CSV" --journal "$JOURNAL_CSV" --in "$GRIST_DN_EMAIL_DELAY_MIN")
-    if (( DRY_RUN )); then email_args+=(--dry-run); fi
-    if ! (cd "$WORKER_DIR" && pnpm --silent codes:support-emails "${email_args[@]}") | tee "$RUN_DIR/envois.log"; then
-      mails_ok=0
-      log "ATTENTION : mails non tous envoyés, détail dans $JOURNAL_CSV — attention à une ligne « erreur » sans réponse de Link Mobility : son mail est peut-être parti"
-    fi
-  fi
-
-  step 11/11 "retours : statut Grist, annotation / message / label / acceptation DN"
-  retours_args=(--verdicts "$VERDICTS_CSV" --grist-in "$GRIST_RAW" --dn-in "$DN_RAW"
-                --journal "$RETOURS_CSV" --envois "$JOURNAL_CSV" --codes "$WRITEBACK_CSV")
+send_feedback() {
+  local retours_args=(--verdicts "$VERDICTS_CSV" --dn-in "$DN_RAW" --journal "$RETOURS_CSV"
+                      --codes "$WRITEBACK_CSV")
   if (( DRY_RUN )); then retours_args+=(--dry-run); fi
+  step 10/10 "retours : annotation / message / label / acceptation des dossiers"
   "$PYTHON" "$PIPELINE" retours "${retours_args[@]}" | tee "$RUN_DIR/retours.log" \
     || die "retours incomplets, détail dans $RETOURS_CSV"
-  (( mails_ok )) || die "mails non tous envoyés, détail dans $JOURNAL_CSV"
 }
 
 summary() {
-  local bilan_mails=""
-  if [[ -f "$RUN_DIR/envois.log" ]]; then bilan_mails="$(grep '^bilan' "$RUN_DIR/envois.log" | tail -n 1 || true)"; fi
-  printf '%s' "$(sed -n 's/^actions_faites : /actions faites /p; s/^actions_simulees : /actions simulées /p' "$RUN_DIR/retours.log" | paste -sd ',' -)${bilan_mails:+, $bilan_mails}"
+  printf '%s' "$(sed -n 's/^actions_faites : /actions faites /p; s/^actions_simulees : /actions simulées /p' "$RUN_DIR/retours.log" | paste -sd ',' -)"
 }
 
-[[ "$GRIST_DN_ATTENTE_PROD_MIN" =~ ^[0-9]+$ && "$GRIST_DN_ATTENTE_PAS_S" =~ ^[1-9][0-9]*$ ]] \
-  || die "GRIST_DN_ATTENTE_PROD_MIN et GRIST_DN_ATTENTE_PAS_S attendent un nombre entier"
+[[ "$DN_ATTENTE_PROD_MIN" =~ ^[0-9]+$ && "$DN_ATTENTE_PAS_S" =~ ^[1-9][0-9]*$ ]] \
+  || die "DN_ATTENTE_PROD_MIN et DN_ATTENTE_PAS_S attendent un nombre entier"
 
 # lamp01: a resume injects too.
 [[ -n "${LAMP_DB_PASSWORD:-}" ]] || die "LAMP_DB_PASSWORD manquant — voir lamp01/README.md"
@@ -412,12 +381,12 @@ if [[ -n "$RESUME_DIR" ]]; then
   [[ -f "$VERDICTS_CSV" ]] || die "verdicts du passage absents : rien à reprendre"
   if [[ -f "$PROD_CSV" ]]; then
     if [[ ! -f "$DROPPED_MARKER" ]]; then
-      step 7/11 "dépôt du CSV de production (reprise)"
+      step 7/10 "dépôt du CSV de production (reprise)"
       drop_production_csv "$(rows "$PROD_CSV")"
     fi
     finish_after_drop
   else
-    send_mails_and_feedback
+    send_feedback
   fi
   rm -f "$RESUME_MARKER"
   RUN_DETAIL="reprise de $(basename "$RUN_DIR") terminée — $(summary)"
@@ -426,9 +395,9 @@ fi
 
 # --- Preflight ---------------------------------------------------------------------
 
-log "=== passage Grist + Démarches Numériques, dossier $RUN_DIR (sources : $GRIST_DN_SOURCES)"
+log "=== passage Démarches Numériques, dossier $RUN_DIR"
 if (( DRY_RUN )); then
-  log "=== DRY-RUN : lecture des API seulement, codes tirés sur une copie, injection lamp01 annulée, aucun dépôt, aucun mail, aucun retour"
+  log "=== DRY-RUN : lecture de DN seulement, codes tirés sur une copie, injection lamp01 annulée, aucun dépôt, aucun retour"
 fi
 
 [[ -n "${EXISTING_CODES_PATHFILE_2026:-}" ]] || die "variable d'environnement manquante : EXISTING_CODES_PATHFILE_2026"
@@ -450,23 +419,30 @@ if (( ${#backlog[@]} > 0 )); then
   fi
 fi
 
-# No code is drawn for people nobody could mail.
-log "configuration d'envoi (worker/.env.local)"
-(cd "$WORKER_DIR" && pnpm --silent codes:support-emails --check-config)
-
-if (( GRIST_DN_ATTENTE_PROD_MIN == 0 )); then
-  log "ATTENTION : GRIST_DN_ATTENTE_PROD_MIN=0, la production ne sera pas vérifiée avant les mails et les retours — recette seulement"
+if (( DN_ATTENTE_PROD_MIN == 0 )); then
+  log "ATTENTION : DN_ATTENTE_PROD_MIN=0, la production ne sera pas vérifiée avant les retours — recette seulement"
+fi
+if [[ -n "${DN_DOSSIERS:-}" ]]; then
+  log "ATTENTION : seuls les dossiers DN_DOSSIERS=$DN_DOSSIERS sont pris"
 fi
 
-# --- 1: API reads ------------------------------------------------------------------
+# --- 1: DN read --------------------------------------------------------------------
 
-step 1/11 "lecture de Grist et Démarches Numériques"
-"$PYTHON" "$PIPELINE" fetch --grist-out "$GRIST_RAW" --dn-out "$DN_RAW"
+step 1/10 "lecture de Démarches Numériques"
+"$PYTHON" "$PIPELINE" fetch --dn-out "$DN_RAW"
+
+# Never stops the run: the codes matter more than this label.
+LABEL_FC_CSV="$RUN_DIR/label-franceconnect.csv"
+label_fc_args=(label-fc --journal "$LABEL_FC_CSV")
+if (( DRY_RUN )); then label_fc_args+=(--dry-run); fi
+log "label « FranceConnect » des dossiers déposés pré-remplis par le worker ou via FranceConnect"
+"$PYTHON" "$PIPELINE" "${label_fc_args[@]}" | tee "$RUN_DIR/label-franceconnect.log" \
+  || log "ATTENTION : label « FranceConnect » pas posé partout, détail dans $LABEL_FC_CSV et run.log"
 
 # --- 2: cleaning -------------------------------------------------------------------
 
-step 2/11 "nettoyage, une ligne par bénéficiaire"
-"$PYTHON" "$PIPELINE" clean --grist-in "$GRIST_RAW" --dn-in "$DN_RAW" --output "$CLEANED_CSV" \
+step 2/10 "nettoyage, une ligne par bénéficiaire"
+"$PYTHON" "$PIPELINE" clean --dn-in "$DN_RAW" --output "$CLEANED_CSV" \
   --match-out "$MATCH_CANDIDATES_CSV" --cnaf-extra-out "$CNAF_EXTRA_CSV" \
   --identities-out "$IDENTITIES_CSV" --rejects-out "$REJECTS_CSV"
 
@@ -475,7 +451,7 @@ if (( nb_rejets > 0 )); then log "ATTENTION : $nb_rejets ligne(s) rejetée(s), m
 
 if (( $(rows "$CLEANED_CSV") == 0 && nb_rejets == 0 )); then
   RUN_STATUS="rien-a-faire"
-  RUN_DETAIL="aucune ligne Grist ni aucun dossier DN à traiter"
+  RUN_DETAIL="aucun dossier DN à traiter"
   exit 0
 fi
 
@@ -483,7 +459,7 @@ fi
 
 cd "$RUN_DIR"
 
-step 3/11 "rapprochement avec la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
+step 3/10 "rapprochement avec la base bénéficiaires ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
 psql "$LAMP_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -v correspondances="$CORRESPONDENCES_CSV" -v touchees="$TOUCHED_CSV" \
   -v exercice="$FC_EXERCICE_ID" -f "$MATCH_SQL"
@@ -495,7 +471,7 @@ psql "$LAMP_DATABASE_URL" -v ON_ERROR_STOP=1 \
 
 nb_doublons="$(grep -c ';doublon;' "$VERDICTS_CSV" || true)"
 nb_a_verifier="$(grep -c ';a_verifier;' "$VERDICTS_CSV" || true)"
-log "$nb_doublons doublon(s), ni code ni mail ; détail des lignes lamp01 dans $INVESTIGATION_CSV"
+log "$nb_doublons doublon(s), sans nouveau code ; détail des lignes lamp01 dans $INVESTIGATION_CSV"
 if (( nb_a_verifier > 0 )); then
   log "ATTENTION : $nb_a_verifier bénéficiaire(s) à vérifier à la main (ressemblance dans lamp01), aucun code : $INVESTIGATION_CSV"
 fi
@@ -506,7 +482,7 @@ if (( $(rows "$TO_CODE_CSV") > 0 )); then
 
   # --- 4: codes --------------------------------------------------------------------
 
-  step 4/11 "génération des codes -> $WITH_CODES_CSV"
+  step 4/10 "génération des codes -> $WITH_CODES_CSV"
   codes_memory="$CODES_CSV"
   if (( DRY_RUN )); then
     DRY_RUN_CODES_COPY="$RUN_DIR/existing-codes-dry-run.csv"
@@ -518,12 +494,10 @@ if (( $(rows "$TO_CODE_CSV") > 0 )); then
 
   # --- 5: split --------------------------------------------------------------------
 
-  step 5/11 "fichiers de production, lamp01 et mails"
+  step 5/10 "fichiers de production et lamp01"
   "$PYTHON" "$FC_PIPELINE" writeback --with-codes "$WITH_CODES_CSV" \
     --writeback-out "$WRITEBACK_CSV" --prod-out "$PROD_CSV" \
     --cnaf-extra "$CNAF_EXTRA_CSV" --lamp-out "$LAMP_CSV"
-  "$PYTHON" "$PIPELINE" emails --with-codes "$WITH_CODES_CSV" --identities "$IDENTITIES_CSV" \
-    --output "$EMAILS_CSV"
 
   nb_codes="$(rows "$PROD_CSV")"
 
@@ -531,32 +505,32 @@ if (( $(rows "$TO_CODE_CSV") > 0 )); then
   # Played then rolled back: what lamp01 would refuse is known before anything is dropped.
   # The real injection waits for production (step 9).
 
-  step 6/11 "contrôle de l'injection dans la base bénéficiaires, jouée puis annulée ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
+  step 6/10 "contrôle de l'injection dans la base bénéficiaires, jouée puis annulée ($LAMP_DB_NAME sur $LAMP_DB_HOST:$LAMP_DB_PORT)"
   inject_lamp01 essai \
-    || die "injection lamp01 refusée — rien n'est déposé, aucun mail n'est parti, aucun retour"
+    || die "injection lamp01 refusée — rien n'est déposé, aucun retour"
 
   # --- 7: /nfs/run -----------------------------------------------------------------
   # From here on, production may take the codes: a failure must be resumed, not replayed.
 
   if (( ! DRY_RUN )); then printf '%s\n' "$RUN_DIR" >"$RESUME_MARKER"; fi
-  step 7/11 "dépôt du CSV de production"
+  step 7/10 "dépôt du CSV de production"
   drop_production_csv "$nb_codes"
 else
   log "aucun bénéficiaire à coder — $COUNTS"
 fi
 
-# --- 8-11: production, lamp01, mails and feedback ----------------------------------------
+# --- 8-10: production, lamp01 and feedback ----------------------------------------------
 
 if (( DRY_RUN )); then
   if (( nb_codes > 0 )); then
     log "dry-run : un passage réel attendrait ici que l'injecteur de production range le fichier dans $PROD_SUCCESS_DIR, puis injecterait lamp01 (déjà jouée et annulée)"
   fi
-  send_mails_and_feedback
+  send_feedback
 elif (( nb_codes > 0 )); then
   finish_after_drop
 else
   printf '%s\n' "$RUN_DIR" >"$RESUME_MARKER"
-  send_mails_and_feedback
+  send_feedback
 fi
 if (( ! DRY_RUN )); then rm -f "$RESUME_MARKER"; fi
 
