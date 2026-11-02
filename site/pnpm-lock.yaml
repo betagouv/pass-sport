@@ -33,8 +33,8 @@ importers:
         specifier: ^2.5.1
         version: 2.5.1
       crisp-api:
-        specifier: ^12.0.0
-        version: 12.0.0
+        specifier: ^12.0.1
+        version: 12.0.1
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
@@ -2358,8 +2358,8 @@ packages:
     resolution: {integrity: sha512-AdmX6xUzdNASswsFtmwSt7Vj8po9IuqXm0UXz7QKPuEUmPB4XyjGfaAr2PSuELMwkRMVH1EpIkX5bTZGRB3eCA==}
     engines: {node: '>=10'}
 
-  crisp-api@12.0.0:
-    resolution: {integrity: sha512-CKcp0lypycDvXEptGygXxNrxxVrjbKaw8SKMi1BtwfJspybguFI2Y8OaFzPr0QmiX9o6P8ovJhhnD8vHE/Za7w==}
+  crisp-api@12.0.1:
+    resolution: {integrity: sha512-NbQvok/qiW+ZMrtArtsyd8PFaloVsqE3eSIf2B3CFeEYGFFFQV5/RoulEE+meMQNwKE/Ztgk8rb2/QwY03kZkw==}
     engines: {node: '>= 18.0.0'}
 
   cron-parser@4.9.0:
@@ -4955,6 +4955,18 @@ packages:
       utf-8-validate:
         optional: true
 
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
     engines: {node: '>=18'}
@@ -7288,7 +7300,7 @@ snapshots:
       path-type: 4.0.0
       yaml: 1.10.3
 
-  crisp-api@12.0.0:
+  crisp-api@12.0.1:
     dependencies:
       mitt: 3.0.1
       socket.io-client: 4.8.3
@@ -7437,7 +7449,7 @@ snapshots:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3
       engine.io-parser: 5.2.3
-      ws: 8.21.3
+      ws: 8.22.0
       xmlhttprequest-ssl: 2.1.2
     transitivePeerDependencies:
       - bufferutil
@@ -10594,6 +10606,8 @@ snapshots:
       signal-exit: 4.1.0
 
   ws@8.21.3: {}
+
+  ws@8.22.0: {}
 
   xml-name-validator@5.0.0: {}
 
