@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 #
-# One-shot run for the CNOUS/MSE boursiers delivered on 2026-10-27: lamp01 export, the
-# Python script (cleaning, lamp01 deduplication, codes), lamp01 injection check, /nfs/run drop,
-# wait for production's injector, lamp01 injection.
+# One-shot run for a CNOUS/MSE boursiers delivery: lamp01 export, the Python script (cleaning,
+# lamp01 deduplication, codes), lamp01 injection check, /nfs/run drop, wait for production's
+# injector, lamp01 injection.
 #
-#   ./run_cnous_boursiers.sh [--dry-run]
+#   ./run_cnous_boursiers.sh [--dry-run] [boursiers.csv ...]
+#
+# Without files, the 7 files of the 2026-10-27 delivery, read from CNOUS_BOURSIERS_27_10_2026_DIR.
+# A later delivery in the same format is given as files: the boursiers an earlier run injected
+# are in the fresh lamp01 export, and set aside on INE, courriel or identity.
 #
 # No lock: stop the FranceConnect and Grist/DN crons first, they draw from the same code list
 # and drop into the same directory. Production's /nfs/run injector must keep running, this
@@ -24,7 +28,7 @@
 # deja-en-base.csv and run.log, which holds the script's report.
 #
 # Variables (data/.env, the caller's environment wins):
-#   CNOUS_BOURSIERS_27_10_2026_DIR  folder holding the boursiers_*.csv      (required)
+#   CNOUS_BOURSIERS_27_10_2026_DIR  folder holding the boursiers_*.csv      (required without files)
 #   EXISTING_CODES_PATHFILE_2026    codes already handed out                 (required)
 #   LAMP_DB_PASSWORD                lamp01 database                          (required)
 #   LAMP_DB_HOST/PORT/USER/NAME     (defaults 127.0.0.1 / 55432 / u_passsport / passsport)
@@ -48,19 +52,26 @@ RESUME_MARKER="$RUNS_DIR/a-reprendre"
 log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 die() { log "ERREUR : $*" >&2; exit 1; }
 
-DRY_RUN=0
-case "${1:-}" in
-  --dry-run) DRY_RUN=1 ;;
-  '') ;;
-  *) die "usage : $0 [--dry-run]" ;;
-esac
-
 resolve_path() {
   case "$1" in
     /*) printf '%s\n' "$1" ;;
     *)  printf '%s\n' "$DATA_DIR/${1#./}" ;;
   esac
 }
+
+# Files given on the command line are relative to the caller's directory, not to data/.
+DRY_RUN=0
+INPUT_FILES=()
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    -*) die "usage : $0 [--dry-run] [boursiers.csv ...]" ;;
+    *)
+      [[ -f "$arg" ]] || die "fichier boursiers introuvable : $arg"
+      INPUT_FILES+=("$(cd "$(dirname "$arg")" && pwd)/$(basename "$arg")")
+      ;;
+  esac
+done
 
 # --- Environment (as run_aah_direct.sh) ----------------------------------------------
 
@@ -96,7 +107,6 @@ export LAMP_DB_PORT="${LAMP_DB_PORT:-55432}"
 export LAMP_DB_USER="${LAMP_DB_USER:-u_passsport}"
 export LAMP_DB_NAME="${LAMP_DB_NAME:-passsport}"
 
-[[ -n "${CNOUS_BOURSIERS_27_10_2026_DIR:-}" ]] || die "variable d'environnement manquante : CNOUS_BOURSIERS_27_10_2026_DIR"
 [[ -n "${EXISTING_CODES_PATHFILE_2026:-}" ]] || die "variable d'environnement manquante : EXISTING_CODES_PATHFILE_2026"
 [[ -n "${LAMP_DB_PASSWORD:-}" ]] || die "LAMP_DB_PASSWORD manquant — voir lamp01/README.md"
 [[ "$FC_EXERCICE_ID" =~ ^[0-9]+$ ]] || die "FC_EXERCICE_ID invalide : $FC_EXERCICE_ID"
@@ -104,9 +114,13 @@ command -v psql >/dev/null || die "psql introuvable"
 [[ -x "$PYTHON" ]] || die "virtualenv absent : $PYTHON"
 [[ -x "$LAMP_INJECT" ]] || die "injecteur de la base bénéficiaires absent : $LAMP_INJECT"
 
-INPUT_DIR="$(resolve_path "$CNOUS_BOURSIERS_27_10_2026_DIR")"
 CODES_CSV="$(resolve_path "$EXISTING_CODES_PATHFILE_2026")"
-[[ -d "$INPUT_DIR" ]] || die "dossier des fichiers boursiers introuvable : $INPUT_DIR"
+if (( ${#INPUT_FILES[@]} == 0 )); then
+  [[ -n "${CNOUS_BOURSIERS_27_10_2026_DIR:-}" ]] || die "variable d'environnement manquante : CNOUS_BOURSIERS_27_10_2026_DIR"
+  INPUT_DIR="$(resolve_path "$CNOUS_BOURSIERS_27_10_2026_DIR")"
+  [[ -d "$INPUT_DIR" ]] || die "dossier des fichiers boursiers introuvable : $INPUT_DIR"
+  export CNOUS_BOURSIERS_27_10_2026_DIR="$INPUT_DIR"
+fi
 
 # --- Preflight -----------------------------------------------------------------------
 
@@ -136,11 +150,15 @@ mkdir -p "$RUN_DIR"
 exec > >(tee -a "$RUN_DIR/run.log") 2>&1
 
 LAMP_EXPORT_CSV="$RUN_DIR/lamp01-beneficiaires.csv"
-OUTPUT_CSV="$RUN_DIR/cnous-boursiers-27-10-2026.csv"
+OUTPUT_CSV="$RUN_DIR/cnous-boursiers.csv"
 
 rows() { echo $(( $(wc -l < "$1") - 1 )); }
 
-log "=== passage boursiers CNOUS du 27/10/2026, dossier $RUN_DIR"
+if (( ${#INPUT_FILES[@]} == 0 )); then
+  log "=== passage boursiers CNOUS du 27/10/2026, dossier $RUN_DIR"
+else
+  log "=== passage boursiers CNOUS (${INPUT_FILES[*]}), dossier $RUN_DIR"
+fi
 if (( DRY_RUN )); then
   log "=== DRY-RUN : codes tirés sur une copie, injection lamp01 annulée, aucun dépôt"
 fi
@@ -164,11 +182,10 @@ if (( DRY_RUN )); then
 fi
 
 log "étape 2/6 — script : nettoyage, dédoublonnage, codes -> $OUTPUT_CSV"
-CNOUS_BOURSIERS_27_10_2026_DIR="$INPUT_DIR" \
 LAMP_BENEFICIAIRES_EXPORT_PATHFILE_2026="$LAMP_EXPORT_CSV" \
-DB_CNOUS_EXPORT_27_10_2026="$OUTPUT_CSV" \
+DB_CNOUS_BOURSIERS_EXPORT="$OUTPUT_CSV" \
 EXISTING_CODES_PATHFILE_2026="$codes_memory" \
-  "$PYTHON" "$SCRIPT"
+  "$PYTHON" "$SCRIPT" "${INPUT_FILES[@]}"
 
 if (( DRY_RUN )); then rm -f "$codes_memory"; fi
 

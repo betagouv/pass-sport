@@ -29,7 +29,10 @@ instead, a one-shot run (stop the FranceConnect and Grist/DN crons first). Its P
 each file like ④ (`clean_cnous_lib.clean_cnous_rows`), completes the birth countries MSE left
 empty from `v_pays_territoire_2026.csv`, and sets aside the boursiers lamp01 already holds (INE,
 courriel or identity). The script then drops the coded file in `/nfs/run` and injects lamp01 once
-production holds it, as `run_grist_dn.sh` does.
+production holds it, as `run_grist_dn.sh` does. A later CNOUS delivery in the same format goes
+through the same runner, its files given as arguments (`./run_cnous_boursiers.sh <fichier.csv>`):
+the boursiers an earlier run injected are in the fresh lamp01 export, and set aside on the same
+criteria.
 
 Steps ⑩ ③ ⑪ are also driven unattended, by
 [partners/franceconnect/run_fc_pipeline.sh](partners/franceconnect/run_fc_pipeline.sh) — the

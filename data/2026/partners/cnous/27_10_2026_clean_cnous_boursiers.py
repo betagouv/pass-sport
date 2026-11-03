@@ -1,6 +1,11 @@
-"""Process - CNOUS/MSE boursiers delivered on 2026-10-27.
+"""Process - CNOUS/MSE boursiers delivered on 2026-10-27, or any later delivery in the same format.
 
-- Load the 7 boursier files kept from the delivery, each cleaned with the sequence of
+    27_10_2026_clean_cnous_boursiers.py [boursiers.csv ...]
+
+Without arguments, the 7 files of the 2026-10-27 delivery below. Otherwise the files given, in
+that order: the boursiers already injected by an earlier run are set aside through lamp01.
+
+- Load the boursier files, each cleaned with the sequence of
   `clean_cnous.ipynb` (`cnous.clean_cnous_rows`), missing birth countries completed from
   `v_pays_territoire_2026.csv` before the FR default
 - Drop the duplicates across the delivery: INE, then courriel
@@ -8,7 +13,6 @@
   prénom, date de naissance, genre) of any row
 - Serialize the JSON columns, add the production columns, draw one code per boursier
 - Output to CSV
-- Read-only look at `boursiers_etat.csv`, which the delivery mail does not describe
 
 Run through `run_cnous_boursiers.sh`, never on its own: the script exports lamp01 for this
 one and hands it a copy of the code list on a dry run, then checks the lamp01 injection,
@@ -65,64 +69,21 @@ CNOUS_FILES = [
     'boursiers_etat_ecart_mail_incomplet.csv',
 ]
 
-ETAT_FIRST_DELIVERY = 'boursiers_etat.csv'
-ETAT_FILES_OF_16H20 = [
-    'boursiers_etat_OK.csv',
-    'boursiers_etat_OK_incomplet.csv',
-    'boursiers_etat_ecart_mail.csv',
-    'boursiers_etat_ecart_mail_incomplet.csv',
-    'boursiers_etat_ecart+.csv',
-]
-
 pd.set_option('display.width', 200)
 pd.set_option('display.max_columns', None)
-
-
-def diagnostic_keys(df: pd.DataFrame) -> pd.DataFrame:
-    """INE, pivot identity and whole-row fingerprint of raw CNOUS rows."""
-    return pd.DataFrame({
-        'ine': df['allocataire-matricule'].fillna('').str.strip().str.upper(),
-        'identite': partners.build_lamp_deduplication_key(df, cnous.LAMP_IDENTITY_KEY_COLUMNS),
-        'ligne_identique': pd.util.hash_pandas_object(df.fillna(''), index=False),
-    })
-
-
-def diagnose_etat_first_delivery(cnous_input_dir: Path, df_lamp: pd.DataFrame) -> None:
-    """Where the rows of boursiers_etat.csv are found: in the 16:20 files, in lamp01."""
-    etat = diagnostic_keys(cnous.read_raw_cnous_csv(cnous_input_dir / ETAT_FIRST_DELIVERY))
-    print(f"{len(etat)} row(s) in {ETAT_FIRST_DELIVERY}")
-
-    found_in, union = {}, {key: set() for key in etat.columns}
-    for filename in ETAT_FILES_OF_16H20:
-        keys = diagnostic_keys(cnous.read_raw_cnous_csv(cnous_input_dir / filename))
-        found_in[filename] = {key: etat[key].isin(set(keys[key]) - {''}) for key in etat.columns}
-        for key in etat.columns:
-            union[key] |= set(keys[key]) - {''}
-    found_in['union des fichiers de 16h20'] = {key: etat[key].isin(union[key]) for key in etat.columns}
-
-    lamp_cnous = df_lamp[df_lamp['organisme'] == cnous.ORGANISME]
-    found_in['lamp01'] = {
-        'ine': etat['ine'].isin(set(lamp_cnous['allocataire_matricule'].str.strip().str.upper()) - {''}),
-        'identite': etat['identite'].isin(set(
-            partners.build_lamp_deduplication_key(df_lamp, cnous.LAMP_IDENTITY_KEY_COLUMNS))),
-    }
-
-    diagnostic = pd.DataFrame({
-        source: {key: int(mask.sum()) for key, mask in masks.items()}
-        for source, masks in found_in.items()
-    }).T.astype('Int64')
-    print(diagnostic.join((diagnostic / len(etat) * 100).round(1), rsuffix=' (%)'))
-
-    union_16h20, lamp01 = found_in['union des fichiers de 16h20'], found_in['lamp01']
-    nowhere = ~(union_16h20['ine'] | union_16h20['identite'] | lamp01['ine'] | lamp01['identite'])
-    print(f"{int(nowhere.sum())} row(s) of {ETAT_FIRST_DELIVERY} found neither in the 16:20 files "
-          f"nor in lamp01, by INE or identity")
 
 
 def main() -> None:
     load_dotenv()
 
-    cnous_input_dir = Path(os.environ['CNOUS_BOURSIERS_27_10_2026_DIR'])
+    if sys.argv[1:]:
+        input_files = [Path(path) for path in sys.argv[1:]]
+    else:
+        cnous_input_dir = Path(os.environ['CNOUS_BOURSIERS_27_10_2026_DIR'])
+        input_files = [cnous_input_dir / filename for filename in CNOUS_FILES]
+    input_names = [path.name for path in input_files]
+    assert len(set(input_names)) == len(input_names), f"same file name given twice: {input_names}"
+
     # Relative to this folder, as when the notebook ran from it
     cog_pays_input_filepath = CNOUS_DIR / os.environ.get(
         'COG_PAYS_PATHFILE_2026', '../v_pays_territoire_2026.csv')
@@ -130,7 +91,7 @@ def main() -> None:
     # Both set by run_cnous_boursiers.sh, in its run directory: a lamp01 export taken right
     # before this run, and where the coded rows go.
     lamp_beneficiaires_filepath = os.environ['LAMP_BENEFICIAIRES_EXPORT_PATHFILE_2026']
-    base_output_filepath = Path(os.environ['DB_CNOUS_EXPORT_27_10_2026'])
+    base_output_filepath = Path(os.environ['DB_CNOUS_BOURSIERS_EXPORT'])
 
     # The campaign's code list, or a copy of it on a dry run.
     existing_codes_filepath = os.environ['EXISTING_CODES_PATHFILE_2026']
@@ -140,10 +101,10 @@ def main() -> None:
     df_cog_pays = pd.read_csv(cog_pays_input_filepath, dtype=str, keep_default_na=False)
 
     cleaned, reports = [], {}
-    for filename in CNOUS_FILES:
-        df_raw = cnous.read_raw_cnous_csv(cnous_input_dir / filename)
-        df_clean, reports[filename] = cnous.clean_cnous_rows(df_raw, df_cog_pays)
-        cleaned.append(df_clean.assign(fichier_source=filename))
+    for path in input_files:
+        df_raw = cnous.read_raw_cnous_csv(path)
+        df_clean, reports[path.name] = cnous.clean_cnous_rows(df_raw, df_cog_pays)
+        cleaned.append(df_clean.assign(fichier_source=path.name))
 
     df_boursiers = pd.concat(cleaned, ignore_index=True)
     del cleaned
@@ -229,7 +190,7 @@ def main() -> None:
         'doublons_dans_la_livraison': delivery_duplicates.value_counts(),
         'deja_dans_lamp01': df_known['fichier_source'].value_counts(),
         'codes_generes': df_final['fichier_source'].value_counts(),
-    }).reindex(CNOUS_FILES).fillna(0).astype(int)
+    }).reindex(input_names).fillna(0).astype(int)
     summary.loc['total'] = summary.sum()
 
     assert (summary['retenus_apres_nettoyage'] - summary['doublons_dans_la_livraison']
@@ -241,8 +202,6 @@ def main() -> None:
     print(f"genre_M: {len(df_final_jeune[df_final_jeune['genre'] == 'M'])}")
     print(f"genre_F: {len(df_final_jeune[df_final_jeune['genre'] == 'F'])}")
     print(df_final_jeune[['organisme', 'situation']].value_counts())
-
-    diagnose_etat_first_delivery(cnous_input_dir, df_lamp)
 
 
 if __name__ == '__main__':
