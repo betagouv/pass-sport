@@ -12,6 +12,8 @@ jest.mock('@socialgouv/matomo-next', () => ({ push: jest.fn() }));
 const fetchMock = jest.fn();
 global.fetch = fetchMock as unknown as typeof fetch;
 
+const SECTION = 'Vous rencontrez un problème avec les résultats ?';
+
 const PREFILL_URL = 'https://demarche.numerique.gouv.fr/commencer/pass-sport?prefill_token=tok-1';
 
 const DOSSIER: DnDossier = {
@@ -74,25 +76,23 @@ describe('DnDossierButton', () => {
   ])('sits in its own titled section when %s', (_label, props) => {
     render(<DnDossierButton hasDossier={false} {...props} />);
 
-    expect(
-      screen.getByRole('region', { name: 'Faire vérifier votre éligibilité' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: SECTION })).toBeInTheDocument();
   });
 
-  it('describes what the button does', () => {
+  it('introduces the button in its section', () => {
     render(<DnDossierButton hasDossier={false} />);
 
-    const button = screen.getByRole('button', { name: 'Vous pensez être éligible ?' });
-    expect(button).toHaveAccessibleDescription(/dossier de vérification sur Démarche Numérique/);
+    const section = screen.getByRole('region', { name: SECTION });
+    expect(section).toHaveTextContent('Si vous pensez que vous ou vos enfants êtes éligibles');
+    expect(
+      within(section).getByRole('button', { name: 'Vous pensez être éligible ?' }),
+    ).toBeEnabled();
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 
-  it('hands back a dossier the usager already holds, saying it is looked up first', async () => {
+  it('hands back a dossier the usager already holds, looking it up first', async () => {
     respond(pending, ready());
     render(<DnDossierButton hasDossier />);
-
-    const button = screen.getByRole('button', { name: 'Retrouver mon dossier' });
-    expect(button).toHaveAccessibleDescription(/puis vous donnons le lien pour l’ouvrir/);
 
     await click('Retrouver mon dossier');
     expect(screen.getByRole('button', { name: 'Recherche de votre dossier…' })).toBeDisabled();
@@ -106,7 +106,7 @@ describe('DnDossierButton', () => {
     expect(alert.parentElement).toHaveTextContent('Suivez son avancement sur Démarche Numérique.');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     // The alert stands before the section, which only holds the link.
-    const section = screen.getByRole('region', { name: 'Faire vérifier votre éligibilité' });
+    const section = screen.getByRole('region', { name: SECTION });
     expect(section).not.toContainElement(alert);
     expect(alert.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const link = within(section).getByRole('link', {
@@ -136,7 +136,7 @@ describe('DnDossierButton', () => {
     expect(status).toHaveTextContent('ne le partagez pas');
 
     // The alert stands before the section, which only holds the link.
-    const section = screen.getByRole('region', { name: 'Faire vérifier votre éligibilité' });
+    const section = screen.getByRole('region', { name: SECTION });
     expect(section).not.toContainElement(status);
     expect(status.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const link = within(section).getByRole('link', {

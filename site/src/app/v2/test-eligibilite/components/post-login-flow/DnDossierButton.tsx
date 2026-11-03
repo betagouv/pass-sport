@@ -177,7 +177,6 @@ interface Props {
 
 export default function DnDossierButton({ hasDossier, link = null }: Props) {
   const [state, setState] = useState<State>({ kind: 'idle' });
-  const descriptionId = useId();
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -265,15 +264,9 @@ export default function DnDossierButton({ hasDossier, link = null }: Props) {
         )}
 
         {showButton && (
-          <>
-            <Button
-              onClick={request}
-              disabled={state.kind === 'loading'}
-              nativeButtonProps={{ 'aria-describedby': descriptionId }}
-            >
-              {buttonLabel}
-            </Button>
-          </>
+          <Button onClick={request} disabled={state.kind === 'loading'}>
+            {buttonLabel}
+          </Button>
         )}
       </DnSection>
     </>

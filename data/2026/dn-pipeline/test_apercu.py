@@ -67,7 +67,7 @@ def test_dn_overview_counts_the_dossiers_to_process(capsys):
     apercu.dn_overview(FakeDn([dn_dossier(1), dn_dossier(2, connectionUsager=DN_ACCOUNT),
                                dn_dossier(3, state='accepte')], labels={}), 1234)
     out = capsys.readouterr().out
-    assert f'connexion : france_connect 2, {DN_ACCOUNT} 1' in out
+    assert f'connexion : {DN_ACCOUNT} 1, france_connect 2' in out
     assert ('à traiter (FranceConnect, en instruction par un instructeur, sans label) : 1 ; '
             'ignorés : pas en instruction 1, sans FranceConnect 1') in out
 
