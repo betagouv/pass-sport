@@ -18,9 +18,12 @@ cd /srv/pass-sport/data/2026/dn-pipeline
 
 ## Ce qui est lu
 
-Les dossiers **en instruction**, déposés via FranceConnect ou non : l'état « En instruction »
-fait foi. Seuls ceux qui ne portent aucun des labels du pipeline (`Traité`, `À vérifier`, `Rejeté`,
-`Doublon`) sont pris. Pour faire repasser un dossier, lui retirer ses labels.
+Les dossiers **en instruction** et **FranceConnect** : ceux qui portent le label `FranceConnect`
+ou qui le reçoivent dans ce passage (pré-remplis par le worker, ou déposés par un usager connecté à
+DN via FranceConnect, voir [plus bas](#dossiers-pré-remplis-depuis-lespace-franceconnect)). Les
+autres sont ignorés (`sans FranceConnect`). Seuls ceux qui ne portent aucun des labels du pipeline
+(`Traité`, `À vérifier`, `Rejeté`, `Doublon`) sont pris. Pour faire repasser un dossier, lui
+retirer ses labels.
 
 Chaque dossier reçoit ses réponses (annotation, message, acceptation) **au nom de l'instructeur
 qui l'a passé en instruction** : le dernier passage en instruction de ses `traitements`
@@ -34,16 +37,16 @@ Les libellés des champs et les valeurs reconnues (situations, caisses, genres) 
 ### Bénéficiaires d'un dossier
 
 - **Le demandeur** s'il est lui-même bénéficiaire : `Je suis bénéficiaire de :` = AAH (situation
-  `AAH`, organisme = `À quelle caisse êtes vous rattaché ?`) ou une bourse (situation `boursier`,
+  `AAH`, organisme = `À quelle caisse je suis rattaché ?`) ou une bourse (situation `boursier`,
   organisme `cnous`, INE facultatif). « Seuls mes enfants sont bénéficiaires… » ne lui donne pas
-  de ligne. Sa date de naissance vient du champ `Votre date de naissance`.
-- **Chaque enfant** du bloc `Pour chaque enfant…`, si `Est ce qu'un ou plusieurs de vos enfants
-  sont éligibles…` ne vaut pas Non : `Est il bénéficiaire de l'AEEH` = Oui → `AEEH`, sauf si la
+  de ligne. Sa date de naissance vient du champ `Ma date de naissance`.
+- **Chaque enfant** du bloc `Pour chaque enfant…`, si `Un ou plusieurs de vos enfants sont-ils
+  éligibles…` ne vaut pas Non : `Est il bénéficiaire de l'AEEH` = Oui → `AEEH`, sauf si la
   question du foyer `Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH…` vaut Non ;
-  sinon `jeune` (QF) si `Font ils partie d'un foyer dont le quotient familial…` vaut Oui ; sinon
-  la ligne est rejetée. Organisme = `A quelle caisse sont ils rattachés ?`.
-- L'allocataire des enfants est le demandeur : nom, prénom, `Votre civilité :`, date de
-  naissance (`Votre date de naissance`, obligatoire dans la démarche), adresse de résidence (dont
+  sinon `jeune` (QF) si `Font-ils partie d'un foyer dont le quotient familial…` vaut Oui ; sinon
+  la ligne est rejetée. Organisme = `À quelle caisse sont-ils rattachés ?`.
+- L'allocataire des enfants est le demandeur : nom, prénom, `Ma civilité`, date de
+  naissance (`Ma date de naissance`, obligatoire dans la démarche), adresse de résidence (dont
   le code INSEE) et email.
 - Les colonnes du **mandataire** (dépôt pour un tiers) ne sont **jamais** utilisées. Sur un
   dépôt pour un tiers, l'email est celui du demandeur, pas celui du compte qui a déposé.
@@ -70,34 +73,34 @@ et caisses** de l'exercice, et pour un enfant son parent en plus : un enfant n'e
 sous le même parent. Le n° allocataire n'est jamais utilisé, ni le genre du bénéficiaire, sauf
 pour un boursier sans INE.
 
+La comparaison est **exacte seulement** : nom, prénom(s) et date de naissance identiques une
+fois normalisés (accents, casse, tirets). Un prénom mal saisi (LEAH / LEA), un prénom ou un nom
+en plus (LEA / LEA ROSE, MARTIN / MARTIN DUPONT) ou des jumeaux ne donnent aucune
+correspondance : le bénéficiaire est codé.
+
 | Correspondance | Règle | Verdict |
 |---|---|---|
 | `ine` | boursier : même INE (organisme cnous) | **Doublon** : pas de nouveau code |
-| `exacte` | nom, prénom(s) et date de naissance identiques (normalisés). Enfant (AEEH, jeune) : en plus même parent, au sens de `parent`. Boursier sans INE : en plus même genre, et ligne lamp01 en situation boursier | **Doublon** : pas de nouveau code |
+| `exacte` | nom, prénom(s) et date de naissance identiques. Enfant (AEEH, jeune) : en plus même parent. Boursier sans INE : en plus même genre, et ligne lamp01 en situation boursier | **Doublon** : pas de nouveau code |
 | `identite` | boursier sans INE : nom, prénom(s) et date identiques, mais genre ou situation différents (homonyme, genre mal saisi, ou même personne sous une autre aide) | **À vérifier** : pas de code |
 | `autre_parent` | enfant : nom, prénom(s) et date identiques, mais pas le même parent, ou parent inconnu de lamp01 (homonyme, ou même enfant déclaré par son autre parent) | **À vérifier** : pas de code |
-| `proche` | même date, et même nom avec un prénom en commun (LEA / LEA ROSE), ou mêmes prénoms avec un nom en commun (MARTIN / MARTIN DUPONT) | **À vérifier** : pas de code |
-| `parent` | enfant (AEEH, jeune) : même date et même parent (nom de l'allocataire, prénoms contenus les uns dans les autres, genre et date de naissance quand les deux côtés les connaissent) | **À vérifier** : pas de code |
 | aucune | | **à coder** |
 
 Un enfant identique sous un autre parent n'est donc pas un **Doublon** mais **À vérifier** : deux
-enfants homonymes de parents différents ne se bloquent plus, et un enfant redéclaré par son autre
-parent n'obtient pas un second code sans qu'un humain tranche. `proche` n'exige pas le parent.
-`parent` rattrape ce que les autres laissent passer, comme un prénom mal saisi (LEAH / LEA) ou
-l'enfant inscrit sous le nom de l'autre parent.
+enfants homonymes de parents différents ne se bloquent pas, et un enfant redéclaré par son autre
+parent n'obtient pas un second code sans qu'un humain tranche.
 
-Le demandeur DN arrive avec son identité FranceConnect (nom de naissance et tous ses prénoms),
-ou, sans FranceConnect, avec celle qu'il a saisie. lamp01 garde, pour la CNAF, le nom d'usage
-et un seul prénom. Le parent est donc reconnu :
-- par son nom tel que lamp01 l'a, ou par son nom de naissance de
-  `beneficiaire_cnaf_extra_field` (DORVAT saisi, MARTIN dans lamp01) ;
-- par des prénoms contenus les uns dans les autres (CLAIRE YSOLDE saisi, CLAIRE dans lamp01) ;
-- genre et date de naissance ne bloquent que s'ils sont connus des deux côtés et différents. La
-  date écarte un parent homonyme ; lamp01 l'a pour la MSA, les lignes ARS et les codes
-  FranceConnect et DN, pas pour l'AEEH de la CNAF.
-
-Deux jumeaux (même nom, même date, aucun prénom commun) ne sont pas « proches », mais ils ont le
-même parent : le second déclaré passe donc en **À vérifier**.
+Le **même parent**, c'est :
+- le même nom : celui de lamp01 (le nom d'usage, pour la CNAF) ou son nom de naissance de
+  `beneficiaire_cnaf_extra_field`, celui que donne DN avec FranceConnect (DORVAT saisi, MARTIN
+  dans lamp01, DORVAT en nom de naissance) ;
+- les mêmes prénoms : la CNAF n'en garde qu'un, FranceConnect les donne tous, donc CLAIRE YSOLDE
+  saisi face à CLAIRE dans lamp01 n'est **pas** le même parent (**À vérifier**) ;
+- le genre ne bloque que s'il est connu des deux côtés et différent ;
+- la date de naissance du parent n'est **jamais** comparée. Elle ne compte que pour un
+  bénéficiaire AAH ou boursier, qui est son propre allocataire : c'est alors la sienne, comparée
+  comme date du bénéficiaire. Elle reste affichée dans `investigation.csv` et injectée dans
+  lamp01, pour le rapprochement FranceConnect.
 
 **`investigation.csv`** met côte à côte, pour chaque doublon et chaque cas à vérifier, la ligne
 saisie (`saisie_*`, lien du dossier DN) et chaque ligne lamp01 touchée (`lamp01_*` : code,
@@ -251,7 +254,8 @@ Chaque passage pose le label `FranceConnect` sur ces dossiers (`prefilled` dans 
 étant le seul à pré-remplir cette démarche), ainsi que sur ceux dont l'usager s'est connecté à DN
 via FranceConnect (`connectionUsager` = `france_connect`). Seulement une fois déposés : en
 construction ou en instruction. DN refuse un label sur un brouillon, le worker ne peut donc pas
-le poser à la création. Ce n'est pas un label du pipeline : le dossier reste pris. Journal :
+le poser à la création. Ce n'est pas un label du pipeline : le dossier reste pris, et c'est
+même la condition pour l'être (voir [Ce qui est lu](#ce-qui-est-lu)). Journal :
 `label-franceconnect.csv` du passage (`simule` en dry-run). Un échec n'arrête pas le passage,
 il est signalé par un `ATTENTION` dans `run.log`.
 
@@ -263,7 +267,7 @@ il est signalé par un `ATTENTION` dans `run.log`.
     par le pipeline ;
   - le label `FranceConnect`, posé sur les dossiers pré-remplis par le worker ou déposés via
     FranceConnect ;
-  - le champ `Votre date de naissance`, obligatoire : celle du bénéficiaire AAH ou boursier, et
+  - le champ `Ma date de naissance`, obligatoire : celle du bénéficiaire AAH ou boursier, et
     celle du parent pour ses enfants ;
   - l'annotation privée `Codes pass Sport`, de type **Texte long**. Sans elle, le passage
     s'arrête dès la lecture de DN.

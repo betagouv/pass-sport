@@ -227,11 +227,6 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             className="fr-mb-3w"
           />
 
-          {/* A dossier already held comes first, whatever the verdicts. */}
-          {FC_DN_DOSSIER_ENABLED && hasDnDossier && (
-            <DnDossierButton hasDossier link={dnDossierLink} />
-          )}
-
           {debuggingEnabled && (
             <>
               <h2 className="fr-h4">Identité FranceConnect</h2>
@@ -268,6 +263,10 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             // The callback enqueues before redirecting here, so this is only reachable when
             // that enqueue failed.
             <EnqueueRetry allocataireIdentity={result.identity} jobInfo={existingJobInfo} />
+          )}
+
+          {FC_DN_DOSSIER_ENABLED && hasDnDossier && (
+            <DnDossierButton hasDossier link={dnDossierLink} />
           )}
           {/* Logout moved to the header quick-access item ("Se déconnecter"),
               shown while the POC session is live (see the root layout). */}

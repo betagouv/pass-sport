@@ -59,6 +59,10 @@ def instruction(number):
     }
 
 
+# Dossier.connectionUsager of an usager logged in with a DN account, not FranceConnect.
+DN_ACCOUNT = 'dn_account'
+
+
 def dn_dossier(number=34778465, beneficiaire_de="L'Allocation aux adultes handicapés (AAH)",
                enfants=None, foyer='Oui', enfants_aeeh='Oui', date_naissance='2000-05-04',
                caisse='CAF', caisse_enfants=None, allocataire_genre='M.', code_insee='69052',
@@ -177,17 +181,21 @@ def test_fetch_dn_skips_dossiers_already_labelled_by_the_pipeline():
     assert raw['ignores'] == 1
 
 
-def test_fetch_dn_takes_dossiers_en_instruction_through_france_connect_or_not():
-    password = dn_dossier(2, connectionUsager='password')
+def test_fetch_dn_takes_only_the_franceconnect_dossiers_en_instruction():
+    dn_account = dn_dossier(2, connectionUsager=DN_ACCOUNT)
     deleted = dn_dossier(3, connectionUsager='deleted')
-    labelled = dn_dossier(4, labels=[{'id': 'L', 'name': mapping.DN_LABELS['rejete']}])
-    en_construction = dn_dossier(5, connectionUsager='password', state='en_construction')
+    prefilled = dn_dossier(4, connectionUsager=DN_ACCOUNT, prefilled=True)
+    labelled_fc = dn_dossier(5, connectionUsager=DN_ACCOUNT,
+                             labels=[{'id': 'L', 'name': mapping.DN_LABEL_FRANCECONNECT}])
+    labelled = dn_dossier(6, labels=[{'id': 'L', 'name': mapping.DN_LABELS['rejete']}])
+    en_construction = dn_dossier(7, state='en_construction')
 
-    raw = pipeline.fetch_dn(FakeDn([dn_dossier(1), password, deleted, labelled, en_construction]), 1234)
+    raw = pipeline.fetch_dn(FakeDn([dn_dossier(1), dn_account, deleted, prefilled, labelled_fc, labelled,
+                                    en_construction]), 1234)
 
-    assert [dossier['number'] for dossier in raw['dossiers']] == [1, 2, 3]
-    assert raw['ignores'] == 2
-    assert raw['ignores_par_motif'] == {'déjà labellisé': 1, 'pas en instruction': 1}
+    assert [dossier['number'] for dossier in raw['dossiers']] == [1, 4, 5]
+    assert raw['ignores'] == 4
+    assert raw['ignores_par_motif'] == {'sans FranceConnect': 2, 'déjà labellisé': 1, 'pas en instruction': 1}
 
 
 def test_fetch_dn_takes_only_the_listed_dossiers():
@@ -215,7 +223,10 @@ def test_dossier_numbers_refuses_anything_but_numbers():
 @pytest.mark.parametrize('overrides, reason', [
     ({}, ''),
     ({'state': 'en_construction'}, 'pas en instruction'),
-    ({'connectionUsager': 'password'}, ''),
+    ({'connectionUsager': DN_ACCOUNT}, 'sans FranceConnect'),
+    ({'connectionUsager': DN_ACCOUNT, 'prefilled': True}, ''),
+    ({'connectionUsager': DN_ACCOUNT, 'labels': [{'id': 'L', 'name': 'franceconnect'}]}, ''),
+    ({'state': 'en_construction', 'connectionUsager': DN_ACCOUNT}, 'pas en instruction'),
     ({'labels': [{'id': 'L', 'name': 'à vérifier'}]}, 'déjà labellisé'),
     ({'traitements': [traitement('passe_en_instruction_automatiquement')]}, 'sans instructeur'),
 ])
@@ -497,8 +508,7 @@ def test_clean_offers_the_names_as_typed_to_the_matching(tmp_path):
     assert candidates.drop(columns='eligibility_result_id').to_dict('records') == [{
         'situation': 'AEEH', 'ine': '', 'nom': 'Dorvat', 'prenom': 'Éla',
         'date_naissance': '2015-03-12', 'genre': 'F', 'allocataire_genre': 'M',
-        'allocataire_nom': 'Dorvat', 'allocataire_prenom': 'Pim',
-        'allocataire_date_naissance': '2000-05-04'}]
+        'allocataire_nom': 'Dorvat', 'allocataire_prenom': 'Pim'}]
 
 
 @pytest.mark.parametrize('prenom, nom, psp_prenom, psp_nom', [
@@ -596,32 +606,29 @@ def run_split(tmp_path, paths, correspondences):
     return ids, stats, out
 
 
-def test_split_exact_is_a_doublon_close_or_same_parent_only_is_to_review_and_the_rest_is_coded(tmp_path):
+def test_split_exact_is_a_doublon_another_parent_only_is_to_review_and_the_rest_is_coded(tmp_path):
     _, paths = run_clean(tmp_path, dn=raw_dn(dn_dossier(7, beneficiaire_de='', enfants=[
         enfant('Ana'), enfant('Bea'), enfant('Cia'), enfant('Xen', genre='X'), enfant('Dia')])))
 
     ids, stats, out = run_split(tmp_path, paths, [
-        (0, '26-AAAA-AAAA', 'exacte'), (0, '26-BBBB-BBBB', 'proche'), (1, '26-CCCC-CCCC', 'proche'),
-        (1, '26-EEEE-EEEE', 'autre_parent'), (3, '26-DDDD-DDDD', 'parent')])
+        (0, '26-AAAA-AAAA', 'exacte'), (0, '26-BBBB-BBBB', 'autre_parent'),
+        (1, '26-EEEE-EEEE', 'autre_parent')])
 
-    assert (stats['doublons'], stats['a_verifier'], stats['a_coder'], stats['rejets']) == (1, 2, 1, 1)
+    assert (stats['doublons'], stats['a_verifier'], stats['a_coder'], stats['rejets']) == (1, 1, 2, 1)
     verdicts = read(out['verdicts']).set_index('reference')
     references = [f'dn:7:enfant-{index}' for index in range(1, 6)]
     assert verdicts.loc[references, 'verdict'].tolist() == [
-        'doublon', 'a_verifier', 'a_coder', 'rejete', 'a_verifier']
+        'doublon', 'a_verifier', 'a_coder', 'rejete', 'a_coder']
     assert 'identiques' in verdicts.loc['dn:7:enfant-1', 'motif']
     assert 'pas le même parent' in verdicts.loc['dn:7:enfant-2', 'motif']
-    assert 'même parent' in verdicts.loc['dn:7:enfant-5', 'motif']
-    assert read(out['to_code'], quoting=csv.QUOTE_ALL)['eligibility_result_id'].tolist() == [ids[2]]
+    assert read(out['to_code'], quoting=csv.QUOTE_ALL)['eligibility_result_id'].tolist() == [ids[2], ids[3]]
 
     investigation = read(out['investigation'])
     assert investigation.columns.tolist() == pipeline.INVESTIGATION_COLUMNS
     assert investigation[['reference', 'verdict', 'type', 'lamp01_id_psp']].values.tolist() == [
+        ['dn:7:enfant-1', 'doublon', 'autre_parent', '26-BBBB-BBBB'],
         ['dn:7:enfant-1', 'doublon', 'exacte', '26-AAAA-AAAA'],
-        ['dn:7:enfant-1', 'doublon', 'proche', '26-BBBB-BBBB'],
         ['dn:7:enfant-2', 'a_verifier', 'autre_parent', '26-EEEE-EEEE'],
-        ['dn:7:enfant-2', 'a_verifier', 'proche', '26-CCCC-CCCC'],
-        ['dn:7:enfant-5', 'a_verifier', 'parent', '26-DDDD-DDDD'],
     ]
     assert investigation[[
         'saisie_allocataire_nom', 'saisie_allocataire_prenom', 'saisie_allocataire_genre',
@@ -632,7 +639,7 @@ def test_split_a_loose_boursier_identity_is_to_review_with_its_own_reason(tmp_pa
     _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
 
     _, stats, out = run_split(tmp_path, paths, [
-        (0, '26-AAAA-AAAA', 'proche'), (0, '26-BBBB-BBBB', 'identite')])
+        (0, '26-AAAA-AAAA', 'autre_parent'), (0, '26-BBBB-BBBB', 'identite')])
 
     assert (stats['doublons'], stats['a_verifier']) == (0, 1)
     assert 'genre ou situation différents' in read(out['verdicts'])['motif'].iloc[0]
@@ -858,7 +865,7 @@ FC_LABELS = {**{name: f'L-{key}' for key, name in mapping.DN_LABELS.items()},
              mapping.DN_LABEL_FRANCECONNECT: 'L-fc'}
 
 
-def listed(number, state='en_construction', prefilled=True, connection='password', labels=()):
+def listed(number, state='en_construction', prefilled=True, connection=DN_ACCOUNT, labels=()):
     """A dossier as iter_dossier_labels lists it."""
     return {'id': f'D{number}', 'number': number, 'state': state, 'prefilled': prefilled,
             'connectionUsager': connection,

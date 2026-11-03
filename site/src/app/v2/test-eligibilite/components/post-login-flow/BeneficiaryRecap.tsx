@@ -144,7 +144,7 @@ interface Props {
   relanceAvailableAt?: string | null;
   relanceEnabled?: boolean;
   relanceAllowlistOnly?: boolean;
-  // Off once the usager holds a dossier: the page shows it at its top.
+  // Off once the usager holds a dossier: the page shows it itself.
   dnDossierEnabled?: boolean;
 }
 
@@ -180,9 +180,6 @@ export default function BeneficiaryRecap({
 
   return (
     <>
-      {/* Right under the FranceConnect alert, above the verdicts it is about. */}
-      {dnDossierEnabled && hasRefusal(beneficiaries) && <DnDossierButton hasDossier={false} />}
-
       <section className="fr-mb-3w">
         {countBeneficiariesByVerdict(beneficiaries).map(([verdict, count]) => (
           <TrackEventOnMount
@@ -214,6 +211,8 @@ export default function BeneficiaryRecap({
           <RelanceButton availableAt={relanceAvailableAt} />
         )}
       </section>
+
+      {dnDossierEnabled && hasRefusal(beneficiaries) && <DnDossierButton hasDossier={false} />}
     </>
   );
 }

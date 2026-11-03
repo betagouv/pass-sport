@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 
 import mapping
+from test_dn_pipeline import DN_ACCOUNT
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 SCRIPT = PIPELINE_DIR / 'run_dn.sh'
@@ -76,19 +77,21 @@ DN_DOSSIERS = [
     # The AAH applicant and their AEEH child, both coded. Pre-filled by the worker.
     dossier(501, {'nom': 'Mervik', 'prenom': 'Tozal'}, ('Ola', 'Mervik', 'Mme', '2016-01-02'),
             beneficiaire_de="L'Allocation aux adultes handicapés (AAH)", prefilled=True),
-    # Rejected: unknown gender. Filed without FranceConnect, taken all the same.
-    dossier(502, {'nom': 'Dorvat', 'prenom': 'Tozal'}, ('Pim', 'Dorvat', 'X', '2015-03-12'),
-            connectionUsager='password'),
+    # Rejected: unknown gender.
+    dossier(502, {'nom': 'Dorvat', 'prenom': 'Tozal'}, ('Pim', 'Dorvat', 'X', '2015-03-12')),
     # Already in lamp01 (seeded by the test), under another situation and caisse: doublon.
     dossier(503, {'nom': 'Ker', 'prenom': 'Ana', 'civilite': 'Mme'}, ('Lio', 'Ker', 'M', '2015-03-12'),
             caisse='MSA'),
     # Still en construction: ignored, but labelled FranceConnect, pre-filled by the worker though
-    # claimed with a DN password.
+    # claimed with a DN account.
     dossier(504, {'nom': 'Sorel', 'prenom': 'Eli'}, ('Ema', 'Sorel', 'Mme', '2015-03-12'),
-            state='en_construction', prefilled=True, connectionUsager='password'),
+            state='en_construction', prefilled=True, connectionUsager=DN_ACCOUNT),
     # Put en instruction by DN itself, no instructeur to answer it as: ignored.
     dossier(505, {'nom': 'Varn', 'prenom': 'Ilo'}, ('Rem', 'Varn', 'M', '2015-03-12'),
             instruction_event='passe_en_instruction_automatiquement'),
+    # Neither pre-filled nor filed through FranceConnect: ignored, never labelled.
+    dossier(506, {'nom': 'Lorn', 'prenom': 'Ade'}, ('Kai', 'Lorn', 'M', '2015-03-12'),
+            connectionUsager=DN_ACCOUNT),
 ]
 DN_LABELS = [{'id': f'L-{key}', 'name': name} for key, name in mapping.DN_LABELS.items()]
 DN_LABELS.append({'id': 'L-franceconnect', 'name': mapping.DN_LABEL_FRANCECONNECT})
@@ -276,8 +279,8 @@ def sha1(path: Path) -> str:
 
 
 # Right after the DN read, before any code: the deposited dossiers the worker pre-filled or
-# filed through FranceConnect, D502 excepted.
-LABELLED_FC = [('dossierAjouterLabel', f'D{number}', 'L-franceconnect') for number in (501, 503, 504, 505)]
+# filed through FranceConnect, D506 excepted.
+LABELLED_FC = [('dossierAjouterLabel', f'D{number}', 'L-franceconnect') for number in (501, 502, 503, 504, 505)]
 
 ANSWERED = [
     ('dossierModifierAnnotations', 'D501', None), ('dossierEnvoyerMessage', 'D501', None),

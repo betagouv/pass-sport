@@ -400,7 +400,7 @@ describe('BeneficiaryRecap', () => {
       const button = screen.getByRole('button', { name: DN_LABEL });
       const results = screen.getByRole('heading', { name: 'Résultat de votre demande' });
       expect(
-        button.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING,
+        button.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_PRECEDING,
       ).toBeTruthy();
     });
 

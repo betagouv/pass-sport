@@ -34,6 +34,7 @@ query dossiers($numero: Int!, $state: DossierState, $after: String) {
         id
         number
         state
+        prefilled
         connectionUsager
         deposeParUnTiers
         usager { email }

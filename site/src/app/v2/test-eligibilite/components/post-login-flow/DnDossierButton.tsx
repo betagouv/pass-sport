@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { fr } from '@codegouvfr/react-dsfr';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import { IS_LOCAL_ENV } from '@/app/constants/env';
@@ -27,7 +28,7 @@ const SESSION_EXPIRED =
   'Votre session a expiré. Reconnectez-vous avec FranceConnect pour accéder à votre dossier.';
 const UNAVAILABLE = 'Ce service n’est pas disponible pour le moment.';
 
-const SECTION_TITLE = 'Faire vérifier votre éligibilité';
+const SECTION_TITLE = 'Vous rencontrez un problème avec les résultats ?';
 const FOLLOW_UP = 'Suivez son avancement sur Démarche Numérique.';
 
 type PollAnswer =
@@ -73,21 +74,30 @@ const DossierAnchor = ({ url, label }: { url: string; label: string }) =>
 
 // Its state may have moved on since the page read it: the title leaves it to DN's page.
 // The actions alone, an error on them first: the dossier's own alert stands above the section,
-// right under the page's FranceConnect alert.
+// right under the separator.
 const DnSection = ({ children }: { children: ReactNode }) => {
   const titleId = useId();
   return (
     <section className="fr-mb-6w" aria-labelledby={titleId}>
-      <h2 id={titleId} className="fr-h3 fr-mb-1w">
+      <h2 id={titleId} className="fr-h4 fr-mb-1w">
         {SECTION_TITLE}
       </h2>
+      <p className="fr-mb-2w">
+        Nous avons vérifié votre éligibilité via les bases de données que nos partenaires (CAF, MSA,
+        CNOUS) nous ont envoyées pour cette campagne du pass Sport 2026. Si vous pensez que vous ou
+        vous enfants êtes éligibles merci de cliquer sur ce lien :
+      </p>
+
       {children}
     </section>
   );
 };
 
+const Separator = () => <hr className={fr.cx('fr-hr')} />;
+
 const KnownDossier = ({ link }: { link: DnDossierLink }) => (
   <>
+    <Separator />
     <Alert
       severity="info"
       as="h2"
@@ -237,6 +247,7 @@ export default function DnDossierButton({ hasDossier, link = null }: Props) {
 
   return (
     <>
+      <Separator />
       {/* Present from the first render, so the dossier's arrival is announced. */}
       <div role="status" aria-live="polite">
         {state.kind === 'ready' && <ReadyDossier dossier={state.dossier} />}
@@ -262,11 +273,6 @@ export default function DnDossierButton({ hasDossier, link = null }: Props) {
             >
               {buttonLabel}
             </Button>
-            <p id={descriptionId} className="fr-mt-1w fr-text--sm">
-              {hasDossier
-                ? 'Nous recherchons votre dossier de vérification sur Démarche Numérique, puis vous donnons le lien pour l’ouvrir.'
-                : 'Nous vous préparons un dossier de vérification sur Démarche Numérique, pré-rempli avec les informations transmises par FranceConnect et par les organismes consultés (CAF ou MSA, CNOUS). Vous pourrez le vérifier, le compléter et joindre vos justificatifs avant de le déposer.'}
-            </p>
           </>
         )}
       </DnSection>

@@ -4,7 +4,7 @@ Every label is compared folded (no accents, no case, single spaces, see `fold`),
 renamed champ only needs its new label here. Situations and caisses are recognised by
 keyword, the démarche spelling them out in full (« AAH (allocation aux adultes handicapés) »).
 
-Checked against the real démarche with apercu_dn.sh and `pnpm dn:champs` (2026-10-27).
+Checked against the real démarche with apercu_dn.sh and `pnpm dn:champs` (2026-11-03).
 """
 
 import re
@@ -23,20 +23,20 @@ def fold(value) -> str:
 # Also read by the worker, which pre-fills dossiers from the espace FranceConnect: keep
 # worker/src/demarche-numerique/champs-resolver.ts in step, then run `pnpm dn:champs` there.
 DN_CHAMPS = {
-    'allocataire_genre': 'Votre civilité :',
-    'adresse': 'Adresse de résidence',
+    'allocataire_genre': 'Ma civilité',
+    'adresse': 'Mon adresse de résidence',
     'beneficiaire_de': 'Je suis bénéficiaire de :',
     'ine': 'Numéro INE (Identification Nationale Étudiant)',
     # The applicant's own caisse, for their AAH.
-    'caisse': 'À quelle caisse êtes vous rattaché ?',
-    'date_naissance': 'Votre date de naissance',
-    'a_des_enfants': "Est ce qu'un ou plusieurs de vos enfants sont éligibles au Pass Sport ?",
-    'caisse_enfants': 'A quelle caisse sont ils rattachés ?',
-    'foyer_qf': "Font ils partie d'un foyer dont le quotient familial est inférieur ou égal à 699 € ?",
+    'caisse': 'À quelle caisse je suis rattaché ?',
+    'date_naissance': 'Ma date de naissance',
+    'a_des_enfants': 'Un ou plusieurs de vos enfants sont-ils éligibles au Pass Sport ?',
+    'caisse_enfants': 'À quelle caisse sont-ils rattachés ?',
+    'foyer_qf': "Font-ils partie d'un foyer dont le quotient familial est inférieur ou égal à 699 € ?",
     'enfants_aeeh': (
         "Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH (Allocation d'éducation "
         "de l'enfant handicapé) ?"),
-    'enfants': 'Pour chaque enfant, merci de remplir les champs suivants :',
+    'enfants': 'Pour chaque enfant, remplissez les informations suivantes',
 }
 
 DN_ENFANT_CHAMPS = {

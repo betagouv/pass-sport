@@ -78,7 +78,7 @@ CLEANED_COLUMNS = [
 # match_dn.sql loads them with `header match`: same names, same order.
 MATCH_COLUMNS = [
     'eligibility_result_id', 'situation', 'ine', 'nom', 'prenom', 'date_naissance', 'genre',
-    'allocataire_genre', 'allocataire_nom', 'allocataire_prenom', 'allocataire_date_naissance',
+    'allocataire_genre', 'allocataire_nom', 'allocataire_prenom',
 ]
 IDENTITY_COLUMNS = [
     'eligibility_result_id', *SUIVI_COLUMNS, 'genre', 'situation', 'caisse',
@@ -187,12 +187,24 @@ def dn_instructeur_id(dossier: dict) -> str:
                  if email and instructeur['email'].lower() == email), '')
 
 
+def dn_franceconnect(dossier: dict) -> bool:
+    """Pre-filled by the worker from the espace FranceConnect (the démarche's only pre-filled
+    ones), or filed by an usager logged in to DN through FranceConnect."""
+    return bool(dossier.get('prefilled')) or dossier.get('connectionUsager') == mapping.DN_CONNECTION_FRANCECONNECT
+
+
+def _holds_label(dossier: dict, name: str) -> bool:
+    return any(mapping.fold(label['name']) == mapping.fold(name) for label in dossier['labels'])
+
+
 def dn_skip_reason(dossier: dict) -> str:
-    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, through
-    FranceConnect or not, holding none of its labels, and put en instruction by an instructeur
-    of its groupe."""
+    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, holding the
+    FranceConnect label or due to get it from this run, none of the pipeline's labels, and put
+    en instruction by an instructeur of its groupe."""
     if dossier['state'] != 'en_instruction':
         return 'pas en instruction'
+    if not (dn_franceconnect(dossier) or _holds_label(dossier, mapping.DN_LABEL_FRANCECONNECT)):
+        return 'sans FranceConnect'
     ours = {mapping.fold(name) for name in mapping.DN_LABELS.values()}
     if any(mapping.fold(label['name']) in ours for label in dossier['labels']):
         return 'déjà labellisé'
@@ -202,8 +214,8 @@ def dn_skip_reason(dossier: dict) -> str:
 
 
 def fetch_dn(client: DnClient, numero: int, only: set[int] | None = None) -> dict:
-    """The dossiers en instruction without the pipeline's labels, put en instruction by an
-    instructeur of their groupe; with `only`, among those numbers."""
+    """The FranceConnect dossiers en instruction without the pipeline's labels, put en
+    instruction by an instructeur of their groupe; with `only`, among those numbers."""
     label_id_by_name = {mapping.fold(name): label_id for name, label_id in client.labels(numero).items()}
     missing = [name for name in mapping.DN_LABELS.values() if mapping.fold(name) not in label_id_by_name]
     if missing:
@@ -525,7 +537,6 @@ def build_match_candidates(psp: pd.DataFrame, valid: pd.DataFrame) -> pd.DataFra
         'allocataire_genre': valid['allocataire_genre'],
         'allocataire_nom': valid['allocataire_nom'],
         'allocataire_prenom': valid['allocataire_prenom'],
-        'allocataire_date_naissance': valid['allocataire_date_naissance'],
     })[MATCH_COLUMNS]
 
 
@@ -595,15 +606,13 @@ def clean(dn_filepath, output_filepath, match_filepath, cnaf_extra_filepath, ide
 VERDICT_MOTIF = {
     'exacte': "déjà connu de lamp01 (nom, prénom et date de naissance identiques, et même parent pour un enfant)",
     'ine': "déjà connu de lamp01 (même INE)",
-    'proche': "ressemble à une personne connue de lamp01 : voir investigation.csv",
-    'parent': "même date de naissance et même parent qu'une personne connue de lamp01 : voir investigation.csv",
     'identite': ("boursier sans INE : mêmes nom, prénom et date de naissance qu'une personne connue de "
                  "lamp01, mais genre ou situation différents : voir investigation.csv"),
     'autre_parent': ("mêmes nom, prénom et date de naissance qu'un enfant connu de lamp01, mais pas le "
                      "même parent : voir investigation.csv"),
 }
 # The à vérifier motif a line gets, from the most to the least specific of its correspondences.
-REVIEW_TYPES = ('identite', 'autre_parent', 'proche', 'parent')
+REVIEW_TYPES = ('identite', 'autre_parent')
 BATCH_OTHER_PARENT_MOTIF = "même enfant que {reference}, déclaré dans ce passage par un autre parent"
 
 
@@ -617,9 +626,8 @@ def batch_first_holder(identities: pd.DataFrame) -> pd.Series:
 
 def split(cleaned_filepath, correspondences_filepath, touched_filepath, identities_filepath,
           rejects_filepath, to_code_filepath, verdicts_filepath, investigation_filepath) -> dict:
-    """Exact (or INE) correspondence = doublon; close, same-parent, other-parent or loose boursier
-    one only = à vérifier, as is a child the batch already holds under another parent; none =
-    à coder."""
+    """Exact (or INE) correspondence = doublon; other-parent or loose boursier one only = à
+    vérifier, as is a child the batch already holds under another parent; none = à coder."""
     cleaned = _read(cleaned_filepath, quoting=csv.QUOTE_ALL)
     correspondences = _read(correspondences_filepath)
     touched = _read(touched_filepath)
@@ -889,12 +897,10 @@ def label_franceconnect(client, numero: int, journal: Journal, dry_run: bool,
     # By number: a dossier put en instruction between the two reads is seen once.
     dossiers = {dossier['number']: dossier for state in FRANCECONNECT_LABEL_STATES
                 for dossier in client.iter_dossier_labels(numero, state)
-                if (dossier['prefilled']
-                    or dossier['connectionUsager'] == mapping.DN_CONNECTION_FRANCECONNECT)
-                and (only is None or dossier['number'] in only)}
+                if dn_franceconnect(dossier) and (only is None or dossier['number'] in only)}
 
     for number, dossier in sorted(dossiers.items()):
-        if any(mapping.fold(label['name']) == wanted for label in dossier['labels']):
+        if _holds_label(dossier, mapping.DN_LABEL_FRANCECONNECT):
             continue
         reference = f'dn:{number}'
         if dry_run:

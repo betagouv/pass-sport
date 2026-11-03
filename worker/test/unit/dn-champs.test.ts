@@ -20,10 +20,10 @@ const descriptor = (
 // The démarche as its administrators could have built it: labels with other accents and cases
 // than mapping.py's, every kind of champ the resolver knows.
 const DESCRIPTORS: ChampDescriptor[] = [
-  descriptor("HeaderSectionChampDescriptor", "Votre identité"),
-  descriptor("CiviliteChampDescriptor", "VOTRE CIVILITÉ :"),
-  descriptor("DateChampDescriptor", "VOTRE DATE DE NAISSANCE"),
-  descriptor("AddressChampDescriptor", "Adresse de résidence"),
+  descriptor("HeaderSectionChampDescriptor", "Mon identité"),
+  descriptor("CiviliteChampDescriptor", "MA CIVILITÉ"),
+  descriptor("DateChampDescriptor", "MA DATE DE NAISSANCE"),
+  descriptor("AddressChampDescriptor", "Mon adresse de résidence"),
   descriptor("DropDownListChampDescriptor", "Je suis bénéficiaire de :", {
     options: [
       "L'Allocation aux adultes handicapés (AAH)",
@@ -32,9 +32,9 @@ const DESCRIPTORS: ChampDescriptor[] = [
     ],
   }),
   descriptor("TextChampDescriptor", "Numéro INE (Identification Nationale Étudiant)"),
-  descriptor("TextChampDescriptor", "à quelle caisse êtes vous rattaché ?"),
+  descriptor("TextChampDescriptor", "à quelle caisse je suis rattaché ?"),
   descriptor("DropDownListChampDescriptor", DN_CHAMP_LABELS.aDesEnfants, { options: ["Oui", "Non"] }),
-  descriptor("DropDownListChampDescriptor", "À QUELLE CAISSE SONT ILS RATTACHÉS ?", {
+  descriptor("DropDownListChampDescriptor", "À QUELLE CAISSE SONT-ILS RATTACHÉS ?", {
     // Its folded label starts like the applicant's caisse.
     id: "id-caisse-enfants",
     options: ["MSA", "CAF"],
@@ -96,9 +96,9 @@ describe("resolveChamps", () => {
   it("names what it cannot resolve", () => {
     const { champs, problems } = resolveChamps([
       descriptor("TextChampDescriptor", "Je suis bénéficiaire de :"),
-      descriptor("TextChampDescriptor", "Votre date de naissance"),
-      descriptor("TextChampDescriptor", "Votre civilité :"),
-      descriptor("TextChampDescriptor", "Votre civilité :"),
+      descriptor("TextChampDescriptor", "Ma date de naissance"),
+      descriptor("TextChampDescriptor", "Ma civilité"),
+      descriptor("TextChampDescriptor", "Ma civilité"),
       descriptor("DropDownListChampDescriptor", DN_CHAMP_LABELS.aDesEnfants, { options: ["Peut-être"] }),
     ]);
 
@@ -107,8 +107,8 @@ describe("resolveChamps", () => {
     expect(champs.allocataireGenre).toBeUndefined();
     expect(problems).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("dateNaissance « Votre date de naissance » : type TextChampDescriptor"),
-        expect.stringContaining("allocataireGenre « Votre civilité : » : 2 champs"),
+        expect.stringContaining("dateNaissance « Ma date de naissance » : type TextChampDescriptor"),
+        expect.stringContaining("allocataireGenre « Ma civilité » : 2 champs"),
         expect.stringContaining(
           `aDesEnfants « ${DN_CHAMP_LABELS.aDesEnfants} » : aucune option unique pour yes, no`,
         ),

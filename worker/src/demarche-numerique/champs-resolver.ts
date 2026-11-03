@@ -23,19 +23,19 @@ export type ChampDescriptor = {
 // The champs of data/2026/dn-pipeline/mapping.py DN_CHAMPS and DN_ENFANT_CHAMPS the worker
 // pre-fills: the address is not one, no API answer carries it. Change them together.
 export const DN_CHAMP_LABELS = {
-  allocataireGenre: "Votre civilité :",
+  allocataireGenre: "Ma civilité",
   beneficiaireDe: "Je suis bénéficiaire de :",
   ine: "Numéro INE (Identification Nationale Étudiant)",
-  caisse: "À quelle caisse êtes vous rattaché ?",
-  dateNaissance: "Votre date de naissance",
-  aDesEnfants: "Est ce qu'un ou plusieurs de vos enfants sont éligibles au Pass Sport ?",
-  caisseEnfants: "A quelle caisse sont ils rattachés ?",
+  caisse: "À quelle caisse je suis rattaché ?",
+  dateNaissance: "Ma date de naissance",
+  aDesEnfants: "Un ou plusieurs de vos enfants sont-ils éligibles au Pass Sport ?",
+  caisseEnfants: "À quelle caisse sont-ils rattachés ?",
   foyerQf:
-    "Font ils partie d'un foyer dont le quotient familial est inférieur ou égal à 699 € ?",
+    "Font-ils partie d'un foyer dont le quotient familial est inférieur ou égal à 699 € ?",
   enfantsAeeh:
     "Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH (Allocation d'éducation " +
     "de l'enfant handicapé) ?",
-  enfants: "Pour chaque enfant, merci de remplir les champs suivants :",
+  enfants: "Pour chaque enfant, remplissez les informations suivantes",
 } as const;
 
 export const DN_ENFANT_CHAMP_LABELS = {

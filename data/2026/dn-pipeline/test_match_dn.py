@@ -22,7 +22,7 @@ import dn_pipeline as pipeline
 PIPELINE_DIR = Path(__file__).resolve().parent
 DB_INIT_DIR = PIPELINE_DIR.parents[2] / 'lamp01' / 'db-init'
 
-RECAP_COLUMNS = ['candidats', 'par_ine', 'par_exacte', 'par_autre_parent', 'par_parent', 'a_verifier',
+RECAP_COLUMNS = ['candidats', 'par_ine', 'par_exacte', 'par_autre_parent', 'a_verifier',
                  'sans_correspondance']
 
 # The parent of base_row()'s child, as DN gives it.
@@ -146,79 +146,15 @@ def test_exact_whatever_the_situation_the_caisse_and_the_gender(pg):
     assert [row['id_psp'] for row in touched] == ['PSP-1']
     assert touched[0]['date_naissance'] == '2015-03-12'
     assert touched[0].keys() == set(pipeline.TOUCHED_COLUMNS)
-    assert recap == {'candidats': 1, 'par_ine': 0, 'par_exacte': 1, 'par_autre_parent': 0, 'par_parent': 0,
+    assert recap == {'candidats': 1, 'par_ine': 0, 'par_exacte': 1, 'par_autre_parent': 0,
                      'a_verifier': 0, 'sans_correspondance': 0}
-
-
-@pytest.mark.parametrize('lamp, typed', [
-    ({'prenom': 'LEA ROSE'}, {'prenom': 'Léa'}),
-    ({'nom': 'MARTIN DUPONT'}, {'nom': 'Martin'}),
-    ({'nom': 'MARTIN-DUPONT'}, {'nom': 'Dupont'}),
-])
-def test_close_when_one_name_matches_and_the_other_shares_a_word(pg, lamp, typed):
-    correspondences, _, recap = match(pg, base=[base_row(**lamp)], candidates=[candidate(**typed)])
-    assert correspondences == {('c1', 'PSP-1'): 'proche'}
-    assert recap['a_verifier'] == 1
-
-
-@pytest.mark.parametrize('lamp, typed', [
-    ({}, {'prenom': 'Leah'}),                                       # the child's first name mistyped
-    ({'nom': 'DUPONT'}, {}),                                        # the child under another family name
-    ({'prenom': 'TOM'}, {}),                                        # twins: same parent, same day
-    ({'allocataire_qualite': None}, {'prenom': 'Leah'}),            # parent's genre unknown in lamp01
-    ({}, {'prenom': 'Leah', 'allocataire_genre': ''}),              # ... or unknown as typed
-    ({'allocataire_qualite': 'MME', 'allocataire_nom': 'MARTÍN'}, {'prenom': 'Leah'}),  # raw civilité, accents
-    # CNAF keeps one first name, DN gives all of FranceConnect's, and the other way round.
-    ({}, {'prenom': 'Leah', 'allocataire_prenom': 'Claire Ysolde'}),
-    ({'allocataire_prenom': 'CLAIRE YSOLDE'}, {'prenom': 'Leah'}),
-    # The parent's birthdate, compared when both sides know it.
-    ({'allocataire_date_naissance': '1985-03-02'}, {'prenom': 'Leah', 'allocataire_date_naissance': '1985-03-02'}),
-    ({}, {'prenom': 'Leah', 'allocataire_date_naissance': '1985-03-02'}),
-])
-def test_same_birth_date_and_same_parent_is_to_review(pg, lamp, typed):
-    correspondences, _, recap = match(pg, base=[base_row(**lamp)], candidates=[candidate(**{**PARENT, **typed})])
-    assert correspondences == {('c1', 'PSP-1'): 'parent'}
-    assert (recap['par_parent'], recap['a_verifier']) == (1, 1)
-
-
-@pytest.mark.parametrize('lamp, typed', [
-    ({'allocataire_qualite': 'M'}, {}),                             # a father where a mother was typed
-    ({'allocataire_prenom': 'PAUL'}, {}),                           # another parent
-    ({'date_naissance': '2015-03-13 04:00:00'}, {}),                # another day
-    ({'allocataire_nom': None, 'allocataire_prenom': None}, {}),    # no parent known in lamp01
-    ({}, {'situation': 'AAH'}),                                     # an adult: no parent to compare
-    ({'allocataire_prenom': 'CLAIRE MARIE'}, {'allocataire_prenom': 'Claire Ysolde'}),  # neither within the other
-    # A namesake parent: same name, another birthdate.
-    ({'allocataire_date_naissance': '1980-01-01'}, {'allocataire_date_naissance': '1985-03-02'}),
-])
-def test_no_same_parent_correspondence(pg, lamp, typed):
-    correspondences, _, _ = match(pg, base=[base_row(**lamp)],
-                                  candidates=[candidate(**{**PARENT, 'prenom': 'Leah', **typed})])
-    assert correspondences == {}
-
-
-@pytest.mark.parametrize('extra, expected', [
-    ({}, {('c1', 'PSP-1'): 'parent'}),
-    ({'cnaf_allocataire_date_naissance': '1980-01-01'}, {}),        # a namesake parent
-])
-def test_the_parent_birth_name_and_birthdate_of_the_cnaf_side_table(pg, extra, expected):
-    # CNAF holds the mother's usage name and one first name; DN, through FranceConnect, her
-    # birth name and all her first names.
-    typed = candidate(prenom='Leah', allocataire_nom='Dorvat', allocataire_prenom='Claire Ysolde',
-                      allocataire_genre='F', allocataire_date_naissance='1985-03-02')
-    correspondences, touched, _ = match(pg, base=[base_row()], candidates=[typed],
-                                        extra=[extra_row(**extra)])
-
-    assert correspondences == expected
-    if expected:
-        assert touched[0]['allocataire_date_naissance'] == '1985-03-02'
 
 
 @pytest.mark.parametrize('lamp, typed, extra', [
     ({}, {}, []),
     ({'allocataire_qualite': None}, {'allocataire_genre': ''}, []),        # parent's genre unknown
-    ({}, {'allocataire_prenom': 'Claire Ysolde'}, []),                     # CNAF keeps one first name
-    ({}, {'allocataire_nom': 'Dorvat', 'allocataire_date_naissance': '1985-03-02'}, [extra_row()]),
+    ({'allocataire_qualite': 'MME', 'allocataire_nom': 'MARTÍN'}, {}, []), # raw civilité, accents
+    ({'allocataire_date_naissance': '1980-01-01'}, {}, []),                # the parent's birthdate is never compared
 ])
 def test_a_child_is_exact_under_the_same_parent(pg, lamp, typed, extra):
     correspondences, _, recap = match(pg, base=[base_row(**lamp)],
@@ -227,12 +163,30 @@ def test_a_child_is_exact_under_the_same_parent(pg, lamp, typed, extra):
     assert recap['a_verifier'] == 0
 
 
+@pytest.mark.parametrize('extra', [
+    {},
+    {'cnaf_allocataire_date_naissance': '1980-01-01'},              # the parent's birthdate is never compared
+])
+def test_the_parent_birth_name_of_the_cnaf_side_table(pg, extra):
+    # CNAF holds the mother's usage name; DN, through FranceConnect, her birth name.
+    side_table = extra_row(**extra)
+    correspondences, touched, _ = match(pg, base=[base_row()],
+                                        candidates=[candidate(**{**PARENT, 'allocataire_nom': 'Dorvat'})],
+                                        extra=[side_table])
+
+    assert correspondences == {('c1', 'PSP-1'): 'exacte'}
+    # Shown to whoever investigates.
+    assert touched[0]['allocataire_date_naissance'] == side_table['cnaf_allocataire_date_naissance']
+
+
 @pytest.mark.parametrize('lamp, typed', [
     ({'allocataire_prenom': 'PAUL', 'allocataire_qualite': 'M'}, {}),     # its other parent, or a namesake's
     ({'allocataire_nom': None, 'allocataire_prenom': None}, {}),          # no parent known in lamp01
     ({'allocataire_qualite': 'M'}, {}),                                    # a father where a mother was typed
-    ({'allocataire_date_naissance': '1980-01-01'}, {'allocataire_date_naissance': '1985-03-02'}),
     ({'allocataire_nom': 'DURAND'}, {'situation': 'jeune'}),
+    # Exact first names: CNAF keeps one, DN gives all of FranceConnect's.
+    ({}, {'allocataire_prenom': 'Claire Ysolde'}),
+    ({'allocataire_prenom': 'CLAIRE YSOLDE'}, {}),
 ])
 def test_a_child_under_another_parent_is_to_review(pg, lamp, typed):
     correspondences, _, recap = match(pg, base=[base_row(**lamp)],
@@ -241,31 +195,27 @@ def test_a_child_under_another_parent_is_to_review(pg, lamp, typed):
     assert (recap['par_exacte'], recap['par_autre_parent'], recap['a_verifier']) == (0, 1, 1)
 
 
-def test_the_parent_is_never_required_by_proche_and_never_listed_again_as_parent(pg):
-    correspondences, _, _ = match(
-        pg, base=[base_row(), base_row(id_psp='PSP-2', prenom='LEA ROSE'),
-                  base_row(id_psp='PSP-3', prenom='LEA ROSE', allocataire_prenom='PAUL')],
-        candidates=[candidate(**PARENT)])
-    assert correspondences == {('c1', 'PSP-1'): 'exacte', ('c1', 'PSP-2'): 'proche',
-                               ('c1', 'PSP-3'): 'proche'}
-
-
 def test_an_adult_needs_no_parent(pg):
     correspondences, _, _ = match(pg, base=[base_row(situation='AAH', allocataire_nom=None)],
                                   candidates=[candidate(situation='AAH')])
     assert correspondences == {('c1', 'PSP-1'): 'exacte'}
 
 
-@pytest.mark.parametrize('lamp', [
-    {'prenom': 'TOM'},                                  # twin: same name, same date
-    {'nom': 'DURAND'},                                  # another Léa born that day
-    {'date_naissance': '2015-03-13 04:00:00'},          # another day
-    {'exercice_id': 4},                                 # a previous campaign
-    {'id_psp': None},                                   # never coded
+@pytest.mark.parametrize('lamp, typed', [
+    # Exact identities only, even under the same parent.
+    ({}, {'prenom': 'Leah'}),                           # a first name mistyped
+    ({'prenom': 'LEA ROSE'}, {}),                       # a first name more
+    ({'nom': 'MARTIN DUPONT'}, {}),                     # a family name more
+    ({'nom': 'MARTIN-DUPONT'}, {'nom': 'Dupont'}),
+    ({'nom': 'DUPONT'}, {}),                            # under the other parent's family name
+    ({'prenom': 'TOM'}, {}),                            # twin: same name, same date
+    ({'date_naissance': '2015-03-13 04:00:00'}, {}),    # another day
+    ({'exercice_id': 4}, {}),                           # a previous campaign
+    ({'id_psp': None}, {}),                             # never coded
 ])
-def test_no_correspondence(pg, lamp):
-    correspondences, touched, recap = match(pg, base=[base_row(**lamp)], candidates=[candidate()],
-                                            exercices=[4])
+def test_no_correspondence(pg, lamp, typed):
+    correspondences, touched, recap = match(pg, base=[base_row(**lamp)],
+                                            candidates=[candidate(**{**PARENT, **typed})], exercices=[4])
     assert correspondences == {}
     assert touched == []
     assert recap['sans_correspondance'] == 1
@@ -307,9 +257,9 @@ def test_genre_and_situation_only_matter_for_a_boursier_without_ine(pg):
 
 def test_every_lamp01_row_is_listed_for_investigation(pg):
     correspondences, touched, _ = match(
-        pg, base=[base_row(id_psp='PSP-1'), base_row(id_psp='PSP-2', prenom='LEA ROSE'),
-                  base_row(id_psp='PSP-3', prenom='LEA')],
+        pg, base=[base_row(id_psp='PSP-1'), base_row(id_psp='PSP-2', allocataire_prenom='PAUL'),
+                  base_row(id_psp='PSP-3'), base_row(id_psp='PSP-4', prenom='LEA ROSE')],
         candidates=[candidate(**PARENT)])
-    assert correspondences == {('c1', 'PSP-1'): 'exacte', ('c1', 'PSP-2'): 'proche',
+    assert correspondences == {('c1', 'PSP-1'): 'exacte', ('c1', 'PSP-2'): 'autre_parent',
                                ('c1', 'PSP-3'): 'exacte'}
     assert [row['id_psp'] for row in touched] == ['PSP-1', 'PSP-2', 'PSP-3']
