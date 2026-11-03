@@ -35,6 +35,8 @@ logs/
 2026/support-pipeline/run/
 # Same for run_grist_dn.sh, raw API answers included.
 2026/grist-dn-pipeline/run/
+# Same for run_cnous_boursiers.sh, the executed notebook included.
+2026/partners/cnous/run/
 
 # One directory per run_dashboard.sh run: logs only.
 2026/dashboard/run/
