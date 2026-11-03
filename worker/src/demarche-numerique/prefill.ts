@@ -101,9 +101,10 @@ const enfantRow = ({ identity, aeeh }: ContestedChild, champs: DnEnfantChamps): 
   return row;
 };
 
-// The dossier the usager contests their refusal with. Every value comes from FranceConnect or
-// an API Particulier answer, and a "no" is only sent when an answer says so: the DN
-// pipeline grants on these answers (AEEH child, then a foyer under the quotient threshold).
+// The dossier the usager asks for, refused or not: what is already granted stays out of it.
+// Every value comes from FranceConnect or an API Particulier answer, and a "no" is only sent
+// when an answer says so: the DN pipeline grants on these answers (AEEH child, then a foyer
+// under the quotient threshold).
 export const buildPrefill = (
   { identity, results, lastRun }: PrefillInput,
   champs: DnChamps,

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { startStack, type Stack } from "./harness";
 
-// Le dossier Démarche Numérique pré-rempli d'un foyer refusé : créé une fois, relu ensuite,
+// Le dossier Démarche Numérique pré-rempli d'un foyer, refusé ou non : créé une fois, relu ensuite,
 // recréé seulement quand DN ne le liste plus.
 //
 // Les quatre enfants du faux client, à la date de référence 2026-12-31 :
@@ -241,8 +241,8 @@ describe("Démarche Numérique en difficulté", () => {
   });
 });
 
-describe("rien à contester", () => {
-  it("n'appelle pas DN pour un foyer entièrement éligible", async () => {
+describe("un foyer entièrement éligible", () => {
+  it("reçoit aussi un dossier, sans l'aide déjà accordée", async () => {
     const sub = "fc-sub-dn-eligible";
     // Boursier dans la fenêtre CROUS et sans enfant : une seule ligne, éligible.
     stack.setCrousBoursier(true);
@@ -252,9 +252,18 @@ describe("rien à contester", () => {
 
     const outcome = await stack.enqueueDnDossierAndWait(dnIdentity(sub, "2004-05-15"));
 
-    expect(outcome).toEqual({ outcome: "skipped", raison: "aucun_refus" });
-    expect(requestsSince(since)).toEqual([]);
-    expect(await dossiers(sub)).toHaveLength(0);
+    expect(outcome).toMatchObject({ outcome: "created", state: "prefilled" });
+    const requests = requestsSince(since);
+    expect(requests.map((r) => r.method)).toEqual(["POST"]);
+    expect(requests[0].body).toMatchObject({
+      identite_nom: "OSTRENYA",
+      identite_prenom: "Velmorak",
+      champ_NAISSANCE: "2004-05-15",
+    });
+    expect(requests[0].body).not.toHaveProperty("champ_BENEF");
+    expect(requests[0].body).not.toHaveProperty("champ_INE");
+    expect(requests[0].body).not.toHaveProperty("champ_ENFANTS");
+    expect(await dossiers(sub)).toHaveLength(1);
   });
 });
 

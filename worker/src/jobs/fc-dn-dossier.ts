@@ -140,14 +140,8 @@ const create = async (
   { db: database, dn, config }: { db: Database; dn: DemarcheNumeriqueClient; config: DnConfig },
   history: HistoryRecorder,
   sub: string,
-): Promise<DnCreatedDossier | null> => {
+): Promise<DnCreatedDossier> => {
   const lastRun = await findLastRunRows(database, sub);
-
-  if (!lastRun.some((row) => row.verdict === "not_eligible")) {
-    await skip(history, "aucun_refus");
-    return null;
-  }
-
   const results = toResourceResults(await loadApiRows(database, sub));
   const { body, filled } = buildPrefill({ identity: data.identity, results, lastRun }, config.champs);
 
@@ -182,7 +176,7 @@ const create = async (
   return created;
 };
 
-// Hands a FranceConnect user who contests a refusal their Démarche Numérique dossier: the live
+// Hands a FranceConnect user their Démarche Numérique dossier, whatever their verdicts: the live
 // one when DN still lists it, otherwise a new one pre-filled from FranceConnect and the API
 // Particulier answers already journaled. Never calls API Particulier.
 export async function processFcDnDossierJob(
@@ -226,8 +220,6 @@ export async function processFcDnDossierJob(
   }
 
   const created = data.created ?? (await create(job, data, { db: database, dn, config }, history, sub));
-
-  if (!created) return { outcome: "skipped", raison: "aucun_refus" };
 
   const inserted = await database
     .insert(fcDnDossiers)

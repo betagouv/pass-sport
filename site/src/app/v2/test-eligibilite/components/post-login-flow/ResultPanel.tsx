@@ -35,7 +35,6 @@ interface Props {
   relanceAvailableAt?: string | null;
   relanceEnabled?: boolean;
   relanceAllowlistOnly?: boolean;
-  dnDossierEnabled?: boolean;
 }
 
 export default function ResultPanel({
@@ -44,7 +43,6 @@ export default function ResultPanel({
   relanceAvailableAt = null,
   relanceEnabled = false,
   relanceAllowlistOnly = false,
-  dnDossierEnabled = false,
 }: Props) {
   const [state, setState] = useState<State>({ kind: 'polling' });
 
@@ -125,7 +123,6 @@ export default function ResultPanel({
           relanceAvailableAt={relanceAvailableAt}
           relanceEnabled={relanceEnabled}
           relanceAllowlistOnly={relanceAllowlistOnly}
-          dnDossierEnabled={dnDossierEnabled}
         />
       </div>
     );

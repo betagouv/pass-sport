@@ -247,7 +247,6 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 relanceAvailableAt={relanceAvailableAt?.toISOString() ?? null}
                 relanceEnabled={FC_RELANCE_ENABLED}
                 relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
-                dnDossierEnabled={FC_DN_DOSSIER_ENABLED && !hasDnDossier}
               />
             ) : (
               <ResultPanel
@@ -256,7 +255,6 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 relanceAvailableAt={relanceAvailableAt?.toISOString() ?? null}
                 relanceEnabled={FC_RELANCE_ENABLED}
                 relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
-                dnDossierEnabled={FC_DN_DOSSIER_ENABLED && !hasDnDossier}
               />
             )
           ) : (
@@ -265,8 +263,9 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             <EnqueueRetry allocataireIdentity={result.identity} jobInfo={existingJobInfo} />
           )}
 
-          {FC_DN_DOSSIER_ENABLED && hasDnDossier && (
-            <DnDossierButton hasDossier link={dnDossierLink} />
+          {/* Whatever the verdicts, even before they land. */}
+          {FC_DN_DOSSIER_ENABLED && (
+            <DnDossierButton hasDossier={hasDnDossier} link={dnDossierLink} />
           )}
           {/* Logout moved to the header quick-access item ("Se déconnecter"),
               shown while the POC session is live (see the root layout). */}

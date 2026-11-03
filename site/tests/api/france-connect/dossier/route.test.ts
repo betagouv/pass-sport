@@ -4,8 +4,6 @@
 
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { enqueueFcDnDossierJob, findDnDossierJobState } from '@/app/services/queue';
-import { findResultsForSub } from '@/app/services/applications';
-import type { BeneficiaryResult } from '@/app/services/applications';
 import { findDnDossierForSub } from '@/app/services/dn-dossier';
 import { GET, POST } from '@/app/api/france-connect/dossier/route';
 import type { PivotIdentity } from '@/app/services/eligibility-job';
@@ -17,10 +15,6 @@ jest.mock('../../../../src/app/api/france-connect/session', () => ({
 jest.mock('../../../../src/app/services/queue', () => ({
   enqueueFcDnDossierJob: jest.fn(),
   findDnDossierJobState: jest.fn(),
-}));
-
-jest.mock('../../../../src/app/services/applications', () => ({
-  findResultsForSub: jest.fn(),
 }));
 
 jest.mock('../../../../src/app/services/dn-dossier', () => ({
@@ -39,7 +33,6 @@ jest.mock('../../../../src/app/constants/env', () => ({
 const mockedLoadPocResult = loadPocResult as jest.Mock;
 const mockedEnqueue = enqueueFcDnDossierJob as jest.Mock;
 const mockedJobState = findDnDossierJobState as jest.Mock;
-const mockedFindResultsForSub = findResultsForSub as jest.Mock;
 const mockedFindDnDossierForSub = findDnDossierForSub as jest.Mock;
 
 // Fictional syllable-based identity: pass-sport processes real beneficiary data, so test
@@ -62,17 +55,6 @@ const DOSSIER = {
   submittedAt: null,
 };
 
-const result = (verdict: BeneficiaryResult['verdict']): BeneficiaryResult => ({
-  source: 'enfant',
-  givenName: 'Élyra',
-  familyName: 'QUISTANE',
-  birthdate: '2015-03-12',
-  gender: 'female',
-  verdict,
-  code: null,
-  relanceAllowed: false,
-});
-
 const authenticate = () =>
   mockedLoadPocResult.mockResolvedValue({
     sub: IDENTITY.sub,
@@ -92,7 +74,6 @@ const post = () =>
 beforeEach(() => {
   jest.clearAllMocks();
   mockEnv.FC_DN_DOSSIER_ENABLED = true;
-  mockedFindResultsForSub.mockResolvedValue([result('not_eligible')]);
   mockedFindDnDossierForSub.mockResolvedValue(null);
   mockedEnqueue.mockResolvedValue({ queued: true });
   mockedJobState.mockResolvedValue(null);
@@ -126,16 +107,6 @@ describe('POST /api/france-connect/dossier', () => {
     expect(mockedEnqueue).not.toHaveBeenCalled();
   });
 
-  it('refuses a household with no refusal and no dossier', async () => {
-    authenticate();
-    mockedFindResultsForSub.mockResolvedValue([result('eligible_pending')]);
-
-    const response = await post();
-
-    expect(response.status).toBe(403);
-    expect(mockedEnqueue).not.toHaveBeenCalled();
-  });
-
   it('queues the session identity, keyed on the session sub, and nothing else of it', async () => {
     authenticate();
 
@@ -144,7 +115,6 @@ describe('POST /api/france-connect/dossier', () => {
     expect(response.status).toBe(202);
     await expect(response.json()).resolves.toEqual({ queued: true });
     expect(response.headers.get('cache-control')).toBe('private, no-store');
-    expect(mockedFindResultsForSub).toHaveBeenCalledWith('poc-sub-1');
     expect(mockedEnqueue).toHaveBeenCalledWith(
       {
         identity: {
@@ -159,15 +129,6 @@ describe('POST /api/france-connect/dossier', () => {
       },
       'poc-sub-1',
     );
-  });
-
-  it('hands back an existing dossier once every verdict turned eligible', async () => {
-    authenticate();
-    mockedFindResultsForSub.mockResolvedValue([result('eligible_confirmed')]);
-    mockedFindDnDossierForSub.mockResolvedValue(DOSSIER);
-
-    expect((await post()).status).toBe(202);
-    expect(mockedEnqueue).toHaveBeenCalled();
   });
 
   it('accepts a click while a job already runs, without queuing another', async () => {

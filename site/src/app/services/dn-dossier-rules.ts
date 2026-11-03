@@ -1,6 +1,4 @@
-import type { BeneficiaryResult } from '@/app/services/applications';
-
-// Client-safe: BeneficiaryRecap also renders inside the client ResultPanel.
+// Client-safe: DnDossierButton imports it.
 
 // The usager's Démarche Numérique dossier, as /api/france-connect/dossier hands it out.
 export type DnDossier = {
@@ -24,6 +22,3 @@ export const stableDossierLink = (dossier: DnDossier | null): DnDossierLink | nu
   dossier && [...DN_SUBMITTED_STATES, ...DN_CLOSED_STATES].includes(dossier.state)
     ? { number: dossier.number, url: dossier.url }
     : null;
-
-export const hasRefusal = (beneficiaries: BeneficiaryResult[]): boolean =>
-  beneficiaries.some(({ verdict }) => verdict === 'not_eligible');

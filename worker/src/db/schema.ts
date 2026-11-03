@@ -437,7 +437,7 @@ export const fcRelanceLastBySub = pgView("fc_relance_last_by_sub").as((qb) =>
     .groupBy(eligibilityHistory.allocataireFcSub),
 );
 
-// The Démarche Numérique dossier pre-filled for a FranceConnect user who contests a refusal
+// The Démarche Numérique dossier pre-filled for a FranceConnect user, refused or not
 // (jobs/fc-dn-dossier.ts). One live row per user and démarche; a dossier DN no longer lists is
 // set to 'gone' and replaced by a new row, never deleted.
 export const fcDnDossiers = pgTable(

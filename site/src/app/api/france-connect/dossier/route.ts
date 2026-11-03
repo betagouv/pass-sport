@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { FC_DN_DOSSIER_ENABLED } from '@/app/constants/env';
 import { loadPocResult } from '@/app/api/france-connect/session';
-import { findResultsForSub } from '@/app/services/applications';
 import { findDnDossierForSub } from '@/app/services/dn-dossier';
-import { hasRefusal } from '@/app/services/dn-dossier-rules';
 import { enqueueFcDnDossierJob, findDnDossierJobState } from '@/app/services/queue';
 import { getClientIp } from '@/utils/client-ip';
 
@@ -34,12 +32,6 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const { sub, identity } = pocResult;
-
-    // Hiding the button does not close the endpoint: only a refused household, or one that
-    // already holds a dossier, gets one.
-    if (!hasRefusal(await findResultsForSub(sub)) && !(await findDnDossierForSub(sub))) {
-      return reply({ error: 'Non disponible.' }, 403);
-    }
 
     const { queued } = await enqueueFcDnDossierJob(
       {
