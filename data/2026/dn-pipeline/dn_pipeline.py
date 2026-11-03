@@ -454,10 +454,16 @@ def validate(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return valid, df[df['motif'] != '']
 
 
+def _person_key(df: pd.DataFrame) -> pd.Series:
+    return (partners.normalise_recherche(df['nom']) + '|'
+            + partners.normalise_recherche(df['prenom']) + '|' + df['date_naissance'])
+
+
 def drop_duplicates(valid: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """The same person twice in the batch (in one dossier or across several): the first wins."""
-    key = (partners.normalise_recherche(valid['nom']) + '|'
-           + partners.normalise_recherche(valid['prenom']) + '|' + valid['date_naissance'])
+    """The same person twice in the batch (in one dossier or across several) under the same
+    allocataire: the first wins. Under another one, split sends the next to review."""
+    key = (_person_key(valid) + '|' + partners.normalise_recherche(valid['allocataire_nom']) + '|'
+           + partners.normalise_recherche(valid['allocataire_prenom']))
     duplicated = key.duplicated(keep='first')
     first_reference = valid['reference'].groupby(key).transform('first')
     duplicates = valid[duplicated].assign(motif='doublon de ' + first_reference[duplicated])
@@ -587,21 +593,33 @@ def clean(dn_filepath, output_filepath, match_filepath, cnaf_extra_filepath, ide
 # --- split ------------------------------------------------------------------------------
 
 VERDICT_MOTIF = {
-    'exacte': "déjà connu de lamp01 (nom, prénom et date de naissance identiques)",
+    'exacte': "déjà connu de lamp01 (nom, prénom et date de naissance identiques, et même parent pour un enfant)",
     'ine': "déjà connu de lamp01 (même INE)",
     'proche': "ressemble à une personne connue de lamp01 : voir investigation.csv",
     'parent': "même date de naissance et même parent qu'une personne connue de lamp01 : voir investigation.csv",
     'identite': ("boursier sans INE : mêmes nom, prénom et date de naissance qu'une personne connue de "
                  "lamp01, mais genre ou situation différents : voir investigation.csv"),
+    'autre_parent': ("mêmes nom, prénom et date de naissance qu'un enfant connu de lamp01, mais pas le "
+                     "même parent : voir investigation.csv"),
 }
 # The à vérifier motif a line gets, from the most to the least specific of its correspondences.
-REVIEW_TYPES = ('identite', 'proche', 'parent')
+REVIEW_TYPES = ('identite', 'autre_parent', 'proche', 'parent')
+BATCH_OTHER_PARENT_MOTIF = "même enfant que {reference}, déclaré dans ce passage par un autre parent"
+
+
+def batch_first_holder(identities: pd.DataFrame) -> pd.Series:
+    """The reference of the earlier line holding the same person under another allocataire
+    (drop_duplicates kept both), '' for the first."""
+    key = _person_key(identities)
+    first = identities['reference'].groupby(key).transform('first')
+    return first.where(key.duplicated(keep='first'), '')
 
 
 def split(cleaned_filepath, correspondences_filepath, touched_filepath, identities_filepath,
           rejects_filepath, to_code_filepath, verdicts_filepath, investigation_filepath) -> dict:
-    """Exact (or INE) correspondence = doublon; close, same-parent or loose boursier one only =
-    à vérifier; none = à coder."""
+    """Exact (or INE) correspondence = doublon; close, same-parent, other-parent or loose boursier
+    one only = à vérifier, as is a child the batch already holds under another parent; none =
+    à coder."""
     cleaned = _read(cleaned_filepath, quoting=csv.QUOTE_ALL)
     correspondences = _read(correspondences_filepath)
     touched = _read(touched_filepath)
@@ -626,6 +644,10 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     is_review = ids.isin(review_type)
     verdict[is_review] = 'a_verifier'
     motif[is_review] = ids[is_review].map(review_type).map(VERDICT_MOTIF)
+    holder = batch_first_holder(identities)
+    in_batch = (holder != '') & (verdict == 'a_coder')
+    verdict[in_batch] = 'a_verifier'
+    motif[in_batch] = holder[in_batch].map(lambda reference: BATCH_OTHER_PARENT_MOTIF.format(reference=reference))
 
     verdicts = pd.concat([
         identities.assign(verdict=verdict, motif=motif),
@@ -633,7 +655,7 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     ])
     _write(verdicts.sort_values('reference'), verdicts_filepath, VERDICT_COLUMNS)
 
-    _write(cleaned[~cleaned['eligibility_result_id'].isin(types.index)], to_code_filepath,
+    _write(cleaned[cleaned['eligibility_result_id'].isin(ids[verdict == 'a_coder'])], to_code_filepath,
            CLEANED_COLUMNS, quoting=csv.QUOTE_ALL)
 
     investigation = correspondences.merge(identities, on='eligibility_result_id').merge(
@@ -663,7 +685,7 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     return {
         'lus': len(identities),
         'doublons': int(is_doublon.sum()),
-        'a_verifier': int(is_review.sum()),
+        'a_verifier': int((verdict == 'a_verifier').sum()),
         'a_coder': int((verdict == 'a_coder').sum()),
         'rejets': len(rejects),
         'investigation': str(investigation_filepath),

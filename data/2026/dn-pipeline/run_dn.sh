@@ -473,7 +473,7 @@ nb_doublons="$(grep -c ';doublon;' "$VERDICTS_CSV" || true)"
 nb_a_verifier="$(grep -c ';a_verifier;' "$VERDICTS_CSV" || true)"
 log "$nb_doublons doublon(s), sans nouveau code ; détail des lignes lamp01 dans $INVESTIGATION_CSV"
 if (( nb_a_verifier > 0 )); then
-  log "ATTENTION : $nb_a_verifier bénéficiaire(s) à vérifier à la main (ressemblance dans lamp01), aucun code : $INVESTIGATION_CSV"
+  log "ATTENTION : $nb_a_verifier bénéficiaire(s) à vérifier à la main, aucun code : motifs dans $VERDICTS_CSV, lignes lamp01 dans $INVESTIGATION_CSV"
 fi
 COUNTS="$nb_rejets rejet(s), $nb_doublons doublon(s), $nb_a_verifier à vérifier"
 nb_codes=0

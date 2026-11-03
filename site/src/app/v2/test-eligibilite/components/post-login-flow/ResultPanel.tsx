@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import Card from '@codegouvfr/react-dsfr/Card';
 import type { BeneficiaryResult } from '@/app/services/applications';
-import type { DnDossierLink } from '@/app/services/dn-dossier-rules';
 import BeneficiaryRecap, { ProcessingBadge, type AllocataireIdentity } from './BeneficiaryRecap';
 import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 
@@ -37,8 +36,6 @@ interface Props {
   relanceEnabled?: boolean;
   relanceAllowlistOnly?: boolean;
   dnDossierEnabled?: boolean;
-  hasDnDossier?: boolean;
-  dnDossierLink?: DnDossierLink | null;
 }
 
 export default function ResultPanel({
@@ -48,8 +45,6 @@ export default function ResultPanel({
   relanceEnabled = false,
   relanceAllowlistOnly = false,
   dnDossierEnabled = false,
-  hasDnDossier = false,
-  dnDossierLink = null,
 }: Props) {
   const [state, setState] = useState<State>({ kind: 'polling' });
 
@@ -131,8 +126,6 @@ export default function ResultPanel({
           relanceEnabled={relanceEnabled}
           relanceAllowlistOnly={relanceAllowlistOnly}
           dnDossierEnabled={dnDossierEnabled}
-          hasDnDossier={hasDnDossier}
-          dnDossierLink={dnDossierLink}
         />
       </div>
     );

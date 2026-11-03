@@ -2,7 +2,7 @@
 -- lamp (lamp01). Indépendant de franceconnect/match_beneficiaires.sql : rien ne garantit que la
 -- situation ou la caisse déclarées soient celles sous lesquelles l'enfant est déjà connu. On
 -- compare donc le bénéficiaire, sur TOUTES les situations et caisses de l'exercice, et pour un
--- enfant son parent en plus (type parent), jamais en condition des autres types. Le n°
+-- enfant son parent en plus : un enfant n'est un doublon que sous le même parent. Le n°
 -- allocataire n'entre jamais en jeu.
 --
 --   cd <dossier du passage>     # \copy lit dn_candidats.csv dans le dossier courant
@@ -14,9 +14,14 @@
 --
 --   ine      boursier : beneficiaires.allocataire_matricule = INE, organisme cnous
 --   exacte   nom, prénom(s) et date de naissance identiques une fois normalisés. Pour un
---            boursier sans INE, en plus : même genre, et ligne lamp01 en situation boursier
+--            enfant (AEEH, jeune), en plus : même parent (voir parent). Pour un boursier sans
+--            INE, en plus : même genre, et ligne lamp01 en situation boursier
 --   identite boursier sans INE : nom, prénom(s) et date identiques, mais genre ou situation
 --            différents (homonyme ou même personne sous une autre aide : un humain tranche)
+--   autre_parent
+--            enfant : nom, prénom(s) et date identiques, mais pas le même parent, ou parent
+--            inconnu de lamp01 (homonyme, ou même enfant déclaré par son autre parent : un
+--            humain tranche)
 --   proche   même date de naissance, et
 --              - même nom, prénoms différents mais partageant au moins un mot
 --                (LEA / LEA ROSE), ou
@@ -33,14 +38,15 @@
 --                lignes ARS et les codes FranceConnect et DN, pas pour l'AEEH de la CNAF.
 --            Rattrape un enfant dont le nom ou le prénom a été saisi autrement (LEAH / LEA,
 --            nom de l'autre parent). Des jumeaux en relèvent aussi : jamais un doublon.
---            Seulement pour un couple que ine, exacte et proche n'ont pas déjà trouvé.
+--            Seulement pour un couple que ine, exacte, autre_parent et proche n'ont pas déjà
+--            trouvé.
 --
 -- Le genre du bénéficiaire n'est comparé que pour un boursier sans INE : ailleurs, une erreur
 -- de saisie ferait rater un doublon. Il est exporté dans les lignes touchées, pour
 -- l'investigation.
 --
--- Le verdict (doublon pour exacte/ine, à vérifier pour identite, proche ou parent seuls) est
--- posé par dn_pipeline.py split.
+-- Le verdict (doublon pour exacte/ine, à vérifier pour identite, autre_parent, proche ou parent
+-- seuls) est posé par dn_pipeline.py split.
 
 \set ON_ERROR_STOP on
 
@@ -140,39 +146,44 @@ join public.beneficiaires b
 where n.situation = 'boursier'
   and n.ine is not null;
 
-insert into dn_correspondances (eligibility_result_id, id_psp, type)
-select distinct n.eligibility_result_id, b.id_psp,
-	case when n.boursier_sans_ine
-	      and not coalesce(b.situation = 'boursier' and b.genre = n.genre, false)
-	     then 'identite' else 'exacte' end
+-- Every candidate / lamp01 code pair born the same day, the parent compared once.
+create temp table dn_paires on commit drop as
+select
+	n.eligibility_result_id,
+	b.id_psp,
+	bool_or(coalesce(b.nom = n.nom and b.prenom = n.prenom, false)) as meme_identite,
+	bool_or(coalesce((b.nom = n.nom and b.prenoms && n.prenoms)
+	              or (b.prenom = n.prenom and b.noms && n.noms), false)) as proche,
+	bool_or(n.boursier_sans_ine
+	        and not coalesce(b.situation = 'boursier' and b.genre = n.genre, false)) as identite_lache,
+	bool_or(coalesce(n.situation in ('AEEH', 'jeune'), false)) as enfant,
+	bool_or(coalesce(
+		n.parent_nom in (b.parent_nom, b.parent_nom_naissance)
+		and (b.parent_prenoms <@ n.parent_prenoms or n.parent_prenoms <@ b.parent_prenoms)
+		and (n.parent_genre is null or b.parent_genre is null or b.parent_genre = n.parent_genre)
+		and (n.parent_naissance is null or b.parent_naissance is null or b.parent_naissance = n.parent_naissance),
+		false)) as meme_parent
 from dn_norm n
-join dn_base b
-  on b.naissance = n.naissance
- and b.nom = n.nom
- and b.prenom = n.prenom;
+join dn_base b on b.naissance = n.naissance
+group by n.eligibility_result_id, b.id_psp;
 
 insert into dn_correspondances (eligibility_result_id, id_psp, type)
-select distinct n.eligibility_result_id, b.id_psp, 'proche'
-from dn_norm n
-join dn_base b
-  on b.naissance = n.naissance
-where ((b.nom = n.nom and b.prenoms && n.prenoms)
-    or (b.prenom = n.prenom and b.noms && n.noms))
-  and not (b.nom = n.nom and b.prenom = n.prenom);
+select eligibility_result_id, id_psp,
+	case when identite_lache then 'identite'
+	     when enfant and not meme_parent then 'autre_parent'
+	     else 'exacte' end
+from dn_paires
+where meme_identite;
 
 insert into dn_correspondances (eligibility_result_id, id_psp, type)
-select distinct n.eligibility_result_id, b.id_psp, 'parent'
-from dn_norm n
-join dn_base b
-  on b.naissance = n.naissance
- and n.parent_nom in (b.parent_nom, b.parent_nom_naissance)
- and (b.parent_prenoms <@ n.parent_prenoms or n.parent_prenoms <@ b.parent_prenoms)
-where n.situation in ('AEEH', 'jeune')
-  and (n.parent_genre is null or b.parent_genre is null or b.parent_genre = n.parent_genre)
-  and (n.parent_naissance is null or b.parent_naissance is null or b.parent_naissance = n.parent_naissance)
-  and not exists (select 1 from dn_correspondances c
-                  where c.eligibility_result_id = n.eligibility_result_id
-                    and c.id_psp = b.id_psp);
+select eligibility_result_id, id_psp, 'proche'
+from dn_paires
+where proche and not meme_identite;
+
+insert into dn_correspondances (eligibility_result_id, id_psp, type)
+select eligibility_result_id, id_psp, 'parent'
+from dn_paires
+where enfant and meme_parent and not (meme_identite or proche);
 
 -- --- Sorties ----------------------------------------------------------------------------
 -- :correspondances and not :'correspondances': \o takes its argument raw.
@@ -215,9 +226,10 @@ select
 	(select count(*) from dn_candidats) as candidats,
 	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'ine') as par_ine,
 	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'exacte') as par_exacte,
+	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'autre_parent') as par_autre_parent,
 	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'parent') as par_parent,
 	(select count(distinct eligibility_result_id) from dn_correspondances c
-	  where type in ('identite', 'proche', 'parent')
+	  where type in ('identite', 'autre_parent', 'proche', 'parent')
 	    and not exists (select 1 from dn_correspondances d
 	                     where d.eligibility_result_id = c.eligibility_result_id
 	                       and d.type in ('exacte', 'ine'))) as a_verifier,

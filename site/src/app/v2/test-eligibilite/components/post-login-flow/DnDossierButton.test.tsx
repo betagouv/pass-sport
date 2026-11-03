@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { push } from '@socialgouv/matomo-next';
 import DnDossierButton, {
   MAX_POLLS,
@@ -68,6 +68,17 @@ afterEach(() => {
 });
 
 describe('DnDossierButton', () => {
+  it.each([
+    ['offered', {}],
+    ['linked', { link: { number: 9001, url: 'https://demarche.numerique.gouv.fr/dossiers/9001' } }],
+  ])('sits in its own titled section when %s', (_label, props) => {
+    render(<DnDossierButton hasDossier={false} {...props} />);
+
+    expect(
+      screen.getByRole('region', { name: 'Faire vérifier votre éligibilité' }),
+    ).toBeInTheDocument();
+  });
+
   it('describes what the button does', () => {
     render(<DnDossierButton hasDossier={false} />);
 
@@ -91,9 +102,16 @@ describe('DnDossierButton', () => {
     const url = 'https://demarche.numerique.gouv.fr/dossiers/9001';
     render(<DnDossierButton hasDossier link={{ number: 9001, url }} />);
 
-    expect(screen.getByRole('heading', { name: 'Votre dossier n° 9001' })).toBeInTheDocument();
+    const alert = screen.getByRole('heading', { level: 2, name: 'Votre dossier n° 9001' });
+    expect(alert.parentElement).toHaveTextContent('Suivez son avancement sur Démarche Numérique.');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    const link = screen.getByRole('link', { name: 'Suivre mon dossier sur Démarche Numérique' });
+    // The alert stands before the section, which only holds the link.
+    const section = screen.getByRole('region', { name: 'Faire vérifier votre éligibilité' });
+    expect(section).not.toContainElement(alert);
+    expect(alert.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const link = within(section).getByRole('link', {
+      name: 'Suivre mon dossier sur Démarche Numérique',
+    });
     expect(link).toHaveAttribute('href', url);
     expect(link).toHaveAttribute('target', '_blank');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -117,7 +135,13 @@ describe('DnDossierButton', () => {
     expect(status).toHaveTextContent('de préférence avec FranceConnect');
     expect(status).toHaveTextContent('ne le partagez pas');
 
-    const link = screen.getByRole('link', { name: 'Compléter mon dossier sur Démarche Numérique' });
+    // The alert stands before the section, which only holds the link.
+    const section = screen.getByRole('region', { name: 'Faire vérifier votre éligibilité' });
+    expect(section).not.toContainElement(status);
+    expect(status.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const link = within(section).getByRole('link', {
+      name: 'Compléter mon dossier sur Démarche Numérique',
+    });
     expect(link).toHaveAttribute('href', PREFILL_URL);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -145,6 +169,7 @@ describe('DnDossierButton', () => {
     await click('Retrouver mon dossier');
 
     expect(screen.getByRole('status')).toHaveTextContent('Votre dossier n° 9001 a été déposé');
+    expect(screen.getByRole('status')).toHaveTextContent('Suivez son avancement');
     expect(screen.getByRole('status')).not.toHaveTextContent('ne le partagez pas');
     expect(
       screen.getByRole('link', { name: 'Suivre mon dossier sur Démarche Numérique' }),
@@ -201,8 +226,13 @@ describe('DnDossierButton', () => {
     await flush(POLL_INTERVAL_MS * MAX_POLLS);
 
     expect(fetchMock).toHaveBeenCalledTimes(MAX_POLLS + 1);
-    expect(screen.getByRole('alert')).toHaveTextContent('plus de temps que prévu');
-    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('plus de temps que prévu');
+    // DSFR: the alert comes first, above the button it is about.
+    expect(
+      alert.compareDocumentPosition(screen.getByRole('button', { name: 'Réessayer' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(matomoNames()).toEqual(['demandé', 'délai dépassé']);
   });
 

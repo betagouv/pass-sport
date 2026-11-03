@@ -3,7 +3,6 @@ import { render, screen, within } from '@testing-library/react';
 import { push } from '@socialgouv/matomo-next';
 import BeneficiaryRecap from '@/app/v2/test-eligibilite/components/post-login-flow/BeneficiaryRecap';
 import type { BeneficiaryResult } from '@/app/services/applications';
-import type { DnDossierLink } from '@/app/services/dn-dossier-rules';
 
 jest.mock('@socialgouv/matomo-next', () => ({ push: jest.fn() }));
 
@@ -169,9 +168,11 @@ describe('BeneficiaryRecap', () => {
     expect(screen.getByText('Zephyrin')).toBeInTheDocument();
 
     const badges = statusBadges(container);
-    expect(badges).toHaveLength(1);
-    expect(badges[0]).toHaveClass('fr-badge--info');
-    expect(badges[0]).toHaveTextContent('En cours de traitement');
+    expect(badges).toHaveLength(2);
+    expect(badges[0]).toHaveClass('fr-badge--success');
+    expect(badges[0]).toHaveTextContent('Eligible');
+    expect(badges[1]).toHaveClass('fr-badge--info');
+    expect(badges[1]).toHaveTextContent('Code en cours de création');
   });
 
   it('renders one Card per child even when both share the same verdict', () => {
@@ -245,7 +246,8 @@ describe('BeneficiaryRecap', () => {
     expect(cards(container)).toHaveLength(2);
 
     expect(within(pendingCard).getByText('Quorindel')).toBeInTheDocument();
-    const pendingBadge = within(pendingCard).getByText('En cours de traitement');
+    expect(within(pendingCard).getByText('Eligible')).toHaveClass('fr-badge--success');
+    const pendingBadge = within(pendingCard).getByText('Code en cours de création');
     expect(pendingBadge).toHaveClass('fr-badge--info');
 
     expect(within(confirmedCard).getByText('Astravelle')).toBeInTheDocument();
@@ -377,16 +379,12 @@ describe('BeneficiaryRecap', () => {
     const renderWithDn = (
       beneficiaries: BeneficiaryResult[],
       dnDossierEnabled: boolean | undefined,
-      hasDnDossier = false,
-      dnDossierLink: DnDossierLink | null = null,
     ) =>
       render(
         <BeneficiaryRecap
           beneficiaries={beneficiaries}
           allocataireIdentity={ALLOCATAIRE_IDENTITY}
           dnDossierEnabled={dnDossierEnabled}
-          hasDnDossier={hasDnDossier}
-          dnDossierLink={dnDossierLink}
         />,
       );
 
@@ -399,7 +397,11 @@ describe('BeneficiaryRecap', () => {
         true,
       );
 
-      expect(screen.getByRole('button', { name: DN_LABEL })).toBeInTheDocument();
+      const button = screen.getByRole('button', { name: DN_LABEL });
+      const results = screen.getByRole('heading', { name: 'Résultat de votre demande' });
+      expect(
+        button.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
     it.each([
@@ -411,28 +413,10 @@ describe('BeneficiaryRecap', () => {
       expect(screen.queryByRole('button', { name: DN_LABEL })).not.toBeInTheDocument();
     });
 
-    it('est absent sans refus ni dossier', () => {
+    it('est absent sans refus', () => {
       renderWithDn([beneficiary({ verdict: 'eligible_confirmed' })], true);
 
       expect(screen.queryByRole('button', { name: DN_LABEL })).not.toBeInTheDocument();
-    });
-
-    it('rend le dossier existant, même sans refus', () => {
-      renderWithDn([beneficiary({ verdict: 'eligible_confirmed' })], true, true);
-
-      expect(screen.getByRole('button', { name: 'Retrouver mon dossier' })).toBeInTheDocument();
-    });
-
-    it('donne directement le lien d’un dossier déposé', () => {
-      const url = 'https://demarche.numerique.gouv.fr/dossiers/9001';
-      renderWithDn([beneficiary({ verdict: 'not_eligible' })], true, true, { number: 9001, url });
-
-      expect(
-        screen.queryByRole('button', { name: 'Retrouver mon dossier' }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole('link', { name: 'Suivre mon dossier sur Démarche Numérique' }),
-      ).toHaveAttribute('href', url);
     });
   });
 });

@@ -57,28 +57,34 @@ Une ligne invalide est écartée avec son motif dans `rejets.csv` ; les autres c
 champ vide, genre, situation ou caisse inconnus, date illisible, email invalide, code INSEE
 invalide, hors fenêtre d'âge de la situation (AAH 1996-2010, AEEH 2007-2020, jeune 2009-2020,
 boursier à partir de 1998). Un boursier sans INE n'est pas rejeté. Le même bénéficiaire présent
-deux fois dans le lot (dans un dossier ou dans deux) n'est gardé qu'une fois :
-`doublon de dn:<dossier>:enfant-1`.
+deux fois dans le lot (dans un dossier ou dans deux) sous le même parent n'est gardé qu'une fois :
+`doublon de dn:<dossier>:enfant-1`. Sous un autre parent, les deux restent et le second passe en
+**À vérifier** (`même enfant que dn:<dossier>:enfant-1, déclaré dans ce passage par un autre
+parent`), sauf si lamp01 le connaît déjà sous ce parent-là (**Doublon**).
 
 ## Rapprochement avec lamp01
 
 [match_dn.sql](match_dn.sql) est **propre à ce parcours**, indépendant de
 `franceconnect/match_beneficiaires.sql`. Il compare le bénéficiaire sur **toutes les situations
-et caisses** de l'exercice, et pour un enfant son parent en plus. Le n° allocataire n'est jamais
-utilisé, ni le genre du bénéficiaire, sauf pour un boursier sans INE.
+et caisses** de l'exercice, et pour un enfant son parent en plus : un enfant n'est un doublon que
+sous le même parent. Le n° allocataire n'est jamais utilisé, ni le genre du bénéficiaire, sauf
+pour un boursier sans INE.
 
 | Correspondance | Règle | Verdict |
 |---|---|---|
 | `ine` | boursier : même INE (organisme cnous) | **Doublon** : pas de nouveau code |
-| `exacte` | nom, prénom(s) et date de naissance identiques (normalisés). Boursier sans INE : en plus même genre, et ligne lamp01 en situation boursier | **Doublon** : pas de nouveau code |
+| `exacte` | nom, prénom(s) et date de naissance identiques (normalisés). Enfant (AEEH, jeune) : en plus même parent, au sens de `parent`. Boursier sans INE : en plus même genre, et ligne lamp01 en situation boursier | **Doublon** : pas de nouveau code |
 | `identite` | boursier sans INE : nom, prénom(s) et date identiques, mais genre ou situation différents (homonyme, genre mal saisi, ou même personne sous une autre aide) | **À vérifier** : pas de code |
+| `autre_parent` | enfant : nom, prénom(s) et date identiques, mais pas le même parent, ou parent inconnu de lamp01 (homonyme, ou même enfant déclaré par son autre parent) | **À vérifier** : pas de code |
 | `proche` | même date, et même nom avec un prénom en commun (LEA / LEA ROSE), ou mêmes prénoms avec un nom en commun (MARTIN / MARTIN DUPONT) | **À vérifier** : pas de code |
 | `parent` | enfant (AEEH, jeune) : même date et même parent (nom de l'allocataire, prénoms contenus les uns dans les autres, genre et date de naissance quand les deux côtés les connaissent) | **À vérifier** : pas de code |
 | aucune | | **à coder** |
 
-Le parent n'est jamais exigé par les autres correspondances : un enfant redéclaré par son autre
-parent reste un **Doublon**. Il rattrape ce qu'elles laissent passer, comme un prénom mal saisi
-(LEAH / LEA) ou l'enfant inscrit sous le nom de l'autre parent.
+Un enfant identique sous un autre parent n'est donc pas un **Doublon** mais **À vérifier** : deux
+enfants homonymes de parents différents ne se bloquent plus, et un enfant redéclaré par son autre
+parent n'obtient pas un second code sans qu'un humain tranche. `proche` n'exige pas le parent.
+`parent` rattrape ce que les autres laissent passer, comme un prénom mal saisi (LEAH / LEA) ou
+l'enfant inscrit sous le nom de l'autre parent.
 
 Le demandeur DN arrive avec son identité FranceConnect (nom de naissance et tous ses prénoms),
 ou, sans FranceConnect, avec celle qu'il a saisie. lamp01 garde, pour la CNAF, le nom d'usage

@@ -543,6 +543,34 @@ def test_clean_drops_the_same_child_seen_in_two_dossiers(tmp_path):
     assert rejects.to_dict('records')[0]['motif'] == 'doublon de dn:1:enfant-1'
 
 
+OTHER_PARENT = {'demandeur': {'__typename': 'PersonnePhysique', 'civilite': None, 'nom': 'Ker',
+                              'prenom': 'Ana', 'email': None}}
+
+
+def test_the_same_child_under_another_parent_is_kept_then_sent_to_review(tmp_path):
+    stats, paths = run_clean(tmp_path, dn=raw_dn(
+        child_dossier(1), child_dossier(2, **OTHER_PARENT), child_dossier(3)))
+    assert (stats['beneficiaires'], stats['doublons_du_lot']) == (2, 1)
+
+    ids, stats, out = run_split(tmp_path, paths, [])
+
+    assert (stats['a_verifier'], stats['a_coder']) == (1, 1)
+    verdicts = read(out['verdicts']).set_index('reference')
+    assert verdicts.loc['dn:2:enfant-1', 'verdict'] == 'a_verifier'
+    assert verdicts.loc['dn:2:enfant-1', 'motif'] == (
+        'même enfant que dn:1:enfant-1, déclaré dans ce passage par un autre parent')
+    assert read(out['to_code'], quoting=csv.QUOTE_ALL)['eligibility_result_id'].tolist() == [ids[0]]
+
+
+def test_a_lamp01_verdict_wins_over_the_batch_one(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier(1), child_dossier(2, **OTHER_PARENT)))
+
+    _, stats, out = run_split(tmp_path, paths, [(1, '26-AAAA-AAAA', 'exacte')])
+
+    assert stats['doublons'] == 1
+    assert read(out['verdicts']).set_index('reference').loc['dn:2:enfant-1', 'verdict'] == 'doublon'
+
+
 def test_clean_without_any_line_writes_headers_only(tmp_path):
     stats, paths = run_clean(tmp_path)
     assert stats['lignes_lues'] == 0
@@ -574,7 +602,7 @@ def test_split_exact_is_a_doublon_close_or_same_parent_only_is_to_review_and_the
 
     ids, stats, out = run_split(tmp_path, paths, [
         (0, '26-AAAA-AAAA', 'exacte'), (0, '26-BBBB-BBBB', 'proche'), (1, '26-CCCC-CCCC', 'proche'),
-        (3, '26-DDDD-DDDD', 'parent')])
+        (1, '26-EEEE-EEEE', 'autre_parent'), (3, '26-DDDD-DDDD', 'parent')])
 
     assert (stats['doublons'], stats['a_verifier'], stats['a_coder'], stats['rejets']) == (1, 2, 1, 1)
     verdicts = read(out['verdicts']).set_index('reference')
@@ -582,7 +610,7 @@ def test_split_exact_is_a_doublon_close_or_same_parent_only_is_to_review_and_the
     assert verdicts.loc[references, 'verdict'].tolist() == [
         'doublon', 'a_verifier', 'a_coder', 'rejete', 'a_verifier']
     assert 'identiques' in verdicts.loc['dn:7:enfant-1', 'motif']
-    assert 'ressemble' in verdicts.loc['dn:7:enfant-2', 'motif']
+    assert 'pas le même parent' in verdicts.loc['dn:7:enfant-2', 'motif']
     assert 'même parent' in verdicts.loc['dn:7:enfant-5', 'motif']
     assert read(out['to_code'], quoting=csv.QUOTE_ALL)['eligibility_result_id'].tolist() == [ids[2]]
 
@@ -591,6 +619,7 @@ def test_split_exact_is_a_doublon_close_or_same_parent_only_is_to_review_and_the
     assert investigation[['reference', 'verdict', 'type', 'lamp01_id_psp']].values.tolist() == [
         ['dn:7:enfant-1', 'doublon', 'exacte', '26-AAAA-AAAA'],
         ['dn:7:enfant-1', 'doublon', 'proche', '26-BBBB-BBBB'],
+        ['dn:7:enfant-2', 'a_verifier', 'autre_parent', '26-EEEE-EEEE'],
         ['dn:7:enfant-2', 'a_verifier', 'proche', '26-CCCC-CCCC'],
         ['dn:7:enfant-5', 'a_verifier', 'parent', '26-DDDD-DDDD'],
     ]

@@ -7,6 +7,7 @@ import NoFranceConnectSection from './components/NoFranceConnectSection';
 import EnqueueRetry from './components/post-login-flow/EnqueueRetry';
 import ResultPanel from './components/post-login-flow/ResultPanel';
 import BeneficiaryRecap from './components/post-login-flow/BeneficiaryRecap';
+import DnDossierButton from './components/post-login-flow/DnDossierButton';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
 import { findResultsForSub } from '@/app/services/applications';
@@ -226,6 +227,11 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             className="fr-mb-3w"
           />
 
+          {/* A dossier already held comes first, whatever the verdicts. */}
+          {FC_DN_DOSSIER_ENABLED && hasDnDossier && (
+            <DnDossierButton hasDossier link={dnDossierLink} />
+          )}
+
           {debuggingEnabled && (
             <>
               <h2 className="fr-h4">Identité FranceConnect</h2>
@@ -246,9 +252,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 relanceAvailableAt={relanceAvailableAt?.toISOString() ?? null}
                 relanceEnabled={FC_RELANCE_ENABLED}
                 relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
-                dnDossierEnabled={FC_DN_DOSSIER_ENABLED}
-                hasDnDossier={hasDnDossier}
-                dnDossierLink={dnDossierLink}
+                dnDossierEnabled={FC_DN_DOSSIER_ENABLED && !hasDnDossier}
               />
             ) : (
               <ResultPanel
@@ -257,9 +261,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
                 relanceAvailableAt={relanceAvailableAt?.toISOString() ?? null}
                 relanceEnabled={FC_RELANCE_ENABLED}
                 relanceAllowlistOnly={FC_RELANCE_ALLOWLIST_ONLY}
-                dnDossierEnabled={FC_DN_DOSSIER_ENABLED}
-                hasDnDossier={hasDnDossier}
-                dnDossierLink={dnDossierLink}
+                dnDossierEnabled={FC_DN_DOSSIER_ENABLED && !hasDnDossier}
               />
             )
           ) : (

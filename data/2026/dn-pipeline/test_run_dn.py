@@ -247,8 +247,8 @@ def workspace(tmp_path, lamp, dn, injector):
 
     psql('truncate public.beneficiaire_cnaf_extra_field, public.beneficiaires')
     psql("insert into public.beneficiaires (id_psp, nom, prenom, date_naissance, genre, organisme, "
-         "situation, exercice_id) values ('26-KNWN-0001', 'KER', 'LIO', '2015-03-12 04:00', 'M', "
-         "'CAF', 'jeune', 5)")
+         "situation, allocataire_qualite, allocataire_nom, allocataire_prenom, exercice_id) values "
+         "('26-KNWN-0001', 'KER', 'LIO', '2015-03-12 04:00', 'M', 'CAF', 'jeune', 'M', 'KER', 'ANA', 5)")
     (tmp_path / 'codes.csv').write_text('code\n26-KNWN-0001\n')
 
     env = {

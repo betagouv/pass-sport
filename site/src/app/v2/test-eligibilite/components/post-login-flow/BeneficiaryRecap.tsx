@@ -10,7 +10,7 @@ import CodePdfDownloadLink from './CodePdfDownloadLink';
 import RelanceButton from './RelanceButton';
 import DnDossierButton from './DnDossierButton';
 import { canRerun } from '@/app/services/relance';
-import { hasRefusal, type DnDossierLink } from '@/app/services/dn-dossier-rules';
+import { hasRefusal } from '@/app/services/dn-dossier-rules';
 import TrackEventOnMount from '@/app/components/track-event-on-mount/TrackEventOnMount';
 import { MATOMO_CATEGORY } from '@/utils/matomo-category';
 
@@ -56,11 +56,14 @@ type StatusDisplay = {
   label: string;
 };
 
-const STATUS_DISPLAY_BY_VERDICT: Record<Verdict, StatusDisplay> = {
-  eligible_confirmed: { severity: 'success', label: 'Eligible' },
-  eligible_confirmed_but_email_not_matching: { severity: 'info', label: 'En cours de traitement' },
-  eligible_pending: { severity: 'info', label: 'En cours de traitement' },
-  not_eligible: { severity: 'error', label: 'Non-Eligible' },
+const ELIGIBLE: StatusDisplay = { severity: 'success', label: 'Eligible' };
+const PROCESSING: StatusDisplay = { severity: 'info', label: 'En cours de traitement' };
+
+const STATUS_DISPLAYS_BY_VERDICT: Record<Verdict, StatusDisplay[]> = {
+  eligible_confirmed: [ELIGIBLE],
+  eligible_confirmed_but_email_not_matching: [PROCESSING],
+  eligible_pending: [ELIGIBLE, { severity: 'info', label: 'Code en cours de création' }],
+  not_eligible: [{ severity: 'error', label: 'Non-Eligible' }],
 };
 
 export const PENDING_CODE_MESSAGE =
@@ -114,22 +117,21 @@ const downloadLink = (b: BeneficiaryResult, index: number): ReactNode | undefine
   return <CodePdfDownloadLink href={href} filename={`Pass Sport ${b.givenName}.pdf`} />;
 };
 
-const StatusBadgeFor = ({ severity, label }: StatusDisplay) => (
-  <p className="fr-mb-1w">
-    {/* Badge defaults to rendering as a <p>, which this wrapping <p> can't contain. */}
-    <Badge as="span" severity={severity}>
-      {label}
-    </Badge>
-  </p>
+const StatusBadgesFor = ({ displays }: { displays: StatusDisplay[] }) => (
+  <ul className="fr-badges-group">
+    {displays.map(({ severity, label }) => (
+      <li key={label}>
+        <Badge severity={severity}>{label}</Badge>
+      </li>
+    ))}
+  </ul>
 );
 
 export const StatusBadge = ({ verdict }: { verdict: Verdict }) => (
-  <StatusBadgeFor {...STATUS_DISPLAY_BY_VERDICT[verdict]} />
+  <StatusBadgesFor displays={STATUS_DISPLAYS_BY_VERDICT[verdict]} />
 );
 
-export const ProcessingBadge = () => (
-  <StatusBadgeFor severity="info" label="En cours de traitement" />
-);
+export const ProcessingBadge = () => <StatusBadgesFor displays={[PROCESSING]} />;
 
 interface Props {
   beneficiaries: BeneficiaryResult[];
@@ -142,10 +144,8 @@ interface Props {
   relanceAvailableAt?: string | null;
   relanceEnabled?: boolean;
   relanceAllowlistOnly?: boolean;
+  // Off once the usager holds a dossier: the page shows it at its top.
   dnDossierEnabled?: boolean;
-  // A Démarche Numérique dossier was already pre-filled for this usager.
-  hasDnDossier?: boolean;
-  dnDossierLink?: DnDossierLink | null;
 }
 
 export default function BeneficiaryRecap({
@@ -156,8 +156,6 @@ export default function BeneficiaryRecap({
   relanceEnabled = false,
   relanceAllowlistOnly = false,
   dnDossierEnabled = false,
-  hasDnDossier = false,
-  dnDossierLink = null,
 }: Props) {
   if (beneficiaries.length === 0) {
     return (
@@ -181,41 +179,41 @@ export default function BeneficiaryRecap({
   }
 
   return (
-    <section className="fr-mb-3w">
-      {countBeneficiariesByVerdict(beneficiaries).map(([verdict, count]) => (
-        <TrackEventOnMount
-          key={verdict}
-          category={MATOMO_CATEGORY.franceConnectRequest}
-          action="résultat"
-          name={verdict}
-          value={count}
-        />
-      ))}
-      <h2 className="fr-h4 fr-mb-1w">Résultat de votre demande</h2>
-      {jobInfo && <p className="fr-text--sm fr-mb-3w">{jobInfo}</p>}
+    <>
+      {/* Right under the FranceConnect alert, above the verdicts it is about. */}
+      {dnDossierEnabled && hasRefusal(beneficiaries) && <DnDossierButton hasDossier={false} />}
 
-      {beneficiaries.map((b, i) => (
-        <Card
-          key={`${b.source}-${i}`}
-          className="fr-mb-6w"
-          border
-          title={who(b, allocataireIdentity)}
-          titleAs="h3"
-          start={<StatusBadge verdict={b.verdict} />}
-          desc={verdictMessage(b)}
-          classes={{ desc: 'fr-text--md' }}
-          end={downloadLink(b, i)}
-        />
-      ))}
+      <section className="fr-mb-3w">
+        {countBeneficiariesByVerdict(beneficiaries).map(([verdict, count]) => (
+          <TrackEventOnMount
+            key={verdict}
+            category={MATOMO_CATEGORY.franceConnectRequest}
+            action="résultat"
+            name={verdict}
+            value={count}
+          />
+        ))}
+        <h2 className="fr-h4 fr-mb-1w">Résultat de votre demande</h2>
+        {jobInfo && <p className="fr-text--sm fr-mb-3w">{jobInfo}</p>}
 
-      {/* Still offered once every verdict turned eligible, so the usager can follow it. */}
-      {dnDossierEnabled && (hasRefusal(beneficiaries) || hasDnDossier) && (
-        <DnDossierButton hasDossier={hasDnDossier} link={dnDossierLink} />
-      )}
+        {beneficiaries.map((b, i) => (
+          <Card
+            key={`${b.source}-${i}`}
+            className="fr-mb-6w"
+            border
+            title={who(b, allocataireIdentity)}
+            titleAs="h3"
+            start={<StatusBadge verdict={b.verdict} />}
+            desc={verdictMessage(b)}
+            classes={{ desc: 'fr-text--md' }}
+            end={downloadLink(b, i)}
+          />
+        ))}
 
-      {relanceEnabled && canRerun(beneficiaries, relanceAllowlistOnly) && (
-        <RelanceButton availableAt={relanceAvailableAt} />
-      )}
-    </section>
+        {relanceEnabled && canRerun(beneficiaries, relanceAllowlistOnly) && (
+          <RelanceButton availableAt={relanceAvailableAt} />
+        )}
+      </section>
+    </>
   );
 }

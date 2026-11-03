@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import Alert from '@codegouvfr/react-dsfr/Alert';
 import Button from '@codegouvfr/react-dsfr/Button';
 import { IS_LOCAL_ENV } from '@/app/constants/env';
@@ -26,6 +26,9 @@ const TOO_LONG =
 const SESSION_EXPIRED =
   'Votre session a expiré. Reconnectez-vous avec FranceConnect pour accéder à votre dossier.';
 const UNAVAILABLE = 'Ce service n’est pas disponible pour le moment.';
+
+const SECTION_TITLE = 'Faire vérifier votre éligibilité';
+const FOLLOW_UP = 'Suivez son avancement sur Démarche Numérique.';
 
 type PollAnswer =
   { status: 'pending' | 'failed' | 'none' } | { status: 'ready'; dossier: DnDossier };
@@ -69,64 +72,87 @@ const DossierAnchor = ({ url, label }: { url: string; label: string }) =>
   ) : null;
 
 // Its state may have moved on since the page read it: the title leaves it to DN's page.
+// The actions alone, an error on them first: the dossier's own alert stands above the section,
+// right under the page's FranceConnect alert.
+const DnSection = ({ children }: { children: ReactNode }) => {
+  const titleId = useId();
+  return (
+    <section className="fr-mb-6w" aria-labelledby={titleId}>
+      <h2 id={titleId} className="fr-h3 fr-mb-1w">
+        {SECTION_TITLE}
+      </h2>
+      {children}
+    </section>
+  );
+};
+
 const KnownDossier = ({ link }: { link: DnDossierLink }) => (
-  <Alert
-    severity="info"
-    as="h3"
-    // Shown on load: nothing to announce.
-    role={undefined}
-    title={`Votre dossier n° ${link.number}`}
-    description={
-      <>
-        <p className="fr-mb-0">Suivez son avancement sur Démarche Numérique.</p>
-        <DossierAnchor url={link.url} label="Suivre mon dossier" />
-      </>
-    }
-  />
+  <>
+    <Alert
+      severity="info"
+      as="h2"
+      className="fr-mb-3w"
+      // Shown on load: nothing to announce.
+      role={undefined}
+      title={`Votre dossier n° ${link.number}`}
+      description={FOLLOW_UP}
+    />
+    <DnSection>
+      <DossierAnchor url={link.url} label="Suivre mon dossier" />
+    </DnSection>
+  </>
 );
 
-const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
-  const submitted = DN_SUBMITTED_STATES.includes(dossier.state);
-  const closed = DN_CLOSED_STATES.includes(dossier.state);
-  const toComplete = !submitted && !closed;
+const readyView = (dossier: DnDossier) => {
+  if (DN_CLOSED_STATES.includes(dossier.state)) {
+    return {
+      title: `Votre dossier n° ${dossier.number} a été traité`,
+      label: 'Consulter mon dossier',
+      toComplete: false,
+    };
+  }
+  if (DN_SUBMITTED_STATES.includes(dossier.state)) {
+    return {
+      title: `Votre dossier n° ${dossier.number} a été déposé`,
+      label: 'Suivre mon dossier',
+      toComplete: false,
+    };
+  }
+  return {
+    title: `Votre dossier n° ${dossier.number} est prêt`,
+    label: 'Compléter mon dossier',
+    toComplete: true,
+  };
+};
 
-  const title = closed
-    ? `Votre dossier n° ${dossier.number} a été traité`
-    : submitted
-      ? `Votre dossier n° ${dossier.number} a été déposé`
-      : `Votre dossier n° ${dossier.number} est prêt`;
-  const label = closed
-    ? 'Consulter mon dossier'
-    : submitted
-      ? 'Suivre mon dossier'
-      : 'Compléter mon dossier';
+const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
+  const { title, toComplete } = readyView(dossier);
 
   return (
     <Alert
       severity="success"
-      as="h3"
-      className="fr-mt-3w"
+      as="h2"
+      className="fr-mb-3w"
       // The live region around it announces it: no second, nested one.
       role={undefined}
       title={title}
       description={
-        <>
-          {toComplete && (
-            <>
-              <ol className="fr-mb-2w">
-                <li>
-                  Connectez-vous à Démarche Numérique, de préférence{' '}
-                  <strong>avec FranceConnect</strong>.
-                </li>
-                <li>Vérifiez et complétez les informations pré-remplies.</li>
-                <li>Joignez vos justificatifs.</li>
-                <li>Déposez votre dossier.</li>
-              </ol>
-              <p className="fr-mb-2w">Ce lien vous est personnel : ne le partagez pas.</p>
-            </>
-          )}
-          <DossierAnchor url={dossier.url} label={label} />
-        </>
+        toComplete ? (
+          <>
+            <ol className="fr-mb-2w">
+              <li>
+                Connectez-vous à Démarche Numérique, de préférence{' '}
+                <strong>avec FranceConnect</strong>.
+              </li>
+              <li>Vérifiez et complétez les informations pré-remplies.</li>
+              <li>Joignez vos justificatifs.</li>
+              <li>Déposez votre dossier.</li>
+            </ol>
+            <p className="fr-mb-0">Ce lien vous est personnel : ne le partagez pas.</p>
+          </>
+        ) : (
+          FOLLOW_UP
+        )
       }
     />
   );
@@ -195,13 +221,7 @@ export default function DnDossierButton({ hasDossier, link = null }: Props) {
     fail('délai dépassé', TOO_LONG);
   };
 
-  if (link) {
-    return (
-      <div className="fr-mb-6w">
-        <KnownDossier link={link} />
-      </div>
-    );
-  }
+  if (link) return <KnownDossier link={link} />;
 
   const showButton = state.kind !== 'ready' && !(state.kind === 'error' && !state.retry);
   const buttonLabel =
@@ -216,34 +236,40 @@ export default function DnDossierButton({ hasDossier, link = null }: Props) {
           : 'Vous pensez être éligible ?';
 
   return (
-    <div className="fr-mb-6w">
-      {showButton && (
-        <>
-          <Button
-            onClick={request}
-            disabled={state.kind === 'loading'}
-            nativeButtonProps={{ 'aria-describedby': descriptionId }}
-          >
-            {buttonLabel}
-          </Button>
-          <p id={descriptionId} className="fr-mt-1w fr-text--sm">
-            {hasDossier
-              ? 'Nous recherchons votre dossier de vérification sur Démarche Numérique, puis vous donnons le lien pour l’ouvrir.'
-              : 'Nous vous préparons un dossier de vérification sur Démarche Numérique, pré-rempli avec les informations transmises par FranceConnect et par les organismes consultés (CAF ou MSA, CNOUS). Vous pourrez le vérifier, le compléter et joindre vos justificatifs avant de le déposer.'}
-          </p>
-        </>
-      )}
-
+    <>
       {/* Present from the first render, so the dossier's arrival is announced. */}
       <div role="status" aria-live="polite">
         {state.kind === 'ready' && <ReadyDossier dossier={state.dossier} />}
       </div>
 
-      {state.kind === 'error' && (
-        <div className="fr-alert fr-alert--error fr-alert--sm fr-mt-2w" role="alert">
-          <p>{state.message}</p>
-        </div>
-      )}
-    </div>
+      <DnSection>
+        {state.kind === 'error' && (
+          <div className="fr-alert fr-alert--error fr-alert--sm fr-mb-2w" role="alert">
+            <p>{state.message}</p>
+          </div>
+        )}
+
+        {state.kind === 'ready' && (
+          <DossierAnchor url={state.dossier.url} label={readyView(state.dossier).label} />
+        )}
+
+        {showButton && (
+          <>
+            <Button
+              onClick={request}
+              disabled={state.kind === 'loading'}
+              nativeButtonProps={{ 'aria-describedby': descriptionId }}
+            >
+              {buttonLabel}
+            </Button>
+            <p id={descriptionId} className="fr-mt-1w fr-text--sm">
+              {hasDossier
+                ? 'Nous recherchons votre dossier de vérification sur Démarche Numérique, puis vous donnons le lien pour l’ouvrir.'
+                : 'Nous vous préparons un dossier de vérification sur Démarche Numérique, pré-rempli avec les informations transmises par FranceConnect et par les organismes consultés (CAF ou MSA, CNOUS). Vous pourrez le vérifier, le compléter et joindre vos justificatifs avant de le déposer.'}
+            </p>
+          </>
+        )}
+      </DnSection>
+    </>
   );
 }
