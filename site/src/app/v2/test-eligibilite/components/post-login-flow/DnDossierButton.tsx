@@ -85,7 +85,7 @@ const DnSection = ({ children }: { children: ReactNode }) => {
       <p className="fr-mb-2w">
         Nous avons vérifié votre éligibilité via les bases de données que nos partenaires (CAF, MSA,
         CNOUS) nous ont envoyées pour cette campagne du pass Sport 2026. Si vous pensez que vous ou
-        vous enfants êtes éligibles merci de cliquer sur ce lien :
+        vos enfants êtes éligibles merci de cliquer sur ce lien :
       </p>
 
       {children}
