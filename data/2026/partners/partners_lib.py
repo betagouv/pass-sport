@@ -393,9 +393,14 @@ def to_json_allocataire_without_null(row, extra_fields: dict = None) -> str:
 
 
 def add_allocataire_json_column(df: pd.DataFrame, extra_fields: dict = None) -> pd.DataFrame:
-    """Serialize the allocataire-* columns into the 'allocataire' JSON column."""
+    """Serialize the allocataire-* columns into the 'allocataire' JSON column.
+
+    result_type='reduce' keeps a frame without rows serializable: apply would otherwise hand
+    back an empty DataFrame, which cannot be assigned to one column.
+    """
     df = df.copy()
-    df['allocataire'] = df.apply(to_json_allocataire_without_null, axis=1, extra_fields=extra_fields)
+    df['allocataire'] = df.apply(
+        to_json_allocataire_without_null, axis=1, result_type='reduce', extra_fields=extra_fields)
     return df
 
 
@@ -418,9 +423,13 @@ def to_json_adresse_without_null(row, extra_fields: dict = None) -> str:
 
 
 def add_adresse_allocataire_json_column(df: pd.DataFrame, extra_fields: dict = None) -> pd.DataFrame:
-    """Serialize the adresse_allocataire-* columns into the 'adresse_allocataire' JSON column."""
+    """Serialize the adresse_allocataire-* columns into the 'adresse_allocataire' JSON column.
+
+    result_type='reduce' for the same reason as add_allocataire_json_column.
+    """
     df = df.copy()
-    df['adresse_allocataire'] = df.apply(to_json_adresse_without_null, axis=1, extra_fields=extra_fields)
+    df['adresse_allocataire'] = df.apply(
+        to_json_adresse_without_null, axis=1, result_type='reduce', extra_fields=extra_fields)
     return df
 
 

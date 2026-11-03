@@ -38,5 +38,3 @@ logs/
 
 # One directory per run_dashboard.sh run: logs only.
 2026/dashboard/run/
-
-2026/grist-dn-pipeline/run/
