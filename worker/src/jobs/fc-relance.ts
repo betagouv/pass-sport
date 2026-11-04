@@ -24,7 +24,7 @@ import { fcRelanceAllowlistOnly, fcRelanceCooldownDays } from "../env";
 
 export const FC_RELANCE_ACTION = "fc_relance";
 
-type TargetRow = {
+export type TargetRow = {
   id: string;
   source: string;
   familyName: string | null;
@@ -44,7 +44,7 @@ type TargetRow = {
 // Every row of this sub's LAST run. Same definition of "last run" as the
 // application_results_by_sub view and export_eligible_pending.sql — created_at = max(created_at),
 // which holds because now() is transaction-scoped and the whole PHASE 2 batch shares one instant.
-const findLastRunRows = async (db: Database, sub: string): Promise<TargetRow[]> =>
+export const findLastRunRows = async (db: Database, sub: string): Promise<TargetRow[]> =>
   db
     .select({
       id: eligibilityResults.id,

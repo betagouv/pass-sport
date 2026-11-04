@@ -26,7 +26,7 @@
 # (worker/src/jobs/fc-code-emails.ts) : aucune autre cron n'est nécessaire pour les courriels.
 #
 # No run between midnight and 06:00: the first one is at 06:00, the last one at 23:30. That
-# night window is left to the Grist + Démarches Numériques run below.
+# night window is left to the Démarches Numériques run below.
 - name: Passage FranceConnect toutes les 30 minutes, de 6 h à minuit
   become: true
   ansible.builtin.cron:
@@ -53,21 +53,31 @@
     disabled: "{{ not pass_sport_tdb_cron_enabled }}"
   tags: [tdb-cron]
 
-# Codes the beneficiaries the support team collects in Grist and Démarches Numériques
-# (data/2026/grist-dn-pipeline/run_grist_dn.sh), once a night at 03:00, while FranceConnect is
-# paused: its lock is free and its last drop (23:30) has had time to leave /nfs/run. A run that
-# still finds either is postponed to the next night. Posted disabled until
-# pass_sport_grist_dn_cron_enabled is set.
-- name: Passage Grist + Démarches Numériques chaque nuit à 3 h
+# Codes the beneficiaries of the Démarches Numériques dossiers (data/2026/dn-pipeline/run_dn.sh),
+# once a night at 03:00, while FranceConnect is paused: its lock is free and its last drop
+# (23:30) has had time to leave /nfs/run. A run that still finds either is postponed to the next
+# night. Posted disabled until pass_sport_dn_cron_enabled is set.
+- name: Passage Démarches Numériques chaque nuit à 3 h
+  become: true
+  ansible.builtin.cron:
+    name: pass-sport-dn
+    user: "{{ pass_sport_user }}"
+    minute: '0'
+    hour: '3'
+    job: "{{ pass_sport_repo }}/data/2026/dn-pipeline/run_dn.sh"
+    disabled: "{{ not pass_sport_dn_cron_enabled }}"
+  tags: [dn-cron]
+
+# Retire l'entrée du même passage sous son ancien nom, quand il lisait aussi Grist : laissée en
+# place, elle appellerait un script qui n'existe plus. Sans effet sur une machine qui ne l'a
+# jamais eue.
+- name: Retrait de l'ancienne cron pass-sport-grist-dn
   become: true
   ansible.builtin.cron:
     name: pass-sport-grist-dn
     user: "{{ pass_sport_user }}"
-    minute: '0'
-    hour: '3'
-    job: "{{ pass_sport_repo }}/data/2026/grist-dn-pipeline/run_grist_dn.sh"
-    disabled: "{{ not pass_sport_grist_dn_cron_enabled }}"
-  tags: [grist-dn-cron]
+    state: absent
+  tags: [dn-cron]
 
 # Retire l'ancienne entrée qui appelait worker/src/scripts/run-lca-checks.sh, supprimé depuis
 # que run_fc_pipeline.sh pose lui-même le job courriel : laissée en place, elle échouerait

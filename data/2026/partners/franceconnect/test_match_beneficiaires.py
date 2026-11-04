@@ -31,8 +31,8 @@ DB_INIT_DIR = FC_DIR.parents[3] / 'lamp01' / 'db-init'
 # The columns of the recap SELECT that closes match_beneficiaires.sql, in its order.
 RECAP_COLONNES = [
     'candidats', 'par_boursier', 'par_aah_msa', 'par_aah_caf', 'par_aeeh_msa',
-    'par_aeeh_caf', 'par_qf_msa', 'par_qf_caf', 'avec_conjoint', 'inconcluants',
-    'non_apparies',
+    'par_aeeh_caf', 'par_qf_msa', 'par_qf_caf', 'par_repli_situation', 'avec_conjoint',
+    'inconcluants', 'non_apparies',
 ]
 
 
@@ -58,10 +58,11 @@ def pg():
 
     try:
         # Ready means the init scripts ran to completion, not just that postgres answers:
-        # the image starts a temporary server while loading db-init, then restarts it.
+        # the image starts a temporary server while loading db-init, then restarts it. That
+        # one only listens on the Unix socket, hence TCP.
         for _ in range(120):
             pret = subprocess.run(
-                ['docker', 'exec', name, 'psql', '-U', 'u_passsport', '-d', 'passsport',
+                ['docker', 'exec', name, 'psql', '-h', '127.0.0.1', '-U', 'u_passsport', '-d', 'passsport',
                  '-Atc', 'select 1 from public.beneficiaires limit 1'],
                 capture_output=True)
             if pret.returncode == 0:
@@ -455,6 +456,51 @@ def test_qf_caf_sans_ligne_extra_field_reste_non_apparie(pg):
     # table: a CNAF row that reconcile_cnaf never covered cannot be matched.
     apparies, non_apparies, _ = rapprocher(
         pg, base=[ligne_base()], candidats=[candidat(**CANDIDAT_QF_CAF)])
+    assert apparies == {}
+    assert non_apparies == ['c1']
+
+
+# --- Enfant : sa situation, puis l'autre ---------------------------------------------
+# FranceConnect puts a child the quotient covers under jeune even with the AEEH; dn-pipeline and
+# the CNAF files put it under AEEH. A child is looked up under its own situation first, under
+# the other one only when that finds nobody, each time with the strategy of the base row.
+
+def test_un_enfant_jeune_retrouve_un_code_aeeh_caf(pg):
+    cand = candidat(**{**CANDIDAT_AEEH_CAF, 'situation': 'jeune'})
+    apparies, _, recap = rapprocher(pg, base=[ligne_base(**BASE_AEEH_CAF)], candidats=[cand])
+    assert apparies == {'c1': 'PSP-E2'}
+    assert recap['par_aeeh_caf'] == 1
+    assert recap['par_repli_situation'] == 1
+
+
+def test_un_enfant_aeeh_retrouve_un_code_jeune_msa_avec_les_regles_qf(pg):
+    # 'Tom Alexandre' against base 'TOM': strict AEEH equality would refuse it, the QF
+    # containment of the base row's strategy accepts it.
+    cand = candidat(**{**CANDIDAT_QF_MSA, 'situation': 'AEEH'})
+    apparies, _, recap = rapprocher(pg, base=[ligne_base(**BASE_QF_MSA)], candidats=[cand])
+    assert apparies == {'c1': 'PSP-Q2'}
+    assert recap['par_qf_msa'] == 1
+    assert recap['par_repli_situation'] == 1
+
+
+def test_la_situation_de_l_enfant_passe_avant_l_autre(pg):
+    # Coded twice, once per situation: the own situation's code is served, where counting
+    # both would leave the child inconclusive and mint a third.
+    base_aeeh = ligne_base(id_psp='PSP-2', situation='AEEH')
+    extra_aeeh = ligne_extra(id_psp='PSP-2')
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(), base_aeeh], extra=[ligne_extra(), extra_aeeh],
+        candidats=[candidat(**CANDIDAT_QF_CAF)])
+    assert apparies == {'c1': 'PSP-1'}
+    assert recap['par_qf_caf'] == 1
+    assert recap['par_repli_situation'] == 0
+    assert recap['inconcluants'] == 0
+
+
+def test_l_aah_ne_cherche_pas_dans_les_situations_enfant(pg):
+    cand = candidat(**{**CANDIDAT_AEEH_CAF, 'situation': 'AAH'})
+    apparies, non_apparies, _ = rapprocher(
+        pg, base=[ligne_base(**BASE_AEEH_CAF)], candidats=[cand])
     assert apparies == {}
     assert non_apparies == ['c1']
 

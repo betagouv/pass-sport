@@ -1,7 +1,12 @@
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { findApplicationForSub } from '@/app/services/applications';
-import { type EligibilityJobData, type LcaJobData, lcaJobId } from '@/app/services/eligibility-job';
+import {
+  type EligibilityJobData,
+  type FcDnDossierJobData,
+  type LcaJobData,
+  lcaJobId,
+} from '@/app/services/eligibility-job';
 
 export type {
   Allowance,
@@ -15,10 +20,12 @@ export { ALLOWANCE, SITUATION, lcaJobId } from '@/app/services/eligibility-job';
 
 export const CODES_QUEUE_NAME = 'codes-queue-france-connect';
 export const LCA_QUEUE_NAME = 'codes-queue-lca';
+export const DN_DOSSIERS_QUEUE_NAME = 'codes-queue-dn-dossiers';
 
 export const CODES_JOB_NAME = 'france-connect-job';
 export const LCA_JOB_NAME = 'lca-job';
 export const FC_RELANCE_JOB_NAME = 'fc-relance-job';
+export const FC_DN_DOSSIER_JOB_NAME = 'fc-dn-dossier-job';
 
 const JOB_OPTS = {
   attempts: 4,
@@ -38,9 +45,12 @@ type CodesQueue = Queue<EligibilityJobData>;
 
 type LcaQueue = Queue<LcaJobData>;
 
+type DnDossiersQueue = Queue<FcDnDossierJobData>;
+
 const globalForQueue = globalThis as unknown as {
   __codesQueue?: CodesQueue;
   __lcaQueue?: LcaQueue;
+  __dnDossiersQueue?: DnDossiersQueue;
 };
 
 const createConnection = (): IORedis => {
@@ -67,6 +77,15 @@ export const getLcaQueue = (): LcaQueue => {
     });
   }
   return globalForQueue.__lcaQueue;
+};
+
+export const getDnDossiersQueue = (): DnDossiersQueue => {
+  if (!globalForQueue.__dnDossiersQueue) {
+    globalForQueue.__dnDossiersQueue = new Queue<FcDnDossierJobData>(DN_DOSSIERS_QUEUE_NAME, {
+      connection: createConnection(),
+    });
+  }
+  return globalForQueue.__dnDossiersQueue;
 };
 
 export type ExistingJob = {
@@ -182,4 +201,42 @@ export const enqueueLcaJob = async (data: LcaJobData): Promise<{ id: string | un
   const job = await queue.add(LCA_JOB_NAME, data, { ...JOB_OPTS, jobId });
 
   return { id: job.id };
+};
+
+// The usager waits on screen: retried within seconds, never on the 2h/4h/18h ladder.
+const DN_DOSSIER_JOB_OPTS = {
+  attempts: 3,
+  backoff: { type: 'exponential' as const, delay: 2_000 },
+  removeOnComplete: true,
+  // Once DN created the dossier, the job data carries its bearer URL: kept a day, not 120.
+  removeOnFail: { age: 86_400 },
+};
+
+// Keyed on the sub: a second click while the first one runs collapses into it.
+export const enqueueFcDnDossierJob = async (
+  data: FcDnDossierJobData,
+  sub: string,
+): Promise<{ queued: boolean }> => {
+  const queue = getDnDossiersQueue();
+  const existing = await queue.getJob(sub);
+
+  if (existing && !(await isDeadJob(existing))) {
+    return { queued: false };
+  }
+
+  await clearIfDead(queue, sub);
+  await queue.add(FC_DN_DOSSIER_JOB_NAME, data, { ...DN_DOSSIER_JOB_OPTS, jobId: sub });
+
+  return { queued: true };
+};
+
+// 'failed' only once every attempt is spent; a job waiting out its backoff is still live.
+export const findDnDossierJobState = async (sub: string): Promise<'live' | 'failed' | null> => {
+  const job = await getDnDossiersQueue().getJob(sub);
+  if (!job) return null;
+
+  const state = await job.getState();
+  if (state === 'failed') return 'failed';
+
+  return state === 'completed' || state === 'unknown' ? null : 'live';
 };

@@ -54,11 +54,14 @@ type StatusDisplay = {
   label: string;
 };
 
-const STATUS_DISPLAY_BY_VERDICT: Record<Verdict, StatusDisplay> = {
-  eligible_confirmed: { severity: 'success', label: 'Eligible' },
-  eligible_confirmed_but_email_not_matching: { severity: 'info', label: 'En cours de traitement' },
-  eligible_pending: { severity: 'info', label: 'En cours de traitement' },
-  not_eligible: { severity: 'error', label: 'Non-Eligible' },
+const ELIGIBLE: StatusDisplay = { severity: 'success', label: 'Eligible' };
+const PROCESSING: StatusDisplay = { severity: 'info', label: 'En cours de traitement' };
+
+const STATUS_DISPLAYS_BY_VERDICT: Record<Verdict, StatusDisplay[]> = {
+  eligible_confirmed: [ELIGIBLE],
+  eligible_confirmed_but_email_not_matching: [PROCESSING],
+  eligible_pending: [ELIGIBLE, { severity: 'info', label: 'Code en cours de création' }],
+  not_eligible: [{ severity: 'error', label: 'Non-Eligible' }],
 };
 
 export const PENDING_CODE_MESSAGE =
@@ -112,22 +115,21 @@ const downloadLink = (b: BeneficiaryResult, index: number): ReactNode | undefine
   return <CodePdfDownloadLink href={href} filename={`Pass Sport ${b.givenName}.pdf`} />;
 };
 
-const StatusBadgeFor = ({ severity, label }: StatusDisplay) => (
-  <p className="fr-mb-1w">
-    {/* Badge defaults to rendering as a <p>, which this wrapping <p> can't contain. */}
-    <Badge as="span" severity={severity}>
-      {label}
-    </Badge>
-  </p>
+const StatusBadgesFor = ({ displays }: { displays: StatusDisplay[] }) => (
+  <ul className="fr-badges-group">
+    {displays.map(({ severity, label }) => (
+      <li key={label}>
+        <Badge severity={severity}>{label}</Badge>
+      </li>
+    ))}
+  </ul>
 );
 
 export const StatusBadge = ({ verdict }: { verdict: Verdict }) => (
-  <StatusBadgeFor {...STATUS_DISPLAY_BY_VERDICT[verdict]} />
+  <StatusBadgesFor displays={STATUS_DISPLAYS_BY_VERDICT[verdict]} />
 );
 
-export const ProcessingBadge = () => (
-  <StatusBadgeFor severity="info" label="En cours de traitement" />
-);
+export const ProcessingBadge = () => <StatusBadgesFor displays={[PROCESSING]} />;
 
 interface Props {
   beneficiaries: BeneficiaryResult[];

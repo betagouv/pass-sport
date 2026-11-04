@@ -154,9 +154,11 @@ test.describe('BeneficiaryRecap', () => {
     await expect(component.getByText('Zephyrin')).toBeVisible();
 
     const badges = component.locator('.fr-badge');
-    await expect(badges).toHaveCount(1);
-    await expect(badges).toHaveClass(/fr-badge--info/);
-    await expect(badges).toHaveText('En cours de traitement');
+    await expect(badges).toHaveCount(2);
+    await expect(badges.nth(0)).toHaveClass(/fr-badge--success/);
+    await expect(badges.nth(0)).toHaveText('Eligible');
+    await expect(badges.nth(1)).toHaveClass(/fr-badge--info/);
+    await expect(badges.nth(1)).toHaveText('Code en cours de création');
   });
 
   test('renders one Card per child even when both share the same verdict', async ({ mount }) => {
@@ -269,7 +271,8 @@ test.describe('BeneficiaryRecap', () => {
     const confirmedCard = cards.nth(1);
 
     await expect(pendingCard.getByText('Quorindel')).toBeVisible();
-    const pendingBadge = pendingCard.getByText('En cours de traitement');
+    await expect(pendingCard.getByText('Eligible')).toHaveClass(/fr-badge--success/);
+    const pendingBadge = pendingCard.getByText('Code en cours de création');
     await expect(pendingBadge).toHaveClass(/fr-badge--info/);
 
     await expect(confirmedCard.getByText('Astravelle')).toBeVisible();

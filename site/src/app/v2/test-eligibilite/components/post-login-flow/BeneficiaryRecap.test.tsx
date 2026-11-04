@@ -168,9 +168,11 @@ describe('BeneficiaryRecap', () => {
     expect(screen.getByText('Zephyrin')).toBeInTheDocument();
 
     const badges = statusBadges(container);
-    expect(badges).toHaveLength(1);
-    expect(badges[0]).toHaveClass('fr-badge--info');
-    expect(badges[0]).toHaveTextContent('En cours de traitement');
+    expect(badges).toHaveLength(2);
+    expect(badges[0]).toHaveClass('fr-badge--success');
+    expect(badges[0]).toHaveTextContent('Eligible');
+    expect(badges[1]).toHaveClass('fr-badge--info');
+    expect(badges[1]).toHaveTextContent('Code en cours de création');
   });
 
   it('renders one Card per child even when both share the same verdict', () => {
@@ -244,7 +246,8 @@ describe('BeneficiaryRecap', () => {
     expect(cards(container)).toHaveLength(2);
 
     expect(within(pendingCard).getByText('Quorindel')).toBeInTheDocument();
-    const pendingBadge = within(pendingCard).getByText('En cours de traitement');
+    expect(within(pendingCard).getByText('Eligible')).toHaveClass('fr-badge--success');
+    const pendingBadge = within(pendingCard).getByText('Code en cours de création');
     expect(pendingBadge).toHaveClass('fr-badge--info');
 
     expect(within(confirmedCard).getByText('Astravelle')).toBeInTheDocument();

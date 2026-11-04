@@ -13,4 +13,4 @@
 set -euo pipefail
 
 PIPELINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$PIPELINE_DIR/../../.venv/bin/python" "$PIPELINE_DIR/apercu.py" dn "$@"
+exec "$PIPELINE_DIR/../../.venv/bin/python" "$PIPELINE_DIR/apercu.py" "$@"

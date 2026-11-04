@@ -162,6 +162,13 @@
       "when": 1790780699766,
       "tag": "0022_lca_tableaux_de_bord_federation",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792754058751,
+      "tag": "0023_add_fc_dn_dossiers",
+      "breakpoints": true
     }
   ]
 }

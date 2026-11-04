@@ -9,6 +9,10 @@ export const FC_CODE_EMAILS_QUEUE_NAME = "codes-queue-fc-code-emails";
 export const FC_CODE_EMAILS_JOB_NAME = "fc_code_emails";
 export const FC_CODE_EMAILS_JOB_ID = "fc_code_emails";
 
+// Its own queue: a usager waits on screen, never behind the FranceConnect backlog.
+export const DN_DOSSIERS_QUEUE_NAME = "codes-queue-dn-dossiers";
+export const FC_DN_DOSSIER_JOB_NAME = "fc-dn-dossier-job";
+
 // 2h, then 4h, then 18h: the three retries of a 4-attempt job span a full day, so an LCA or
 // API Particulier outage lasting a working day is ridden out without the usager resubmitting.
 const RETRY_DELAYS_MS = [2, 4, 18].map((hours) => hours * 3_600_000);
