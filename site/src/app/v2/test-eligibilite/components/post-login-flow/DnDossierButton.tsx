@@ -242,7 +242,7 @@ export default function DnDossierButton({ hasDossier, link = null }: Props) {
         ? 'Réessayer'
         : hasDossier
           ? 'Retrouver mon dossier'
-          : 'Vous pensez être éligible ?';
+          : 'Déposer un dossier de demande de code';
 
   return (
     <>

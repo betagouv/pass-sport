@@ -97,9 +97,9 @@ The offline `qf:batch` runs on the processing machine with its own in-memory pac
 
 ## Dossier Démarche Numérique pré-rempli
 
-A FranceConnect household with at least one `not_eligible` beneficiary gets a « Vous pensez être
-éligible ? » button on the site. The click asks this worker for a dossier on the support démarche
-that the [DN pipeline](../data/2026/dn-pipeline/) processes, through its own queue
+A FranceConnect household with at least one `not_eligible` beneficiary gets a « Déposer un
+dossier de demande de code » button on the site. The click asks this worker for a dossier on the
+support démarche that the [DN pipeline](../data/2026/dn-pipeline/) processes, through its own queue
 `codes-queue-dn-dossiers` (never behind the FranceConnect backlog). The job
 ([src/jobs/fc-dn-dossier.ts](src/jobs/fc-dn-dossier.ts)):
 

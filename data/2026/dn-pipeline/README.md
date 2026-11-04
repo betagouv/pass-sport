@@ -139,11 +139,17 @@ rapprochement (pas encore de forçage).
    Le rapprochement FranceConnect (`match_beneficiaires.sql`) ne retrouve un code que par elles :
    sans elles, un enfant codé ici puis jugé éligible sur le site recevrait un second code.
 10. **Retours** (`retours`), par dossier :
-    1. l'**annotation privée** `Codes pass Sport` (instructeurs seulement) reçoit une ligne
-       `Prénom Nom : code` par code de ce passage, à la suite de ce qu'elle contenait ;
+    1. l'**annotation privée** `Codes pass Sport` (instructeurs seulement) reçoit, à la suite
+       de ce qu'elle contenait, une ligne `Prénom Nom : code` par code de ce passage, et une
+       ligne par doublon de lamp01 avec sa raison et son code existant : `Prénom Nom : doublon,
+       déjà connu de lamp01 (même INE). Code existant : 26-XXXX-XXXX. Vérification manuelle du
+       support requise avant de le donner à l'usager.` (plusieurs codes séparés par des
+       virgules si lamp01 en a plusieurs). Elle est écrite même quand la production a refusé
+       le dépôt ;
     2. un **message à l'usager**, une ligne par bénéficiaire, avec son code s'il vient d'être
-       créé. Le code d'un doublon n'est jamais donné : venu de lamp01, il pourrait être celui
-       d'un homonyme ;
+       créé. Le code d'un doublon n'est jamais envoyé automatiquement : venu de lamp01, il
+       pourrait être celui d'un homonyme. Le support le vérifie (`investigation.csv`) avant de
+       le transmettre à la main ;
     3. un **label** : `À vérifier` si un bénéficiaire l'est, sinon `Rejeté` si un bénéficiaire
        l'est, sinon `Traité`. En plus, `Doublon` si un bénéficiaire est un doublon de lamp01 ;
     4. **`dossierAccepter`** si le dossier est `Traité` (tous codés ou déjà détenteurs d'un code).
@@ -176,7 +182,7 @@ Chaque passage crée `run/<AAAA-MM-JJTHH-MM-SS>[-dry-run]/` et ajoute une ligne 
 |---|---|
 | `dn-brut.json` | réponse de l'API (dossiers à traiter) |
 | `rejets.csv` | lignes écartées et motif |
-| `verdicts.csv` | verdict de chaque ligne : `rejete`, `doublon`, `a_verifier`, `a_coder` |
+| `verdicts.csv` | verdict de chaque ligne : `rejete`, `doublon`, `a_verifier`, `a_coder` ; pour un doublon, ses codes lamp01 (`code_lamp01`) |
 | `investigation.csv` | doublons et cas à vérifier, face aux lignes lamp01 touchées |
 | `prod.csv` | ce qui est déposé dans `/nfs/run` |
 | `lamp01.csv` | ce qui est injecté dans lamp01 |
@@ -244,7 +250,7 @@ Sans option, rien de personnel n'est affiché : libellés et comptes seulement.
 ### Dossiers pré-remplis depuis l'espace FranceConnect
 
 Le worker pré-remplit aussi des dossiers de cette démarche. Il le fait quand un usager
-FranceConnect refusé clique sur « Vous pensez être éligible ? » (voir
+FranceConnect refusé clique sur « Déposer un dossier de demande de code » (voir
 [worker/README.md](../../../worker/README.md#dossier-démarche-numérique-pré-rempli)). Il retrouve
 les champs par les mêmes libellés que `mapping.py`, recopiés dans
 `worker/src/demarche-numerique/champs-resolver.ts`. Un libellé renommé ici doit l'être là aussi,

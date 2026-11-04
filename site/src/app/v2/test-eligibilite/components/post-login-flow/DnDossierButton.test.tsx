@@ -85,7 +85,7 @@ describe('DnDossierButton', () => {
     const section = screen.getByRole('region', { name: SECTION });
     expect(section).toHaveTextContent('Si vous pensez que vous ou vos enfants êtes éligibles');
     expect(
-      within(section).getByRole('button', { name: 'Vous pensez être éligible ?' }),
+      within(section).getByRole('button', { name: 'Déposer un dossier de demande de code' }),
     ).toBeEnabled();
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
@@ -124,7 +124,7 @@ describe('DnDossierButton', () => {
     respond(pending, ready());
     render(<DnDossierButton hasDossier={false} />);
 
-    await click('Vous pensez être éligible ?');
+    await click('Déposer un dossier de demande de code');
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/france-connect/dossier', { method: 'POST' });
     expect(screen.getByRole('button', { name: 'Préparation de votre dossier…' })).toBeDisabled();
 
@@ -180,7 +180,7 @@ describe('DnDossierButton', () => {
     respond(ready({ ...DOSSIER, url: 'javascript:alert(1)' }));
     render(<DnDossierButton hasDossier={false} />);
 
-    await click('Vous pensez être éligible ?');
+    await click('Déposer un dossier de demande de code');
 
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
@@ -193,7 +193,7 @@ describe('DnDossierButton', () => {
     );
     render(<DnDossierButton hasDossier={false} />);
 
-    await click('Vous pensez être éligible ?');
+    await click('Déposer un dossier de demande de code');
     await flush(POLL_INTERVAL_MS);
     await flush(POLL_INTERVAL_MS);
 
@@ -207,7 +207,7 @@ describe('DnDossierButton', () => {
     respond(() => answer(200, body));
     render(<DnDossierButton hasDossier={false} />);
 
-    await click('Vous pensez être éligible ?');
+    await click('Déposer un dossier de demande de code');
 
     expect(screen.getByRole('alert')).toHaveTextContent('n’a pas pu être préparé');
     expect(matomoNames()).toEqual(['demandé', 'échec']);
@@ -222,7 +222,7 @@ describe('DnDossierButton', () => {
     respond(...Array.from({ length: MAX_POLLS }, () => pending));
     render(<DnDossierButton hasDossier={false} />);
 
-    await click('Vous pensez être éligible ?');
+    await click('Déposer un dossier de demande de code');
     await flush(POLL_INTERVAL_MS * MAX_POLLS);
 
     expect(fetchMock).toHaveBeenCalledTimes(MAX_POLLS + 1);
@@ -240,7 +240,7 @@ describe('DnDossierButton', () => {
     fetchMock.mockImplementationOnce(() => answer(401, { error: 'Session expirée.' }));
     render(<DnDossierButton hasDossier={false} />);
 
-    await click('Vous pensez être éligible ?');
+    await click('Déposer un dossier de demande de code');
 
     expect(screen.getByRole('alert')).toHaveTextContent('Reconnectez-vous avec FranceConnect');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -250,7 +250,7 @@ describe('DnDossierButton', () => {
     fetchMock.mockImplementationOnce(() => answer(status, { error: 'Non disponible.' }));
     render(<DnDossierButton hasDossier={false} />);
 
-    await click('Vous pensez être éligible ?');
+    await click('Déposer un dossier de demande de code');
 
     expect(screen.getByRole('alert')).toHaveTextContent('pas disponible');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();

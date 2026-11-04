@@ -71,8 +71,8 @@ DN_LABEL_FRANCECONNECT = 'FranceConnect'
 # Dossier.connectionUsager: france_connect, password or deleted.
 DN_CONNECTION_FRANCECONNECT = 'france_connect'
 
-# Private annotation (instructeurs only) receiving the codes each run hands out, created by hand
-# in the démarche as « Texte long ».
+# Private annotation (instructeurs only) receiving the codes each run hands out and its doublons,
+# created by hand in the démarche as « Texte long ».
 DN_ANNOTATION_CODES = 'Codes pass Sport'
 DN_ANNOTATION_TYPE = 'TextareaChampDescriptor'
 
@@ -142,5 +142,10 @@ DN_MESSAGE = (
 
 DN_ACCEPT_MOTIVATION = "Demande traitée : codes pass Sport attribués."
 
-# One line per code this run hands out, in the private annotation.
-DN_ANNOTATION_LINE = "{prenom} {nom} : {code}"
+# One line per code this run hands out and per doublon, in the private annotation. A doublon's
+# code comes from lamp01 and may be a namesake's: never sent to the usager automatically.
+DN_ANNOTATION_LINE = {
+    'code_envoye': "{prenom} {nom} : {code}",
+    'doublon': ("{prenom} {nom} : doublon, {motif}. Code existant : {code_lamp01}. Vérification "
+                "manuelle du support requise avant de le donner à l'usager."),
+}

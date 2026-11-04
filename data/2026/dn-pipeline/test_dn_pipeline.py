@@ -621,6 +621,8 @@ def test_split_exact_is_a_doublon_another_parent_only_is_to_review_and_the_rest_
         'doublon', 'a_verifier', 'a_coder', 'rejete', 'a_coder']
     assert 'identiques' in verdicts.loc['dn:7:enfant-1', 'motif']
     assert 'pas le même parent' in verdicts.loc['dn:7:enfant-2', 'motif']
+    # Only the doublon's exact correspondence is its code: the other parent's one is someone else.
+    assert verdicts.loc[references, 'code_lamp01'].tolist() == ['26-AAAA-AAAA', '', '', '', '']
     assert read(out['to_code'], quoting=csv.QUOTE_ALL)['eligibility_result_id'].tolist() == [ids[2], ids[3]]
 
     investigation = read(out['investigation'])
@@ -643,6 +645,17 @@ def test_split_a_loose_boursier_identity_is_to_review_with_its_own_reason(tmp_pa
 
     assert (stats['doublons'], stats['a_verifier']) == (0, 1)
     assert 'genre ou situation différents' in read(out['verdicts'])['motif'].iloc[0]
+
+
+def test_split_a_doublon_carries_every_lamp01_code_it_matched(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
+
+    _, _, out = run_split(tmp_path, paths, [
+        (0, '26-BBBB-BBBB', 'exacte'), (0, '26-AAAA-AAAA', 'ine'), (0, '26-BBBB-BBBB', 'ine')])
+
+    verdicts = read(out['verdicts'])
+    assert verdicts[['verdict', 'code_lamp01']].values.tolist() == [['doublon', '26-AAAA-AAAA, 26-BBBB-BBBB']]
+    assert 'même INE' in verdicts['motif'].iloc[0]
 
 
 # --- whole Python chain -----------------------------------------------------------------
@@ -691,11 +704,19 @@ def write_verdicts(tmp_path, rows, annotated=None, without_annotation=()):
     (tmp_path / 'dn.json').write_text(json.dumps(raw_dn(*dossiers)))
 
 
-def dn_line(number, index, verdict, eligibility_id='', motif='', prenom='Ola'):
+def dn_line(number, index, verdict, eligibility_id='', motif='', prenom='Ola', code_lamp01=''):
+    if verdict == 'doublon':
+        motif = motif or pipeline.VERDICT_MOTIF['exacte']
+        code_lamp01 = code_lamp01 or '26-LAMP-0001'
     return {'reference': f'dn:{number}:enfant-{index}',
             'dossier_id': f'D{number}', 'dossier_number': str(number),
             'eligibility_result_id': eligibility_id, 'verdict': verdict, 'motif': motif,
-            'prenom': prenom, 'nom': 'Dorvat', 'email': 'pim@example.org'}
+            'code_lamp01': code_lamp01, 'prenom': prenom, 'nom': 'Dorvat', 'email': 'pim@example.org'}
+
+
+def doublon_annotation(prenom, code_lamp01='26-LAMP-0001', kind='exacte'):
+    return mapping.DN_ANNOTATION_LINE['doublon'].format(
+        prenom=prenom, nom='Dorvat', motif=pipeline.VERDICT_MOTIF[kind], code_lamp01=code_lamp01)
 
 
 def run_retours(tmp_path, dn=None, dry_run=False, refused_drop=''):
@@ -713,10 +734,11 @@ def test_retours_annotates_messages_labels_and_accepts_a_fully_coded_dossier(tmp
     assert stats['dossiers_dn_acceptes'] == 1
     assert [call[:2] for call in dn.calls] == [
         ('annotation', 'D7'), ('message', 'D7'), ('label', 'D7'), ('label', 'D7'), ('accepter', 'D7')]
-    assert dn.calls[0][2:] == ('A7', 'Ola Dorvat : 26-TEST-E1')
+    assert dn.calls[0][2:] == ('A7', 'Ola Dorvat : 26-TEST-E1\n' + doublon_annotation('Lio'))
     message = dn.calls[1][2]
     assert 'Ola Dorvat : code pass Sport 26-TEST-E1.' in message
     assert 'Lio Dorvat : un code pass Sport a déjà été attribué.' in message
+    assert '26-LAMP-0001' not in message
     assert [dn.calls[2][2], dn.calls[3][2]] == ['L1', 'L4']
 
 
@@ -748,19 +770,34 @@ def test_retours_answers_each_dossier_as_the_instructeur_who_put_it_en_instructi
     }
 
 
-def test_retours_appends_this_run_codes_to_the_annotation_and_never_shows_a_doublon_code(tmp_path):
+def test_retours_appends_this_run_codes_and_doublons_to_the_annotation_but_never_tells_a_doublon_code(tmp_path):
     write_verdicts(tmp_path, [dn_line(7, 1, 'a_coder', 'e1'), dn_line(7, 2, 'a_coder', 'e2', prenom='Lio'),
-                              dn_line(7, 3, 'doublon', 'e3', prenom='Mia')],
+                              dn_line(7, 3, 'doublon', 'e3', prenom='Mia', code_lamp01='26-OLD-0001')],
                    annotated={7: 'Mia Dorvat : 26-OLD-0001\n'})
     dn = FakeDn([])
 
     run_retours(tmp_path, dn=dn)
 
-    assert dn.calls[0][3] == 'Mia Dorvat : 26-OLD-0001\nOla Dorvat : 26-TEST-E1\nLio Dorvat : 26-TEST-E2'
+    assert dn.calls[0][3] == '\n'.join([
+        'Mia Dorvat : 26-OLD-0001', 'Ola Dorvat : 26-TEST-E1', 'Lio Dorvat : 26-TEST-E2',
+        doublon_annotation('Mia', '26-OLD-0001')])
+    assert 'Vérification manuelle du support requise' in dn.calls[0][3]
     message = dn.calls[1][2]
     assert 'Lio Dorvat : code pass Sport 26-TEST-E2' in message
     assert 'Mia Dorvat : un code pass Sport a déjà été attribué.' in message
     assert '26-OLD-0001' not in message
+
+
+def test_retours_of_a_verdicts_file_older_than_code_lamp01_annotates_no_doublon(tmp_path):
+    write_verdicts(tmp_path, [dn_line(7, 1, 'doublon', 'e1')])
+    verdicts = read(tmp_path / 'verdicts.csv').drop(columns='code_lamp01')
+    verdicts.to_csv(tmp_path / 'verdicts.csv', sep=';', index=False)
+    dn = FakeDn([])
+
+    stats = run_retours(tmp_path, dn=dn)
+
+    assert stats['erreurs'] == 0
+    assert [call[0] for call in dn.calls] == ['message', 'label', 'label', 'accepter']
 
 
 def test_retours_stops_a_dossier_missing_the_codes_annotation(tmp_path):
@@ -797,13 +834,18 @@ def test_retours_of_a_drop_refused_by_production(tmp_path):
     stats = run_retours(tmp_path, dn=dn, refused_drop='beneficiaires-insertion-1-x.csv')
 
     assert (stats['refusees_par_la_production'], stats['erreurs']) == (1, 0)
-    # A dossier holding a refused line gets its labels only: no codes, no message, no acceptance.
-    assert [call for call in dn.calls if call[1] == 'D7'] == [('label', 'D7', 'L2'), ('label', 'D7', 'L4')]
-    assert [call[0] for call in dn.calls if call[1] == 'D8'] == ['message', 'label', 'label', 'accepter']
+    # A dossier holding a refused line gets its doublons and labels only: no code, no message, no
+    # acceptance.
+    assert [call for call in dn.calls if call[1] == 'D7'] == [
+        ('annotation', 'D7', 'A7', doublon_annotation('Lio')),
+        ('label', 'D7', 'L2'), ('label', 'D7', 'L4')]
+    assert [call[0] for call in dn.calls if call[1] == 'D8'] == [
+        'annotation', 'message', 'label', 'label', 'accepter']
     journal = read(tmp_path / 'retours.csv')
     assert journal[['reference', 'action', 'statut']].values.tolist() == [
-        ['dn:7', 'label', 'fait'], ['dn:7', 'label-doublon', 'fait'], ['dn:8', 'message', 'fait'],
-        ['dn:8', 'label', 'fait'], ['dn:8', 'label-doublon', 'fait'], ['dn:8', 'accepter', 'fait']]
+        ['dn:7', 'annotation', 'fait'], ['dn:7', 'label', 'fait'], ['dn:7', 'label-doublon', 'fait'],
+        ['dn:8', 'annotation', 'fait'], ['dn:8', 'message', 'fait'], ['dn:8', 'label', 'fait'],
+        ['dn:8', 'label-doublon', 'fait'], ['dn:8', 'accepter', 'fait']]
 
 
 def test_retours_replay_skips_what_was_done_and_retries_a_refused_action(tmp_path):
@@ -815,7 +857,8 @@ def test_retours_replay_skips_what_was_done_and_retries_a_refused_action(tmp_pat
 
     assert first['erreurs'] == 1
     assert [call[:2] for call in dn.calls] == [
-        ('message', 'D7'), ('message', 'D8'), ('label', 'D8'), ('label', 'D8'), ('accepter', 'D8')]
+        ('annotation', 'D7'), ('message', 'D7'), ('annotation', 'D8'), ('message', 'D8'),
+        ('label', 'D8'), ('label', 'D8'), ('accepter', 'D8')]
     journal = read(tmp_path / 'retours.csv')
     assert 'refusé par DN : label inconnu' in journal.loc[journal['statut'] == 'erreur', 'detail'].iloc[0]
 
@@ -835,8 +878,9 @@ def test_retours_never_retries_a_message_dn_did_not_answer_within_the_run(tmp_pa
     stats = run_retours(tmp_path, dn=dn)
 
     assert stats['erreurs'] == 1
-    assert dn.calls == []
-    assert 'vérifier le dossier avant de rejouer' in read(tmp_path / 'retours.csv')['detail'].iloc[0]
+    assert [call[0] for call in dn.calls] == ['annotation']
+    journal = read(tmp_path / 'retours.csv')
+    assert 'vérifier le dossier avant de rejouer' in journal.loc[journal['statut'] == 'erreur', 'detail'].iloc[0]
 
 
 def test_retours_dry_run_writes_nothing_and_journals_what_would_go_out(tmp_path):

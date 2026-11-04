@@ -85,7 +85,8 @@ IDENTITY_COLUMNS = [
     'allocataire_prenom', 'allocataire_nom', 'allocataire_genre', 'allocataire_date_naissance',
 ]
 REJECT_COLUMNS = [*SUIVI_COLUMNS, 'motif']
-VERDICT_COLUMNS = ['eligibility_result_id', *SUIVI_COLUMNS, 'verdict', 'motif']
+# code_lamp01: the codes lamp01 already holds for a doublon, for the support to check.
+VERDICT_COLUMNS = ['eligibility_result_id', *SUIVI_COLUMNS, 'verdict', 'motif', 'code_lamp01']
 # The lamp01 side of a correspondence, as match_dn.sql exports it.
 TOUCHED_COLUMNS = [
     'id_psp', 'nom', 'prenom', 'date_naissance', 'genre', 'situation', 'organisme',
@@ -642,6 +643,9 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
                     if t & {'exacte', 'ine'}}
     review_type = {rid: next(kind for kind in REVIEW_TYPES if kind in t) for rid, t in types.items()
                    if rid not in doublon_type}
+    doublon_codes = (correspondences[correspondences['type'].isin({'exacte', 'ine'})]
+                     .groupby('eligibility_result_id')['id_psp']
+                     .agg(lambda codes: ', '.join(sorted(set(codes)))))
 
     verdict = pd.Series('a_coder', index=identities.index)
     motif = pd.Series('', index=identities.index)
@@ -649,6 +653,7 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     is_doublon = ids.isin(doublon_type)
     verdict[is_doublon] = 'doublon'
     motif[is_doublon] = ids[is_doublon].map(doublon_type).map(VERDICT_MOTIF)
+    code_lamp01 = ids.map(doublon_codes).where(is_doublon, '')
     is_review = ids.isin(review_type)
     verdict[is_review] = 'a_verifier'
     motif[is_review] = ids[is_review].map(review_type).map(VERDICT_MOTIF)
@@ -658,7 +663,7 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     motif[in_batch] = holder[in_batch].map(lambda reference: BATCH_OTHER_PARENT_MOTIF.format(reference=reference))
 
     verdicts = pd.concat([
-        identities.assign(verdict=verdict, motif=motif),
+        identities.assign(verdict=verdict, motif=motif, code_lamp01=code_lamp01),
         rejects.assign(eligibility_result_id='', verdict='rejete'),
     ])
     _write(verdicts.sort_values('reference'), verdicts_filepath, VERDICT_COLUMNS)
@@ -768,11 +773,15 @@ def dn_message(lines: pd.DataFrame) -> str:
 
 
 def dn_annotation(lines: pd.DataFrame, current) -> str:
-    """The codes annotation once this run's codes are appended to what it held; '' when the
-    dossier got no new code."""
+    """The codes annotation once this run's codes and doublons are appended to what it held; ''
+    when the dossier got nothing new."""
     kept = [line for line in (current or '').splitlines() if line.strip()]
-    added = [mapping.DN_ANNOTATION_LINE.format(prenom=row['prenom'], nom=row['nom'], code=row['code'])
-             for _, row in lines[lines['statut'] == 'code_envoye'].iterrows()]
+    # A doublon without code_lamp01 comes from a verdicts.csv older than it: left out.
+    wanted = lines['statut'].eq('code_envoye') | (lines['statut'].eq('doublon') & lines['code_lamp01'].ne(''))
+    added = [mapping.DN_ANNOTATION_LINE[row['statut']].format(
+                 prenom=row['prenom'], nom=row['nom'], code=row['code'], motif=row['motif'],
+                 code_lamp01=row['code_lamp01'])
+             for _, row in lines[wanted].iterrows()]
     new = [line for line in added if line not in kept]
     return '\n'.join(kept + new) if new else ''
 
@@ -846,7 +855,9 @@ def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, instructeurs: 
 def retours(verdicts_filepath, codes_filepath, dn_filepath, journal_filepath, dry_run=False,
             dn_client=None, refused_drop='') -> dict:
     """refused_drop: the name of the drop production's injector filed in failed/, if it did."""
-    verdicts = final_statuses(_read(verdicts_filepath), refused=bool(refused_drop))
+    # reindex: a run resumed after an upgrade may hold a verdicts.csv without code_lamp01.
+    verdicts = final_statuses(_read(verdicts_filepath).reindex(columns=VERDICT_COLUMNS, fill_value=''),
+                              refused=bool(refused_drop))
     refused = verdicts['statut'] == 'refuse_prod'
     verdicts.loc[refused, 'motif'] = f"refusé par l'injecteur de production ({refused_drop})"
     verdicts['code'] = verdicts['eligibility_result_id'].map(_codes(codes_filepath)).fillna('')

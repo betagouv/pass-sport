@@ -286,7 +286,8 @@ ANSWERED = [
     ('dossierModifierAnnotations', 'D501', None), ('dossierEnvoyerMessage', 'D501', None),
     ('dossierAjouterLabel', 'D501', 'L-traite'), ('dossierAccepter', 'D501', None),
     ('dossierEnvoyerMessage', 'D502', None), ('dossierAjouterLabel', 'D502', 'L-rejete'),
-    ('dossierEnvoyerMessage', 'D503', None), ('dossierAjouterLabel', 'D503', 'L-traite'),
+    ('dossierModifierAnnotations', 'D503', None), ('dossierEnvoyerMessage', 'D503', None),
+    ('dossierAjouterLabel', 'D503', 'L-traite'),
     ('dossierAjouterLabel', 'D503', 'L-doublon'), ('dossierAccepter', 'D503', None),
 ]
 
@@ -330,8 +331,13 @@ def test_real_run_answers_the_dossiers_only_once_the_injector_filed_the_drop_in_
     assert set(annotation.values()) == injected_codes
     message = dn.mutations[len(LABELLED_FC) + 1][1]['body']
     assert all(code in message for code in annotation.values())
-    # The doublon's code comes from lamp01: never handed out.
-    assert all('26-KNWN-0001' not in json.dumps(payload) for _, payload in dn.mutations)
+    # The doublon's code comes from lamp01: never handed out, only noted for the support.
+    assert all('26-KNWN-0001' not in json.dumps(payload) for field, payload in dn.mutations
+               if field != 'dossierModifierAnnotations')
+    doublon_annotation, = (dossier['annotations'][0]['stringValue'] for dossier in dn.dossiers
+                           if dossier['id'] == 'D503')
+    assert 'Code existant : 26-KNWN-0001' in doublon_annotation
+    assert 'Vérification manuelle du support requise' in doublon_annotation
     investigation = (tmp_path / 'run' / 'latest' / 'investigation.csv').read_text()
     assert '26-KNWN-0001' in investigation
 
@@ -387,7 +393,8 @@ def test_a_drop_refused_by_production_is_never_replayed(workspace, dn, injector)
     assert dn.calls() == LABELLED_FC + [
         ('dossierAjouterLabel', 'D501', 'L-a_verifier'),
         ('dossierEnvoyerMessage', 'D502', None), ('dossierAjouterLabel', 'D502', 'L-rejete'),
-        ('dossierEnvoyerMessage', 'D503', None), ('dossierAjouterLabel', 'D503', 'L-traite'),
+        ('dossierModifierAnnotations', 'D503', None), ('dossierEnvoyerMessage', 'D503', None),
+        ('dossierAjouterLabel', 'D503', 'L-traite'),
         ('dossierAjouterLabel', 'D503', 'L-doublon'), ('dossierAccepter', 'D503', None),
     ]
     assert not (tmp_path / 'run' / 'a-reprendre').exists()
