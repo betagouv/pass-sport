@@ -1,0 +1,38 @@
+import { positiveNumberFromEnv } from "../env";
+import { DN_CHAMPS, type DnChamps } from "./champs";
+
+export const DN_DEFAULT_BASE_URL = "https://demarche.numerique.gouv.fr";
+
+const DEFAULT_TIMEOUT_MS = 8_000;
+
+export type DnConfig = {
+  baseUrl: string;
+  demarcheNumber: number;
+  champs: DnChamps;
+  timeoutMs: number;
+};
+
+// No default démarche: a worker that names none must never pre-fill the production one.
+export const readDnConfig = (
+  champs: DnChamps = DN_CHAMPS,
+): { config: DnConfig } | { error: string } => {
+  const raw = process.env.DN_DEMARCHE_NUMBER?.trim();
+  if (!raw) return { error: "DN_DEMARCHE_NUMBER is not set" };
+
+  const demarcheNumber = Number(raw);
+  if (!Number.isInteger(demarcheNumber) || demarcheNumber <= 0) {
+    return { error: `DN_DEMARCHE_NUMBER="${raw}" is not a démarche number` };
+  }
+
+  const baseUrl = (process.env.DN_BASE_URL?.trim() || DN_DEFAULT_BASE_URL).replace(/\/+$/, "");
+  if (!URL.canParse(baseUrl)) return { error: `DN_BASE_URL="${baseUrl}" is not a URL` };
+
+  return {
+    config: {
+      baseUrl,
+      demarcheNumber,
+      champs,
+      timeoutMs: positiveNumberFromEnv("DN_REQUEST_TIMEOUT_MS", DEFAULT_TIMEOUT_MS),
+    },
+  };
+};

@@ -91,6 +91,12 @@ export default function RelanceButton({ availableAt }: RelanceButtonProps) {
   return (
     <div className="fr-mt-3w">
       <h2 className="fr-h3">Votre situation a changé&nbsp;?</h2>
+      {/* DSFR: an alert opens its section, above the action it is about. */}
+      {error && (
+        <div className="fr-alert fr-alert--error fr-alert--sm fr-mb-2w" role="alert">
+          <p>{error}</p>
+        </div>
+      )}
       <p className="fr-mb-1w">
         Pour obtenir un code pass Sport, vous devez vous connecter avec le compte FranceConnect de
         la personne qui bénéficie de l&apos;aide.
@@ -108,12 +114,6 @@ export default function RelanceButton({ availableAt }: RelanceButtonProps) {
         <Button onClick={rerun} disabled={isLoading}>
           {isLoading ? 'Envoi en cours…' : 'Relancer la vérification'}
         </Button>
-      )}
-
-      {error && (
-        <div className="fr-alert fr-alert--error fr-alert--sm fr-mt-2w" role="alert">
-          <p>{error}</p>
-        </div>
       )}
     </div>
   );

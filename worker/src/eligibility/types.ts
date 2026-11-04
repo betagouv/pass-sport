@@ -54,6 +54,9 @@ export const QF_REFERENCE_YEAR = "2026";
 export const QF_REFERENCE_MONTH_MIN = 8;
 export const QF_REFERENCE_MONTH_MAX = 12;
 
+// First instant of the campaign those months belong to, Paris time. Moves with them.
+export const CAMPAIGN_START = new Date("2026-08-01T00:00:00+02:00");
+
 // The server clock is UTC, so the month has to be read in Paris time — otherwise the first
 // hours of a new month there would still query the previous one.
 const PARIS_YEAR_MONTH = new Intl.DateTimeFormat("en-CA", {

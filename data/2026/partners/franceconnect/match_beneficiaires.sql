@@ -45,10 +45,18 @@
 -- deux personas sur la même personne comptent pour un id_psp, deux personnes différentes
 -- restent inconcluantes.
 --
+-- A CHILD IS LOOKED UP UNDER ITS OWN SITUATION FIRST, then under the other one (AEEH <-> jeune)
+-- only when its own strategy reaches nobody. The two routes overlap and the sources do not rank
+-- them alike: FranceConnect puts a child the quotient covers under jeune even with the AEEH
+-- (clean_fc_lib.resolve_situation), dn-pipeline puts a declared AEEH under AEEH, and the CNAF
+-- files declare the AEEH regardless of the quotient. Each fallback row runs the strategy of the
+-- base row it reaches, since that is what fixes which fields its caisse wrote.
+--
 -- beneficiaire_cnaf_extra_field also holds a row for every code the FranceConnect pipeline
 -- itself issued under organisme CAF (clean_fc_lib.build_cnaf_extra_field_rows). That row is
 -- the only way the CAF strategies below find such a code again: its beneficiaires row holds
--- the birth name in `nom`, where they expect the CNAF usage name.
+-- the birth name in `nom`, where they expect the CNAF usage name. dn-pipeline writes one too for
+-- each CAF code it issues (dn_pipeline.build_cnaf_extra_field_rows).
 --
 -- Les prénoms venus de la base LAMP doivent être CONTENUS dans les prénoms FranceConnect :
 -- sous-ensemble de mots, ordre libre (opérateur <@ sur les tableaux de mots normalisés).
@@ -182,7 +190,9 @@ where nullif(btrim(c.conjoint_nom), '') is not null
 create temp table fc_essais (
 	eligibility_result_id text not null,
 	id_psp text not null,
-	strategie text not null
+	strategie text not null,
+	-- A child reached under the other situation than its own.
+	repli boolean not null default false
 ) on commit drop;
 
 create temp table fc_apparies (
@@ -259,8 +269,8 @@ where n.situation = 'AAH'
 -- Allocataire : nom de naissance, prénoms contenus, qualité (M/Mme, le seul « genre » que
 -- les partenaires écrivent en base pour l'allocataire) et date de naissance — la MSA la
 -- porte, contrairement à la CNAF. Bénéficiaire : identité complète, en égalité stricte.
-insert into fc_essais (eligibility_result_id, id_psp, strategie)
-select distinct n.eligibility_result_id, b.id_psp, 'aeeh_msa'
+insert into fc_essais (eligibility_result_id, id_psp, strategie, repli)
+select distinct n.eligibility_result_id, b.id_psp, 'aeeh_msa', n.situation <> 'AEEH'
 from fc_norm n
 join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
@@ -277,7 +287,7 @@ join public.beneficiaires b
  and public.normalise_recherche(b.prenom) = n.benef_prenoms_texte
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
-where n.situation = 'AEEH'
+where n.situation in ('AEEH', 'jeune')
   and n.organisme = 'MSA'
   and p.alloc_nom_naissance is not null
   and p.alloc_prenoms is not null
@@ -295,8 +305,8 @@ where n.situation = 'AEEH'
 -- les détails de naissance n'y étant remplis que pour les lignes d'origine ARS. Bénéficiaire :
 -- NOMENF ne porte pas le suffixe NAI des noms de naissance CNAF, le nom du candidat est donc
 -- accepté sous ses deux formes.
-insert into fc_essais (eligibility_result_id, id_psp, strategie)
-select distinct n.eligibility_result_id, b.id_psp, 'aeeh_caf'
+insert into fc_essais (eligibility_result_id, id_psp, strategie, repli)
+select distinct n.eligibility_result_id, b.id_psp, 'aeeh_caf', n.situation <> 'AEEH'
 from fc_norm n
 join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
@@ -313,7 +323,7 @@ join public.beneficiaires b
  and b.date_naissance::date = n.benef_naissance
 left join public.beneficiaire_cnaf_extra_field x
   on x.id_psp = b.id_psp
-where n.situation = 'AEEH'
+where n.situation in ('AEEH', 'jeune')
   and n.organisme = 'CAF'
   and (public.normalise_recherche(b.allocataire_nom) = p.alloc_nom_usage
        or public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = p.alloc_nom_naissance)
@@ -327,8 +337,8 @@ where n.situation = 'AEEH'
 -- --- jeune (QF), caisse MSA -------------------------------------------------------------
 -- Même bloc allocataire que l'AEEH MSA ; bénéficiaire en containment de prénoms — la règle
 -- QF le demande explicitement, là où l'AEEH exige l'égalité.
-insert into fc_essais (eligibility_result_id, id_psp, strategie)
-select distinct n.eligibility_result_id, b.id_psp, 'qf_msa'
+insert into fc_essais (eligibility_result_id, id_psp, strategie, repli)
+select distinct n.eligibility_result_id, b.id_psp, 'qf_msa', n.situation <> 'jeune'
 from fc_norm n
 join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
@@ -345,7 +355,7 @@ join public.beneficiaires b
  and string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
  and b.genre::text = n.benef_genre
  and b.date_naissance::date = n.benef_naissance
-where n.situation = 'jeune'
+where n.situation in ('AEEH', 'jeune')
   and n.organisme = 'MSA'
   and p.alloc_nom_naissance is not null
   and p.alloc_prenoms is not null
@@ -362,8 +372,8 @@ where n.situation = 'jeune'
 -- précisément la population QF. cnaf_allocataire_genre partage le vocabulaire du pivot
 -- ('male'/'female'), d'où alloc_genre plutôt que la qualité. Le prénom de l'allocataire
 -- reste PRENOMDOS, dans beneficiaires.
-insert into fc_essais (eligibility_result_id, id_psp, strategie)
-select distinct n.eligibility_result_id, b.id_psp, 'qf_caf'
+insert into fc_essais (eligibility_result_id, id_psp, strategie, repli)
+select distinct n.eligibility_result_id, b.id_psp, 'qf_caf', n.situation <> 'jeune'
 from fc_norm n
 join fc_norm_allocataires p using (eligibility_result_id)
 join public.beneficiaires b
@@ -382,7 +392,7 @@ join public.beneficiaire_cnaf_extra_field x
  and public.normalise_recherche(x.cnaf_allocataire_nom_naissance) = p.alloc_nom_naissance
  and lower(btrim(x.cnaf_allocataire_genre)) = p.alloc_genre
  and x.cnaf_allocataire_date_naissance = p.alloc_naissance::date
-where n.situation = 'jeune'
+where n.situation in ('AEEH', 'jeune')
   and n.organisme = 'CAF'
   and p.alloc_nom_naissance is not null
   and p.alloc_prenoms is not null
@@ -394,6 +404,14 @@ where n.situation = 'jeune'
   and n.benef_naissance is not null;
 
 -- --- Verdicts ---------------------------------------------------------------------------
+
+-- The other situation only counts when the child's own reached nobody: every verdict the own
+-- strategy reaches, match or inconclusive, stays what it was without the fallback.
+delete from fc_essais repli
+where repli.repli
+  and exists (select 1 from fc_essais propre
+              where propre.eligibility_result_id = repli.eligibility_result_id
+                and not propre.repli);
 
 -- Hors AAH, un candidat ne relève que d'une stratégie (sa situation et sa caisse la
 -- choisissent) : concluant ssi elle atteint exactement un id_psp.
@@ -482,6 +500,10 @@ select
 	(select count(*) from fc_apparies where strategie = 'aeeh_caf') as par_aeeh_caf,
 	(select count(*) from fc_apparies where strategie = 'qf_msa') as par_qf_msa,
 	(select count(*) from fc_apparies where strategie = 'qf_caf') as par_qf_caf,
+	(select count(*) from fc_apparies a
+	  where exists (select 1 from fc_essais e
+	                 where e.eligibility_result_id = a.eligibility_result_id and e.repli))
+		as par_repli_situation,
 	(select count(*) from fc_candidats
 	  where nullif(btrim(conjoint_nom), '') is not null
 	     or nullif(btrim(conjoint_nom_usage), '') is not null) as avec_conjoint,

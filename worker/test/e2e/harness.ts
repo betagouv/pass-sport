@@ -14,9 +14,11 @@ import {
 // Worker code under test — imported from src (extensionless; Vitest/Vite resolve
 // the .ts sources directly, matching the tsconfig "bundler" moduleResolution).
 import {
+  DN_DOSSIERS_QUEUE_NAME,
   FC_CODE_EMAILS_JOB_ID,
   FC_CODE_EMAILS_JOB_NAME,
   FC_CODE_EMAILS_QUEUE_NAME,
+  FC_DN_DOSSIER_JOB_NAME,
   FC_RELANCE_JOB_NAME,
   FRANCE_CONNECT_JOB_NAME,
   FRANCE_CONNECT_QUEUE_NAME,
@@ -28,6 +30,15 @@ import { processEligibilityJob, type FranceConnectDeps } from "../../src/jobs/fr
 import { processFcRelanceJob } from "../../src/jobs/fc-relance";
 import { processLcaJob, type LcaDeps } from "../../src/jobs/lca";
 import { processFcCodeEmailsJob, type FcCodeEmailsJobData } from "../../src/jobs/fc-code-emails";
+import {
+  processFcDnDossierJob,
+  type FcDnDossierJobData,
+  type FcDnDossierOutcome,
+} from "../../src/jobs/fc-dn-dossier";
+import type { DnChamps } from "../../src/demarche-numerique/champs";
+import { createDnClient } from "../../src/demarche-numerique/client";
+import type { DnConfig } from "../../src/demarche-numerique/config";
+import type { DnIdentity } from "../../src/demarche-numerique/prefill";
 import { RESOURCE_META, type ApiParticulierClient } from "../../src/eligibility/client";
 import { runMigrations } from "../../src/db/migrate";
 import { eligibilityResults, type Verdict } from "../../src/db/schema";
@@ -365,6 +376,42 @@ export const parseSentEmail = (raw: string): SentEmail => {
   };
 };
 
+// The test démarche the fake DN server answers for, and its champ ids.
+export const DN_TEST_DEMARCHE = 4242;
+
+const yesNo = { yes: "true", no: "false" };
+const gender = { male: "Masculin", female: "Féminin" };
+
+export const DN_TEST_CHAMPS: DnChamps = {
+  allocataireGenre: { id: "GENRE", values: { male: "M.", female: "Mme" } },
+  beneficiaireDe: { id: "BENEF", values: { aah: "AAH", bourse: "Bourse" } },
+  ine: { id: "INE" },
+  caisse: { id: "CAISSE", values: { CAF: "CAF", MSA: "MSA" } },
+  dateNaissance: { id: "NAISSANCE" },
+  aDesEnfants: { id: "ENFANTS_OUI", values: yesNo },
+  caisseEnfants: { id: "CAISSE_ENFANTS", values: { CAF: "CAF", MSA: "MSA" } },
+  foyerQf: { id: "FOYER_QF", values: yesNo },
+  enfantsAeeh: { id: "ENFANTS_AEEH", values: yesNo },
+  enfants: {
+    id: "ENFANTS",
+    champs: {
+      aeeh: { id: "E_AEEH", values: yesNo },
+      genre: { id: "E_GENRE", values: gender },
+      prenom: { id: "E_PRENOM" },
+      nom: { id: "E_NOM" },
+      dateNaissance: { id: "E_NAISSANCE" },
+    },
+  },
+};
+
+export type DnRequest = {
+  method: string;
+  // Path and query string, the prefill token included.
+  path: string;
+  contentType: string | undefined;
+  body: unknown;
+};
+
 export type ConfirmedSeed = {
   sub: string;
   code: string;
@@ -445,6 +492,18 @@ export type Stack = {
   setQfFournisseur: (fournisseur: string | undefined) => void;
   // Second allocataire of the fake QF couple, null for a single-allocataire household.
   setQfConjoint: (conjoint: PersonneQuotientFamilial | null) => void;
+
+  // The Démarche Numérique dossier flow, on its own queue and worker as in production, against a
+  // fake DN prefill API. The job runs with the site's attempts and a 50 ms backoff.
+  dnQueue: Queue<FcDnDossierJobData>;
+  enqueueDnDossierAndWait: (identity: DnIdentity) => Promise<FcDnDossierOutcome>;
+  // Waits for the job to exhaust its attempts. Returns the failure reason.
+  enqueueDnDossierAndWaitFailure: (identity: DnIdentity) => Promise<{ reason: string; attemptsMade: number }>;
+  dnRequests: () => DnRequest[];
+  // The next requests answer these statuses, in order, before the fake DN answers normally again.
+  failNextDnRequests: (...statuses: number[]) => void;
+  // What the usager did on DN: a state such as 'en_construction', or null for a deleted dossier.
+  setDnDossierState: (dossierNumber: number, state: string | null) => void;
   close: () => Promise<void>;
 };
 
@@ -522,6 +581,69 @@ export async function startStack(
   process.env.LINK_MOBILITY_TEMPLATE_ACKNOWLEDGMENT = String(TEMPLATE_IDS.acknowledgment);
 
   process.env.ACKNOWLEDGMENT_QUEUE_THRESHOLD = "0";
+
+  // Fake Démarche Numérique prefill API: creates dossiers numbered 9001, 9002… under tokens
+  // tok-1, tok-2…, and lists them back by token the way DN does, unclaimed or claimed.
+  const dnRequests: DnRequest[] = [];
+  const dnFailures: number[] = [];
+  const dnDossiers = new Map<string, { number: number; state: string }>();
+  let dnBaseUrl = "";
+
+  const dnServer: Server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      const url = new URL(req.url ?? "/", "http://dn.test");
+      const raw = Buffer.concat(chunks).toString("utf8");
+      dnRequests.push({
+        method: req.method ?? "",
+        path: `${url.pathname}${url.search}`,
+        contentType: req.headers["content-type"],
+        body: raw ? JSON.parse(raw) : null,
+      });
+
+      const reply = (status: number, body: unknown) => {
+        res.statusCode = status;
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify(body));
+      };
+
+      const forced = dnFailures.shift();
+      if (forced !== undefined) return reply(forced, { error: "Erreur simulée" });
+
+      if (url.pathname !== `/api/public/v1/demarches/${DN_TEST_DEMARCHE}/dossiers`) {
+        return reply(404, { error: "Démarche introuvable" });
+      }
+
+      const dossierJson = (token: string, dossier: { number: number; state: string }) => ({
+        dossier_id: Buffer.from(`Dossier-${dossier.number}`).toString("base64"),
+        dossier_number: dossier.number,
+        dossier_prefill_token: token,
+        ...(dossier.state === "prefilled"
+          ? {
+              state: "prefilled",
+              dossier_url: `${dnBaseUrl}/commencer/pass-sport-test?prefill_token=${token}`,
+            }
+          : { state: dossier.state, submitted_at: "2026-10-20T10:00:00+02:00", processed_at: null }),
+      });
+
+      if (req.method === "POST") {
+        if (req.headers["content-type"] !== "application/json") {
+          return reply(400, { error: "Content-Type invalide" });
+        }
+        const token = `tok-${dnDossiers.size + 1}`;
+        const dossier = { number: 9000 + dnDossiers.size + 1, state: "prefilled" };
+        dnDossiers.set(token, dossier);
+        return reply(201, dossierJson(token, dossier));
+      }
+
+      const token = url.searchParams.get("prefill_token") ?? "";
+      const dossier = dnDossiers.get(token);
+      return reply(200, dossier && dossier.state !== "deleted" ? [dossierJson(token, dossier)] : []);
+    });
+  });
+  await new Promise<void>((resolve) => dnServer.listen(0, "127.0.0.1", () => resolve()));
+  dnBaseUrl = `http://127.0.0.1:${(dnServer.address() as AddressInfo).port}`;
 
   const pool = new pg.Pool({ connectionString: pgC.getConnectionUri() });
   await runMigrations(pool);
@@ -681,6 +803,69 @@ export async function startStack(
   );
   await fcCodeEmailsWorker.waitUntilReady();
 
+  const dnConfig: DnConfig = {
+    baseUrl: dnBaseUrl,
+    demarcheNumber: DN_TEST_DEMARCHE,
+    champs: DN_TEST_CHAMPS,
+    timeoutMs: 2_000,
+  };
+  const dnClient = createDnClient(dnConfig);
+
+  const dnQueue = new Queue<FcDnDossierJobData>(DN_DOSSIERS_QUEUE_NAME, { connection: conn() });
+  await dnQueue.setGlobalConcurrency(1);
+
+  const dnWorker = new Worker<FcDnDossierJobData>(
+    DN_DOSSIERS_QUEUE_NAME,
+    async (job) => processFcDnDossierJob(job, job.data, { db, dn: dnClient, config: dnConfig }),
+    { connection: conn(), settings: { backoffStrategy: retryBackoff } },
+  );
+  await dnWorker.waitUntilReady();
+
+  const addDnDossierJob = (identity: DnIdentity) =>
+    dnQueue.add(
+      FC_DN_DOSSIER_JOB_NAME,
+      { identity },
+      { jobId: identity.sub, attempts: 3, backoff: { type: "fixed", delay: 50 } },
+    );
+
+  const enqueueDnDossierAndWait = async (identity: DnIdentity): Promise<FcDnDossierOutcome> => {
+    const job = await addDnDossierJob(identity);
+    for (let i = 0; i < 200; i++) {
+      const fresh = await dnQueue.getJob(job.id!);
+      const state = await fresh?.getState();
+      if (state === "completed") {
+        const value = fresh?.returnvalue as FcDnDossierOutcome;
+        await fresh?.remove();
+        return value;
+      }
+      if (state === "failed") {
+        const reason = fresh?.failedReason ?? "<no reason>";
+        await fresh?.remove();
+        throw new Error(`dossier job ${job.id} failed: ${reason}`);
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    throw new Error(`dossier job ${job.id} did not finish in time`);
+  };
+
+  const enqueueDnDossierAndWaitFailure = async (
+    identity: DnIdentity,
+  ): Promise<{ reason: string; attemptsMade: number }> => {
+    const job = await addDnDossierJob(identity);
+    for (let i = 0; i < 200; i++) {
+      const fresh = await dnQueue.getJob(job.id!);
+      const state = await fresh?.getState();
+      if (state === "failed") {
+        const failed = { reason: fresh?.failedReason ?? "", attemptsMade: fresh?.attemptsMade ?? 0 };
+        await fresh?.remove();
+        return failed;
+      }
+      if (state === "completed") throw new Error(`dossier job ${job.id} completed but should have failed`);
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    throw new Error(`dossier job ${job.id} did not finish in time`);
+  };
+
   const seedConfirmedRow = async (seed: ConfirmedSeed): Promise<string> => {
     const source = seed.source ?? "self";
     const identity = {
@@ -752,9 +937,12 @@ export async function startStack(
     await lcaQueue.close();
     await fcCodeEmailsWorker.close();
     await fcCodeEmailsQueue.close();
+    await dnWorker.close();
+    await dnQueue.close();
     await Promise.all(connections.map((c) => c.quit().catch(() => {})));
     await pool.end();
     await new Promise<void>((resolve) => emailServer.close(() => resolve()));
+    await new Promise<void>((resolve) => dnServer.close(() => resolve()));
     await redisC.stop();
     await pgC.stop();
   };
@@ -840,6 +1028,18 @@ export async function startStack(
     },
     setQfConjoint: (conjoint: PersonneQuotientFamilial | null) => {
       apiClient.qfConjoint = conjoint;
+    },
+    dnQueue,
+    enqueueDnDossierAndWait,
+    enqueueDnDossierAndWaitFailure,
+    dnRequests: () => dnRequests,
+    failNextDnRequests: (...statuses: number[]) => {
+      dnFailures.push(...statuses);
+    },
+    setDnDossierState: (dossierNumber: number, state: string | null) => {
+      for (const dossier of dnDossiers.values()) {
+        if (dossier.number === dossierNumber) dossier.state = state ?? "deleted";
+      }
     },
     close,
   };

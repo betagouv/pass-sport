@@ -1,18 +1,18 @@
-"""Python steps of run_grist_dn.sh: beneficiaries collected in Grist and Démarches Numériques.
+"""Python steps of run_dn.sh: beneficiaries of the Démarches Numériques dossiers.
 
-    python grist_dn_pipeline.py fetch     # both APIs -> raw JSON of what is left to process
-    python grist_dn_pipeline.py clean     # raw JSON -> PSP schema, match candidates, rejects
-    python grist_dn_pipeline.py split     # match_grist_dn.sql output -> doublons / à vérifier / à coder
-    python grist_dn_pipeline.py emails    # coded rows -> input of `pnpm codes:support-emails`
-    python grist_dn_pipeline.py retours   # verdicts -> Grist Statut, DN codes annotation, message, label, acceptance
+    python dn_pipeline.py fetch     # DN API -> raw JSON of the dossiers left to process
+    python dn_pipeline.py clean     # raw JSON -> PSP schema, match candidates, rejects
+    python dn_pipeline.py split     # match_dn.sql output -> doublons / à vérifier / à coder
+    python dn_pipeline.py retours   # verdicts -> codes annotation, message, label, acceptance
+    python dn_pipeline.py label-fc  # « FranceConnect » label on the deposited FranceConnect dossiers
 
 Code drawing and the prod/lamp01 split are the FranceConnect ones (fc_pipeline.py codes and
 writeback), called directly by the shell script. Matching is NOT the FranceConnect one: see
-match_grist_dn.sql.
+match_dn.sql.
 
 API settings come from the environment (data/.env, loaded by the shell script).
 
-See test_grist_dn_pipeline.py for the unit tests.
+See test_dn_pipeline.py for the unit tests.
 """
 
 import argparse
@@ -23,7 +23,7 @@ import re
 import sys
 import uuid
 from collections import Counter
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -42,9 +42,6 @@ import clean_fc_lib as fc  # noqa: E402
 import mapping  # noqa: E402
 import partners_lib as partners  # noqa: E402
 from dn_client import DEFAULT_API_URL, DnApiError, DnClient, DnMutationError  # noqa: E402
-from grist_client import UPDATE_BATCH_SIZE, GristClient  # noqa: E402
-
-SOURCES = ('grist', 'dn')
 
 # The beneficiary themself holds the aid; on the other routes the allocataire is a parent.
 SELF_SITUATIONS = {'AAH', 'boursier'}
@@ -59,47 +56,48 @@ DOB_WINDOWS = {
 
 DN_DOSSIER_URL = 'https://demarche.numerique.gouv.fr/procedures/{demarche}/dossiers/{dossier}'
 
-# What every output carries to trace a line back to its Grist row or DN dossier.
+# The traitements that put a dossier en instruction, the automatic one carrying no agent.
+INSTRUCTION_EVENTS = {
+    'passe_en_instruction', 'repasse_en_instruction', 'passe_en_instruction_automatiquement',
+}
+
+# What every output carries to trace a line back to its DN dossier.
 SUIVI_COLUMNS = [
-    'reference', 'source', 'grist_row_id', 'dossier_id', 'dossier_number', 'lien',
-    'prenom', 'nom', 'date_naissance', 'email',
+    'reference', 'dossier_id', 'dossier_number', 'lien', 'prenom', 'nom', 'date_naissance', 'email',
 ]
 EXTRACTED_COLUMNS = [
     *SUIVI_COLUMNS, 'genre', 'situation_label', 'situation', 'caisse', 'ine',
-    'allocataire_genre', 'allocataire_prenom', 'allocataire_nom', 'allocataire_matricule',
-    'code_insee', 'code_postal', 'commune', 'voie', 'commentaire', 'motif',
+    'allocataire_genre', 'allocataire_prenom', 'allocataire_nom', 'allocataire_date_naissance',
+    'allocataire_matricule', 'code_insee', 'code_postal', 'commune', 'voie', 'motif',
 ]
 # Exactly the production schema, plus the run-local key split_writeback drops.
 CLEANED_COLUMNS = [
     'eligibility_result_id', 'nom', 'prenom', 'date_naissance', 'genre', 'situation',
     'organisme', 'allocataire', 'adresse_allocataire',
 ]
-# match_grist_dn.sql loads them with `header match`: same names, same order.
+# match_dn.sql loads them with `header match`: same names, same order.
 MATCH_COLUMNS = [
     'eligibility_result_id', 'situation', 'ine', 'nom', 'prenom', 'date_naissance', 'genre',
     'allocataire_genre', 'allocataire_nom', 'allocataire_prenom',
 ]
 IDENTITY_COLUMNS = [
     'eligibility_result_id', *SUIVI_COLUMNS, 'genre', 'situation', 'caisse',
-    'allocataire_prenom', 'allocataire_nom', 'allocataire_genre', 'commentaire',
+    'allocataire_prenom', 'allocataire_nom', 'allocataire_genre', 'allocataire_date_naissance',
 ]
 REJECT_COLUMNS = [*SUIVI_COLUMNS, 'motif']
-VERDICT_COLUMNS = ['eligibility_result_id', *SUIVI_COLUMNS, 'verdict', 'motif']
-EMAIL_COLUMNS = [
-    'id', 'code', 'email', 'nom', 'prenom', 'date_naissance', 'situation',
-    'allocataire_prenom', 'allocataire_nom',
-]
-# The lamp01 side of a correspondence, as match_grist_dn.sql exports it.
+# code_lamp01: the codes lamp01 already holds for a doublon, for the support to check.
+VERDICT_COLUMNS = ['eligibility_result_id', *SUIVI_COLUMNS, 'verdict', 'motif', 'code_lamp01']
+# The lamp01 side of a correspondence, as match_dn.sql exports it.
 TOUCHED_COLUMNS = [
     'id_psp', 'nom', 'prenom', 'date_naissance', 'genre', 'situation', 'organisme',
-    'allocataire_qualite', 'allocataire_nom', 'allocataire_prenom', 'allocataire_courriel',
-    'adresse_allocataire_code_insee', 'created_at',
+    'allocataire_qualite', 'allocataire_nom', 'allocataire_prenom', 'allocataire_date_naissance',
+    'allocataire_courriel', 'adresse_allocataire_code_insee', 'created_at',
 ]
 INVESTIGATION_COLUMNS = [
     'verdict', 'type', 'reference', 'lien', 'saisie_nom', 'saisie_prenom',
     'saisie_date_naissance', 'saisie_genre', 'saisie_situation', 'saisie_caisse',
     'saisie_allocataire_nom', 'saisie_allocataire_prenom', 'saisie_allocataire_genre',
-    'saisie_email', 'saisie_commentaire',
+    'saisie_allocataire_date_naissance', 'saisie_email',
     *(f'lamp01_{column}' for column in TOUCHED_COLUMNS),
 ]
 JOURNAL_COLUMNS = ['reference', 'action', 'statut', 'detail', 'horodatage']
@@ -113,12 +111,13 @@ READABLE_FIELD = {
 
 EMAIL_PATTERN = re.compile(r'^[^@\s;]+@[^@\s;]+\.[^@\s;]+$')
 INSEE_PATTERN = re.compile(r'^(\d{5}|2[AB]\d{3})$')
-# Stands for no commune (a Grist Numeric cell left at 0): left out of the address altogether.
-NO_INSEE = '00000'
 DATE_FORMATS = ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%d.%m.%Y')
-CAF_MATRICULE_LENGTH = 7
 
 GENDER_BY_GENRE = {'M': 'male', 'F': 'female'}
+
+# The FranceConnect MSA strategies of match_beneficiaires.sql find a code again by the
+# allocataire's birthdate: fc_pipeline serialises it under the same key.
+ALLOCATAIRE_EXTRA_FIELDS = {'date_naissance': 'allocataire-date_naissance'}
 
 
 # --- shared helpers -------------------------------------------------------------------
@@ -126,17 +125,7 @@ GENDER_BY_GENRE = {'M': 'male', 'F': 'female'}
 def _text(value) -> str:
     if value is None:
         return ''
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
-    if isinstance(value, list):
-        # Grist ChoiceList cells come as ['L', choice, ...].
-        items = value[1:] if value and value[0] == 'L' else value
-        return ', '.join(str(item) for item in items)
     return str(value).strip()
-
-
-def _is_blank(value) -> bool:
-    return _text(value) == ''
 
 
 def parse_date(value) -> date | None:
@@ -158,15 +147,8 @@ def normalize_insee(value) -> str | None:
     return text if INSEE_PATTERN.match(text) else None
 
 
-def normalize_caf_matricule(value) -> str:
-    """A CAF n° allocataire: its first 7 digits, left-padded with zeros; '' without any digit."""
-    digits = re.sub(r'\D', '', _text(value))[:CAF_MATRICULE_LENGTH]
-    return digits.zfill(CAF_MATRICULE_LENGTH) if digits else ''
-
-
 def _genre(value) -> str:
     return mapping.GENRE_BY_LABEL.get(mapping.fold(value), '')
-
 
 
 def _required_env(name: str) -> str:
@@ -192,45 +174,49 @@ def _write_json(payload, filepath) -> None:
 
 # --- fetch ------------------------------------------------------------------------------
 
-def fetch_grist(client: GristClient, table_id: str, motif_label: str = '') -> dict:
-    """The rows support marked eligible and the pipeline has not tagged yet."""
-    column_id_by_label = {mapping.fold(label): column_id
-                          for label, column_id in client.columns(table_id).items()}
-    labels = dict(mapping.GRIST_COLUMNS)
-    if motif_label:
-        labels['motif'] = motif_label
-    column_ids = {name: column_id_by_label.get(mapping.fold(label)) for name, label in labels.items()}
-    missing = [labels[name] for name, column_id in column_ids.items() if column_id is None]
-    if missing:
-        raise ValueError(f"colonnes Grist absentes : {', '.join(missing)}")
+def dn_instructeur_id(dossier: dict) -> str:
+    """The instructeur who last put the dossier en instruction, in whose name it is answered; ''
+    when DN did it automatically or they no longer belong to the dossier's groupe."""
+    moves = [traitement for traitement in dossier.get('traitements') or []
+             if traitement['event'] in INSTRUCTION_EVENTS]
+    if not moves:
+        return ''
+    last = max(moves, key=lambda traitement: datetime.fromisoformat(traitement['dateTraitement']))
+    email = (last.get('emailAgentTraitant') or '').lower()
+    instructeurs = (dossier.get('groupeInstructeur') or {}).get('instructeurs') or []
+    return next((instructeur['id'] for instructeur in instructeurs
+                 if email and instructeur['email'].lower() == email), '')
 
-    records, ignored = [], 0
-    for record in client.records(table_id):
-        fields = {name: record['fields'].get(column_id) for name, column_id in column_ids.items()}
-        eligible = mapping.fold(_text(fields['eligibilite'])) in mapping.GRIST_ELIGIBLE_VALUES
-        if eligible and _is_blank(fields['statut']):
-            records.append({'id': record['id'], 'fields': fields})
-        else:
-            ignored += 1
 
-    return {'table': table_id, 'columns': column_ids, 'records': records, 'ignores': ignored}
+def dn_franceconnect(dossier: dict) -> bool:
+    """Pre-filled by the worker from the espace FranceConnect (the démarche's only pre-filled
+    ones), or filed by an usager logged in to DN through FranceConnect."""
+    return bool(dossier.get('prefilled')) or dossier.get('connectionUsager') == mapping.DN_CONNECTION_FRANCECONNECT
+
+
+def _holds_label(dossier: dict, name: str) -> bool:
+    return any(mapping.fold(label['name']) == mapping.fold(name) for label in dossier['labels'])
 
 
 def dn_skip_reason(dossier: dict) -> str:
-    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, filed
-    through FranceConnect and holding none of its labels."""
+    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, holding the
+    FranceConnect label or due to get it from this run, none of the pipeline's labels, and put
+    en instruction by an instructeur of its groupe."""
     if dossier['state'] != 'en_instruction':
         return 'pas en instruction'
-    if dossier.get('connectionUsager') != mapping.DN_CONNECTION_USAGER:
+    if not (dn_franceconnect(dossier) or _holds_label(dossier, mapping.DN_LABEL_FRANCECONNECT)):
         return 'sans FranceConnect'
     ours = {mapping.fold(name) for name in mapping.DN_LABELS.values()}
     if any(mapping.fold(label['name']) in ours for label in dossier['labels']):
         return 'déjà labellisé'
+    if not dn_instructeur_id(dossier):
+        return 'sans instructeur'
     return ''
 
 
-def fetch_dn(client: DnClient, numero: int) -> dict:
-    """The dossiers en instruction, filed through FranceConnect, without the pipeline's labels."""
+def fetch_dn(client: DnClient, numero: int, only: set[int] | None = None) -> dict:
+    """The FranceConnect dossiers en instruction without the pipeline's labels, put en
+    instruction by an instructeur of their groupe; with `only`, among those numbers."""
     label_id_by_name = {mapping.fold(name): label_id for name, label_id in client.labels(numero).items()}
     missing = [name for name in mapping.DN_LABELS.values() if mapping.fold(name) not in label_id_by_name]
     if missing:
@@ -243,7 +229,8 @@ def fetch_dn(client: DnClient, numero: int) -> dict:
 
     dossiers, skipped = [], Counter()
     for dossier in client.iter_dossiers(numero):
-        reason = dn_skip_reason(dossier)
+        reason = ('hors DN_DOSSIERS' if only is not None and dossier['number'] not in only
+                  else dn_skip_reason(dossier))
         if reason:
             skipped[reason] += 1
         else:
@@ -258,67 +245,29 @@ def fetch_dn(client: DnClient, numero: int) -> dict:
     }
 
 
-def fetch(grist_out, dn_out, sources=SOURCES) -> dict:
-    stats = {}
-    grist = {'records': [], 'columns': {}, 'ignores': 0}
-    if 'grist' in sources:
-        client = GristClient(_required_env('GRIST_API_URL'), _required_env('GRIST_API_KEY'),
-                             _required_env('GRIST_DOC_ID'))
-        grist = fetch_grist(client, _required_env('GRIST_TABLE_ID'),
-                            os.environ.get('GRIST_COLONNE_MOTIF', ''))
-    _write_json(grist, grist_out)
-    stats['grist_lignes'] = len(grist['records'])
-    stats['grist_ignorees'] = grist['ignores']
+def dossier_numbers(value) -> set[int] | None:
+    """DN_DOSSIERS, '123, 456': the only dossiers a run takes; None when empty (every dossier)."""
+    if not (value or '').strip():
+        return None
+    try:
+        return {int(number) for number in value.replace(',', ' ').split()}
+    except ValueError:
+        raise ValueError(f"DN_DOSSIERS attend des numéros de dossier séparés par des virgules : {value}") from None
 
-    dn = {'dossiers': [], 'labels': {}, 'ignores': 0}
-    if 'dn' in sources:
-        client = DnClient(os.environ.get('DN_API_URL') or DEFAULT_API_URL, _required_env('DN_API_TOKEN'))
-        dn = fetch_dn(client, int(_required_env('DN_DEMARCHE_NUMBER')))
+
+def fetch(dn_out) -> dict:
+    client = DnClient(os.environ.get('DN_API_URL') or DEFAULT_API_URL, _required_env('DN_API_TOKEN'))
+    dn = fetch_dn(client, int(_required_env('DN_DEMARCHE_NUMBER')),
+                  dossier_numbers(os.environ.get('DN_DOSSIERS')))
     _write_json(dn, dn_out)
-    stats['dn_dossiers'] = len(dn['dossiers'])
-    stats['dn_ignores'] = dn['ignores']
-    stats['dn_ignores_par_motif'] = dn.get('ignores_par_motif', {})
-    return stats
+    return {
+        'dn_dossiers': len(dn['dossiers']),
+        'dn_ignores': dn['ignores'],
+        'dn_ignores_par_motif': dn['ignores_par_motif'],
+    }
 
 
 # --- extraction: one line per beneficiary -----------------------------------------------
-
-def _grist_date(value) -> str:
-    # Grist Date columns come as seconds since the epoch, at midnight UTC.
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return datetime.fromtimestamp(value, tz=timezone.utc).strftime('%Y-%m-%d')
-    return _text(value)
-
-
-def grist_rows(raw: dict) -> list[dict]:
-    rows = []
-    for record in raw.get('records', []):
-        fields = record['fields']
-        situation = mapping.situation_of_label(_text(fields['situation'])) or ''
-        matricule = _text(fields['matricule'])
-        rows.append({
-            'reference': f"grist:{record['id']}",
-            'source': 'grist',
-            'grist_row_id': str(record['id']),
-            'prenom': _text(fields['prenom']),
-            'nom': _text(fields['nom']),
-            'date_naissance': _grist_date(fields['date_naissance']),
-            'email': _text(fields['email']),
-            'genre': _text(fields['genre']),
-            'situation_label': _text(fields['situation']),
-            'situation': situation,
-            'caisse': _text(fields['caisse']),
-            # The n° allocataire is kept in lamp01 but never matched on; the INE is.
-            'ine': matricule if situation == 'boursier' else '',
-            'allocataire_genre': _text(fields['allocataire_genre']),
-            'allocataire_prenom': _text(fields['allocataire_prenom']),
-            'allocataire_nom': _text(fields['allocataire_nom']),
-            'allocataire_matricule': matricule,
-            'code_insee': _text(fields['code_insee']),
-            'commentaire': _text(fields['commentaire']),
-        })
-    return rows
-
 
 def _champs_by_label(champs: list[dict]) -> dict:
     return {mapping.fold(champ['label']): champ for champ in champs or []}
@@ -352,14 +301,15 @@ def _enfant_rows(dossier: dict, champs: dict) -> list[dict]:
     return enfants.get('rows') or []
 
 
-def _enfant_row(row: dict, common: dict, number: str, index: int, foyer: bool) -> dict:
+def _enfant_row(row: dict, common: dict, number: str, index: int, foyer: dict) -> dict:
     enfant = _champs_by_label(row.get('champs'))
     labels = mapping.DN_ENFANT_CHAMPS
-    aeeh = _champ_yes(_champ(enfant, labels['aeeh']))
-    situation = 'AEEH' if aeeh else ('jeune' if foyer else '')
+    aeeh = foyer['aeeh'] and _champ_yes(_champ(enfant, labels['aeeh']))
+    situation = 'AEEH' if aeeh else ('jeune' if foyer['qf'] else '')
     return {
         **common,
         'reference': f'dn:{number}:enfant-{index}',
+        'caisse': foyer['caisse'],
         'prenom': _champ_text(_champ(enfant, labels['prenom'])),
         'nom': _champ_text(_champ(enfant, labels['nom'])),
         'date_naissance': _champ_date(_champ(enfant, labels['date_naissance'])),
@@ -381,12 +331,10 @@ def _dossier_rows(dossier: dict, demarche) -> list[dict]:
     address = (_champ(champs, labels['adresse']) or {}).get('address') or {}
     number = str(dossier['number'])
     common = {
-        'source': 'dn',
         'dossier_id': dossier['id'],
         'dossier_number': number,
         'lien': DN_DOSSIER_URL.format(demarche=demarche, dossier=number),
         'email': _text(email),
-        'caisse': _champ_text(_champ(champs, labels['caisse'])),
         'code_insee': _text(address.get('cityCode')),
         'code_postal': _text(address.get('postalCode')),
         'commune': _text(address.get('cityName')),
@@ -395,6 +343,8 @@ def _dossier_rows(dossier: dict, demarche) -> list[dict]:
                               or _text(demandeur.get('civilite'))),
         'allocataire_prenom': _text(demandeur.get('prenom')),
         'allocataire_nom': _text(demandeur.get('nom')),
+        # Asked of every applicant, who is also the children's allocataire.
+        'allocataire_date_naissance': _champ_date(_champ(champs, labels['date_naissance'])),
     }
     applicant = {
         'prenom': common['allocataire_prenom'],
@@ -410,16 +360,22 @@ def _dossier_rows(dossier: dict, demarche) -> list[dict]:
         found.append({
             **common, **applicant,
             'reference': f'dn:{number}:demandeur',
-            'date_naissance': _champ_date(_champ(champs, labels['date_naissance'])),
+            'date_naissance': common['allocataire_date_naissance'],
             'situation_label': beneficiaire_de,
             'situation': self_situation,
+            'caisse': _champ_text(_champ(champs, labels['caisse'])),
             'ine': ine,
             'allocataire_matricule': ine,
         })
 
-    # A block answered "no children" may still carry rows typed before that answer.
+    # A block answered "no children" may still carry rows typed before that answer, and a
+    # child's AEEH answer may predate the foyer's "no".
     if not _champ_no(_champ(champs, labels['a_des_enfants'])):
-        foyer = _champ_yes(_champ(champs, labels['foyer_qf_aeeh']))
+        foyer = {
+            'caisse': _champ_text(_champ(champs, labels['caisse_enfants'])),
+            'qf': _champ_yes(_champ(champs, labels['foyer_qf'])),
+            'aeeh': not _champ_no(_champ(champs, labels['enfants_aeeh'])),
+        }
         found += [_enfant_row(row, common, number, index, foyer)
                   for index, row in enumerate(_enfant_rows(dossier, champs), start=1)]
 
@@ -443,9 +399,8 @@ def dn_rows(raw: dict) -> list[dict]:
             for row in _dossier_rows(dossier, raw.get('demarche', ''))]
 
 
-def extract(grist_raw: dict, dn_raw: dict) -> pd.DataFrame:
-    rows = grist_rows(grist_raw) + dn_rows(dn_raw)
-    return pd.DataFrame(rows, columns=EXTRACTED_COLUMNS).fillna('')
+def extract(dn_raw: dict) -> pd.DataFrame:
+    return pd.DataFrame(dn_rows(dn_raw), columns=EXTRACTED_COLUMNS).fillna('')
 
 
 # --- clean ------------------------------------------------------------------------------
@@ -496,25 +451,32 @@ def validate(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     valid = df[df['motif'] == ''].copy()
     valid['date_naissance'] = valid['date_naissance'].map(parse_date).map(lambda d: d.isoformat())
+    # Only serves a later FranceConnect run to find the code again: missing or unreadable, it
+    # is left out rather than rejecting the line.
+    valid['allocataire_date_naissance'] = valid['allocataire_date_naissance'].map(parse_date).map(
+        lambda d: d.isoformat() if d else '')
     valid['genre'] = valid['genre'].map(_genre)
     valid['allocataire_genre'] = valid['allocataire_genre'].map(_genre)
     valid['email'] = valid['email'].str.lower()
-    valid['code_insee'] = valid['code_insee'].map(lambda v: normalize_insee(v) if v else '').replace(NO_INSEE, '')
+    valid['code_insee'] = valid['code_insee'].map(lambda v: normalize_insee(v) if v else '')
     valid['organisme'] = [
         fc.ORGANISME_BOURSIER if situation == 'boursier'
         else mapping.organisme_of_caisse(caisse)
         for situation, caisse in zip(valid['situation'], valid['caisse'], strict=True)
     ]
-    caf = valid['organisme'] == 'CAF'
-    valid.loc[caf, 'allocataire_matricule'] = valid.loc[caf, 'allocataire_matricule'].map(
-        normalize_caf_matricule)
     return valid, df[df['motif'] != '']
 
 
+def _person_key(df: pd.DataFrame) -> pd.Series:
+    return (partners.normalise_recherche(df['nom']) + '|'
+            + partners.normalise_recherche(df['prenom']) + '|' + df['date_naissance'])
+
+
 def drop_duplicates(valid: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """The same person twice in the batch (in one source or across both): the first wins."""
-    key = (partners.normalise_recherche(valid['nom']) + '|'
-           + partners.normalise_recherche(valid['prenom']) + '|' + valid['date_naissance'])
+    """The same person twice in the batch (in one dossier or across several) under the same
+    allocataire: the first wins. Under another one, split sends the next to review."""
+    key = (_person_key(valid) + '|' + partners.normalise_recherche(valid['allocataire_nom']) + '|'
+           + partners.normalise_recherche(valid['allocataire_prenom']))
     duplicated = key.duplicated(keep='first')
     first_reference = valid['reference'].groupby(key).transform('first')
     duplicates = valid[duplicated].assign(motif='doublon de ' + first_reference[duplicated])
@@ -544,6 +506,8 @@ def to_psp(valid: pd.DataFrame) -> pd.DataFrame:
         'allocataire-telephone': None,
         'allocataire-nom': valid['nom'].where(on_self, valid['allocataire_nom']),
         'allocataire-prenom': valid['prenom'].where(on_self, valid['allocataire_prenom']),
+        'allocataire-date_naissance': _or_none(
+            valid['date_naissance'].where(on_self, valid['allocataire_date_naissance'])),
         'allocataire-courriel': valid['email'],
         'adresse_allocataire-voie': _or_none(valid['voie']),
         'adresse_allocataire-code_postal': _or_none(valid['code_postal']),
@@ -556,13 +520,13 @@ def to_psp(valid: pd.DataFrame) -> pd.DataFrame:
     # lamp01 holds the same names whatever the journey: unaccent_and_upper, nothing more.
     df = partners.normalize_identity_casing(df)
     df = partners.normalize_email_casing(df)
-    df = partners.add_allocataire_json_column(df)
+    df = partners.add_allocataire_json_column(df, extra_fields=ALLOCATAIRE_EXTRA_FIELDS)
     df = partners.add_adresse_allocataire_json_column(df)
     return partners.shift_birthdate_by_hours(df)
 
 
 def build_match_candidates(psp: pd.DataFrame, valid: pd.DataFrame) -> pd.DataFrame:
-    """The names as typed: match_grist_dn.sql normalises both sides with the same function."""
+    """The names as typed: match_dn.sql normalises both sides with the same function."""
     return pd.DataFrame({
         'eligibility_result_id': psp['eligibility_result_id'],
         'situation': valid['situation'],
@@ -578,34 +542,38 @@ def build_match_candidates(psp: pd.DataFrame, valid: pd.DataFrame) -> pd.DataFra
 
 
 def build_cnaf_extra_field_rows(psp: pd.DataFrame, valid: pd.DataFrame) -> pd.DataFrame:
-    """Filled for AAH CAF only, like the AAH support pipeline: without it the FranceConnect
-    aah_caf strategy never finds the code again and the site would mint a second one."""
-    aah_caf = (valid['situation'] == 'AAH') & (valid['organisme'] == 'CAF')
-    return pd.DataFrame({
+    """The allocataire of every CAF line, as lamp01 holds it: the FranceConnect CAF strategies
+    find such a code again only through this side table, and without it the site would mint a
+    second one. The AAH beneficiary is their own allocataire, a child's is their parent. Empty
+    off CAF, no strategy reads it there."""
+    allocataire = psp['allocataire'].map(json.loads)
+    on_self = valid['situation'].isin(SELF_SITUATIONS)
+    rows = pd.DataFrame({
         'eligibility_result_id': psp['eligibility_result_id'],
-        'cnaf_allocataire_nom_naissance': psp['nom'].where(aah_caf, ''),
-        'cnaf_allocataire_date_naissance': valid['date_naissance'].where(aah_caf, ''),
-        'cnaf_allocataire_genre': valid['genre'].map(GENDER_BY_GENRE).where(aah_caf, ''),
-    })[['eligibility_result_id', *fc.CNAF_EXTRA_FIELD_COLUMNS]]
+        'cnaf_allocataire_nom_naissance': allocataire.map(lambda a: a.get('nom', '')),
+        'cnaf_allocataire_date_naissance': allocataire.map(lambda a: a.get('date_naissance', '')),
+        'cnaf_allocataire_genre': valid['genre'].where(on_self, valid['allocataire_genre']).map(
+            GENDER_BY_GENRE),
+    })
+    rows.loc[valid['organisme'] != 'CAF', fc.CNAF_EXTRA_FIELD_COLUMNS] = ''
+    return rows.fillna('')[['eligibility_result_id', *fc.CNAF_EXTRA_FIELD_COLUMNS]]
 
 
 def build_identities(psp: pd.DataFrame, valid: pd.DataFrame) -> pd.DataFrame:
-    """What the mails, the DN messages and the investigation show: names as typed."""
+    """What the DN messages and the investigation show: names as typed."""
     on_self = valid['situation'].isin(SELF_SITUATIONS)
     return valid.assign(
         eligibility_result_id=psp['eligibility_result_id'],
         allocataire_prenom=valid['prenom'].where(on_self, valid['allocataire_prenom']),
         allocataire_nom=valid['nom'].where(on_self, valid['allocataire_nom']),
         allocataire_genre=valid['genre'].where(on_self, valid['allocataire_genre']),
+        allocataire_date_naissance=valid['date_naissance'].where(on_self, valid['allocataire_date_naissance']),
     ).reindex(columns=IDENTITY_COLUMNS)
 
 
-def clean(grist_filepath, dn_filepath, output_filepath, match_filepath, cnaf_extra_filepath,
-          identities_filepath, rejects_filepath) -> dict:
-    grist_raw = json.loads(Path(grist_filepath).read_text(encoding='utf-8'))
-    dn_raw = json.loads(Path(dn_filepath).read_text(encoding='utf-8'))
-
-    extracted = extract(grist_raw, dn_raw)
+def clean(dn_filepath, output_filepath, match_filepath, cnaf_extra_filepath, identities_filepath,
+          rejects_filepath) -> dict:
+    extracted = extract(json.loads(Path(dn_filepath).read_text(encoding='utf-8')))
     valid, rejected = validate(extracted)
     valid, duplicates = drop_duplicates(valid)
     rejected = pd.concat([rejected, duplicates])
@@ -626,8 +594,6 @@ def clean(grist_filepath, dn_filepath, output_filepath, match_filepath, cnaf_ext
 
     return {
         'lignes_lues': len(extracted),
-        'lignes_grist': int((extracted['source'] == 'grist').sum()),
-        'lignes_dn': int((extracted['source'] == 'dn').sum()),
         'lignes_rejetees': len(rejected) - len(duplicates),
         'doublons_du_lot': len(duplicates),
         'beneficiaires': len(valid),
@@ -639,21 +605,30 @@ def clean(grist_filepath, dn_filepath, output_filepath, match_filepath, cnaf_ext
 # --- split ------------------------------------------------------------------------------
 
 VERDICT_MOTIF = {
-    'exacte': "déjà connu de lamp01 (nom, prénom et date de naissance identiques)",
+    'exacte': "déjà connu de lamp01 (nom, prénom et date de naissance identiques, et même parent pour un enfant)",
     'ine': "déjà connu de lamp01 (même INE)",
-    'proche': "ressemble à une personne connue de lamp01 : voir investigation.csv",
-    'parent': "même date de naissance et même parent qu'une personne connue de lamp01 : voir investigation.csv",
     'identite': ("boursier sans INE : mêmes nom, prénom et date de naissance qu'une personne connue de "
                  "lamp01, mais genre ou situation différents : voir investigation.csv"),
+    'autre_parent': ("mêmes nom, prénom et date de naissance qu'un enfant connu de lamp01, mais pas le "
+                     "même parent : voir investigation.csv"),
 }
 # The à vérifier motif a line gets, from the most to the least specific of its correspondences.
-REVIEW_TYPES = ('identite', 'proche', 'parent')
+REVIEW_TYPES = ('identite', 'autre_parent')
+BATCH_OTHER_PARENT_MOTIF = "même enfant que {reference}, déclaré dans ce passage par un autre parent"
+
+
+def batch_first_holder(identities: pd.DataFrame) -> pd.Series:
+    """The reference of the earlier line holding the same person under another allocataire
+    (drop_duplicates kept both), '' for the first."""
+    key = _person_key(identities)
+    first = identities['reference'].groupby(key).transform('first')
+    return first.where(key.duplicated(keep='first'), '')
 
 
 def split(cleaned_filepath, correspondences_filepath, touched_filepath, identities_filepath,
           rejects_filepath, to_code_filepath, verdicts_filepath, investigation_filepath) -> dict:
-    """Exact (or INE) correspondence = doublon; close, same-parent or loose boursier one only =
-    à vérifier; none = à coder."""
+    """Exact (or INE) correspondence = doublon; other-parent or loose boursier one only = à
+    vérifier, as is a child the batch already holds under another parent; none = à coder."""
     cleaned = _read(cleaned_filepath, quoting=csv.QUOTE_ALL)
     correspondences = _read(correspondences_filepath)
     touched = _read(touched_filepath)
@@ -661,13 +636,16 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     rejects = _read(rejects_filepath)
 
     assert {'eligibility_result_id', 'id_psp', 'type'} <= set(correspondences.columns), \
-        "le fichier des correspondances ne vient pas de match_grist_dn.sql"
+        "le fichier des correspondances ne vient pas de match_dn.sql"
 
     types = correspondences.groupby('eligibility_result_id')['type'].agg(set)
     doublon_type = {rid: ('ine' if 'ine' in t else 'exacte') for rid, t in types.items()
                     if t & {'exacte', 'ine'}}
     review_type = {rid: next(kind for kind in REVIEW_TYPES if kind in t) for rid, t in types.items()
                    if rid not in doublon_type}
+    doublon_codes = (correspondences[correspondences['type'].isin({'exacte', 'ine'})]
+                     .groupby('eligibility_result_id')['id_psp']
+                     .agg(lambda codes: ', '.join(sorted(set(codes)))))
 
     verdict = pd.Series('a_coder', index=identities.index)
     motif = pd.Series('', index=identities.index)
@@ -675,17 +653,22 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     is_doublon = ids.isin(doublon_type)
     verdict[is_doublon] = 'doublon'
     motif[is_doublon] = ids[is_doublon].map(doublon_type).map(VERDICT_MOTIF)
+    code_lamp01 = ids.map(doublon_codes).where(is_doublon, '')
     is_review = ids.isin(review_type)
     verdict[is_review] = 'a_verifier'
     motif[is_review] = ids[is_review].map(review_type).map(VERDICT_MOTIF)
+    holder = batch_first_holder(identities)
+    in_batch = (holder != '') & (verdict == 'a_coder')
+    verdict[in_batch] = 'a_verifier'
+    motif[in_batch] = holder[in_batch].map(lambda reference: BATCH_OTHER_PARENT_MOTIF.format(reference=reference))
 
     verdicts = pd.concat([
-        identities.assign(verdict=verdict, motif=motif),
+        identities.assign(verdict=verdict, motif=motif, code_lamp01=code_lamp01),
         rejects.assign(eligibility_result_id='', verdict='rejete'),
     ])
     _write(verdicts.sort_values('reference'), verdicts_filepath, VERDICT_COLUMNS)
 
-    _write(cleaned[~cleaned['eligibility_result_id'].isin(types.index)], to_code_filepath,
+    _write(cleaned[cleaned['eligibility_result_id'].isin(ids[verdict == 'a_coder'])], to_code_filepath,
            CLEANED_COLUMNS, quoting=csv.QUOTE_ALL)
 
     investigation = correspondences.merge(identities, on='eligibility_result_id').merge(
@@ -705,8 +688,8 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
         'saisie_allocataire_nom': investigation['allocataire_nom'],
         'saisie_allocataire_prenom': investigation['allocataire_prenom'],
         'saisie_allocataire_genre': investigation['allocataire_genre'],
+        'saisie_allocataire_date_naissance': investigation['allocataire_date_naissance'],
         'saisie_email': investigation['email'],
-        'saisie_commentaire': investigation['commentaire'],
         **{f'lamp01_{column}': investigation[f'lamp01_{column}'] for column in TOUCHED_COLUMNS},
     })
     _write(investigation.sort_values(['reference', 'type']), investigation_filepath,
@@ -715,30 +698,11 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     return {
         'lus': len(identities),
         'doublons': int(is_doublon.sum()),
-        'a_verifier': int(is_review.sum()),
+        'a_verifier': int((verdict == 'a_verifier').sum()),
         'a_coder': int((verdict == 'a_coder').sum()),
         'rejets': len(rejects),
         'investigation': str(investigation_filepath),
     }
-
-
-# --- emails -----------------------------------------------------------------------------
-
-def build_emails(with_codes_filepath, identities_filepath, output_filepath) -> dict:
-    """One line per coded beneficiary, in the shape `pnpm codes:support-emails` reads."""
-    with_codes = _read(with_codes_filepath, quoting=csv.QUOTE_ALL)
-    identities = _read(identities_filepath)
-
-    assert with_codes['id_psp'].ne('').all(), "des bénéficiaires n'ont pas de code"
-
-    emails = with_codes[['eligibility_result_id', 'id_psp']].merge(
-        identities, on='eligibility_result_id', how='left', validate='1:1', indicator=True)
-    assert emails['_merge'].eq('both').all(), "des bénéficiaires codés n'ont pas d'identité"
-
-    emails = emails.rename(columns={'eligibility_result_id': 'id', 'id_psp': 'code'})
-    _write(emails, output_filepath, EMAIL_COLUMNS)
-
-    return {'courriels': len(emails), 'sortie': str(output_filepath)}
 
 
 # --- retours ----------------------------------------------------------------------------
@@ -773,14 +737,6 @@ class Journal:
             self.done.add((reference, action))
 
 
-def _delivered_ids(envois_filepath) -> set:
-    path = Path(envois_filepath) if envois_filepath else None
-    if path is None or not path.exists() or not path.stat().st_size:
-        return set()
-    envois = _read(path)
-    return set(envois.loc[envois['statut'].isin(['envoye', 'simule']), 'id'])
-
-
 def _codes(codes_filepath) -> dict:
     """eligibility_result_id -> code, from the run's writeback.csv (absent: nothing was coded)."""
     path = Path(codes_filepath) if codes_filepath else None
@@ -790,30 +746,11 @@ def _codes(codes_filepath) -> dict:
     return dict(zip(codes['eligibility_result_id'], codes['id_psp'], strict=True))
 
 
-def final_statuses(verdicts: pd.DataFrame, delivered: set, refused: bool = False) -> pd.DataFrame:
-    """Each line's outcome; a coded line whose mail has not left yet stays pending (''),
-    unless production refused the drop (refuse_prod)."""
-    statut = verdicts['verdict'].map({'rejete': 'rejete', 'doublon': 'doublon',
-                                      'a_verifier': 'a_verifier'}).fillna('')
-    coded = verdicts['verdict'] == 'a_coder'
-    if refused:
-        statut[coded] = 'refuse_prod'
-    else:
-        statut[coded & verdicts['eligibility_result_id'].isin(delivered)] = 'code_envoye'
-    return verdicts.assign(statut=statut)
-
-
-def grist_update(row, columns: dict) -> dict:
-    statut = mapping.GRIST_STATUT[row['statut']]
-    if columns.get('motif'):
-        fields = {columns['statut']: statut, columns['motif']: row['motif']}
-    else:
-        fields = {columns['statut']: f"{statut} : {row['motif']}" if row['motif'] else statut}
-    # Only a code this run drew: a doublon's comes from lamp01 and could be a homonym's.
-    # columns.get: a run fetched before the Code column existed has none.
-    if columns.get('code') and row['statut'] == 'code_envoye':
-        fields[columns['code']] = row['code']
-    return {'id': int(row['grist_row_id']), 'fields': fields}
+def final_statuses(verdicts: pd.DataFrame, refused: bool = False) -> pd.DataFrame:
+    """Each line's outcome: a coded line is handed its code by its dossier's message, unless
+    production refused the drop (refuse_prod)."""
+    coded = verdicts['verdict'].map({'a_coder': 'refuse_prod' if refused else 'code_envoye'})
+    return verdicts.assign(statut=coded.fillna(verdicts['verdict']))
 
 
 def dn_decision(lines: pd.DataFrame) -> tuple[str, bool]:
@@ -836,11 +773,15 @@ def dn_message(lines: pd.DataFrame) -> str:
 
 
 def dn_annotation(lines: pd.DataFrame, current) -> str:
-    """The codes annotation once this run's codes are appended to what it held; '' when the
-    dossier got no new code."""
+    """The codes annotation once this run's codes and doublons are appended to what it held; ''
+    when the dossier got nothing new."""
     kept = [line for line in (current or '').splitlines() if line.strip()]
-    added = [mapping.DN_ANNOTATION_LINE.format(prenom=row['prenom'], nom=row['nom'], code=row['code'])
-             for _, row in lines[lines['statut'] == 'code_envoye'].iterrows()]
+    # A doublon without code_lamp01 comes from a verdicts.csv older than it: left out.
+    wanted = lines['statut'].eq('code_envoye') | (lines['statut'].eq('doublon') & lines['code_lamp01'].ne(''))
+    added = [mapping.DN_ANNOTATION_LINE[row['statut']].format(
+                 prenom=row['prenom'], nom=row['nom'], code=row['code'], motif=row['motif'],
+                 code_lamp01=row['code_lamp01'])
+             for _, row in lines[wanted].iterrows()]
     new = [line for line in added if line not in kept]
     return '\n'.join(kept + new) if new else ''
 
@@ -859,39 +800,16 @@ def _failure(error: Exception) -> str:
     return f"{type(error).__name__} : {error}"
 
 
-def send_grist(lines: pd.DataFrame, columns: dict, journal: Journal, client, table_id,
-               dry_run: bool) -> None:
-    pending = [row for _, row in lines.iterrows() if not journal.is_done(row['reference'], 'statut')]
-    if dry_run:
-        for row in pending:
-            journal.record(row['reference'], 'statut', 'simule',
-                           json.dumps(grist_update(row, columns)['fields'], ensure_ascii=False))
-        return
-
-    for start in range(0, len(pending), UPDATE_BATCH_SIZE):
-        batch = pending[start:start + UPDATE_BATCH_SIZE]
-        try:
-            client.update_records(table_id, [grist_update(row, columns) for row in batch])
-            for row in batch:
-                journal.record(row['reference'], 'statut', 'fait', mapping.GRIST_STATUT[row['statut']])
-        except requests.RequestException:
-            # One bad row (deleted meanwhile) fails its whole batch: retry them one by one.
-            for row in batch:
-                try:
-                    client.update_records(table_id, [grist_update(row, columns)])
-                    journal.record(row['reference'], 'statut', 'fait', mapping.GRIST_STATUT[row['statut']])
-                except requests.RequestException as error:
-                    journal.record(row['reference'], 'statut', 'erreur', f"Grist : {error}")
-
-
-def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, journal: Journal, client,
-            instructeur_id, dry_run: bool) -> int:
-    """Codes annotation, message, label, then acceptance, per dossier; returns how many were
-    accepted. annotations: dossier number -> its codes annotation as fetched (None: missing)."""
+def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, instructeurs: dict,
+            journal: Journal, client, dry_run: bool) -> int:
+    """Codes annotation, message, labels, then acceptance, per dossier; returns how many were
+    accepted. annotations: dossier number -> its codes annotation as fetched (None: missing);
+    instructeurs: dossier number -> the instructeur it is answered as."""
     accepted = 0
     for number, dossier in lines.groupby('dossier_number', sort=True):
         reference = f'dn:{number}'
         dossier_id = dossier['dossier_id'].iloc[0]
+        instructeur_id = instructeurs[str(number)]
         label_key, accept = dn_decision(dossier)
         annotation = annotations.get(str(number))
         codes = dn_annotation(dossier, (annotation or {}).get('stringValue'))
@@ -900,6 +818,8 @@ def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, journal: Journ
         if not dossier['statut'].eq('refuse_prod').any():
             steps.append(('message', dn_message(dossier)))
         steps.append(('label', mapping.DN_LABELS[label_key]))
+        if dossier['statut'].eq('doublon').any():
+            steps.append(('label-doublon', mapping.DN_LABELS['doublon']))
         if accept:
             steps.append(('accepter', mapping.DN_ACCEPT_MOTIVATION))
 
@@ -920,6 +840,8 @@ def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, journal: Journ
                     client.envoyer_message(dossier_id, instructeur_id, detail)
                 elif action == 'label':
                     client.ajouter_label(dossier_id, labels[label_key])
+                elif action == 'label-doublon':
+                    client.ajouter_label(dossier_id, labels['doublon'])
                 else:
                     client.accepter(dossier_id, instructeur_id, mapping.DN_ACCEPT_MOTIVATION)
             except Exception as error:  # noqa: BLE001 - one dossier never stops the others
@@ -930,51 +852,88 @@ def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, journal: Journ
     return accepted
 
 
-def retours(verdicts_filepath, envois_filepath, codes_filepath, grist_filepath, dn_filepath,
-            journal_filepath, dry_run=False, grist_client=None, dn_client=None,
-            refused_drop='') -> dict:
+def retours(verdicts_filepath, codes_filepath, dn_filepath, journal_filepath, dry_run=False,
+            dn_client=None, refused_drop='') -> dict:
     """refused_drop: the name of the drop production's injector filed in failed/, if it did."""
-    verdicts = final_statuses(_read(verdicts_filepath), _delivered_ids(envois_filepath),
+    # reindex: a run resumed after an upgrade may hold a verdicts.csv without code_lamp01.
+    verdicts = final_statuses(_read(verdicts_filepath).reindex(columns=VERDICT_COLUMNS, fill_value=''),
                               refused=bool(refused_drop))
     refused = verdicts['statut'] == 'refuse_prod'
     verdicts.loc[refused, 'motif'] = f"refusé par l'injecteur de production ({refused_drop})"
     verdicts['code'] = verdicts['eligibility_result_id'].map(_codes(codes_filepath)).fillna('')
     assert verdicts.loc[verdicts['statut'] == 'code_envoye', 'code'].ne('').all(), \
-        "des lignes au mail parti n'ont pas de code dans writeback.csv"
+        "des lignes codées n'ont pas de code dans writeback.csv"
     journal = Journal(journal_filepath)
-    pending = verdicts['statut'] == ''
 
-    grist_lines = verdicts[(verdicts['source'] == 'grist') & ~pending]
-    if len(grist_lines):
-        grist_raw = json.loads(Path(grist_filepath).read_text(encoding='utf-8'))
-        if grist_client is None and not dry_run:
-            grist_client = GristClient(_required_env('GRIST_API_URL'), _required_env('GRIST_API_KEY'),
-                                       _required_env('GRIST_DOC_ID'))
-        send_grist(grist_lines, grist_raw['columns'], journal, grist_client, grist_raw.get('table'),
-                   dry_run)
-
-    dn_all = verdicts[verdicts['source'] == 'dn']
-    # A dossier speaks once, with all its lines settled.
-    waiting = set(dn_all.loc[pending[dn_all.index], 'dossier_number'])
-    dn_lines = dn_all[~dn_all['dossier_number'].isin(waiting)]
     accepted = 0
-    if len(dn_lines):
+    if len(verdicts):
         dn_raw = json.loads(Path(dn_filepath).read_text(encoding='utf-8'))
-        instructeur_id = os.environ.get('DN_INSTRUCTEUR_ID', '')
         if dn_client is None and not dry_run:
             dn_client = DnClient(os.environ.get('DN_API_URL') or DEFAULT_API_URL,
                                  _required_env('DN_API_TOKEN'))
-            instructeur_id = _required_env('DN_INSTRUCTEUR_ID')
         annotations = {str(dossier['number']): _codes_annotation(dossier) for dossier in dn_raw['dossiers']}
-        accepted = send_dn(dn_lines, dn_raw['labels'], annotations, journal, dn_client,
-                           instructeur_id, dry_run)
+        instructeurs = {str(dossier['number']): dn_instructeur_id(dossier)
+                        for dossier in dn_raw['dossiers']}
+        accepted = send_dn(verdicts, dn_raw['labels'], annotations, instructeurs, journal, dn_client,
+                           dry_run)
 
     return {
         'lignes': len(verdicts),
         'refusees_par_la_production': int(refused.sum()),
-        'en_attente_du_mail': int(pending.sum()),
-        'dossiers_dn_en_attente': len(waiting),
         'dossiers_dn_acceptes': accepted,
+        'actions_faites': journal.counts['fait'],
+        'actions_simulees': journal.counts['simule'],
+        'erreurs': journal.counts['erreur'],
+        'journal': str(journal_filepath),
+    }
+
+
+# --- FranceConnect label ----------------------------------------------------------------
+
+# Deposited only: DN refuses a label on a brouillon.
+FRANCECONNECT_LABEL_STATES = ('en_construction', 'en_instruction')
+
+
+def label_franceconnect(client, numero: int, journal: Journal, dry_run: bool,
+                        only: set[int] | None = None) -> int:
+    """Labels « FranceConnect » the deposited dossiers the worker pre-filled from the espace
+    FranceConnect (the démarche's only pre-filled ones) or whose usager logged in to DN through
+    FranceConnect; returns how many there are."""
+    wanted = mapping.fold(mapping.DN_LABEL_FRANCECONNECT)
+    label_id = next((label_id for name, label_id in client.labels(numero).items()
+                     if mapping.fold(name) == wanted), None)
+    if label_id is None:
+        raise ValueError(f"label « {mapping.DN_LABEL_FRANCECONNECT} » absent de la démarche {numero}")
+
+    # By number: a dossier put en instruction between the two reads is seen once.
+    dossiers = {dossier['number']: dossier for state in FRANCECONNECT_LABEL_STATES
+                for dossier in client.iter_dossier_labels(numero, state)
+                if dn_franceconnect(dossier) and (only is None or dossier['number'] in only)}
+
+    for number, dossier in sorted(dossiers.items()):
+        if _holds_label(dossier, mapping.DN_LABEL_FRANCECONNECT):
+            continue
+        reference = f'dn:{number}'
+        if dry_run:
+            journal.record(reference, 'label-franceconnect', 'simule', mapping.DN_LABEL_FRANCECONNECT)
+            continue
+        try:
+            client.ajouter_label(dossier['id'], label_id)
+        except Exception as error:  # noqa: BLE001 - one dossier never stops the others
+            journal.record(reference, 'label-franceconnect', 'erreur', _failure(error))
+            continue
+        journal.record(reference, 'label-franceconnect', 'fait', mapping.DN_LABEL_FRANCECONNECT)
+    return len(dossiers)
+
+
+def franceconnect(journal_filepath, dry_run=False, dn_client=None) -> dict:
+    client = dn_client or DnClient(os.environ.get('DN_API_URL') or DEFAULT_API_URL,
+                                   _required_env('DN_API_TOKEN'))
+    journal = Journal(journal_filepath)
+    found = label_franceconnect(client, int(_required_env('DN_DEMARCHE_NUMBER')), journal,
+                                dry_run, dossier_numbers(os.environ.get('DN_DOSSIERS')))
+    return {
+        'dossiers_franceconnect': found,
         'actions_faites': journal.counts['fait'],
         'actions_simulees': journal.counts['simule'],
         'erreurs': journal.counts['erreur'],
@@ -989,26 +948,15 @@ def print_stats(stats: dict) -> None:
         print(f"{key} : {value}")
 
 
-def _cmd_fetch(args) -> dict:
-    sources = [s.strip() for s in os.environ.get('GRIST_DN_SOURCES', ','.join(SOURCES)).split(',')
-               if s.strip()]
-    unknown = set(sources) - set(SOURCES)
-    if unknown:
-        raise SystemExit(f"GRIST_DN_SOURCES : source(s) inconnue(s) {', '.join(sorted(unknown))}")
-    return fetch(args.grist_out, args.dn_out, sources)
-
-
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     subparsers = parser.add_subparsers(dest='command', required=True)
 
-    fetch_parser = subparsers.add_parser('fetch', help="Grist + DN -> JSON brut")
-    fetch_parser.add_argument('--grist-out', required=True)
+    fetch_parser = subparsers.add_parser('fetch', help="DN -> JSON brut")
     fetch_parser.add_argument('--dn-out', required=True)
-    fetch_parser.set_defaults(func=_cmd_fetch)
+    fetch_parser.set_defaults(func=lambda a: fetch(a.dn_out))
 
     clean_parser = subparsers.add_parser('clean', help="JSON brut -> schéma PSP")
-    clean_parser.add_argument('--grist-in', required=True)
     clean_parser.add_argument('--dn-in', required=True)
     clean_parser.add_argument('--output', required=True)
     clean_parser.add_argument('--match-out', required=True)
@@ -1016,8 +964,7 @@ def main(argv=None) -> int:
     clean_parser.add_argument('--identities-out', required=True)
     clean_parser.add_argument('--rejects-out', required=True)
     clean_parser.set_defaults(func=lambda a: clean(
-        a.grist_in, a.dn_in, a.output, a.match_out, a.cnaf_extra_out, a.identities_out,
-        a.rejects_out))
+        a.dn_in, a.output, a.match_out, a.cnaf_extra_out, a.identities_out, a.rejects_out))
 
     split_parser = subparsers.add_parser('split', help="doublons / à vérifier / à coder")
     split_parser.add_argument('--input', required=True)
@@ -1032,31 +979,26 @@ def main(argv=None) -> int:
         a.input, a.correspondences, a.touched, a.identities, a.rejects, a.to_code_out,
         a.verdicts_out, a.investigation_out))
 
-    emails_parser = subparsers.add_parser('emails', help="entrée de pnpm codes:support-emails")
-    emails_parser.add_argument('--with-codes', required=True)
-    emails_parser.add_argument('--identities', required=True)
-    emails_parser.add_argument('--output', required=True)
-    emails_parser.set_defaults(func=lambda a: build_emails(a.with_codes, a.identities, a.output))
-
-    retours_parser = subparsers.add_parser(
-        'retours', help="statut Grist, annotation/message/label/acceptation DN")
+    retours_parser = subparsers.add_parser('retours', help="annotation, message, label, acceptation DN")
     retours_parser.add_argument('--verdicts', required=True)
-    retours_parser.add_argument('--envois', help="journal des mails (absent : aucun code)")
     retours_parser.add_argument('--codes', help="writeback.csv du passage (absent : aucun code)")
-    retours_parser.add_argument('--grist-in', required=True)
     retours_parser.add_argument('--dn-in', required=True)
     retours_parser.add_argument('--journal', required=True)
     retours_parser.add_argument('--dry-run', action='store_true')
     retours_parser.add_argument('--refus-production', default='',
                                 help="nom du dépôt que l'injecteur de production a rangé dans failed/")
     retours_parser.set_defaults(func=lambda a: retours(
-        a.verdicts, a.envois, a.codes, a.grist_in, a.dn_in, a.journal, a.dry_run,
-        refused_drop=a.refus_production))
+        a.verdicts, a.codes, a.dn_in, a.journal, a.dry_run, refused_drop=a.refus_production))
+
+    label_parser = subparsers.add_parser('label-fc', help="label FranceConnect des dossiers FranceConnect")
+    label_parser.add_argument('--journal', required=True)
+    label_parser.add_argument('--dry-run', action='store_true')
+    label_parser.set_defaults(func=lambda a: franceconnect(a.journal, a.dry_run))
 
     args = parser.parse_args(argv)
     stats = args.func(args)
     print_stats(stats)
-    if args.command == 'retours' and (stats['erreurs'] or stats['en_attente_du_mail']):
+    if args.command in ('retours', 'label-fc') and stats['erreurs']:
         return 1
     return 0
 

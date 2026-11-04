@@ -6,7 +6,7 @@
 # floor to 23.0.1, the fix for GHSA-rgxp-2hwp-jwgg (use-after-free reading a pre-buffered
 # IPC file).
 pandas==2.3.3
-# Grist and Démarches Numériques API clients (2026/grist-dn-pipeline). Pure Python.
+# Démarches Numériques API client (2026/dn-pipeline). Pure Python.
 requests==2.33.0
 python-dotenv==1.2.2
 pre-commit==3.7.0

@@ -70,6 +70,14 @@ est **strict** : un candidat est apparié ssi sa stratégie retourne **exactemen
 distinct. Zéro ou plusieurs = non apparié → code neuf, le comportement le moins risqué des
 deux. Aucun départageur.
 
+**Un enfant est cherché sous sa situation, puis sous l'autre** (AEEH ↔ jeune), seulement si la
+première n'atteint personne. Les sources ne classent pas les deux aides pareil : ce pipeline met
+en `jeune` un enfant couvert par le quotient même s'il touche l'AEEH, dn-pipeline met en `AEEH` une
+AEEH déclarée, les fichiers CNAF déclarent l'AEEH sans regarder le quotient. Le repli applique la
+stratégie de la ligne de base atteinte (`aeeh_*` sur une ligne AEEH, `qf_*` sur une ligne jeune),
+dans la même caisse. Un enfant codé sous les deux situations reçoit celui de la sienne. Le récap
+compte ces appariements dans `par_repli_situation`.
+
 **Au moins un des deux allocataires du foyer** (AEEH et jeune) : la base partenaire porte le
 responsable dossier, qui peut être l'AUTRE parent que celui qui s'est connecté. Chaque candidat
 présente donc jusqu'à deux personas allocataire — le connecté, et le conjoint quand

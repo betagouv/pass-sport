@@ -106,18 +106,22 @@ def normalize_country_label(label) -> str:
     """
     return re.sub(r'\s+', ' ', unaccent_and_upper(re.sub(r'[^\w]+', ' ', str(label)))).strip()
 
-def build_country_cog_lookup(df_cog_pays: pd.DataFrame) -> pd.Series:
+def build_country_cog_lookup(df_cog_pays: pd.DataFrame, value_column: str = 'COG') -> pd.Series:
     """
     Builds a normalized country label -> INSEE COG code lookup from v_pays_territoire.
 
     LIBCOG first, LIBENR ("Royaume du Maroc") as a fallback spelling for the same COG.
     Labels are compared unaccented/uppercased, since partner files are often ascii-encoded
     while the COG file is not.
+
+    value_column='CODEISO2' maps the label to its ISO code instead (Maroc -> MA). Territories
+    without one are left out.
     """
     cog_by_country_label = pd.concat([
-        df_cog_pays[['LIBCOG', 'COG']].rename(columns={'LIBCOG': 'label'}),
-        df_cog_pays[['LIBENR', 'COG']].rename(columns={'LIBENR': 'label'}),
+        df_cog_pays[['LIBCOG', value_column]].rename(columns={'LIBCOG': 'label'}),
+        df_cog_pays[['LIBENR', value_column]].rename(columns={'LIBENR': 'label'}),
     ])
     cog_by_country_label['label'] = cog_by_country_label['label'].map(normalize_country_label)
-    return cog_by_country_label[cog_by_country_label['label'] != ''].drop_duplicates(
-        subset='label', keep='first').set_index('label')['COG']
+    return cog_by_country_label[
+        (cog_by_country_label['label'] != '') & (cog_by_country_label[value_column] != '')
+    ].drop_duplicates(subset='label', keep='first').set_index('label')[value_column]

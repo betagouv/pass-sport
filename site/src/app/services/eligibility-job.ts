@@ -41,6 +41,14 @@ export type EligibilityJobData = {
   userAgent?: string | null;
 };
 
+// Mirror of the worker's FcDnDossierJobData (worker/src/jobs/fc-dn-dossier.ts): the identity
+// the prefill names the usager with, nothing the worker can read from its own journal.
+export type FcDnDossierJobData = {
+  identity: Pick<PivotIdentity, 'sub' | 'family_name' | 'given_name' | 'birthdate' | 'gender'>;
+  clientIp?: string | null;
+  userAgent?: string | null;
+};
+
 // One event to replay into eligibility_history. The site performs the LCA calls now, so it
 // is the only place that ever sees the raw answers; the worker just writes them down.
 export type LcaHistoryEvent = {
