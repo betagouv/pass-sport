@@ -1,16 +1,16 @@
-// Reads the support démarche's champs from the DN GraphQL API, prints the entry champs.ts must
+// Reads the support démarche's champs from the DN GraphQL API, prints the DN_CHAMPS champs.ts must
 // hold for it and checks the one it holds. Read-only, run by hand: the DN token belongs to the
 // DN pipeline (data/.env) and never goes on the worker.
 //
 //   pnpm dn:champs            # démarche DN_DEMARCHE_NUMBER
-//   pnpm dn:champs 159278
+//   pnpm dn:champs <numéro>   # another démarche
 //
 // Exit 1 when champs.ts differs from the démarche or a champ cannot be resolved.
 
 import "../load-env";
 import { existsSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
-import { CHAMPS_BY_DEMARCHE } from "../demarche-numerique/champs";
+import { DN_CHAMPS } from "../demarche-numerique/champs";
 import { resolveChamps, type ChampDescriptor } from "../demarche-numerique/champs-resolver";
 
 const DATA_ENV = "../data/.env";
@@ -96,10 +96,10 @@ async function main(): Promise<number> {
   console.log("\nproblèmes :");
   console.log(problems.length ? problems.map((p) => `  - ${p}`).join("\n") : "  aucun");
 
-  console.log(`\nentrée attendue dans CHAMPS_BY_DEMARCHE (src/demarche-numerique/champs.ts) :\n`);
-  console.log(`  ${number}: ${JSON.stringify(champs, null, 2).replace(/\n/g, "\n  ")},`);
+  console.log(`\nDN_CHAMPS attendu (src/demarche-numerique/champs.ts) :\n`);
+  console.log(JSON.stringify(champs, null, 2));
 
-  const upToDate = isDeepStrictEqual(CHAMPS_BY_DEMARCHE[number], champs);
+  const upToDate = isDeepStrictEqual(DN_CHAMPS, champs);
   console.log(`\nchamps.ts : ${upToDate ? "à jour" : "À METTRE À JOUR"}`);
 
   return upToDate && problems.length === 0 ? 0 : 1;

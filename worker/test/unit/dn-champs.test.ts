@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHAMPS_BY_DEMARCHE, type DnChamps } from "../../src/demarche-numerique/champs";
+import { DN_CHAMPS, type DnChamps } from "../../src/demarche-numerique/champs";
 import {
   DN_CHAMP_LABELS,
   DN_ENFANT_CHAMP_LABELS,
@@ -143,9 +143,9 @@ const checkConfigured = (champs: DnChamps) => {
   if (bourse) expect(named(bourse, SITUATION_WORDS)).toBe("boursier");
 };
 
-describe("CHAMPS_BY_DEMARCHE", () => {
+describe("DN_CHAMPS", () => {
   it("only holds answers the DN pipeline reads back as meant", () => {
     checkConfigured(resolveChamps(DESCRIPTORS).champs);
-    for (const champs of Object.values(CHAMPS_BY_DEMARCHE)) checkConfigured(champs);
+    checkConfigured(DN_CHAMPS);
   });
 });

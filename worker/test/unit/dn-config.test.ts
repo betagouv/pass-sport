@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DN_DEFAULT_BASE_URL, readDnConfig } from "../../src/demarche-numerique/config";
 
-const CHAMPS = { 4242: { ine: { id: "INE" } } };
+const CHAMPS = { ine: { id: "INE" } };
 const ENV_KEYS = ["DN_DEMARCHE_NUMBER", "DN_BASE_URL", "DN_REQUEST_TIMEOUT_MS"] as const;
 const saved = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 
@@ -19,14 +19,6 @@ describe("readDnConfig", () => {
     expect(readDnConfig(CHAMPS)).toEqual({ error: "DN_DEMARCHE_NUMBER is not set" });
   });
 
-  it("refuses a démarche without champ ids", () => {
-    process.env.DN_DEMARCHE_NUMBER = "159278";
-
-    expect(readDnConfig(CHAMPS)).toEqual({
-      error: "no champ ids for démarche 159278, run pnpm dn:champs",
-    });
-  });
-
   it("refuses what is not a démarche number", () => {
     process.env.DN_DEMARCHE_NUMBER = "15927a";
 
@@ -42,7 +34,7 @@ describe("readDnConfig", () => {
       config: {
         baseUrl: DN_DEFAULT_BASE_URL,
         demarcheNumber: 4242,
-        champs: CHAMPS[4242],
+        champs: CHAMPS,
         timeoutMs: 8_000,
       },
     });

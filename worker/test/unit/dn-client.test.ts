@@ -43,9 +43,9 @@ describe("createPrefilledDossier", () => {
   it("posts the body as plain application/json and reads the dossier back", async () => {
     const { calls, fetchImpl } = fakeFetch(() => json(201, CREATED));
 
-    const created = await client(fetchImpl).createPrefilledDossier(159278, { identite_nom: "OSTRENYA" });
+    const created = await client(fetchImpl).createPrefilledDossier(4242, { identite_nom: "OSTRENYA" });
 
-    expect(calls[0].url).toBe(`${BASE_URL}/api/public/v1/demarches/159278/dossiers`);
+    expect(calls[0].url).toBe(`${BASE_URL}/api/public/v1/demarches/4242/dossiers`);
     expect(calls[0].init.method).toBe("POST");
     expect((calls[0].init.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
     expect(JSON.parse(String(calls[0].init.body))).toEqual({ identite_nom: "OSTRENYA" });
@@ -103,10 +103,10 @@ describe("findByPrefillToken", () => {
   it("reads an unclaimed dossier", async () => {
     const { calls, fetchImpl } = fakeFetch(() => json(200, [CREATED]));
 
-    const status = await client(fetchImpl).findByPrefillToken(159278, TOKEN);
+    const status = await client(fetchImpl).findByPrefillToken(4242, TOKEN);
 
     expect(calls[0].url).toBe(
-      `${BASE_URL}/api/public/v1/demarches/159278/dossiers?prefill_token=${TOKEN}`,
+      `${BASE_URL}/api/public/v1/demarches/4242/dossiers?prefill_token=${TOKEN}`,
     );
     expect(status).toEqual({ dossierNumber: 123, state: "prefilled", submittedAt: null, processedAt: null });
   });

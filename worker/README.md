@@ -138,17 +138,18 @@ Sentry event is redacted of `prefill_token` and query values
 
 | var | default | role |
 |---|---|---|
-| `DN_DEMARCHE_NUMBER` | none | the démarche to pre-fill; unset, or without champ ids, every dossier job fails and the rest of the worker runs on |
+| `DN_DEMARCHE_NUMBER` | none | the démarche to pre-fill; unset, every dossier job fails and the rest of the worker runs on |
 | `DN_BASE_URL` | `https://demarche.numerique.gouv.fr` | DN instance |
 | `DN_REQUEST_TIMEOUT_MS` | `8000` | per call to DN |
 
 The champ ids live in
-[src/demarche-numerique/champs.ts](src/demarche-numerique/champs.ts), one entry per démarche.
+[src/demarche-numerique/champs.ts](src/demarche-numerique/champs.ts), shared by every démarche
+(staging is a clone of production keeping the same ids).
 DN silently drops a value sent under an unknown id or outside a champ's options. Rerun the check
 after every change to the démarche:
 
 ```bash
-pnpm dn:champs 159278    # reads DN_API_TOKEN from the environment or ../data/.env
+pnpm dn:champs          # démarche DN_DEMARCHE_NUMBER; DN_API_TOKEN from the environment or ../data/.env
 ```
 
 The script lists the démarche's champs and resolves them by the labels the DN pipeline reads them by
