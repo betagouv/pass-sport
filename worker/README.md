@@ -97,8 +97,11 @@ The offline `qf:batch` runs on the processing machine with its own in-memory pac
 
 ## Dossier Démarche Numérique pré-rempli
 
-A FranceConnect household with at least one `not_eligible` beneficiary gets a « Déposer un
-dossier de demande de code » button on the site. The click asks this worker for a dossier on the
+With `FC_DN_DOSSIER_ENABLED=yes` on the site, every FranceConnect household gets a « Déposer un
+dossier de demande de code » button, whatever its verdicts. With `FC_DN_DOSSIER_EXISTING_ONLY=yes`
+on top, only a household already holding a dossier (any state, `prefilled` included) keeps it, as
+« Retrouver mon dossier », and the site refuses to ask for a new one (403). A held dossier DN no
+longer lists is still recreated (step 2). The click asks this worker for a dossier on the
 support démarche that the [DN pipeline](../data/2026/dn-pipeline/) processes, through its own queue
 `codes-queue-dn-dossiers` (never behind the FranceConnect backlog). The job
 ([src/jobs/fc-dn-dossier.ts](src/jobs/fc-dn-dossier.ts)):

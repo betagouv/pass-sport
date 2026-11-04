@@ -17,6 +17,7 @@ import { stableDossierLink } from '@/app/services/dn-dossier-rules';
 import {
   FC_DEBUGGING_ONLY,
   FC_DN_DOSSIER_ENABLED,
+  FC_DN_DOSSIER_EXISTING_ONLY,
   FC_RELANCE_ALLOWLIST_ONLY,
   FC_RELANCE_ENABLED,
   IS_LOCAL_ENV,
@@ -264,7 +265,7 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
           )}
 
           {/* Whatever the verdicts, even before they land. */}
-          {FC_DN_DOSSIER_ENABLED && (
+          {FC_DN_DOSSIER_ENABLED && (!FC_DN_DOSSIER_EXISTING_ONLY || hasDnDossier) && (
             <DnDossierButton hasDossier={hasDnDossier} link={dnDossierLink} />
           )}
           {/* Logout moved to the header quick-access item ("Se déconnecter"),

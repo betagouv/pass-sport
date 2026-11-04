@@ -21,12 +21,15 @@ jest.mock('../../../../src/app/services/dn-dossier', () => ({
   findDnDossierForSub: jest.fn(),
 }));
 
-const mockEnv = { FC_DN_DOSSIER_ENABLED: true };
+const mockEnv = { FC_DN_DOSSIER_ENABLED: true, FC_DN_DOSSIER_EXISTING_ONLY: false };
 
 // Getters because the factory runs before mockEnv is initialised.
 jest.mock('../../../../src/app/constants/env', () => ({
   get FC_DN_DOSSIER_ENABLED() {
     return mockEnv.FC_DN_DOSSIER_ENABLED;
+  },
+  get FC_DN_DOSSIER_EXISTING_ONLY() {
+    return mockEnv.FC_DN_DOSSIER_EXISTING_ONLY;
   },
 }));
 
@@ -74,6 +77,7 @@ const post = () =>
 beforeEach(() => {
   jest.clearAllMocks();
   mockEnv.FC_DN_DOSSIER_ENABLED = true;
+  mockEnv.FC_DN_DOSSIER_EXISTING_ONLY = false;
   mockedFindDnDossierForSub.mockResolvedValue(null);
   mockedEnqueue.mockResolvedValue({ queued: true });
   mockedJobState.mockResolvedValue(null);
@@ -95,6 +99,34 @@ describe('fonctionnalité éteinte', () => {
     expect(mockedEnqueue).not.toHaveBeenCalled();
     expect(mockedJobState).not.toHaveBeenCalled();
   });
+});
+
+// Le bouton caché aux usagers sans dossier : l'endpoint ne leur en crée pas non plus.
+describe('réservée aux usagers ayant déjà un dossier', () => {
+  beforeEach(() => {
+    mockEnv.FC_DN_DOSSIER_EXISTING_ONLY = true;
+    authenticate();
+  });
+
+  it('POST répond 403 sans rien mettre en file quand l’usager n’a aucun dossier', async () => {
+    const response = await post();
+
+    expect(response.status).toBe(403);
+    expect(mockedFindDnDossierForSub).toHaveBeenCalledWith('poc-sub-1');
+    expect(mockedEnqueue).not.toHaveBeenCalled();
+  });
+
+  it.each(['prefilled', 'brouillon', 'en_construction', 'accepte'])(
+    'POST rend son dossier %s à l’usager qui en a déjà un',
+    async (state) => {
+      mockedFindDnDossierForSub.mockResolvedValue({ ...DOSSIER, state });
+
+      const response = await post();
+
+      expect(response.status).toBe(202);
+      expect(mockedEnqueue).toHaveBeenCalledTimes(1);
+    },
+  );
 });
 
 describe('POST /api/france-connect/dossier', () => {

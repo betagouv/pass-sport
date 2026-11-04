@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { FC_DN_DOSSIER_ENABLED } from '@/app/constants/env';
+import { FC_DN_DOSSIER_ENABLED, FC_DN_DOSSIER_EXISTING_ONLY } from '@/app/constants/env';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findDnDossierForSub } from '@/app/services/dn-dossier';
 import { enqueueFcDnDossierJob, findDnDossierJobState } from '@/app/services/queue';
@@ -18,7 +18,7 @@ const reportFailure = (message: string, e: unknown) =>
   });
 
 // Asks the worker for the usager's dossier: theirs if Démarche Numérique still lists it, a new
-// pre-filled one otherwise.
+// pre-filled one otherwise. FC_DN_DOSSIER_EXISTING_ONLY: only for an usager already holding one.
 export async function POST(request: Request): Promise<Response> {
   try {
     if (!FC_DN_DOSSIER_ENABLED) {
@@ -32,6 +32,10 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const { sub, identity } = pocResult;
+
+    if (FC_DN_DOSSIER_EXISTING_ONLY && !(await findDnDossierForSub(sub))) {
+      return reply({ error: 'Non disponible.' }, 403);
+    }
 
     const { queued } = await enqueueFcDnDossierJob(
       {
