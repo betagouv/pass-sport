@@ -28,7 +28,8 @@ const SESSION_EXPIRED =
   'Votre session a expiré. Reconnectez-vous avec FranceConnect pour accéder à votre dossier.';
 const UNAVAILABLE = 'Ce service n’est pas disponible pour le moment.';
 
-const SECTION_TITLE = 'Vous rencontrez un problème avec les résultats ?';
+const SECTION_TITLE =
+  'Vous ou vos enfants êtes éligibles mais n’apparaissez pas dans nos résultats ?';
 const FOLLOW_UP = 'Suivez son avancement sur Démarche Numérique.';
 
 type PollAnswer =
@@ -73,8 +74,7 @@ const DossierAnchor = ({ url, label }: { url: string; label: string }) =>
   ) : null;
 
 // Its state may have moved on since the page read it: the title leaves it to DN's page.
-// The actions alone, an error on them first: the dossier's own alert stands above the section,
-// right under the separator.
+// Under the intro: the dossier's alert, then an error, then the action.
 const DnSection = ({ children }: { children: ReactNode }) => {
   const titleId = useId();
   return (
@@ -83,9 +83,10 @@ const DnSection = ({ children }: { children: ReactNode }) => {
         {SECTION_TITLE}
       </h2>
       <p className="fr-mb-2w">
-        Nous avons vérifié votre éligibilité via les bases de données que nos partenaires (CAF, MSA,
-        CNOUS) nous ont envoyées pour cette campagne du pass Sport 2026. Si vous pensez que vous ou
-        vos enfants êtes éligibles merci de cliquer sur ce lien :
+        Pour la campagne pass Sport 2026, nous avons vérifié votre éligibilité à partir des bases de
+        données que nos partenaires (CAF, MSA, CNOUS) nous ont transmises. Si cette vérification
+        vous semble incomplète ou si vous pensez être éligible malgré tout, vous pouvez constituer
+        un dossier avec vos justificatifs.
       </p>
 
       {children}
@@ -98,16 +99,16 @@ const Separator = () => <hr className={fr.cx('fr-hr')} />;
 const KnownDossier = ({ link }: { link: DnDossierLink }) => (
   <>
     <Separator />
-    <Alert
-      severity="info"
-      as="h2"
-      className="fr-mb-3w"
-      // Shown on load: nothing to announce.
-      role={undefined}
-      title={`Votre dossier n° ${link.number}`}
-      description={FOLLOW_UP}
-    />
     <DnSection>
+      <Alert
+        severity="info"
+        as="h3"
+        className="fr-mb-3w"
+        // Shown on load: nothing to announce.
+        role={undefined}
+        title={`Votre dossier n° ${link.number}`}
+        description={FOLLOW_UP}
+      />
       <DossierAnchor url={link.url} label="Suivre mon dossier" />
     </DnSection>
   </>
@@ -129,7 +130,7 @@ const readyView = (dossier: DnDossier) => {
     };
   }
   return {
-    title: `Votre dossier n° ${dossier.number} est prêt`,
+    title: `Un dossier pré-rempli vous attend sur Démarches Simplifiées (n° ${dossier.number}).`,
     label: 'Compléter mon dossier',
     toComplete: true,
   };
@@ -141,7 +142,7 @@ const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
   return (
     <Alert
       severity="success"
-      as="h2"
+      as="h3"
       className="fr-mb-3w"
       // The live region around it announces it: no second, nested one.
       role={undefined}
@@ -149,13 +150,13 @@ const ReadyDossier = ({ dossier }: { dossier: DnDossier }) => {
       description={
         toComplete ? (
           <>
+            <p className="fr-mb-1w">Dans ce dossier vous devrez :</p>
             <ol className="fr-mb-2w">
               <li>
-                Connectez-vous à Démarche Numérique, de préférence{' '}
-                <strong>avec FranceConnect</strong>.
+                Vous connecter avec FranceConnect <strong>(recommandé)</strong>.
               </li>
               <li>Vérifiez et complétez les informations pré-remplies.</li>
-              <li>Joignez vos justificatifs.</li>
+              <li>Joindre vos justificatifs d’éligibilité.</li>
               <li>Déposez votre dossier.</li>
             </ol>
             <p className="fr-mb-0">Ce lien vous est personnel : ne le partagez pas.</p>
@@ -247,12 +248,12 @@ export default function DnDossierButton({ hasDossier, link = null }: Props) {
   return (
     <>
       <Separator />
-      {/* Present from the first render, so the dossier's arrival is announced. */}
-      <div role="status" aria-live="polite">
-        {state.kind === 'ready' && <ReadyDossier dossier={state.dossier} />}
-      </div>
-
       <DnSection>
+        {/* Present from the first render, so the dossier's arrival is announced. */}
+        <div role="status" aria-live="polite">
+          {state.kind === 'ready' && <ReadyDossier dossier={state.dossier} />}
+        </div>
+
         {state.kind === 'error' && (
           <div className="fr-alert fr-alert--error fr-alert--sm fr-mb-2w" role="alert">
             <p>{state.message}</p>

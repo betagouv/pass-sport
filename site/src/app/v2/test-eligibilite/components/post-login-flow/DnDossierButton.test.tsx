@@ -12,7 +12,8 @@ jest.mock('@socialgouv/matomo-next', () => ({ push: jest.fn() }));
 const fetchMock = jest.fn();
 global.fetch = fetchMock as unknown as typeof fetch;
 
-const SECTION = 'Vous rencontrez un problème avec les résultats ?';
+const SECTION = 'Vous ou vos enfants êtes éligibles mais n’apparaissez pas dans nos résultats ?';
+const READY = 'Un dossier pré-rempli vous attend sur Démarches Simplifiées (n° 9001).';
 
 const PREFILL_URL = 'https://demarche.numerique.gouv.fr/commencer/pass-sport?prefill_token=tok-1';
 
@@ -83,7 +84,7 @@ describe('DnDossierButton', () => {
     render(<DnDossierButton hasDossier={false} />);
 
     const section = screen.getByRole('region', { name: SECTION });
-    expect(section).toHaveTextContent('Si vous pensez que vous ou vos enfants êtes éligibles');
+    expect(section).toHaveTextContent('vous pouvez constituer un dossier avec vos justificatifs');
     expect(
       within(section).getByRole('button', { name: 'Déposer un dossier de demande de code' }),
     ).toBeEnabled();
@@ -102,16 +103,16 @@ describe('DnDossierButton', () => {
     const url = 'https://demarche.numerique.gouv.fr/dossiers/9001';
     render(<DnDossierButton hasDossier link={{ number: 9001, url }} />);
 
-    const alert = screen.getByRole('heading', { level: 2, name: 'Votre dossier n° 9001' });
+    const alert = screen.getByRole('heading', { level: 3, name: 'Votre dossier n° 9001' });
     expect(alert.parentElement).toHaveTextContent('Suivez son avancement sur Démarche Numérique.');
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    // The alert stands before the section, which only holds the link.
+    // The alert sits in the section, above the link.
     const section = screen.getByRole('region', { name: SECTION });
-    expect(section).not.toContainElement(alert);
-    expect(alert.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section).toContainElement(alert);
     const link = within(section).getByRole('link', {
       name: 'Suivre mon dossier sur Démarche Numérique',
     });
+    expect(alert.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(link).toHaveAttribute('href', url);
     expect(link).toHaveAttribute('target', '_blank');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -131,17 +132,20 @@ describe('DnDossierButton', () => {
     await flush(POLL_INTERVAL_MS);
 
     const status = screen.getByRole('status');
-    expect(status).toHaveTextContent('Votre dossier n° 9001 est prêt');
-    expect(status).toHaveTextContent('de préférence avec FranceConnect');
+    expect(status).toHaveTextContent(READY);
+    expect(status).toHaveTextContent('Vous connecter avec FranceConnect (recommandé)');
     expect(status).toHaveTextContent('ne le partagez pas');
 
-    // The alert stands before the section, which only holds the link.
+    // The alert sits in the section, under the intro and above the link.
     const section = screen.getByRole('region', { name: SECTION });
-    expect(section).not.toContainElement(status);
-    expect(status.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section).toContainElement(status);
+    expect(within(section).getByRole('heading', { level: 3, name: READY })).toBeInTheDocument();
+    const intro = within(section).getByText(/vous pouvez constituer un dossier/);
+    expect(intro.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const link = within(section).getByRole('link', {
       name: 'Compléter mon dossier sur Démarche Numérique',
     });
+    expect(status.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(link).toHaveAttribute('href', PREFILL_URL);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -197,7 +201,7 @@ describe('DnDossierButton', () => {
     await flush(POLL_INTERVAL_MS);
     await flush(POLL_INTERVAL_MS);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Votre dossier n° 9001 est prêt');
+    expect(screen.getByRole('status')).toHaveTextContent(READY);
   });
 
   it.each([
@@ -215,7 +219,7 @@ describe('DnDossierButton', () => {
     respond(ready());
     await click('Réessayer');
 
-    expect(screen.getByRole('status')).toHaveTextContent('Votre dossier n° 9001 est prêt');
+    expect(screen.getByRole('status')).toHaveTextContent(READY);
   });
 
   it('gives up after its last poll', async () => {
