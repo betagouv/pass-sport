@@ -68,6 +68,20 @@
     disabled: "{{ not pass_sport_dn_cron_enabled }}"
   tags: [dn-cron]
 
+# Flags the Démarches Numériques dossiers en construction lamp01 may already know. Runs through
+# the night too: it only reads lamp01, writes to dossiers in another state than pass-sport-dn, and
+# opens no tunnel. Minute 15 stays clear of the FranceConnect starts. Posted disabled until
+# pass_sport_dn_doublons_cron_enabled is set.
+- name: Doublons potentiels des dossiers Démarches Numériques en construction, chaque heure
+  become: true
+  ansible.builtin.cron:
+    name: pass-sport-dn-doublons
+    user: "{{ pass_sport_user }}"
+    minute: '15'
+    job: "{{ pass_sport_repo }}/data/2026/dn-pipeline/run_dn_doublons.sh"
+    disabled: "{{ not pass_sport_dn_doublons_cron_enabled }}"
+  tags: [dn-doublons-cron]
+
 # Retire l'entrée du même passage sous son ancien nom, quand il lisait aussi Grist : laissée en
 # place, elle appellerait un script qui n'existe plus. Sans effet sur une machine qui ne l'a
 # jamais eue.
