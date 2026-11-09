@@ -41,7 +41,7 @@
     "geolib": "^3.3.14",
     "got": "^15.1.0",
     "ioredis": "^5.11.1",
-    "jose": "^6.2.13",
+    "jose": "^6.2.15",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "next": "^16.4.2",
