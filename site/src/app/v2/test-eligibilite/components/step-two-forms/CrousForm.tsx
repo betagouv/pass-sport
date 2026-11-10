@@ -1,12 +1,9 @@
-import { ChangeEvent, FormEvent, useContext, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import { CrousInputsState } from '@/types/EligibilityTest';
 import { mapper } from '../../helpers/helper';
 import CustomInput from '../custom-input/CustomInput';
 import ErrorAlert from '../error-alert/ErrorAlert';
 import Actions from '@/app/components/actions/Actions';
-import { CROUS } from '@/app/v2/accueil/components/acronymes/Acronymes';
-import EligibilityTestContext from '@/store/eligibilityTestContext';
-import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { FRANCE_ISO_CODE } from '../../helpers/countries';
 import { useStepTwoSubmit } from '../../hooks/use-step-two-submit';
 import { useRecipientEmail } from '../../hooks/use-recipient-email';
@@ -29,7 +26,6 @@ const IDENTIFICATION_ERROR =
  */
 const CrousForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
-  const { allowance } = useContext(EligibilityTestContext);
   const [inputStates, setInputStates] = useState<CrousInputsState>(initialInputsState);
   const { isFormDisabled, error, submit } = useStepTwoSubmit();
   const email = useRecipientEmail();
@@ -94,14 +90,7 @@ const CrousForm = () => {
       <form ref={formRef} onSubmit={onSubmitHandler}>
         <CustomInput
           inputProps={{
-            label:
-              allowance === ALLOWANCE.CROUS ? (
-                <>
-                  Numéro INE provenant du <CROUS />
-                </>
-              ) : (
-                <>Numéro INE provenant des formations sanitaires et sociales</>
-              ),
+            label: 'Numéro INE',
             hintText:
               'Format attendu : composé de 11 caractères, soit 10 chiffres et 1 lettre soit 9 chiffres et 2 lettres',
             nativeInputProps: {

@@ -188,13 +188,8 @@ const StepOneForm = ({ onValidated, initialFields }: Props) => {
     if (allowance === ALLOWANCE.CROUS) {
       return (
         <>
-          Format attendu : {what} tel qu&apos;il est écrit sur vos papiers du <CROUS />.
-        </>
-      );
-    } else if (allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) {
-      return (
-        <>
-          Format attendu : Nom tel qu&apos;il est écrit sur votre notification de bourse régionale
+          Format attendu : {what} tel qu&apos;il est écrit sur vos papiers du <CROUS /> ou votre
+          notification de bourse régionale.
         </>
       );
     } else {
