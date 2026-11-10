@@ -19,13 +19,16 @@
 - https://sports-sgsocialgouv.opendatasoft.com/api/explore/v2.1/catalog/datasets/passsports-asso_volontaires/records
   - Used to fetch list of clubs that are within the pass Sport
 
-Commune/postal-code search data (used by the club finder and the eligibility test's birth-place
-field) is embedded in `site/src/data/communes.json` instead of calling an external API, built
-from La Poste's ["Base officielle des codes postaux"](https://www.data.gouv.fr/datasets/base-officielle-des-codes-postaux)
-and INSEE's ["Code officiel géographique"](https://www.insee.fr/fr/information/2560452), updated
+Commune/postal-code search data (used by the club finder and the eligibility test's residence
+and birth-place fields) is embedded in `site/src/data/communes.json` instead of calling an
+external API, built from La Poste's ["Base officielle des codes postaux"](https://www.data.gouv.fr/datasets/base-officielle-des-codes-postaux)
+and two files of INSEE's ["Code officiel géographique"](https://www.insee.fr/fr/information/2560452):
+the communes (`v_commune_<year>.csv`) and the events on communes since 1943
+(`v_mvt_commune_<year>.csv`). The latter adds the former communes and the former codes of
+current ones, which partners' records still use and the eligibility test retries with. Updated
 ~1-2x/year. To refresh: download the latest CSV from each source, then from `site/` run
-`LAPOSTE_CSV_PATH=<path> COG_CSV_PATH=<path> pnpm run generate:communes` and commit the updated
-`src/data/communes.json` via a normal PR.
+`LAPOSTE_CSV_PATH=<path> COG_CSV_PATH=<path> MVT_CSV_PATH=<path> pnpm run generate:communes`
+and commit the updated `src/data/communes.json` via a normal PR.
 
 ## Backend - Data processing
 ### Stack

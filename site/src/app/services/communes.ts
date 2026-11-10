@@ -1,12 +1,19 @@
 import communesData from '@/data/communes.json';
-import { City } from '@/types/City';
+import { City, type CommuneSearchOptions } from '@/types/City';
+import { parseInseeCodeQuery } from '@/utils/city';
 
-interface RawCommune {
+export interface RawCommune {
   code: string;
   nom: string;
   codesPostaux: string[];
   codeDepartement: string;
   isDistrict: boolean;
+  // Arrondissements only: the code of Paris, Lyon or Marseille.
+  codeParent?: string;
+  // Codes this commune held before (department change, merger…), which partners may still use.
+  codesHistoriques?: string[];
+  // Former communes only: the current commune they now belong to.
+  communeActuelle?: { code: string; nom: string };
 }
 
 const MAX_RESULTS_BY_NAME = 30;
@@ -46,11 +53,18 @@ interface IndexedCommune {
   nameTokens: string[];
 }
 
-const toPublicCity = ({ nom, code, codesPostaux, codeDepartement }: RawCommune): City => ({
+const toPublicCity = ({
   nom,
   code,
   codesPostaux,
   codeDepartement,
+  communeActuelle,
+}: RawCommune): City => ({
+  nom,
+  code,
+  codesPostaux,
+  codeDepartement,
+  ...(communeActuelle ? { communeActuelle } : {}),
 });
 
 const matchesQuery = (queryTokens: string[], commune: IndexedCommune): boolean =>
@@ -60,14 +74,18 @@ const matchesQuery = (queryTokens: string[], commune: IndexedCommune): boolean =
 
 // Ranks a commune whose first name token starts with a query token above the rest — a
 // population-free stand-in for the `boost=population` ordering the external API provided
-// (dropped: the embedded CSV carries no population figure). Ties break alphabetically.
+// (dropped: the embedded CSV carries no population figure). Current communes come before
+// former ones, then ties break alphabetically.
 const sortByRelevance = (queryTokens: string[]) => (a: IndexedCommune, b: IndexedCommune) => {
   const rank = (commune: IndexedCommune) =>
     queryTokens.some((queryToken) => commune.nameTokens[0]?.startsWith(queryToken)) ? 0 : 1;
+  const formerRank = (commune: IndexedCommune) => (commune.raw.communeActuelle ? 1 : 0);
 
-  const rankDiff = rank(a) - rank(b);
-  return rankDiff !== 0 ? rankDiff : a.raw.nom.localeCompare(b.raw.nom);
+  return rank(a) - rank(b) || formerRank(a) - formerRank(b) || a.raw.nom.localeCompare(b.raw.nom);
 };
+
+const unique = (codes: (string | undefined)[]): string[] =>
+  Array.from(new Set(codes.filter((code): code is string => Boolean(code))));
 
 export const createCommuneSearch = (rawCommunes: RawCommune[]) => {
   const index: IndexedCommune[] = rawCommunes.map((raw) => ({
@@ -75,14 +93,50 @@ export const createCommuneSearch = (rawCommunes: RawCommune[]) => {
     nameTokens: tokenize(raw.nom),
   }));
 
-  const searchCommunesByName = (query: string, includeDistricts: boolean): City[] => {
+  const districtParentCodes = new Set(
+    rawCommunes.map(({ codeParent }) => codeParent).filter(Boolean),
+  );
+
+  const currentByCode = new Map<string, RawCommune>();
+  const formerByCode = new Map<string, RawCommune>();
+  for (const raw of rawCommunes) {
+    const byCode = raw.communeActuelle ? formerByCode : currentByCode;
+    if (!byCode.has(raw.code)) {
+      byCode.set(raw.code, raw);
+    }
+  }
+
+  const isAllowed =
+    ({
+      includeDistricts,
+      includeFormer = false,
+      excludeDistrictParents = false,
+    }: CommuneSearchOptions) =>
+    ({ raw }: IndexedCommune): boolean =>
+      (includeDistricts || !raw.isDistrict) &&
+      (includeFormer || !raw.communeActuelle) &&
+      !(excludeDistrictParents && !raw.communeActuelle && districtParentCodes.has(raw.code));
+
+  const searchCommunesByInseeCode = (code: string, options: CommuneSearchOptions): City[] =>
+    index
+      .filter(isAllowed(options))
+      .filter(({ raw }) => raw.code === code || raw.codesHistoriques?.includes(code))
+      .sort(sortByRelevance([]))
+      .map(({ raw }) => toPublicCity(raw));
+
+  const searchCommunesByName = (query: string, options: CommuneSearchOptions): City[] => {
+    const inseeCode = parseInseeCodeQuery(query);
+    if (inseeCode) {
+      return searchCommunesByInseeCode(inseeCode, options);
+    }
+
     const queryTokens = tokenize(query);
     if (queryTokens.length === 0) {
       return [];
     }
 
     return index
-      .filter((commune) => includeDistricts || !commune.raw.isDistrict)
+      .filter(isAllowed(options))
       .filter((commune) => matchesQuery(queryTokens, commune))
       .sort(sortByRelevance(queryTokens))
       .slice(0, MAX_RESULTS_BY_NAME)
@@ -92,12 +146,12 @@ export const createCommuneSearch = (rawCommunes: RawCommune[]) => {
   const searchCommunesByPostalCodeAndName = (
     postalCode: string,
     query: string,
-    includeDistricts: boolean,
+    options: CommuneSearchOptions,
   ): City[] => {
     const queryTokens = tokenize(query);
 
     return index
-      .filter((commune) => includeDistricts || !commune.raw.isDistrict)
+      .filter(isAllowed(options))
       .filter((commune) => commune.raw.codesPostaux.includes(postalCode))
       .filter((commune) => queryTokens.length === 0 || matchesQuery(queryTokens, commune))
       .sort(sortByRelevance(queryTokens))
@@ -105,10 +159,29 @@ export const createCommuneSearch = (rawCommunes: RawCommune[]) => {
       .map(({ raw }) => toPublicCity(raw));
   };
 
-  return { searchCommunesByName, searchCommunesByPostalCodeAndName };
+  // The INSEE codes to try, in order, for the commune the usager picked. LCA mostly holds the
+  // current code, so it comes first; the rest are codes some partners still use for the same
+  // place. A current code is never expanded to all its délégués or arrondissements, which
+  // could mean 20+ LCA calls.
+  const lcaCandidateCodes = (code: string): string[] => {
+    const current = currentByCode.get(code);
+    if (current) {
+      return unique([code, current.codeParent, ...(current.codesHistoriques ?? [])]);
+    }
+
+    const former = formerByCode.get(code);
+    if (former?.communeActuelle) {
+      return unique([former.communeActuelle.code, code, ...(former.codesHistoriques ?? [])]);
+    }
+
+    return [code];
+  };
+
+  return { searchCommunesByName, searchCommunesByPostalCodeAndName, lcaCandidateCodes };
 };
 
 const communeSearch = createCommuneSearch(communesData as RawCommune[]);
 
 export const searchCommunesByName = communeSearch.searchCommunesByName;
 export const searchCommunesByPostalCodeAndName = communeSearch.searchCommunesByPostalCodeAndName;
+export const lcaCandidateCodes = communeSearch.lcaCandidateCodes;
