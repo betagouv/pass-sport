@@ -12,6 +12,8 @@ export function GET(request: NextRequest): Response {
       name: searchParams.get('name') ?? '',
       postalCode: searchParams.get('postalCode') ?? undefined,
       includeDistricts: searchParams.get('includeDistricts') ?? 'false',
+      includeFormer: searchParams.get('includeFormer') ?? 'false',
+      excludeDistrictParents: searchParams.get('excludeDistrictParents') ?? 'false',
     });
   } catch (e) {
     if (e instanceof ZodError) {
@@ -24,9 +26,10 @@ export function GET(request: NextRequest): Response {
     return NextResponse.json([]);
   }
 
-  const cities = query.postalCode
-    ? searchCommunesByPostalCodeAndName(query.postalCode, query.name, query.includeDistricts)
-    : searchCommunesByName(query.name, query.includeDistricts);
+  const { name, postalCode, ...options } = query;
+  const cities = postalCode
+    ? searchCommunesByPostalCodeAndName(postalCode, name, options)
+    : searchCommunesByName(name, options);
 
   return NextResponse.json(cities);
 }

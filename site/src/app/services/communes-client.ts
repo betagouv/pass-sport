@@ -1,7 +1,7 @@
 'use client';
 
 import * as Sentry from '@sentry/nextjs';
-import { City } from '@/types/City';
+import { City, type CommuneSearchOptions } from '@/types/City';
 
 const fetchCommunes = async (params: URLSearchParams, context: string): Promise<City[]> => {
   try {
@@ -28,13 +28,22 @@ const fetchCommunes = async (params: URLSearchParams, context: string): Promise<
   }
 };
 
+const appendOptions = (
+  params: URLSearchParams,
+  { includeDistricts, includeFormer = false, excludeDistrictParents = false }: CommuneSearchOptions,
+) => {
+  params.append('includeDistricts', includeDistricts.toString());
+  params.append('includeFormer', includeFormer.toString());
+  params.append('excludeDistrictParents', excludeDistrictParents.toString());
+};
+
 export const getFranceCitiesByName = (
   cityName: string,
-  includeDistricts: boolean,
+  options: CommuneSearchOptions,
 ): Promise<City[]> => {
   const params = new URLSearchParams();
   params.append('name', cityName);
-  params.append('includeDistricts', includeDistricts.toString());
+  appendOptions(params, options);
 
   return fetchCommunes(params, 'search by name');
 };
@@ -42,12 +51,12 @@ export const getFranceCitiesByName = (
 export const getFranceCitiesByPostalCodeAndCityName = (
   postalCode: string,
   cityName: string,
-  includeDistricts: boolean,
+  options: CommuneSearchOptions,
 ): Promise<City[]> => {
   const params = new URLSearchParams();
   params.append('name', cityName);
   params.append('postalCode', postalCode);
-  params.append('includeDistricts', includeDistricts.toString());
+  appendOptions(params, options);
 
   return fetchCommunes(params, 'search by postal code and name');
 };

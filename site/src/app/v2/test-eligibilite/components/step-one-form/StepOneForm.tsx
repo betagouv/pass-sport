@@ -248,6 +248,7 @@ const StepOneForm = ({ onValidated, initialFields }: Props) => {
         onChanged={(text) => onInputChanged(text, 'recipientResidencePlace')}
         onOptionChanged={setResidencePlace}
         onBlur={(text) => onInputChanged(text, 'recipientResidencePlace')}
+        excludeDistrictParents
         required
       />
 

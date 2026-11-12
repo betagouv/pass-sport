@@ -7,6 +7,7 @@ import { ALLOWANCE } from '@/app/v2/test-eligibilite/components/types/types';
 import { CAISSE } from '@/utils/eligibility-test';
 import { handleSupportCookie } from '@/utils/cookie';
 import { getClientIp } from '@/utils/client-ip';
+import { lcaCandidateCodes } from '@/app/services/communes';
 import {
   LCA_SITUATION,
   ORGANISME,
@@ -19,6 +20,19 @@ import {
 
 // CROUS students often have no address on file — retry the search with this default INSEE.
 const DEFAULT_INSEE_CODE = '75113';
+
+// Whether a search that finds nobody is retried with the commune's other INSEE codes (former
+// code, Corsican 20xxx, the city of an arrondissement…). CAF holds the current code, and the
+// arrondissement for Paris/Lyon/Marseille, almost without exception: retrying would cost an
+// extra LCA call for every usager it doesn't know, to recover ~150 records out of 2.4 M.
+const RETRIES_OTHER_INSEE_CODES: Record<OrganismType, boolean> = {
+  [ORGANISME.CAF]: false,
+  [ORGANISME.MSA]: true,
+  [ORGANISME.CNOUS]: true,
+};
+
+const retriesOtherInseeCodes = (organisme: OrganismType | null): boolean =>
+  organisme !== null && RETRIES_OTHER_INSEE_CODES[organisme];
 
 const schema = z.object({
   allowanceName: z.enum(ALLOWANCE),
@@ -57,6 +71,22 @@ const AIDE_BY_ALLOWANCE: Record<ALLOWANCE, Situation | null> = {
 
 const isLcaError = (outcome: unknown): outcome is { message: string } =>
   typeof outcome === 'object' && outcome !== null && 'message' in outcome;
+
+// Calls LCA with each code in turn, until one answers with a match or with an error.
+const tryCodes = async <Outcome>(
+  codes: string[],
+  call: (code: string) => Promise<Outcome>,
+  isMatch: (outcome: Outcome) => boolean,
+): Promise<Outcome | null> => {
+  let outcome: Outcome | null = null;
+  for (const code of codes) {
+    outcome = await call(code);
+    if (isLcaError(outcome) || isMatch(outcome)) {
+      break;
+    }
+  }
+  return outcome;
+};
 
 const startTimer = (): (() => number) => {
   const t0 = Date.now();
@@ -197,11 +227,33 @@ export async function POST(request: Request): Promise<Response> {
       });
     };
 
+    const [residenceCode, ...otherResidenceCodes] = lcaCandidateCodes(
+      payload.recipientResidencePlace,
+    );
+    const firstSearchPayload = { ...searchPayload, recipientResidencePlace: residenceCode };
+
     const searchTimer = startTimer();
-    let search = await fetchEligible(searchPayload, { keepMatricule: true });
-    recordSearch('lca.search', searchTimer(), searchPayload, search, {
+    let search = await fetchEligible(firstSearchPayload, { keepMatricule: true });
+    recordSearch('lca.search', searchTimer(), firstSearchPayload, search, {
       is_from_crous: isBoursier,
     });
+
+    if (!isLcaError(search) && search.length === 0 && retriesOtherInseeCodes(organisme)) {
+      search =
+        (await tryCodes(
+          otherResidenceCodes,
+          async (code) => {
+            const retryPayload = { ...searchPayload, recipientResidencePlace: code };
+            const retryTimer = startTimer();
+            const retry = await fetchEligible(retryPayload, { keepMatricule: true });
+            recordSearch('lca.search.residence_retry', retryTimer(), retryPayload, retry, {
+              insee_fallback: code,
+            });
+            return retry;
+          },
+          (retry) => !isLcaError(retry) && retry.length > 0,
+        )) ?? search;
+    }
 
     if (isLcaError(search)) {
       await enqueue('error', null, null);
@@ -241,11 +293,16 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ outcome: 'sent' } satisfies VerdictResponseBody);
     }
 
+    const birthPlaceCodes = payload.recipientBirthPlace
+      ? lcaCandidateCodes(payload.recipientBirthPlace)
+      : [];
+
     const confirmPayload = {
       id: item.id.toString(),
       situation: item.situation,
       organisme: item.organisme,
       ...stepTwoPayload,
+      recipientBirthPlace: birthPlaceCodes[0],
     };
 
     const recordConfirm = (
@@ -274,6 +331,23 @@ export async function POST(request: Request): Promise<Response> {
     const confirmTimer = startTimer();
     let confirm = await fetchCode(confirmPayload);
     recordConfirm('lca.confirm', confirmTimer(), confirmPayload, confirm);
+
+    if (!isLcaError(confirm) && confirm.length === 0 && retriesOtherInseeCodes(item.organisme)) {
+      confirm =
+        (await tryCodes(
+          birthPlaceCodes.slice(1),
+          async (code) => {
+            const retryPayload = { ...confirmPayload, recipientBirthPlace: code };
+            const retryTimer = startTimer();
+            const retry = await fetchCode(retryPayload);
+            recordConfirm('lca.confirm.birthplace_retry', retryTimer(), retryPayload, retry, {
+              insee_fallback: code,
+            });
+            return retry;
+          },
+          (retry) => !isLcaError(retry) && retry.length > 0,
+        )) ?? confirm;
+    }
 
     if (isLcaError(confirm)) {
       await enqueue('error', null, null);

@@ -47,7 +47,7 @@ const CityFilter = ({ isDisabled, onCityChanged }: Props) => {
 
   const [value, setValue] = useState<CityOption>(allCitiesOption);
 
-  const { cities, isSearching } = useCitySearch(searchTerm, false);
+  const { cities, isSearching } = useCitySearch(searchTerm, { includeDistricts: false });
   const options = useMemo(
     () => (searchTerm ? parseCities(cities) : [allCitiesOption]),
     [cities, searchTerm],
@@ -92,7 +92,9 @@ const CityFilter = ({ isDisabled, onCityChanged }: Props) => {
     if (postalCode && city) {
       const unescapedCity = unescapeSingleQuotes(city);
 
-      getFranceCitiesByPostalCodeAndCityName(postalCode, unescapedCity, false).then((cities) => {
+      getFranceCitiesByPostalCodeAndCityName(postalCode, unescapedCity, {
+        includeDistricts: false,
+      }).then((cities) => {
         const formattedCities = parseCities(cities);
         let matchingCity = formattedCities.find((formattedCity) => {
           return (
