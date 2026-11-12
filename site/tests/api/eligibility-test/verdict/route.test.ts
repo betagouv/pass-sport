@@ -235,4 +235,104 @@ describe('POST /api/eligibility-test/verdict', () => {
     expect(await response.json()).toEqual({ outcome: 'error' });
     expect(mockedEnqueue).toHaveBeenCalledWith(expect.objectContaining({ lcaStatus: 'error' }));
   });
+
+  describe("retries with the commune's other INSEE codes", () => {
+    const historyActions = () =>
+      mockedEnqueue.mock.calls[0][0].history.map(({ action }: { action: string }) => action);
+
+    it('searches a former commune under its current commune first', async () => {
+      mockedFetchEligible.mockResolvedValueOnce(buildSearchResponseBody());
+      mockedFetchCode.mockResolvedValueOnce(buildConfirmResponseBody({}));
+
+      // Exmes, merged into Gouffern en Auge (61474) in 2017.
+      await post({ ...YOUNG_MSA_REQUEST, recipientResidencePlace: '61157' });
+
+      expect(mockedFetchEligible).toHaveBeenCalledTimes(1);
+      expect(mockedFetchEligible).toHaveBeenCalledWith(
+        expect.objectContaining({ recipientResidencePlace: '61474' }),
+        expect.anything(),
+      );
+    });
+
+    it('retries an MSA residence under its pre-1976 Corsican code', async () => {
+      mockedFetchEligible
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(buildSearchResponseBody());
+      mockedFetchCode.mockResolvedValueOnce(buildConfirmResponseBody({}));
+
+      await post({ ...YOUNG_MSA_REQUEST, recipientResidencePlace: '2A004' });
+
+      expect(mockedFetchEligible).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ recipientResidencePlace: '20004' }),
+        expect.anything(),
+      );
+      expect(mockedFetchCode).toHaveBeenCalledTimes(1);
+      expect(historyActions()).toContain('lca.search.residence_retry');
+    });
+
+    it('never retries a CAF residence', async () => {
+      mockedFetchEligible.mockResolvedValueOnce([]);
+
+      await post({ ...YOUNG_MSA_REQUEST, caisse: 'CAF', recipientResidencePlace: '2A004' });
+
+      expect(mockedFetchEligible).toHaveBeenCalledTimes(1);
+    });
+
+    it('never retries when the caisse is unknown', async () => {
+      mockedFetchEligible.mockResolvedValueOnce([]);
+
+      await post({ ...YOUNG_MSA_REQUEST, caisse: null, recipientResidencePlace: '2A004' });
+
+      expect(mockedFetchEligible).toHaveBeenCalledTimes(1);
+    });
+
+    it('tries the city of an arrondissement before the boursier default INSEE', async () => {
+      mockedFetchEligible
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      await post({
+        ...YOUNG_MSA_REQUEST,
+        allowanceName: 'CROUS',
+        caisse: null,
+        recipientResidencePlace: '75115',
+        recipientIneNumber: '0000000000X',
+      });
+
+      const residences = mockedFetchEligible.mock.calls.map(
+        ([searchPayload]) => searchPayload.recipientResidencePlace,
+      );
+      expect(residences).toEqual(['75115', '75056', '75113']);
+    });
+
+    it('retries an MSA birth place under each code the former commune held', async () => {
+      mockedFetchEligible.mockResolvedValueOnce(buildSearchResponseBody());
+      mockedFetchCode.mockResolvedValueOnce([]).mockResolvedValueOnce(buildConfirmResponseBody({}));
+
+      // Courcouronnes, merged into Évry-Courcouronnes (91228) in 2019.
+      await post({ ...YOUNG_MSA_REQUEST, recipientBirthPlace: '91182' });
+
+      const birthPlaces = mockedFetchCode.mock.calls.map(
+        ([confirmPayload]) => confirmPayload.recipientBirthPlace,
+      );
+      expect(birthPlaces).toEqual(['91228', '91182']);
+      expect(historyActions()).toContain('lca.confirm.birthplace_retry');
+      expect(mockedEnqueue).toHaveBeenCalledWith(
+        expect.objectContaining({ lcaStatus: 'confirmed' }),
+      );
+    });
+
+    it('stops retrying as soon as LCA answers with an error', async () => {
+      mockedFetchEligible
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce({ message: 'gateway is down' });
+
+      const response = await post({ ...YOUNG_MSA_REQUEST, recipientResidencePlace: '91182' });
+
+      expect(await response.json()).toEqual({ outcome: 'error' });
+      expect(mockedFetchEligible).toHaveBeenCalledTimes(2);
+    });
+  });
 });

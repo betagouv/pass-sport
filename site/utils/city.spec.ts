@@ -1,4 +1,4 @@
-import { sortCities } from './city';
+import { cityOptionLabel, parseInseeCodeQuery, sortCities } from './city';
 
 describe('city helpers', () => {
   describe('sortCities()', () => {
@@ -342,6 +342,53 @@ describe('city helpers', () => {
       expect(sortCities(parisWithSomeDistrictsAndOtherCities, 'PARIS 3')[0].nom).toEqual(
         'Paris 3e Arrondissement',
       );
+    });
+  });
+
+  describe('former communes', () => {
+    const gouffern = {
+      nom: 'Gouffern en Auge',
+      code: '61474',
+      codesPostaux: ['61310'],
+      codeDepartement: '61',
+    };
+    const exmes = {
+      nom: 'Exmes',
+      code: '61157',
+      codesPostaux: ['61310'],
+      codeDepartement: '61',
+      communeActuelle: { code: '61474', nom: 'Gouffern en Auge' },
+    };
+
+    it('lists current communes before former ones', () => {
+      expect(sortCities([exmes, gouffern], 'auge').map((city) => city.code)).toEqual([
+        '61474',
+        '61157',
+      ]);
+    });
+
+    it('labels a former commune with the current commune it belongs to', () => {
+      expect(cityOptionLabel(exmes, 'exmes')).toEqual('Exmes → Gouffern en Auge (61)');
+      expect(cityOptionLabel(gouffern, 'gouffern')).toEqual('Gouffern en Auge (61)');
+    });
+
+    it('shows the searched INSEE code on a code lookup', () => {
+      expect(cityOptionLabel(exmes, '#61157')).toEqual(
+        'Exmes → Gouffern en Auge (61) · INSEE 61157',
+      );
+    });
+  });
+
+  describe('parseInseeCodeQuery()', () => {
+    it('reads a "#"-prefixed INSEE code, Corsican ones included', () => {
+      expect(parseInseeCodeQuery('#61157')).toEqual('61157');
+      expect(parseInseeCodeQuery(' # 2a004 ')).toEqual('2A004');
+    });
+
+    it('ignores a bare number, a commune name and a malformed code', () => {
+      expect(parseInseeCodeQuery('61310')).toBeNull();
+      expect(parseInseeCodeQuery('Exmes')).toBeNull();
+      expect(parseInseeCodeQuery('#6131')).toBeNull();
     });
   });
 });

@@ -16,7 +16,7 @@ import {
   selectStyles,
 } from '@/app/v2/trouver-un-club/components/club-filters/custom-select/CustomSelect';
 import React, { ReactNode, useMemo, useState } from 'react';
-import { sortCities } from '@/utils/city';
+import { cityOptionLabel, sortCities } from '@/utils/city';
 import { useCitySearch } from '@/app/hooks/use-city-search';
 
 export interface CityOption {
@@ -36,6 +36,8 @@ interface Props {
   shouldAutoFocus?: boolean;
   /* Stands in for a commune the user would have picked, without running the async search */
   defaultOption?: CityOption;
+  /* Hides Paris, Lyon and Marseille so the usager picks an arrondissement, which LCA needs */
+  excludeDistrictParents?: boolean;
 }
 
 const CITY_FINDER_DESC_ERROR_ID = 'city-finder-desc-error';
@@ -52,13 +54,21 @@ const CityFinder = ({
   required = false,
   shouldAutoFocus = false,
   defaultOption,
+  excludeDistrictParents = false,
 }: Props) => {
   const [inputValue, setInputValue] = useState(defaultOption?.label ?? '');
   const [searchTerm, setSearchTerm] = useState('');
   const [value, setValue] = useState<CityOption>(defaultOption ?? { label: '', value: '' });
 
-  const { cities, isSearching } = useCitySearch(searchTerm, true);
-  const options = useMemo(() => parseCities(sortCities(cities, searchTerm)), [cities, searchTerm]);
+  const { cities, isSearching } = useCitySearch(searchTerm, {
+    includeDistricts: true,
+    includeFormer: true,
+    excludeDistrictParents,
+  });
+  const options = useMemo(
+    () => parseCities(sortCities(cities, searchTerm), searchTerm),
+    [cities, searchTerm],
+  );
 
   const onInputChange: ReactSelectProps['onInputChange'] = (inputValue, { action }) => {
     if (action === 'input-change') {
@@ -110,6 +120,10 @@ const CityFinder = ({
           options={options}
           isLoading={isSearching}
           filterOption={null}
+          // A former commune and the current one share a code: tell them apart by label.
+          isOptionSelected={(option, selected) =>
+            selected.some(({ label }) => label === option.label)
+          }
           onChange={birthPlaceChangedHandler}
           onInputChange={onInputChange}
           onBlur={(e) => {
@@ -161,10 +175,8 @@ const CityFinder = ({
   );
 };
 
-function parseCities(cities: City[]): CityOption[] {
-  return cities.map((city) => {
-    return { label: `${city.nom} (${city.codeDepartement})`, value: city.code };
-  });
+function parseCities(cities: City[], searchTerm: string): CityOption[] {
+  return cities.map((city) => ({ label: cityOptionLabel(city, searchTerm), value: city.code }));
 }
 
 export default CityFinder;
