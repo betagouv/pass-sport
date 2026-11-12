@@ -10,20 +10,28 @@
 --        -v correspondances=/chemin/correspondances.csv -v touchees=/chemin/lamp01-touchees.csv \
 --        -f match_dn.sql
 --
--- Comparaison exacte seulement : nom, prénom(s) et date de naissance identiques une fois
--- normalisés. Un prénom qui diffère d'une lettre (LEAH / LEA), un prénom en plus
--- (LEA / LEA ROSE) ou des jumeaux ne donnent aucune correspondance.
+-- Comparaison : même nom et même date de naissance une fois normalisés, et prénoms identiques
+-- ou contenus les uns dans les autres, mot entier par mot entier (LEA / LEA ROSE). Un prénom
+-- qui diffère d'une lettre (LEAH / LEA), un nom en plus (MARTIN / MARTIN DUPONT), des prénoms
+-- qui ne partagent qu'une partie de leurs mots (MARIE CLAIRE / MARIE ANNE) ou des jumeaux ne
+-- donnent aucune correspondance.
 --
 -- Types de correspondance (une ligne par couple candidat / ligne lamp01) :
 --
---   ine      boursier : beneficiaires.allocataire_matricule = INE, organisme cnous
+--   ine      boursier : beneficiaires.allocataire_matricule = INE, organisme cnous, et même
+--            identité (son code lui est renvoyé)
+--   ine_seul boursier : même INE, mais pas la même identité (INE mal saisi, ou même
+--            personne saisie autrement : un humain tranche)
 --   exacte   même identité. Pour un enfant (AEEH, jeune), en plus : même parent. Pour un
---            boursier sans INE, en plus : même genre, et ligne lamp01 en situation boursier
---   identite boursier sans INE : même identité, mais genre ou situation différents
+--            boursier sans INE, en plus : ligne lamp01 en situation boursier
+--   identite boursier sans INE : même identité, mais ligne lamp01 sous une autre aide
 --            (homonyme ou même personne sous une autre aide : un humain tranche)
 --   autre_parent
 --            enfant : même identité, mais pas le même parent, ou parent inconnu de lamp01
 --            (homonyme, ou même enfant déclaré par son autre parent : un humain tranche)
+--   prenom_contenu
+--            prénoms différents, l'un contenu dans l'autre, quel que soit le parent ou
+--            l'aide (même personne saisie autrement, ou jumeaux : un humain tranche)
 --
 -- Même parent, c'est-à-dire :
 --   - même nom : celui de lamp01 (le nom d'usage côté CNAF), ou son nom de naissance de
@@ -34,12 +42,11 @@
 -- bénéficiaire AAH ou boursier, qui est son propre allocataire, et c'est alors la sienne,
 -- comparée comme date du bénéficiaire.
 --
--- Le genre du bénéficiaire n'est comparé que pour un boursier sans INE : ailleurs, une erreur
--- de saisie ferait rater un doublon. Il est exporté dans les lignes touchées, pour
--- l'investigation.
+-- Le genre du bénéficiaire n'est jamais comparé : une erreur de saisie ferait rater un
+-- doublon. Il est exporté dans les lignes touchées, pour l'investigation.
 --
--- Le verdict (doublon pour exacte/ine, à vérifier pour identite ou autre_parent seuls) est posé
--- par dn_pipeline.py split.
+-- Le verdict (doublon pour exacte/ine, à vérifier pour ine_seul, identite, autre_parent ou
+-- prenom_contenu seuls) est posé par dn_pipeline.py split.
 
 \set ON_ERROR_STOP on
 
@@ -65,14 +72,13 @@ create temp table dn_candidats (
 	nom text,
 	prenom text,
 	date_naissance text,
-	genre text,
 	allocataire_genre text,
 	allocataire_nom text,
 	allocataire_prenom text
 ) on commit drop;
 
 -- `header match`: names and order of dn_pipeline.MATCH_COLUMNS.
-\copy dn_candidats (eligibility_result_id, situation, ine, nom, prenom, date_naissance, genre, allocataire_genre, allocataire_nom, allocataire_prenom) from 'dn_candidats.csv' with (format csv, header match, delimiter ';')
+\copy dn_candidats (eligibility_result_id, situation, ine, nom, prenom, date_naissance, allocataire_genre, allocataire_nom, allocataire_prenom) from 'dn_candidats.csv' with (format csv, header match, delimiter ';')
 
 create temp table dn_norm on commit drop as
 select
@@ -81,8 +87,8 @@ select
 	nullif(btrim(ine), '') as ine,
 	nullif(public.normalise_recherche(nom), '') as nom,
 	nullif(public.normalise_recherche(prenom), '') as prenom,
+	string_to_array(nullif(public.normalise_recherche(prenom), ''), ' ') as prenoms,
 	nullif(public.normalise_date_recherche(date_naissance), '')::date as naissance,
-	nullif(btrim(genre), '') as genre,
 	-- A boursier without INE: nothing but their identity to tell them from a namesake.
 	coalesce(situation = 'boursier', false) and nullif(btrim(ine), '') is null as boursier_sans_ine,
 	nullif(public.normalise_recherche(allocataire_nom), '') as parent_nom,
@@ -97,8 +103,9 @@ select
 	b.id_psp,
 	public.normalise_recherche(b.nom) as nom,
 	public.normalise_recherche(b.prenom) as prenom,
+	-- nullif: an empty array is contained in every other one.
+	string_to_array(nullif(public.normalise_recherche(b.prenom), ''), ' ') as prenoms,
 	b.date_naissance::date as naissance,
-	b.genre::text as genre,
 	b.situation::text as situation,
 	nullif(public.normalise_recherche(b.allocataire_nom), '') as parent_nom,
 	nullif(public.normalise_recherche(x.cnaf_allocataire_nom_naissance), '') as parent_nom_naissance,
@@ -120,8 +127,34 @@ create temp table dn_correspondances (
 	type text not null
 ) on commit drop;
 
+-- Every candidate / lamp01 code pair with the same family name, birth date and nested first
+-- names, the parent compared once.
+create temp table dn_paires on commit drop as
+select
+	n.eligibility_result_id,
+	b.id_psp,
+	bool_or(b.prenom = n.prenom) as prenom_identique,
+	bool_or(n.boursier_sans_ine and not coalesce(b.situation = 'boursier', false)) as identite_lache,
+	bool_or(coalesce(n.situation in ('AEEH', 'jeune'), false)) as enfant,
+	bool_or(coalesce(
+		n.parent_nom in (b.parent_nom, b.parent_nom_naissance)
+		and n.parent_prenom = b.parent_prenom
+		and (n.parent_genre is null or b.parent_genre is null or b.parent_genre = n.parent_genre),
+		false)) as meme_parent
+from dn_norm n
+join dn_base b
+  on b.naissance = n.naissance
+ and b.nom = n.nom
+ and (b.prenoms <@ n.prenoms or n.prenoms <@ b.prenoms)
+group by n.eligibility_result_id, b.id_psp;
+
+-- Same INE: `ine` only when the identity agrees too, as compared above (an INE typo may point at
+-- another student).
 insert into dn_correspondances (eligibility_result_id, id_psp, type)
-select distinct n.eligibility_result_id, b.id_psp, 'ine'
+select distinct n.eligibility_result_id, b.id_psp,
+	case when exists (select 1 from dn_paires p
+	                   where p.eligibility_result_id = n.eligibility_result_id and p.id_psp = b.id_psp)
+	     then 'ine' else 'ine_seul' end
 from dn_norm n
 join public.beneficiaires b
   on b.allocataire_matricule = n.ine
@@ -131,26 +164,10 @@ join public.beneficiaires b
 where n.situation = 'boursier'
   and n.ine is not null;
 
--- Every candidate / lamp01 code pair with the same identity, the parent compared once.
-create temp table dn_paires on commit drop as
-select
-	n.eligibility_result_id,
-	b.id_psp,
-	bool_or(n.boursier_sans_ine
-	        and not coalesce(b.situation = 'boursier' and b.genre = n.genre, false)) as identite_lache,
-	bool_or(coalesce(n.situation in ('AEEH', 'jeune'), false)) as enfant,
-	bool_or(coalesce(
-		n.parent_nom in (b.parent_nom, b.parent_nom_naissance)
-		and n.parent_prenom = b.parent_prenom
-		and (n.parent_genre is null or b.parent_genre is null or b.parent_genre = n.parent_genre),
-		false)) as meme_parent
-from dn_norm n
-join dn_base b on b.naissance = n.naissance and b.nom = n.nom and b.prenom = n.prenom
-group by n.eligibility_result_id, b.id_psp;
-
 insert into dn_correspondances (eligibility_result_id, id_psp, type)
 select eligibility_result_id, id_psp,
-	case when identite_lache then 'identite'
+	case when not prenom_identique then 'prenom_contenu'
+	     when identite_lache then 'identite'
 	     when enfant and not meme_parent then 'autre_parent'
 	     else 'exacte' end
 from dn_paires;
@@ -198,7 +215,7 @@ select
 	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'exacte') as par_exacte,
 	(select count(distinct eligibility_result_id) from dn_correspondances where type = 'autre_parent') as par_autre_parent,
 	(select count(distinct eligibility_result_id) from dn_correspondances c
-	  where type in ('identite', 'autre_parent')
+	  where type in ('ine_seul', 'identite', 'autre_parent', 'prenom_contenu')
 	    and not exists (select 1 from dn_correspondances d
 	                     where d.eligibility_result_id = c.eligibility_result_id
 	                       and d.type in ('exacte', 'ine'))) as a_verifier,

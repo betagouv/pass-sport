@@ -81,7 +81,7 @@ def base_row(**overrides) -> dict:
 
 def candidate(**overrides) -> dict:
     return {'eligibility_result_id': 'c1', 'situation': 'AEEH', 'ine': '', 'nom': 'Martin',
-            'prenom': 'Léa', 'date_naissance': '2015-03-12', 'genre': 'F', **overrides}
+            'prenom': 'Léa', 'date_naissance': '2015-03-12', **overrides}
 
 
 def extra_row(**overrides) -> dict:
@@ -91,8 +91,9 @@ def extra_row(**overrides) -> dict:
             **overrides}
 
 
-def match(pg, base=(), candidates=(), exercices=(), extra=()):
-    """Seeds lamp01, runs the SQL, returns ({(id, id_psp): type}, touched rows, recap)."""
+def match(pg, base=(), candidates=(), exercices=(), extra=(), discard_touched=False):
+    """Seeds lamp01, runs the SQL, returns ({(id, id_psp): types joined by ' + '}, touched rows,
+    recap)."""
     seed = ['truncate table public.beneficiaire_cnaf_extra_field, public.beneficiaires;']
     seed += [f"insert into public.exercices (id, libelle) values ({e}, 'test') on conflict do nothing;"
              for e in exercices]
@@ -120,7 +121,8 @@ def match(pg, base=(), candidates=(), exercices=(), extra=()):
 
     run = subprocess.run(
         ['docker', 'exec', '-w', workdir, pg, 'psql', '-U', 'u_passsport', '-d', 'passsport',
-         '-v', 'ON_ERROR_STOP=1', '-q', '-A', '-t', '-f', 'match_dn.sql'],
+         '-v', 'ON_ERROR_STOP=1', '-q', '-A', '-t',
+         *(['-v', 'touchees=/dev/null'] if discard_touched else []), '-f', 'match_dn.sql'],
         capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
 
@@ -129,9 +131,11 @@ def match(pg, base=(), candidates=(), exercices=(), extra=()):
                                  capture_output=True, text=True, check=True).stdout
         return list(csv.DictReader(io.StringIO(content), delimiter=';'))
 
-    correspondences = {(row['eligibility_result_id'], row['id_psp']): row['type']
-                       for row in read('correspondances.csv')}
-    touched = read('lamp01-touchees.csv')
+    types = {}
+    for row in read('correspondances.csv'):
+        types.setdefault((row['eligibility_result_id'], row['id_psp']), set()).add(row['type'])
+    correspondences = {pair: ' + '.join(sorted(kinds)) for pair, kinds in types.items()}
+    touched = [] if discard_touched else read('lamp01-touchees.csv')
     recap_line = [line for line in run.stdout.splitlines() if '|' in line][-1]
     recap = dict(zip(RECAP_COLUMNS, (int(v) for v in recap_line.split('|')), strict=True))
     return correspondences, touched, recap
@@ -202,9 +206,12 @@ def test_an_adult_needs_no_parent(pg):
 
 
 @pytest.mark.parametrize('lamp, typed', [
-    # Exact identities only, even under the same parent.
+    # Even under the same parent.
     ({}, {'prenom': 'Leah'}),                           # a first name mistyped
-    ({'prenom': 'LEA ROSE'}, {}),                       # a first name more
+    ({'prenom': 'JEAN'}, {'prenom': 'Jeanne'}),         # whole words only
+    ({'prenom': 'MARIE ANNE'}, {'prenom': 'Marie-Claire'}),  # sisters sharing one word
+    ({'prenom': 'ROSE MARIE'}, {'prenom': 'Léa Rose'}),
+    ({'prenom': '---'}, {}),                            # nothing left once normalised
     ({'nom': 'MARTIN DUPONT'}, {}),                     # a family name more
     ({'nom': 'MARTIN-DUPONT'}, {'nom': 'Dupont'}),
     ({'nom': 'DUPONT'}, {}),                            # under the other parent's family name
@@ -222,7 +229,7 @@ def test_no_correspondence(pg, lamp, typed):
 
 
 def test_ine_for_boursiers_only(pg):
-    correspondences, _, _ = match(
+    correspondences, _, recap = match(
         pg,
         base=[base_row(id_psp='PSP-B', nom='DORVAT', prenom='PIM', date_naissance='2001-01-01',
                        organisme='cnous', situation='boursier', allocataire_matricule='0A1B2C3D4E5'),
@@ -231,23 +238,44 @@ def test_ine_for_boursiers_only(pg):
                               nom='Autre', prenom='Nom', date_naissance='2002-02-02'),
                     candidate(eligibility_result_id='c', situation='AEEH', ine='1234567',
                               nom='Autre', prenom='Nom')])
-    assert correspondences == {('b', 'PSP-B'): 'ine'}
+    assert correspondences == {('b', 'PSP-B'): 'ine_seul'}
+    assert (recap['par_ine'], recap['a_verifier']) == (0, 1)
+
+
+INE_ROW = {'id_psp': 'PSP-B', 'nom': 'DORVAT', 'prenom': 'PIM', 'date_naissance': '2001-01-01 04:00:00',
+           'organisme': 'cnous', 'situation': 'boursier', 'allocataire_matricule': '0A1B2C3D4E5'}
+INE_CANDIDATE = {'situation': 'boursier', 'ine': '0A1B2C3D4E5', 'nom': 'Dorvat', 'prenom': 'Pim',
+                 'date_naissance': '2001-01-01'}
+
+
+@pytest.mark.parametrize('typed, kinds', [
+    ({}, 'exacte + ine'),
+    ({'prenom': 'Pim Alexandre'}, 'ine + prenom_contenu'),
+    ({'nom': 'Martin'}, 'ine_seul'),                                       # INE typo
+    ({'prenom': 'Lou'}, 'ine_seul'),
+    ({'date_naissance': '2001-01-02'}, 'ine_seul'),
+])
+def test_an_ine_is_only_a_doublon_with_the_same_identity(pg, typed, kinds):
+    correspondences, _, recap = match(pg, base=[base_row(**INE_ROW)],
+                                      candidates=[candidate(**{**INE_CANDIDATE, **typed})])
+    assert correspondences == {('c1', 'PSP-B'): kinds}
+    assert (recap['par_ine'], recap['a_verifier']) == ((0, 1) if kinds == 'ine_seul' else (1, 0))
 
 
 @pytest.mark.parametrize('lamp, kind', [
     ({'situation': 'boursier', 'organisme': 'cnous'}, 'exacte'),
     ({'situation': 'AAH'}, 'identite'),                                    # known under another aid
-    ({'situation': 'boursier', 'organisme': 'cnous', 'genre': 'M'}, 'identite'),
-    ({'situation': 'boursier', 'organisme': 'cnous', 'genre': None}, 'identite'),
+    ({'situation': 'boursier', 'organisme': 'cnous', 'genre': 'M'}, 'exacte'),
+    ({'situation': 'boursier', 'organisme': 'cnous', 'genre': None}, 'exacte'),
 ])
-def test_a_boursier_without_ine_is_a_doublon_only_with_the_same_genre_as_a_boursier(pg, lamp, kind):
+def test_a_boursier_without_ine_is_a_doublon_as_a_boursier_whatever_the_genre(pg, lamp, kind):
     correspondences, _, recap = match(pg, base=[base_row(**lamp)],
                                       candidates=[candidate(situation='boursier', ine='')])
     assert correspondences == {('c1', 'PSP-1'): kind}
     assert recap['a_verifier'] == (kind == 'identite')
 
 
-def test_genre_and_situation_only_matter_for_a_boursier_without_ine(pg):
+def test_the_situation_only_matters_for_a_boursier_without_ine(pg):
     correspondences, _, _ = match(
         pg, base=[base_row(situation='AAH', genre='M')],
         candidates=[candidate(eligibility_result_id='b', situation='boursier', ine='0A1B2C3D4E5'),
@@ -261,5 +289,45 @@ def test_every_lamp01_row_is_listed_for_investigation(pg):
                   base_row(id_psp='PSP-3'), base_row(id_psp='PSP-4', prenom='LEA ROSE')],
         candidates=[candidate(**PARENT)])
     assert correspondences == {('c1', 'PSP-1'): 'exacte', ('c1', 'PSP-2'): 'autre_parent',
-                               ('c1', 'PSP-3'): 'exacte'}
-    assert [row['id_psp'] for row in touched] == ['PSP-1', 'PSP-2', 'PSP-3']
+                               ('c1', 'PSP-3'): 'exacte', ('c1', 'PSP-4'): 'prenom_contenu'}
+    assert [row['id_psp'] for row in touched] == ['PSP-1', 'PSP-2', 'PSP-3', 'PSP-4']
+
+
+@pytest.mark.parametrize('typed, known', [
+    ('Léa', 'LEA ROSE'),
+    ('Léa Rose', 'LEA'),
+    ('Jean-Pierre', 'JEAN'),
+    ('Anne Marie', 'MARIE ANNE'),
+])
+def test_a_first_name_contained_in_the_other_is_to_review(pg, typed, known):
+    correspondences, _, recap = match(pg, base=[base_row(prenom=known)],
+                                      candidates=[candidate(**{**PARENT, 'prenom': typed})])
+    assert correspondences == {('c1', 'PSP-1'): 'prenom_contenu'}
+    assert (recap['par_exacte'], recap['a_verifier']) == (0, 1)
+
+
+def test_identical_first_names_once_normalised_stay_exact(pg):
+    correspondences, _, _ = match(pg, base=[base_row(prenom='JEAN PIERRE')],
+                                  candidates=[candidate(**{**PARENT, 'prenom': 'Jean-Pierre'})])
+    assert correspondences == {('c1', 'PSP-1'): 'exacte'}
+
+
+@pytest.mark.parametrize('lamp, typed', [
+    ({'allocataire_prenom': 'PAUL', 'allocataire_qualite': 'M'}, PARENT),
+    ({'situation': 'AAH'}, {'situation': 'boursier'}),
+])
+def test_a_contained_first_name_ignores_the_parent_and_the_aid(pg, lamp, typed):
+    correspondences, _, _ = match(pg, base=[base_row(prenom='LEA ROSE', **lamp)],
+                                  candidates=[candidate(**typed)])
+    assert correspondences == {('c1', 'PSP-1'): 'prenom_contenu'}
+
+
+def test_no_candidate(pg):
+    correspondences, touched, recap = match(pg, base=[base_row()])
+    assert (correspondences, touched, recap['candidats']) == ({}, [], 0)
+
+
+def test_the_touched_rows_can_be_discarded(pg):
+    correspondences, _, _ = match(pg, base=[base_row()], candidates=[candidate(**PARENT)],
+                                  discard_touched=True)
+    assert correspondences == {('c1', 'PSP-1'): 'exacte'}
