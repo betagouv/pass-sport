@@ -24,8 +24,6 @@ import {
 import { useEligibilityTestStorage } from '@/app/hooks/use-eligibility-test-storage';
 import { StoredEligibilityTest } from '@/utils/eligibility-test-storage';
 import { useAskConsentForSupport } from '@/app/v2/test-eligibilite/hooks/use-ask-consent-for-support';
-import BoursierAlert from '@/app/v2/test-eligibilite/components/boursier-alert/BoursierAlert';
-import { CODES_OBTAINABLE_FOR_CROUS } from '@/app/constants/env';
 import { InputState } from '@/types/form';
 import { MATOMO_CATEGORY, trackEvent } from '@/utils/matomo';
 import { situationTrackingName } from '@/app/v2/test-eligibilite/helpers/tracking';
@@ -98,8 +96,7 @@ const AllowanceStep = () => {
     setEditedAnswers({ ...answers, ...patch });
   };
 
-  const isBoursier =
-    allowance === ALLOWANCE.CROUS || allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX;
+  const isBoursier = allowance === ALLOWANCE.CROUS;
   const isCaisseNeeded =
     allowance !== null &&
     ALLOCATIONS_WITH_CAISSE.includes(ALLOWANCE_MAPPING_TO_ALLOCATION[allowance]);
@@ -216,7 +213,6 @@ const AllowanceStep = () => {
       case ALLOWANCE.AEEH:
       case ALLOWANCE.QF:
       case ALLOWANCE.CROUS:
-      case ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX:
         return 'Vos informations d’éligibilité';
       default:
         return '';
@@ -244,11 +240,6 @@ const AllowanceStep = () => {
       }}
     >
       <div className="fr-container" ref={setVerdictNode} />
-
-      {isValidated &&
-        benefIsEligible &&
-        (allowance === ALLOWANCE.CROUS || allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX) &&
-        !CODES_OBTAINABLE_FOR_CROUS && <BoursierAlert allowance={allowance} />}
 
       <div className={cn(styles.background)}>
         <div className={styles.wrapper}>
@@ -370,31 +361,17 @@ const AllowanceStep = () => {
                   {
                     label: (
                       <p className="fr-text--bold">
-                        Étudiant boursier du CROUS
+                        Étudiant boursier
                         <br />
                         <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse annuelle du CROUS pour l&apos;enseignement supérieur
+                          Bourse annuelle du CROUS ou bourse régionale pour une formation sanitaire
+                          et sociale
                         </span>
                       </p>
                     ),
                     nativeInputProps: {
                       checked: allowance === ALLOWANCE.CROUS,
                       onChange: () => selectAllowance(ALLOWANCE.CROUS),
-                    },
-                  },
-                  {
-                    label: (
-                      <p className="fr-text--bold">
-                        Étudiant boursier en formation sanitaire et sociale
-                        <br />
-                        <span className="display--block fr-text--xs text--mention-grey fr-mb-0">
-                          Bourse régionale pour la formation sanitaire et sociale
-                        </span>
-                      </p>
-                    ),
-                    nativeInputProps: {
-                      checked: allowance === ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX,
-                      onChange: () => selectAllowance(ALLOWANCE.FORMATIONS_SANITAIRES_SOCIAUX),
                     },
                   },
                   {
@@ -487,7 +464,6 @@ const AllowanceStep = () => {
             benefIsEligible &&
             allowance !== null &&
             allowance !== ALLOWANCE.NONE &&
-            (isBoursier ? CODES_OBTAINABLE_FOR_CROUS : true) &&
             (isBoursier ? <CrousEligibilityTestForms /> : <EligibilityTestForms />)}
         </div>
       </div>
