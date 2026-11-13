@@ -115,6 +115,9 @@ class FakeApiClient implements ApiParticulierClient {
   // Pivot unknown to CAF/MSA: an answer, not an outage.
   qfNotFound = false;
 
+  // Commune codes API Particulier refuses on QF (422), as it does a pre-1976 Corsican code.
+  qfRefusedBirthplaces = new Set<string>();
+
   // Caisse that served the quotient, as API Particulier spells it.
   qfFournisseur: string | undefined = "CNAF";
 
@@ -215,6 +218,20 @@ class FakeApiClient implements ApiParticulierClient {
         success: false,
         data: null,
         error: "Service temporairement indisponible",
+        rateLimitRemaining: 100,
+        rateLimitResetMs: null,
+      };
+    }
+
+    if (identity.birthplace && this.qfRefusedBirthplaces.has(identity.birthplace)) {
+      this.calls += 1;
+      return {
+        ...RESOURCE_META.qf,
+        httpStatus: 422,
+        success: false,
+        data: null,
+        error: "Le paramètre codeCogInseeCommuneNaissance est invalide",
+        errorCode: "40001",
         rateLimitRemaining: 100,
         rateLimitResetMs: null,
       };
@@ -488,6 +505,7 @@ export type Stack = {
   setQfChildless: (childless: boolean) => void;
   setQfOutage: (outage: boolean) => void;
   setQfNotFound: (notFound: boolean) => void;
+  setQfRefusedBirthplaces: (codes: string[]) => void;
   // Caisse the fake QF answers with, undefined for a payload that names none.
   setQfFournisseur: (fournisseur: string | undefined) => void;
   // Second allocataire of the fake QF couple, null for a single-allocataire household.
@@ -1022,6 +1040,9 @@ export async function startStack(
     },
     setQfNotFound: (notFound: boolean) => {
       apiClient.qfNotFound = notFound;
+    },
+    setQfRefusedBirthplaces: (codes: string[]) => {
+      apiClient.qfRefusedBirthplaces = new Set(codes);
     },
     setQfFournisseur: (fournisseur: string | undefined) => {
       apiClient.qfFournisseur = fournisseur;

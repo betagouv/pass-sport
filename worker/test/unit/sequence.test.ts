@@ -236,6 +236,111 @@ describe("runEligibilitySequence — AEEH et le lieu de naissance", () => {
   });
 });
 
+describe("runEligibilitySequence — commune de naissance périmée", () => {
+  const QF = "dss.quotient_familial_identite";
+  const AAH = "dss.allocation_adulte_handicape_identite";
+  const CNOUS = "cnous.etudiant_boursier_identite";
+
+  const notFound = (resource: string): ResourceResult => ({
+    resource,
+    label: resource,
+    httpStatus: 404,
+    success: false,
+    data: null,
+  });
+
+  // Inside the CROUS window, so all three self resources are asked.
+  const ETUDIANT = { ...JEUNE_RATTACHE, birthcountry: "99100" };
+
+  const sentBirthplaces = (mock: { mock: { calls: unknown[][] } }) =>
+    mock.mock.calls.map(([identity]) => (identity as PivotIdentity).birthplace);
+
+  const runRecorded = async (identity: PivotIdentity, client: ApiParticulierClient) => {
+    const record = vi.fn(async (_event: Record<string, any>) => {});
+    const queue = { rateLimit: async () => {} } as unknown as Queue<EligibilityJobData>;
+    const results = await runEligibilitySequence(
+      stubJob(),
+      { identity, isFranceConnected: true },
+      client,
+      queue,
+      { record },
+      openGate(),
+      AOUT_2026,
+    );
+    return { results, events: record.mock.calls.map(([event]) => event) };
+  };
+
+  it("asks with the current Corsican code, never the pre-1976 one", async () => {
+    const client = stubClient([]);
+
+    await run({ ...ETUDIANT, birthplace: "20033" }, client);
+
+    expect(sentBirthplaces(client.quotientFamilial)).toEqual(["2B033"]);
+    expect(sentBirthplaces(client.aah)).toEqual(["2B033"]);
+    expect(sentBirthplaces(client.cnous)).toEqual(["2B033"]);
+  });
+
+  it("journals the code FranceConnect served next to the one sent", async () => {
+    const { events } = await runRecorded({ ...ETUDIANT, birthplace: "20033" }, stubClient([]));
+
+    expect(events[0].bodyPayload.code_cog_insee_commune_naissance).toBe("2B033");
+    expect(events[0].responsePayload.birthplace_fallback).toEqual({
+      rule: "corse_1976",
+      code_fc: "20033",
+      code_envoye: "2B033",
+    });
+  });
+
+  it("asks only once when the former Mayotte code answers", async () => {
+    const client = stubClient([]);
+
+    await run({ ...ETUDIANT, birthplace: "98501" }, client);
+
+    expect(sentBirthplaces(client.quotientFamilial)).toEqual(["98501"]);
+    expect(sentBirthplaces(client.aah)).toEqual(["98501"]);
+  });
+
+  it("asks again on the current Mayotte code after a 404, then keeps it", async () => {
+    const client = stubClient([]);
+    client.quotientFamilial.mockResolvedValueOnce(notFound(QF));
+
+    const { results, events } = await runRecorded({ ...ETUDIANT, birthplace: "98501" }, client);
+
+    expect(sentBirthplaces(client.quotientFamilial)).toEqual(["98501", "97601"]);
+    expect(sentBirthplaces(client.aah)).toEqual(["97601"]);
+    expect(sentBirthplaces(client.cnous)).toEqual(["97601"]);
+    expect(results.map((r) => r.checkpointKey)).toEqual(["qf:8", "qf:8:cog", "aah", "cnous"]);
+    expect(events[1].responsePayload.birthplace_fallback.rule).toBe("mayotte_2011");
+  });
+
+  it("asks again on the current Mayotte code after a 422", async () => {
+    const client = stubClient([]);
+    client.aah.mockResolvedValueOnce(rejected(AAH));
+
+    await run({ ...ETUDIANT, birthplace: "98501" }, client);
+
+    expect(sentBirthplaces(client.aah)).toEqual(["98501", "97601"]);
+  });
+
+  it("never asks a third time", async () => {
+    const client = stubClient([]);
+    client.cnous.mockResolvedValue(notFound(CNOUS));
+
+    await run({ ...ETUDIANT, birthplace: "98501" }, client);
+
+    expect(sentBirthplaces(client.cnous)).toEqual(["98501", "97601"]);
+  });
+
+  it("asks nothing more for a commune whose code merely changed", async () => {
+    const client = stubClient([]);
+    client.quotientFamilial.mockResolvedValue(notFound(QF));
+
+    await run({ ...ETUDIANT, birthplace: "61157" }, client);
+
+    expect(sentBirthplaces(client.quotientFamilial)).toEqual(["61157"]);
+  });
+});
+
 describe("runEligibilitySequence — ressource en panne", () => {
   const outage = (resource: string, httpStatus = 503): ResourceResult => ({
     resource,
