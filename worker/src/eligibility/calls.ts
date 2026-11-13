@@ -53,6 +53,7 @@ export const resourceEvent = (
   r: ResourceResult,
   durationMs: number,
   params?: Record<string, unknown>,
+  annotation?: Record<string, unknown>,
 ): HistoryEvent => ({
   actor: "api_particulier",
   action: r.resource,
@@ -72,6 +73,7 @@ export const resourceEvent = (
     rate_limit_remaining: r.rateLimitRemaining ?? null,
     rate_limit_reset_ms: r.rateLimitResetMs ?? null,
     retry_after: r.retryAfter ?? null,
+    ...annotation,
   },
 });
 
@@ -188,6 +190,8 @@ export type ResourceCall = {
   // Set only from here, where the call is actually made rather than replayed from the
   // checkpoint.
   params?: Record<string, unknown>;
+  // Extra keys for response_payload, e.g. which birthplace rule changed the params.
+  annotation?: Record<string, unknown>;
   tolerateFailure?: boolean;
   invoke: () => Promise<ResourceResult>;
   commit?: (r: ResourceResult) => Promise<void>;
@@ -203,6 +207,7 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
     subject,
     logSuffix,
     params,
+    annotation,
     tolerateFailure,
     invoke,
     commit,
@@ -227,7 +232,7 @@ export async function callResource(call: ResourceCall): Promise<ResourceResult> 
   // Before handleRateLimit: it throws Worker.RateLimitError(), which would carry off
   // the 429 event — the one most worth having.
   await history.record({
-    ...resourceEvent(r, elapsed(), params),
+    ...resourceEvent(r, elapsed(), params, annotation),
     ...(subject ? { subject } : {}),
   });
 

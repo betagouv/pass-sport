@@ -78,7 +78,8 @@ const isQfOutage = (rejected: RejectedResource): boolean =>
   rejected.http_status >= 500;
 
 // Read off that run's own QF calls, all journaled before its rows: no month answered, and at
-// least one said 404 or failed. A relance writes none before selfRow, so a QF failing again keeps it.
+// least one said 404, was refused (422 — a Corsican pre-1976 commune code, see birthplace.ts) or
+// failed. A relance writes none before selfRow, so a QF failing again keeps it.
 const lastRunMissedChildren = async (
   db: Database,
   sub: string,
@@ -90,7 +91,7 @@ const lastRunMissedChildren = async (
   const [qf] = await db
     .select({
       answered: sql<boolean>`bool_or(${eligibilityHistory.status} = 'success')`,
-      unanswered: sql<boolean>`bool_or(${eligibilityHistory.httpStatus} = 404 or ${eligibilityHistory.httpStatus} >= 500)`,
+      unanswered: sql<boolean>`bool_or(${eligibilityHistory.httpStatus} in (404, 422) or ${eligibilityHistory.httpStatus} >= 500)`,
     })
     .from(eligibilityHistory)
     .where(
