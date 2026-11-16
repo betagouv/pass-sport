@@ -272,6 +272,83 @@ select action, status, count(*)
  group by 1, 2 order by 1;
 ```
 
+### Relance des codes commune périmés (`cog:relance`)
+
+FranceConnect serves the commune code in force at birth. API Particulier refuses the pre-1976
+Corsican ones (20xxx, 422 on every call) and answers the pre-2011 Mayotte ones (985xx) a little
+less often than the current code. Since [src/eligibility/birthplace.ts](src/eligibility/birthplace.ts)
+the chain sends the current Corsican code (2A/2B) and asks again on 976xx after a Mayotte 404 /
+422. Both are journaled on the call under `response_payload.birthplace_fallback`.
+
+This script re-judges the usagers refused before that fix, through `fc-relance`. It selects the
+FranceConnect subs whose last run:
+
+- has a birthplace `20xxx` or `985xx` (born in France);
+- is not eligible and has no code;
+- never got an answer from QF, AAH or CNOUS;
+- was never relancé by this script.
+
+With `--confirm`, it then opens `relance_allowed` on the rows of that last run (production runs
+`FC_RELANCE_ALLOWLIST_ONLY=yes`). It traces each sub as `cog_relance.allowlist` and puts one
+`fc-relance-job` per sub on the FranceConnect queue, skipping a sub whose job is still live. The
+relance raises the refused rows to `eligible_pending` and inserts the children the refused QF hid.
+The next [run_fc_pipeline.sh](../data/2026/partners/franceconnect/run_fc_pipeline.sh) mints their
+codes and mails them.
+
+```text
+ enqueue-cog-relance (processing machine, tunnels 10010/10011)
+   1. selection SQL ──────────── eligibility_results + eligibility_history
+   2. --dry-run → list, stop
+   3. live job for the sub? → skipped
+   4. relance_allowed = true (last run) + trace 'cog_relance.allowlist'
+   5. queue.add('fc-relance-job', {identity: allocataire_identite + sub}, {jobId: sub})
+                    │
+                    ▼ codes-queue-france-connect
+ worker: fc-relance → QF/AAH/CNOUS on 2B033 / 976xx → not_eligible → eligible_pending
+                    + children inserted ('enfant_recupere_apres_echec_qf')
+                    │
+                    ▼ run_fc_pipeline.sh (cron, 30 min)
+ export_eligible_pending → codes → writeback eligible_confirmed → fc_code_emails → mail
+```
+
+**Prerequisite**: the worker in production carries `birthplace.ts`. Without it the relance sends
+20xxx again and gets the same 422.
+
+```bash
+# On the processing machine, from worker/, beside the FC pipeline's tunnels (10000/10001):
+scalingo --app "$SCALINGO_APP" db-tunnel -p 10010 SCALINGO_POSTGRESQL_URL &
+scalingo --app "$SCALINGO_APP" db-tunnel -p 10011 SCALINGO_REDIS_URL &
+export SCALINGO_POSTGRESQL_URL=…127.0.0.1:10010…  FC_CODE_EMAILS_REDIS_URL=…127.0.0.1:10011…
+
+pnpm cog:relance --dry-run              # counts (corse / mayotte) and the targeted subs
+pnpm cog:relance --confirm --limit 5    # a first handful, then read them back
+pnpm cog:relance --confirm              # the rest
+```
+
+Reading the relances back:
+
+```sql
+select h.response_payload ->> 'raison' as raison, h.response_payload ->> 'updated' as updated,
+       h.subject, count(*)
+  from eligibility_history h
+ where h.action = 'fc_relance'
+   and h.allocataire_fc_sub in (select allocataire_fc_sub from eligibility_history
+                                 where action = 'cog_relance.allowlist')
+ group by 1, 2, 3 order by 4 desc;
+```
+
+`relance_allowed` stays open afterwards, which also lets the usager relance from their espace. The
+children the relance inserts inherit it from the allocataire's row and are not in the trace. To
+close it again on the opened rows:
+
+```sql
+update eligibility_results set relance_allowed = false, updated_at = now()
+ where id in (select jsonb_array_elements_text(response_payload -> 'eligibility_result_ids')::uuid
+                from eligibility_history where action = 'cog_relance.allowlist');
+```
+
+The Corsican table is generated from the site's commune dataset: `pnpm cog:corse:generate`.
+
 ### Test email (`email:test`)
 
 Sends one real mail through Link Mobility to an address you choose, and exits. It writes nothing to

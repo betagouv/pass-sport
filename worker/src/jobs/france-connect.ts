@@ -169,10 +169,10 @@ export async function assessHousehold(
   );
 
   const { identity } = data;
-  // A child asked again on another pays de naissance leaves its rejected first row in the
-  // results; naming it here would accuse a resource that did answer in the end.
+  // A child asked again on another pays de naissance, or the allocataire on another commune de
+  // naissance (birthplace.ts), leaves its rejected first row in the results; naming it here would
+  // accuse a resource that did answer in the end.
   const answeredLater = (r: ResourceResult, index: number): boolean =>
-    r.childIndex != null &&
     results.some(
       (other, otherIndex) =>
         otherIndex > index &&
