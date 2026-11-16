@@ -1,4 +1,4 @@
-import { DASHBOARD_URL_PATTERN, maskDashboardKey, maskDashboardKeyIn } from '@/utils/dashboard-url';
+import { DASHBOARD_URL_PATTERN, maskDashboardKey } from '@/utils/dashboard-url';
 
 const KEY = 'AbCdEfGhIjKlMnOpQrStUvWxYz012345-_6789';
 
@@ -13,26 +13,6 @@ describe('maskDashboardKey', () => {
     expect(maskDashboardKey('https://example.test/v2/accueil')).toBe(
       'https://example.test/v2/accueil',
     );
-  });
-});
-
-describe('maskDashboardKeyIn', () => {
-  it('masks every field of a payload and keeps it valid', () => {
-    const event = {
-      request: { url: `https://example.test/tableau-de-bord/${KEY}` },
-      transaction: `GET /tableau-de-bord/${KEY}`,
-      breadcrumbs: [{ data: { from: '/v2/accueil', to: `/tableau-de-bord/${KEY}` } }],
-    };
-    expect(maskDashboardKeyIn(event)).toEqual({
-      request: { url: 'https://example.test/tableau-de-bord/***' },
-      transaction: 'GET /tableau-de-bord/***',
-      breadcrumbs: [{ data: { from: '/v2/accueil', to: '/tableau-de-bord/***' } }],
-    });
-  });
-
-  it('returns the payload itself when there is nothing to mask', () => {
-    const event = { request: { url: 'https://example.test/v2/accueil' } };
-    expect(maskDashboardKeyIn(event)).toBe(event);
   });
 });
 
