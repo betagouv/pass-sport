@@ -18,10 +18,8 @@ cd /srv/pass-sport/data/2026/dn-pipeline
 
 ## Ce qui est lu
 
-Les dossiers **en instruction** et **FranceConnect** : ceux qui portent le label `FranceConnect`
-ou qui le reçoivent dans ce passage (pré-remplis par le worker, ou déposés par un usager connecté à
-DN via FranceConnect, voir [plus bas](#dossiers-pré-remplis-depuis-lespace-franceconnect)). Les
-autres sont ignorés (`sans FranceConnect`). Seuls ceux qui ne portent aucun des labels du pipeline
+Les dossiers **en instruction**, déposés via FranceConnect ou non : sans FranceConnect, l'identité
+du demandeur est celle qu'il a saisie. Seuls ceux qui ne portent aucun des labels du pipeline
 (`Traité`, `À vérifier`, `Rejeté`, `Doublon`) sont pris. Pour faire repasser un dossier, lui
 retirer ses labels.
 
@@ -70,20 +68,23 @@ parent`), sauf si lamp01 le connaît déjà sous ce parent-là (**Doublon**).
 [match_dn.sql](match_dn.sql) est **propre à ce parcours**, indépendant de
 `franceconnect/match_beneficiaires.sql`. Il compare le bénéficiaire sur **toutes les situations
 et caisses** de l'exercice, et pour un enfant son parent en plus : un enfant n'est un doublon que
-sous le même parent. Le n° allocataire n'est jamais utilisé, ni le genre du bénéficiaire, sauf
-pour un boursier sans INE.
+sous le même parent. Le n° allocataire et le genre du bénéficiaire ne sont jamais utilisés. Les
+dossiers en construction passent par les [mêmes règles](#doublons-potentiels-des-dossiers-en-construction).
 
-La comparaison est **exacte seulement** : nom, prénom(s) et date de naissance identiques une
-fois normalisés (accents, casse, tirets). Un prénom mal saisi (LEAH / LEA), un prénom ou un nom
-en plus (LEA / LEA ROSE, MARTIN / MARTIN DUPONT) ou des jumeaux ne donnent aucune
+Il faut le même nom et la même date de naissance une fois normalisés (accents, casse, tirets), et
+des prénoms identiques ou **contenus les uns dans les autres**, mot entier par mot entier. Un
+prénom mal saisi (LEAH / LEA), un nom en plus (MARTIN / MARTIN DUPONT), des prénoms qui ne
+partagent qu'une partie de leurs mots (MARIE-CLAIRE / MARIE-ANNE) ou des jumeaux ne donnent aucune
 correspondance : le bénéficiaire est codé.
 
 | Correspondance | Règle | Verdict |
 |---|---|---|
-| `ine` | boursier : même INE (organisme cnous) | **Doublon** : pas de nouveau code |
-| `exacte` | nom, prénom(s) et date de naissance identiques. Enfant (AEEH, jeune) : en plus même parent. Boursier sans INE : en plus même genre, et ligne lamp01 en situation boursier | **Doublon** : pas de nouveau code |
-| `identite` | boursier sans INE : nom, prénom(s) et date identiques, mais genre ou situation différents (homonyme, genre mal saisi, ou même personne sous une autre aide) | **À vérifier** : pas de code |
+| `ine` | boursier : même INE (organisme cnous), et même nom, même date, prénoms identiques ou l'un contenu dans l'autre | **Doublon** : pas de nouveau code. Si lamp01 n'a qu'un code pour lui, il est envoyé à l'usager (`doublon_transmis`) |
+| `ine_seul` | boursier : même INE, mais pas les mêmes nom, prénom(s) ou date (INE mal saisi, ou même personne saisie autrement) | **À vérifier** : pas de code |
+| `exacte` | nom, prénom(s) et date de naissance identiques. Enfant (AEEH, jeune) : en plus même parent. Boursier sans INE : en plus ligne lamp01 en situation boursier | **Doublon** : pas de nouveau code |
+| `identite` | boursier sans INE : nom, prénom(s) et date identiques, mais ligne lamp01 sous une autre aide (homonyme, ou même personne sous une autre aide) | **À vérifier** : pas de code |
 | `autre_parent` | enfant : nom, prénom(s) et date identiques, mais pas le même parent, ou parent inconnu de lamp01 (homonyme, ou même enfant déclaré par son autre parent) | **À vérifier** : pas de code |
+| `prenom_contenu` | même nom et même date, prénoms différents mais l'un contenu dans l'autre (LEA / LEA ROSE, JEAN-PIERRE / JEAN, ANNE MARIE / MARIE ANNE), quels que soient le parent et l'aide | **À vérifier** : pas de code |
 | aucune | | **à coder** |
 
 Un enfant identique sous un autre parent n'est donc pas un **Doublon** mais **À vérifier** : deux
@@ -102,7 +103,8 @@ Le **même parent**, c'est :
   comme date du bénéficiaire. Elle reste affichée dans `investigation.csv` et injectée dans
   lamp01, pour le rapprochement FranceConnect.
 
-**`investigation.csv`** met côte à côte, pour chaque doublon et chaque cas à vérifier, la ligne
+**`investigation.csv`** met côte à côte, pour chaque doublon (sauf `doublon_transmis`, qui ne
+laisse rien à faire au support) et chaque cas à vérifier, la ligne
 saisie (`saisie_*`, lien du dossier DN) et chaque ligne lamp01 touchée (`lamp01_*` : code,
 identité, situation, caisse, allocataire et sa date de naissance, date d'injection). Un dossier
 « À vérifier » jugé homonyme se relance en retirant son label : il repassera le même
@@ -142,14 +144,19 @@ rapprochement (pas encore de forçage).
     1. l'**annotation privée** `Codes pass Sport` (instructeurs seulement) reçoit, à la suite
        de ce qu'elle contenait, une ligne `Prénom Nom : code` par code de ce passage, et une
        ligne par doublon de lamp01 avec sa raison et son code existant : `Prénom Nom : doublon,
-       déjà connu de lamp01 (même INE). Code existant : 26-XXXX-XXXX. Vérification manuelle du
-       support requise avant de le donner à l'usager.` (plusieurs codes séparés par des
-       virgules si lamp01 en a plusieurs). Elle est écrite même quand la production a refusé
-       le dépôt ;
+       déjà connu de lamp01 (nom, prénom et date de naissance identiques, …). Code existant :
+       26-XXXX-XXXX. Vérification manuelle du support requise avant de le donner à l'usager.`
+       (plusieurs codes séparés par des virgules si lamp01 en a plusieurs), ou pour un
+       `doublon_transmis` : `Prénom Nom : doublon, déjà connu de lamp01 (même INE, mêmes nom et
+       date de naissance, prénom identique ou contenu dans l'autre). Code existant, envoyé à
+       l'usager : 26-XXXX-XXXX.`. Elle est écrite même quand la production a refusé le dépôt ;
     2. un **message à l'usager**, une ligne par bénéficiaire, avec son code s'il vient d'être
-       créé. Le code d'un doublon n'est jamais envoyé automatiquement : venu de lamp01, il
+       créé. Le code d'un doublon n'est pas envoyé automatiquement : venu de lamp01, il
        pourrait être celui d'un homonyme. Le support le vérifie (`investigation.csv`) avant de
-       le transmettre à la main ;
+       le transmettre à la main. Seule exception, le `doublon_transmis` (correspondance `ine`,
+       un seul code dans lamp01) : `Prénom Nom : code pass Sport 26-XXXX-XXXX (déjà attribué).`.
+       Si la production a refusé le dépôt, le dossier ne reçoit aucun message et ce doublon
+       redevient un doublon à vérifier par le support ;
     3. un **label** : `À vérifier` si un bénéficiaire l'est, sinon `Rejeté` si un bénéficiaire
        l'est, sinon `Traité`. En plus, `Doublon` si un bénéficiaire est un doublon de lamp01 ;
     4. **`dossierAccepter`** si le dossier est `Traité` (tous codés ou déjà détenteurs d'un code).
@@ -182,8 +189,8 @@ Chaque passage crée `run/<AAAA-MM-JJTHH-MM-SS>[-dry-run]/` et ajoute une ligne 
 |---|---|
 | `dn-brut.json` | réponse de l'API (dossiers à traiter) |
 | `rejets.csv` | lignes écartées et motif |
-| `verdicts.csv` | verdict de chaque ligne : `rejete`, `doublon`, `a_verifier`, `a_coder` ; pour un doublon, ses codes lamp01 (`code_lamp01`) |
-| `investigation.csv` | doublons et cas à vérifier, face aux lignes lamp01 touchées |
+| `verdicts.csv` | verdict de chaque ligne : `rejete`, `doublon`, `doublon_transmis`, `a_verifier`, `a_coder` ; pour un doublon, ses codes lamp01 (`code_lamp01`) |
+| `investigation.csv` | doublons (sauf `doublon_transmis`) et cas à vérifier, face aux lignes lamp01 touchées |
 | `prod.csv` | ce qui est déposé dans `/nfs/run` |
 | `lamp01.csv` | ce qui est injecté dans lamp01 |
 | `writeback.csv` | le code de chaque bénéficiaire codé, repris dans DN |
@@ -220,6 +227,50 @@ l'attente de la production (2 h au plus) : à 3 h, elle se termine avant la repr
 FranceConnect. Lancé à la main dans la journée, le passage fait reporter les passages FranceConnect
 pendant qu'il attend. Rien à traiter, verrou pris ou dépôt en attente : sortie 0, le passage est
 reporté à la nuit suivante. Passage inachevé : sortie 1 chaque nuit, jusqu'à la reprise.
+
+## Doublons potentiels des dossiers en construction
+
+`run_dn_doublons.sh` (`dn_doublons.py`) prévient les instructeurs dès la construction. Il ne
+tire aucun code et n'envoie rien à l'usager.
+
+```bash
+./run_dn_doublons.sh [--dry-run]
+```
+
+**Dossiers pris** : en construction, suivis par au moins un instructeur, sans le label
+`Doublon potentiel`. Un dossier que personne ne suit attend qu'un instructeur le suive. DN exige
+un instructeur pour annoter : le script passe le premier qui suit le dossier, par ordre d'email.
+
+**Rapprochement** : le même `match_dn.sql` et les mêmes contrôles (`validate`) qu'en instruction,
+sur lamp01 seulement, pas entre dossiers. Une ligne rejetée n'est pas comparée. Toute
+correspondance compte, quel que soit son type.
+
+**Écritures**, dans cet ordre :
+1. l'annotation privée `Notes pour les dossiers en construction`, une ligne par code :
+   `Doublon potentiel pour Prénom Nom JJ/MM/AAAA : code`. Seules les lignes qui commencent par
+   `Doublon potentiel pour ` sont gérées par le script : les notes saisies à la main restent ;
+2. le label `Doublon potentiel`, en dernier : un échec d'annotation laisse le dossier sans label,
+   donc repris au passage suivant.
+
+Un dossier labellisé n'est plus repris : **retirer le label** pour le faire repasser. S'il n'y a
+plus de correspondance, les lignes du script sont retirées et aucun label n'est posé. Un faux
+positif revient au passage suivant s'il est relancé : il n'y a pas de moyen de l'écarter
+durablement.
+
+**Traces** : un dossier par passage, `run/doublons/<AAAA-MM-JJTHH-MM-SS>/`, garde `run.log` et le
+journal `doublons.csv` (références et nombre de lignes, aucune identité),
+`run/doublons/passages.log` chaque passage.
+`run.log` détaille les dossiers écartés : `dossiers_deja_labellises` puis, parmi les autres,
+`dossiers_sans_instructeur`.
+En `--dry-run`, rien n'est écrit dans DN et le journal, dans `<AAAA-MM-JJTHH-MM-SS>-dry-run/`, contient le
+texte exact des annotations. Les candidats envoyés à lamp01 restent dans un dossier temporaire,
+supprimé même en cas d'échec.
+
+**Cron** `pass-sport-dn-doublons`, une fois par heure (`15 * * * *`), posée **désactivée** tant
+que `pass_sport_dn_doublons_cron_enabled` vaut `false`. Elle peut tourner en même temps que
+`pass-sport-dn` et FranceConnect : autre état de dossier, verrou propre (`run/doublons/verrou`,
+un passage encore en cours fait sauter le suivant), lamp01 en lecture seule. Aucun tunnel : lamp01
+est une base locale, jointe par le même `LAMP_DB_PORT` que les autres crons.
 
 ## Configuration
 
@@ -260,8 +311,8 @@ Chaque passage pose le label `FranceConnect` sur ces dossiers (`prefilled` dans 
 étant le seul à pré-remplir cette démarche), ainsi que sur ceux dont l'usager s'est connecté à DN
 via FranceConnect (`connectionUsager` = `france_connect`). Seulement une fois déposés : en
 construction ou en instruction. DN refuse un label sur un brouillon, le worker ne peut donc pas
-le poser à la création. Ce n'est pas un label du pipeline : le dossier reste pris, et c'est
-même la condition pour l'être (voir [Ce qui est lu](#ce-qui-est-lu)). Journal :
+le poser à la création. Ce n'est pas un label du pipeline : il sert au support à repérer ces
+dossiers et ne change pas leur traitement (voir [Ce qui est lu](#ce-qui-est-lu)). Journal :
 `label-franceconnect.csv` du passage (`simule` en dry-run). Un échec n'arrête pas le passage,
 il est signalé par un `ATTENTION` dans `run.log`.
 
@@ -276,7 +327,10 @@ il est signalé par un `ATTENTION` dans `run.log`.
   - le champ `Ma date de naissance`, obligatoire : celle du bénéficiaire AAH ou boursier, et
     celle du parent pour ses enfants ;
   - l'annotation privée `Codes pass Sport`, de type **Texte long**. Sans elle, le passage
-    s'arrête dès la lecture de DN.
+    s'arrête dès la lecture de DN ;
+  - pour `run_dn_doublons.sh`, le label `Doublon potentiel` et l'annotation privée
+    `Notes pour les dossiers en construction`, de type **Texte long**. Sans eux, le script
+    s'arrête avant toute écriture.
 
 ## Tests
 

@@ -93,6 +93,10 @@
     # dossier. Posted disabled: set to true once manual runs (--dry-run first) have been
     # validated.
     pass_sport_dn_cron_enabled: false
+    # Hourly duplicate flagging of the DN dossiers en construction
+    # (data/2026/dn-pipeline/run_dn_doublons.sh). Posted disabled: set to true once manual runs
+    # (--dry-run first) have been validated.
+    pass_sport_dn_doublons_cron_enabled: false
 
   tasks:
     - name: Groupe d'exploitation et comptes

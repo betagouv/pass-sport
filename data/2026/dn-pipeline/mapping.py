@@ -4,7 +4,7 @@ Every label is compared folded (no accents, no case, single spaces, see `fold`),
 renamed champ only needs its new label here. Situations and caisses are recognised by
 keyword, the démarche spelling them out in full (« AAH (allocation aux adultes handicapés) »).
 
-Checked against the real démarche with apercu_dn.sh and `pnpm dn:champs` (2026-11-03).
+Checked against the real démarche with apercu_dn.sh and `pnpm dn:champs` (2026-11-09).
 """
 
 import re
@@ -36,7 +36,7 @@ DN_CHAMPS = {
     'enfants_aeeh': (
         "Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH (Allocation d'éducation "
         "de l'enfant handicapé) ?"),
-    'enfants': 'Pour chaque enfant, remplissez les informations suivantes',
+    'enfants': 'Pour chaque enfant, vérifiez ou completez les informations suivantes',
 }
 
 DN_ENFANT_CHAMPS = {
@@ -71,10 +71,16 @@ DN_LABEL_FRANCECONNECT = 'FranceConnect'
 # Dossier.connectionUsager: france_connect, password or deleted.
 DN_CONNECTION_FRANCECONNECT = 'france_connect'
 
+# Put by dn_doublons.py on the dossiers en construction lamp01 may already know, which it then
+# leaves alone until someone removes it. Not one of DN_LABELS: still taken once en instruction.
+DN_LABEL_DOUBLON_POTENTIEL = 'Doublon potentiel'
+
 # Private annotation (instructeurs only) receiving the codes each run hands out and its doublons,
 # created by hand in the démarche as « Texte long ».
 DN_ANNOTATION_CODES = 'Codes pass Sport'
 DN_ANNOTATION_TYPE = 'TextareaChampDescriptor'
+# May hold notes typed by hand: dn_doublons.py only touches its own lines, by their prefix.
+DN_ANNOTATION_NOTES_CONSTRUCTION = 'Notes pour les dossiers en construction'
 
 # --- Vocabularies -------------------------------------------------------------------
 
@@ -129,6 +135,7 @@ NO = {'non', 'false', 'no'}
 DN_MESSAGE_LINE = {
     'code_envoye': "{prenom} {nom} : code pass Sport {code}.",
     'doublon': "{prenom} {nom} : un code pass Sport a déjà été attribué.",
+    'doublon_transmis': "{prenom} {nom} : code pass Sport {code_lamp01} (déjà attribué).",
     'a_verifier': "{prenom} {nom} : la demande est en cours de vérification par nos équipes.",
     'rejete': "{prenom} {nom} : demande non retenue ({motif}).",
 }
@@ -143,9 +150,15 @@ DN_MESSAGE = (
 DN_ACCEPT_MOTIVATION = "Demande traitée : codes pass Sport attribués."
 
 # One line per code this run hands out and per doublon, in the private annotation. A doublon's
-# code comes from lamp01 and may be a namesake's: never sent to the usager automatically.
+# code comes from lamp01 and may be a namesake's: sent to the usager only when INE, nom, date de
+# naissance and first names agree, with a single lamp01 code (doublon_transmis).
 DN_ANNOTATION_LINE = {
     'code_envoye': "{prenom} {nom} : {code}",
     'doublon': ("{prenom} {nom} : doublon, {motif}. Code existant : {code_lamp01}. Vérification "
                 "manuelle du support requise avant de le donner à l'usager."),
+    'doublon_transmis': ("{prenom} {nom} : doublon, {motif}. Code existant, envoyé à l'usager : "
+                         "{code_lamp01}."),
 }
+
+DN_ANNOTATION_DOUBLON_PREFIX = 'Doublon potentiel pour '
+DN_ANNOTATION_DOUBLON_LINE = DN_ANNOTATION_DOUBLON_PREFIX + "{prenom} {nom} {date_naissance} : {code}"

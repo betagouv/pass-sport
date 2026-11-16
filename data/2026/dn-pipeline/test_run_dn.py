@@ -1,4 +1,4 @@
-"""End-to-end tests of run_dn.sh: throwaway lamp01, a fake /nfs/run injector and a fake
+"""End-to-end tests of run_dn.sh and run_dn_doublons.sh: throwaway lamp01, a fake /nfs/run injector and a fake
 Démarches Numériques behind a local HTTP server.
 
 Skipped without docker, flock, psql or bash >= 4 (the script's `declare -A`), i.e. anywhere but
@@ -9,6 +9,7 @@ Run from data/ : source .venv/bin/activate && pytest 2026/dn-pipeline/test_run_d
 
 import copy
 import csv
+import fcntl
 import hashlib
 import json
 import os
@@ -27,6 +28,7 @@ from test_dn_pipeline import DN_ACCOUNT
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 SCRIPT = PIPELINE_DIR / 'run_dn.sh'
+DOUBLONS_SCRIPT = PIPELINE_DIR / 'run_dn_doublons.sh'
 DB_INIT_DIR = PIPELINE_DIR.parents[2] / 'lamp01' / 'db-init'
 
 
@@ -68,7 +70,8 @@ def dossier(number, demandeur, child, beneficiaire_de='', caisse='CAF',
                 champ(mapping.DN_ENFANT_CHAMPS['date_naissance'], '', 'DateChamp', date=birthdate),
             ]}]),
         ],
-        'annotations': [{'id': f'A{number}', 'label': mapping.DN_ANNOTATION_CODES, 'stringValue': None}],
+        'annotations': [{'id': f'A{number}', 'label': mapping.DN_ANNOTATION_CODES, 'stringValue': None},
+                        {'id': f'N{number}', 'label': mapping.DN_ANNOTATION_NOTES_CONSTRUCTION, 'stringValue': None}],
         **overrides,
     }
 
@@ -89,13 +92,17 @@ DN_DOSSIERS = [
     # Put en instruction by DN itself, no instructeur to answer it as: ignored.
     dossier(505, {'nom': 'Varn', 'prenom': 'Ilo'}, ('Rem', 'Varn', 'M', '2015-03-12'),
             instruction_event='passe_en_instruction_automatiquement'),
-    # Neither pre-filled nor filed through FranceConnect: ignored, never labelled.
+    # Neither pre-filled nor filed through FranceConnect: coded, never labelled FranceConnect.
     dossier(506, {'nom': 'Lorn', 'prenom': 'Ade'}, ('Kai', 'Lorn', 'M', '2015-03-12'),
             connectionUsager=DN_ACCOUNT),
 ]
 DN_LABELS = [{'id': f'L-{key}', 'name': name} for key, name in mapping.DN_LABELS.items()]
 DN_LABELS.append({'id': 'L-franceconnect', 'name': mapping.DN_LABEL_FRANCECONNECT})
-DN_ANNOTATIONS = [{'__typename': mapping.DN_ANNOTATION_TYPE, 'id': 'AD1', 'label': mapping.DN_ANNOTATION_CODES}]
+DN_LABELS.append({'id': 'L-doublon-potentiel', 'name': mapping.DN_LABEL_DOUBLON_POTENTIEL})
+DN_ANNOTATIONS = [
+    {'__typename': mapping.DN_ANNOTATION_TYPE, 'id': 'AD1', 'label': mapping.DN_ANNOTATION_CODES},
+    {'__typename': mapping.DN_ANNOTATION_TYPE, 'id': 'AD2', 'label': mapping.DN_ANNOTATION_NOTES_CONSTRUCTION},
+]
 
 
 @pytest.fixture(scope='module')
@@ -171,7 +178,8 @@ class FakeDn:
         if field == 'dossierAccepter':
             dossier['state'] = 'accepte'
         if field == 'dossierModifierAnnotations':
-            dossier['annotations'][0]['stringValue'] = payload['annotations'][0]['value']['textarea']
+            written = payload['annotations'][0]
+            next(a for a in dossier['annotations'] if a['id'] == written['id'])['stringValue'] = written['value']['textarea']
         return {'data': {field: {'errors': None, 'message': {'id': 'M'}, 'label': {'id': 'L'},
                                  'dossier': {'id': dossier['id'], 'state': dossier['state']}}}}
 
@@ -266,10 +274,10 @@ def workspace(tmp_path, lamp, dn, injector):
         'DN_ATTENTE_PROD_MIN': '1', 'DN_ATTENTE_PAS_S': '1',
     }
 
-    def run(*args):
+    def run(*args, script=SCRIPT, **extra_env):
         # Run directories are named to the second.
         time.sleep(1)
-        return subprocess.run([str(SCRIPT), *args], env=env, capture_output=True, text=True)
+        return subprocess.run([str(script), *args], env={**env, **extra_env}, capture_output=True, text=True)
 
     return tmp_path, run, psql
 
@@ -289,6 +297,8 @@ ANSWERED = [
     ('dossierModifierAnnotations', 'D503', None), ('dossierEnvoyerMessage', 'D503', None),
     ('dossierAjouterLabel', 'D503', 'L-traite'),
     ('dossierAjouterLabel', 'D503', 'L-doublon'), ('dossierAccepter', 'D503', None),
+    ('dossierModifierAnnotations', 'D506', None), ('dossierEnvoyerMessage', 'D506', None),
+    ('dossierAjouterLabel', 'D506', 'L-traite'), ('dossierAccepter', 'D506', None),
 ]
 
 
@@ -317,8 +327,8 @@ def test_real_run_answers_the_dossiers_only_once_the_injector_filed_the_drop_in_
     result = run()
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert psql('select count(*) from public.beneficiaires') == '3'
-    injected, = (tmp_path / 'drop' / 'succes').glob('*/beneficiaires-insertion-2-*.csv')
+    assert psql('select count(*) from public.beneficiaires') == '4'
+    injected, = (tmp_path / 'drop' / 'succes').glob('*/beneficiaires-insertion-3-*.csv')
     with injected.open(encoding='utf-8', newline='') as handle:
         injected_codes = {row['id_psp'] for row in csv.DictReader(handle, delimiter=';')}
     assert injector.injected_at < min(dn.mutation_times[len(LABELLED_FC):])
@@ -328,7 +338,9 @@ def test_real_run_answers_the_dossiers_only_once_the_injector_filed_the_drop_in_
                for field, payload in dn.mutations if field != 'dossierAjouterLabel')
     annotation = dict(line.split(' : ') for line in dn.dossiers[0]['annotations'][0]['stringValue'].splitlines())
     assert sorted(annotation) == ['Ola Mervik', 'Tozal Mervik']
-    assert set(annotation.values()) == injected_codes
+    without_fc = dict(line.split(' : ') for line in dn.dossiers[5]['annotations'][0]['stringValue'].splitlines())
+    assert sorted(without_fc) == ['Kai Lorn']
+    assert {*annotation.values(), *without_fc.values()} == injected_codes
     message = dn.mutations[len(LABELLED_FC) + 1][1]['body']
     assert all(code in message for code in annotation.values())
     # The doublon's code comes from lamp01: never handed out, only noted for the support.
@@ -359,7 +371,7 @@ def test_a_run_stopped_after_lamp01_blocks_the_next_ones_until_resumed(workspace
     run_dir = marker.read_text().strip()
     # Production and lamp01 already hold the codes: the resume neither waits nor injects again.
     assert (Path(run_dir) / 'en-production').exists()
-    assert psql('select count(*) from public.beneficiaires') == '3'
+    assert psql('select count(*) from public.beneficiaires') == '4'
     # The refused acceptance leaves its dossier labelled Traité but en instruction; the other
     # dossiers are answered.
     assert dn.calls() == LABELLED_FC + [call for call in ANSWERED if call != ('dossierAccepter', 'D501', None)]
@@ -374,7 +386,7 @@ def test_a_run_stopped_after_lamp01_blocks_the_next_ones_until_resumed(workspace
 
     assert resumed.returncode == 0, resumed.stdout + resumed.stderr
     assert not marker.exists()
-    assert psql('select count(*) from public.beneficiaires') == '3'
+    assert psql('select count(*) from public.beneficiaires') == '4'
     assert dn.calls()[len(LABELLED_FC) + len(ANSWERED) - 1:] == [('dossierAccepter', 'D501', None)]
     assert dn.dossiers[0]['state'] == 'accepte'
     assert len(list((tmp_path / 'drop' / 'succes').glob('*/beneficiaires-insertion-*.csv'))) == 1
@@ -396,6 +408,7 @@ def test_a_drop_refused_by_production_is_never_replayed(workspace, dn, injector)
         ('dossierModifierAnnotations', 'D503', None), ('dossierEnvoyerMessage', 'D503', None),
         ('dossierAjouterLabel', 'D503', 'L-traite'),
         ('dossierAjouterLabel', 'D503', 'L-doublon'), ('dossierAccepter', 'D503', None),
+        ('dossierAjouterLabel', 'D506', 'L-a_verifier'),
     ]
     assert not (tmp_path / 'run' / 'a-reprendre').exists()
 
@@ -428,3 +441,114 @@ def test_a_demarche_without_the_franceconnect_label_still_codes_and_answers(work
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'ATTENTION : label « FranceConnect » pas posé partout' in result.stdout
     assert dn.calls() == ANSWERED
+
+
+# --- run_dn_doublons.sh -----------------------------------------------------------------
+
+DOUBLON_LINE = 'Doublon potentiel pour Ema Sorel 12/03/2015 : 26-EMAS-0001'
+ANNOTATE_504 = ('dossierModifierAnnotations', 'D504', None)
+LABEL_504 = ('dossierAjouterLabel', 'D504', 'L-doublon-potentiel')
+
+
+@pytest.fixture
+def known_504(workspace, dn):
+    """D504, en construction, is followed by an instructeur and lamp01 knows its child."""
+    _, _, psql = workspace
+    dn.dossiers[3]['instructeurs'] = [{'id': 'I504', 'email': 'agent504@example.org'}]
+    psql("insert into public.beneficiaires (id_psp, nom, prenom, date_naissance, genre, organisme, "
+         "situation, allocataire_qualite, allocataire_nom, allocataire_prenom, exercice_id) values "
+         "('26-EMAS-0001', 'SOREL', 'EMA', '2015-03-12 04:00', 'F', 'CAF', 'jeune', 'M', 'SOREL', 'ELI', 5)")
+    return dn.dossiers[3]
+
+
+def notes_of(dossier_504):
+    return dossier_504['annotations'][1]['stringValue']
+
+
+def doublons_files(tmp_path):
+    return sorted(path.name for path in (tmp_path / 'run' / 'doublons').rglob('*') if path.is_file())
+
+
+def test_doublons_annotates_labels_then_waits_for_the_label_to_be_removed(workspace, dn, known_504):
+    _, run, psql = workspace
+
+    first = run(script=DOUBLONS_SCRIPT)
+
+    assert first.returncode == 0, first.stdout + first.stderr
+    assert dn.calls() == [ANNOTATE_504, LABEL_504]
+    assert notes_of(known_504) == DOUBLON_LINE
+    assert dn.mutations[0][1]['instructeurId'] == 'I504'
+
+    run(script=DOUBLONS_SCRIPT)
+    assert dn.calls() == [ANNOTATE_504, LABEL_504]
+
+    known_504['labels'] = []
+    run(script=DOUBLONS_SCRIPT)
+    assert dn.calls()[2:] == [LABEL_504]
+
+    known_504['labels'] = []
+    psql("delete from public.beneficiaires where id_psp = '26-EMAS-0001'")
+    run(script=DOUBLONS_SCRIPT)
+    assert dn.calls()[3:] == [ANNOTATE_504]
+    assert notes_of(known_504) == ''
+
+
+def test_doublons_ignores_a_dossier_no_instructeur_follows(workspace, dn, known_504):
+    _, run, _ = workspace
+    known_504['instructeurs'] = []
+
+    result = run(script=DOUBLONS_SCRIPT)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert dn.mutations == []
+
+
+def test_doublons_dry_run_writes_nothing_and_shows_the_text(workspace, dn, known_504):
+    tmp_path, run, _ = workspace
+
+    result = run('--dry-run', script=DOUBLONS_SCRIPT)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert dn.mutations == []
+    journal, = (tmp_path / 'run' / 'doublons').glob('*-dry-run/doublons.csv')
+    assert DOUBLON_LINE in journal.read_text(encoding='utf-8')
+
+
+def test_doublons_keeps_no_identity_after_a_real_run(workspace, dn, known_504):
+    tmp_path, run, _ = workspace
+    (tmp_path / 'tmp').mkdir()
+
+    result = run(script=DOUBLONS_SCRIPT, TMPDIR=str(tmp_path / 'tmp'))
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert doublons_files(tmp_path) == ['doublons.csv', 'passages.log', 'run.log', 'verrou']
+    assert list((tmp_path / 'tmp').iterdir()) == []
+    for path in (tmp_path / 'run' / 'doublons').rglob('*'):
+        if path.is_file():
+            assert 'Sorel' not in path.read_text(encoding='utf-8')
+
+
+def test_doublons_leaves_no_candidate_file_when_lamp01_refuses(workspace, dn, known_504):
+    tmp_path, run, _ = workspace
+    (tmp_path / 'tmp').mkdir()
+
+    result = run(script=DOUBLONS_SCRIPT, LAMP_DB_PASSWORD='mauvais', TMPDIR=str(tmp_path / 'tmp'))
+
+    assert result.returncode != 0
+    assert dn.mutations == []
+    assert list((tmp_path / 'tmp').iterdir()) == []
+    assert ' echec ' in (tmp_path / 'run' / 'doublons' / 'passages.log').read_text(encoding='utf-8')
+
+
+def test_doublons_skips_while_a_previous_run_holds_its_lock(workspace, dn, known_504):
+    tmp_path, run, _ = workspace
+    work_dir = tmp_path / 'run' / 'doublons'
+    work_dir.mkdir(parents=True)
+
+    with (work_dir / 'verrou').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        result = run(script=DOUBLONS_SCRIPT)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert dn.mutations == []
+    assert 'ignore-verrou' in (work_dir / 'passages.log').read_text(encoding='utf-8')

@@ -54,13 +54,30 @@ def test_dn_overview_flags_a_missing_or_mistyped_codes_annotation(capsys, annota
     assert shown in capsys.readouterr().out
 
 
-def test_dn_to_process_keeps_franceconnect_dossiers_en_instruction_without_pipeline_label():
+def test_dn_overview_checks_what_the_dossiers_en_construction_need(capsys):
+    annotations = {mapping.DN_ANNOTATION_NOTES_CONSTRUCTION: {'id': 'N', 'type': 'TextChampDescriptor'}}
+    apercu.dn_overview(FakeDn([], labels={'doublon POTENTIEL': 'L'}, annotations=annotations), 1234)
+
+    out = capsys.readouterr().out
+    assert 'ok      Doublon potentiel' in out
+    assert ('TYPE ? Notes pour les dossiers en construction : TextChampDescriptor, '
+            'attendu Texte long') in out
+
+
+def test_dn_overview_flags_a_missing_annotation_for_the_dossiers_en_construction(capsys):
+    apercu.dn_overview(FakeDn([], labels={}), 1234)
+    out = capsys.readouterr().out
+    assert 'ABSENT  Doublon potentiel' in out
+    assert 'ABSENT  Notes pour les dossiers en construction (Texte long)' in out
+
+
+def test_dn_to_process_keeps_dossiers_en_instruction_without_pipeline_label():
     labelled = dn_dossier(2, labels=[{'id': 'L1', 'name': 'traité'}])
     accepted = dn_dossier(3, state='accepte')
     dn_account = dn_dossier(4, connectionUsager=DN_ACCOUNT)
     prefilled = dn_dossier(5, connectionUsager=DN_ACCOUNT, prefilled=True)
     assert [d['number'] for d in apercu.dn_to_process(
-        [dn_dossier(1), labelled, accepted, dn_account, prefilled])] == [1, 5]
+        [dn_dossier(1), labelled, accepted, dn_account, prefilled])] == [1, 4, 5]
 
 
 def test_dn_overview_counts_the_dossiers_to_process(capsys):
@@ -68,8 +85,8 @@ def test_dn_overview_counts_the_dossiers_to_process(capsys):
                                dn_dossier(3, state='accepte')], labels={}), 1234)
     out = capsys.readouterr().out
     assert f'connexion : {DN_ACCOUNT} 1, france_connect 2' in out
-    assert ('à traiter (FranceConnect, en instruction par un instructeur, sans label) : 1 ; '
-            'ignorés : pas en instruction 1, sans FranceConnect 1') in out
+    assert ('à traiter (en instruction par un instructeur, sans label) : 2 ; '
+            'ignorés : pas en instruction 1') in out
 
 
 def test_dn_extraction_shows_the_fetched_dossiers(tmp_path, capsys):
@@ -107,7 +124,7 @@ def test_the_dossiers_to_process_are_cleaned_together_as_a_run_does(tmp_path, mo
 
     identites = apercu._read(work, 'identites.csv')
     assert identites[['reference', 'prenom']].values.tolist() == [
-        ['dn:1:enfant-1', 'Ola'], ['dn:2:enfant-2', 'Lio']]
+        ['dn:1:enfant-1', 'Ola'], ['dn:2:enfant-2', 'Lio'], ['dn:3:enfant-1', 'Eli']]
     rejets = apercu._read(work, 'rejets.csv')
     assert rejets[['reference', 'motif']].values.tolist() == [['dn:2:enfant-1', 'doublon de dn:1:enfant-1']]
     assert f'{work}/dn-brut.json' in capsys.readouterr().out

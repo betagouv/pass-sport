@@ -77,7 +77,7 @@ CLEANED_COLUMNS = [
 ]
 # match_dn.sql loads them with `header match`: same names, same order.
 MATCH_COLUMNS = [
-    'eligibility_result_id', 'situation', 'ine', 'nom', 'prenom', 'date_naissance', 'genre',
+    'eligibility_result_id', 'situation', 'ine', 'nom', 'prenom', 'date_naissance',
     'allocataire_genre', 'allocataire_nom', 'allocataire_prenom',
 ]
 IDENTITY_COLUMNS = [
@@ -85,7 +85,8 @@ IDENTITY_COLUMNS = [
     'allocataire_prenom', 'allocataire_nom', 'allocataire_genre', 'allocataire_date_naissance',
 ]
 REJECT_COLUMNS = [*SUIVI_COLUMNS, 'motif']
-# code_lamp01: the codes lamp01 already holds for a doublon, for the support to check.
+# code_lamp01: the codes lamp01 already holds for a doublon, for the support to check, or the one
+# a doublon_transmis is told.
 VERDICT_COLUMNS = ['eligibility_result_id', *SUIVI_COLUMNS, 'verdict', 'motif', 'code_lamp01']
 # The lamp01 side of a correspondence, as match_dn.sql exports it.
 TOUCHED_COLUMNS = [
@@ -199,14 +200,11 @@ def _holds_label(dossier: dict, name: str) -> bool:
 
 
 def dn_skip_reason(dossier: dict) -> str:
-    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, holding the
-    FranceConnect label or due to get it from this run, none of the pipeline's labels, and put
-    en instruction by an instructeur of its groupe."""
+    """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, none of the
+    pipeline's labels, and put en instruction by an instructeur of its groupe."""
     if dossier['state'] != 'en_instruction':
         return 'pas en instruction'
-    if not (dn_franceconnect(dossier) or _holds_label(dossier, mapping.DN_LABEL_FRANCECONNECT)):
-        return 'sans FranceConnect'
-    ours = {mapping.fold(name) for name in mapping.DN_LABELS.values()}
+    ours ={mapping.fold(name) for name in mapping.DN_LABELS.values()}
     if any(mapping.fold(label['name']) in ours for label in dossier['labels']):
         return 'déjà labellisé'
     if not dn_instructeur_id(dossier):
@@ -215,8 +213,8 @@ def dn_skip_reason(dossier: dict) -> str:
 
 
 def fetch_dn(client: DnClient, numero: int, only: set[int] | None = None) -> dict:
-    """The FranceConnect dossiers en instruction without the pipeline's labels, put en
-    instruction by an instructeur of their groupe; with `only`, among those numbers."""
+    """The dossiers en instruction without the pipeline's labels, put en instruction by an
+    instructeur of their groupe; with `only`, among those numbers."""
     label_id_by_name = {mapping.fold(name): label_id for name, label_id in client.labels(numero).items()}
     missing = [name for name in mapping.DN_LABELS.values() if mapping.fold(name) not in label_id_by_name]
     if missing:
@@ -534,7 +532,6 @@ def build_match_candidates(psp: pd.DataFrame, valid: pd.DataFrame) -> pd.DataFra
         'nom': valid['nom'],
         'prenom': valid['prenom'],
         'date_naissance': valid['date_naissance'],
-        'genre': valid['genre'],
         'allocataire_genre': valid['allocataire_genre'],
         'allocataire_nom': valid['allocataire_nom'],
         'allocataire_prenom': valid['allocataire_prenom'],
@@ -606,14 +603,19 @@ def clean(dn_filepath, output_filepath, match_filepath, cnaf_extra_filepath, ide
 
 VERDICT_MOTIF = {
     'exacte': "déjà connu de lamp01 (nom, prénom et date de naissance identiques, et même parent pour un enfant)",
-    'ine': "déjà connu de lamp01 (même INE)",
+    'ine': ("déjà connu de lamp01 (même INE, mêmes nom et date de naissance, prénom identique ou "
+            "contenu dans l'autre)"),
+    'ine_seul': ("même INE qu'une personne connue de lamp01, mais pas les mêmes nom, prénom ou date de "
+                 "naissance : voir investigation.csv"),
     'identite': ("boursier sans INE : mêmes nom, prénom et date de naissance qu'une personne connue de "
-                 "lamp01, mais genre ou situation différents : voir investigation.csv"),
+                 "lamp01, mais sous une autre aide : voir investigation.csv"),
     'autre_parent': ("mêmes nom, prénom et date de naissance qu'un enfant connu de lamp01, mais pas le "
                      "même parent : voir investigation.csv"),
+    'prenom_contenu': ("mêmes nom et date de naissance qu'une personne connue de lamp01, un prénom "
+                       "contenu dans l'autre : voir investigation.csv"),
 }
 # The à vérifier motif a line gets, from the most to the least specific of its correspondences.
-REVIEW_TYPES = ('identite', 'autre_parent')
+REVIEW_TYPES = ('ine_seul', 'identite', 'autre_parent', 'prenom_contenu')
 BATCH_OTHER_PARENT_MOTIF = "même enfant que {reference}, déclaré dans ce passage par un autre parent"
 
 
@@ -627,8 +629,10 @@ def batch_first_holder(identities: pd.DataFrame) -> pd.Series:
 
 def split(cleaned_filepath, correspondences_filepath, touched_filepath, identities_filepath,
           rejects_filepath, to_code_filepath, verdicts_filepath, investigation_filepath) -> dict:
-    """Exact (or INE) correspondence = doublon; other-parent or loose boursier one only = à
-    vérifier, as is a child the batch already holds under another parent; none = à coder."""
+    """Exact (or INE) correspondence = doublon, doublon_transmis when it is an INE one with a single
+    lamp01 code (told to the usager); INE-only, other-parent, nested first names or loose boursier
+    one only = à vérifier, as is a child the batch already holds under another parent; none = à
+    coder."""
     cleaned = _read(cleaned_filepath, quoting=csv.QUOTE_ALL)
     correspondences = _read(correspondences_filepath)
     touched = _read(touched_filepath)
@@ -643,15 +647,18 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
                     if t & {'exacte', 'ine'}}
     review_type = {rid: next(kind for kind in REVIEW_TYPES if kind in t) for rid, t in types.items()
                    if rid not in doublon_type}
-    doublon_codes = (correspondences[correspondences['type'].isin({'exacte', 'ine'})]
-                     .groupby('eligibility_result_id')['id_psp']
-                     .agg(lambda codes: ', '.join(sorted(set(codes)))))
+    doublons = (correspondences[correspondences['type'].isin({'exacte', 'ine'})]
+                .groupby('eligibility_result_id')['id_psp'])
+    doublon_codes = doublons.agg(lambda codes: ', '.join(sorted(set(codes))))
+    single_code = doublons.nunique().eq(1)
+    transmis = {rid for rid, kind in doublon_type.items() if kind == 'ine' and single_code[rid]}
 
     verdict = pd.Series('a_coder', index=identities.index)
     motif = pd.Series('', index=identities.index)
     ids = identities['eligibility_result_id']
     is_doublon = ids.isin(doublon_type)
     verdict[is_doublon] = 'doublon'
+    verdict[ids.isin(transmis)] = 'doublon_transmis'
     motif[is_doublon] = ids[is_doublon].map(doublon_type).map(VERDICT_MOTIF)
     code_lamp01 = ids.map(doublon_codes).where(is_doublon, '')
     is_review = ids.isin(review_type)
@@ -671,7 +678,9 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     _write(cleaned[cleaned['eligibility_result_id'].isin(ids[verdict == 'a_coder'])], to_code_filepath,
            CLEANED_COLUMNS, quoting=csv.QUOTE_ALL)
 
-    investigation = correspondences.merge(identities, on='eligibility_result_id').merge(
+    # A doublon_transmis leaves the support nothing to do.
+    investigation = correspondences[~correspondences['eligibility_result_id'].isin(transmis)].merge(
+        identities, on='eligibility_result_id').merge(
         touched.add_prefix('lamp01_'), left_on='id_psp', right_on='lamp01_id_psp', how='left')
     investigation = pd.DataFrame({
         'verdict': investigation['eligibility_result_id'].map(
@@ -697,7 +706,8 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
 
     return {
         'lus': len(identities),
-        'doublons': int(is_doublon.sum()),
+        'doublons': int((verdict == 'doublon').sum()),
+        'doublons_transmis': int((verdict == 'doublon_transmis').sum()),
         'a_verifier': int((verdict == 'a_verifier').sum()),
         'a_coder': int((verdict == 'a_coder').sum()),
         'rejets': len(rejects),
@@ -748,9 +758,12 @@ def _codes(codes_filepath) -> dict:
 
 def final_statuses(verdicts: pd.DataFrame, refused: bool = False) -> pd.DataFrame:
     """Each line's outcome: a coded line is handed its code by its dossier's message, unless
-    production refused the drop (refuse_prod)."""
+    production refused the drop (refuse_prod). That silences the dossier's message, so a
+    doublon_transmis of that dossier is left to the support (doublon)."""
     coded = verdicts['verdict'].map({'a_coder': 'refuse_prod' if refused else 'code_envoye'})
-    return verdicts.assign(statut=coded.fillna(verdicts['verdict']))
+    statut = coded.fillna(verdicts['verdict'])
+    silenced = statut.eq('refuse_prod').groupby(verdicts['dossier_number']).transform('any')
+    return verdicts.assign(statut=statut.mask(silenced & statut.eq('doublon_transmis'), 'doublon'))
 
 
 def dn_decision(lines: pd.DataFrame) -> tuple[str, bool]:
@@ -767,7 +780,7 @@ def dn_message(lines: pd.DataFrame) -> str:
     text = '\n'.join(
         '- ' + mapping.DN_MESSAGE_LINE[row['statut']].format(
             prenom=row['prenom'], nom=row['nom'], email=row['email'], motif=row['motif'],
-            code=row['code'])
+            code=row['code'], code_lamp01=row['code_lamp01'])
         for _, row in lines.iterrows())
     return mapping.DN_MESSAGE.format(lignes=text)
 
@@ -777,7 +790,8 @@ def dn_annotation(lines: pd.DataFrame, current) -> str:
     when the dossier got nothing new."""
     kept = [line for line in (current or '').splitlines() if line.strip()]
     # A doublon without code_lamp01 comes from a verdicts.csv older than it: left out.
-    wanted = lines['statut'].eq('code_envoye') | (lines['statut'].eq('doublon') & lines['code_lamp01'].ne(''))
+    wanted = (lines['statut'].isin({'code_envoye', 'doublon_transmis'})
+              | (lines['statut'].eq('doublon') & lines['code_lamp01'].ne('')))
     added = [mapping.DN_ANNOTATION_LINE[row['statut']].format(
                  prenom=row['prenom'], nom=row['nom'], code=row['code'], motif=row['motif'],
                  code_lamp01=row['code_lamp01'])
@@ -786,8 +800,8 @@ def dn_annotation(lines: pd.DataFrame, current) -> str:
     return '\n'.join(kept + new) if new else ''
 
 
-def _codes_annotation(dossier: dict) -> dict | None:
-    wanted = mapping.fold(mapping.DN_ANNOTATION_CODES)
+def _dossier_annotation(dossier: dict, label: str) -> dict | None:
+    wanted = mapping.fold(label)
     return next((annotation for annotation in dossier.get('annotations') or []
                  if mapping.fold(annotation['label']) == wanted), None)
 
@@ -818,7 +832,7 @@ def send_dn(lines: pd.DataFrame, labels: dict, annotations: dict, instructeurs: 
         if not dossier['statut'].eq('refuse_prod').any():
             steps.append(('message', dn_message(dossier)))
         steps.append(('label', mapping.DN_LABELS[label_key]))
-        if dossier['statut'].eq('doublon').any():
+        if dossier['statut'].isin({'doublon', 'doublon_transmis'}).any():
             steps.append(('label-doublon', mapping.DN_LABELS['doublon']))
         if accept:
             steps.append(('accepter', mapping.DN_ACCEPT_MOTIVATION))
@@ -871,7 +885,8 @@ def retours(verdicts_filepath, codes_filepath, dn_filepath, journal_filepath, dr
         if dn_client is None and not dry_run:
             dn_client = DnClient(os.environ.get('DN_API_URL') or DEFAULT_API_URL,
                                  _required_env('DN_API_TOKEN'))
-        annotations = {str(dossier['number']): _codes_annotation(dossier) for dossier in dn_raw['dossiers']}
+        annotations = {str(dossier['number']): _dossier_annotation(dossier, mapping.DN_ANNOTATION_CODES)
+                       for dossier in dn_raw['dossiers']}
         instructeurs = {str(dossier['number']): dn_instructeur_id(dossier)
                         for dossier in dn_raw['dossiers']}
         accepted = send_dn(verdicts, dn_raw['labels'], annotations, instructeurs, journal, dn_client,

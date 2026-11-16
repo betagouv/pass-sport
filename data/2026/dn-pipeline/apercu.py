@@ -2,7 +2,7 @@
 
     python apercu.py [--extraction | --voir]
 
-Without option: access, labels, codes annotation and champs compared with mapping.py, counts.
+Without option: access, labels, annotations and champs compared with mapping.py, counts.
 No personal data: champ labels only.
 --extraction: also cleans what the pipeline would take, as it would, in a private temp
 directory: the run's first two steps, without lamp01, codes nor feedback.
@@ -45,16 +45,17 @@ def dn_overview(client: DnClient, numero: int) -> list[dict]:
     print(f"démarche {numero} : accès OK")
     print(f"labels de la démarche : {', '.join(sorted(labels)) or 'aucun'}")
     folded_labels = {mapping.fold(name) for name in labels}
-    for name in [*mapping.DN_LABELS.values(), mapping.DN_LABEL_FRANCECONNECT]:
+    for name in [*mapping.DN_LABELS.values(), mapping.DN_LABEL_FRANCECONNECT, mapping.DN_LABEL_DOUBLON_POTENTIEL]:
         print(f"  {_ok(mapping.fold(name) in folded_labels)} {name}")
 
     print(f"annotations privées : {', '.join(sorted(annotations)) or 'aucune'}")
-    codes = {mapping.fold(label): spec for label, spec in annotations.items()}.get(
-        mapping.fold(mapping.DN_ANNOTATION_CODES))
-    if codes and codes['type'] != mapping.DN_ANNOTATION_TYPE:
-        print(f"  TYPE ? {mapping.DN_ANNOTATION_CODES} : {codes['type']}, attendu Texte long")
-    else:
-        print(f"  {_ok(codes is not None)} {mapping.DN_ANNOTATION_CODES} (Texte long)")
+    folded_annotations = {mapping.fold(label): spec for label, spec in annotations.items()}
+    for expected in (mapping.DN_ANNOTATION_CODES, mapping.DN_ANNOTATION_NOTES_CONSTRUCTION):
+        found = folded_annotations.get(mapping.fold(expected))
+        if found and found['type'] != mapping.DN_ANNOTATION_TYPE:
+            print(f"  TYPE ? {expected} : {found['type']}, attendu Texte long")
+        else:
+            print(f"  {_ok(found is not None)} {expected} (Texte long)")
 
     states = Counter(dossier['state'] for dossier in dossiers)
     print(f"dossiers : {len(dossiers)} "
@@ -65,7 +66,7 @@ def dn_overview(client: DnClient, numero: int) -> list[dict]:
     print(f"connexion : {', '.join(f'{c} {n}' for c, n in sorted(connections.items()))}")
     skipped = Counter(pipeline.dn_skip_reason(dossier) for dossier in dossiers)
     to_process = skipped.pop('', 0)
-    print(f"à traiter (FranceConnect, en instruction par un instructeur, sans label) : {to_process}"
+    print(f"à traiter (en instruction par un instructeur, sans label) : {to_process}"
           + (f" ; ignorés : {', '.join(f'{r} {n}' for r, n in sorted(skipped.items()))}" if skipped else ''))
 
     # Labels only, in first-seen order, over every dossier: a conditional champ may be missing

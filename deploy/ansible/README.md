@@ -145,6 +145,12 @@ C'est une garantie du playbook, pas un oubli à corriger :
   [README de dn-pipeline/](../../data/2026/dn-pipeline/README.md)). On l'active une
   fois que des passages à la main, `--dry-run` d'abord, ont été validés. Tag `dn-cron`, qui
   retire aussi l'ancienne entrée `pass-sport-grist-dn`.
+- **l'entrée crontab `pass-sport-dn-doublons`** (chaque heure, `15 * * * *`) est posée
+  **désactivée** tant que `pass_sport_dn_doublons_cron_enabled` vaut `false`, sa valeur par
+  défaut. Elle signale aux instructeurs les doublons potentiels des dossiers en construction (voir
+  le [README de dn-pipeline/](../../data/2026/dn-pipeline/README.md#doublons-potentiels-des-dossiers-en-construction)).
+  On l'active une fois que des passages à la main, `--dry-run` d'abord, ont été validés. Tag
+  `dn-doublons-cron`.
 
 ### Reporter tout le volet FC (crontab Scalingo/tunnel)
 
@@ -224,6 +230,7 @@ tâches :
 | `fc-cron` | la crontab `pass-sport-fc` et le contrôle d'écriture de `/nfs/run` |
 | `tdb-cron` | la crontab `pass-sport-tableaux-de-bord` et le contrôle de lecture de `/nfs/stats` |
 | `dn-cron` | la crontab `pass-sport-dn`, et le retrait de l'ancienne `pass-sport-grist-dn` |
+| `dn-doublons-cron` | la crontab `pass-sport-dn-doublons` |
 | `qf-batch-systemd` | l'unité `pass-sport-qf-batch@` |
 
 Par exemple, pour l'arrivée du pipeline DN :
@@ -299,7 +306,8 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
    défaut) n'a pas été repassé à `false`.
    `crontab -l -u <utilisateur> | grep pass-sport-tableaux-de-bord` : la ligne est commentée tant
    que `pass_sport_tdb_cron_enabled` vaut `false`. Idem pour `pass-sport-dn` tant que
-   `pass_sport_dn_cron_enabled` vaut `false`.
+   `pass_sport_dn_cron_enabled` vaut `false`, et pour `pass-sport-dn-doublons` tant que
+   `pass_sport_dn_doublons_cron_enabled` vaut `false`.
 4. `systemctl list-units 'pass-sport-qf-batch@*'` doit être vide : aucune instance active tant
    que personne n'a lancé `systemctl start pass-sport-qf-batch@<partenaire>`.
 5. Aucun secret n'est parti dans le dépôt public :

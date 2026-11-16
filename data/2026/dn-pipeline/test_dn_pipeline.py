@@ -181,7 +181,7 @@ def test_fetch_dn_skips_dossiers_already_labelled_by_the_pipeline():
     assert raw['ignores'] == 1
 
 
-def test_fetch_dn_takes_only_the_franceconnect_dossiers_en_instruction():
+def test_fetch_dn_takes_the_dossiers_en_instruction_with_or_without_franceconnect():
     dn_account = dn_dossier(2, connectionUsager=DN_ACCOUNT)
     deleted = dn_dossier(3, connectionUsager='deleted')
     prefilled = dn_dossier(4, connectionUsager=DN_ACCOUNT, prefilled=True)
@@ -193,9 +193,9 @@ def test_fetch_dn_takes_only_the_franceconnect_dossiers_en_instruction():
     raw = pipeline.fetch_dn(FakeDn([dn_dossier(1), dn_account, deleted, prefilled, labelled_fc, labelled,
                                     en_construction]), 1234)
 
-    assert [dossier['number'] for dossier in raw['dossiers']] == [1, 4, 5]
-    assert raw['ignores'] == 4
-    assert raw['ignores_par_motif'] == {'sans FranceConnect': 2, 'déjà labellisé': 1, 'pas en instruction': 1}
+    assert [dossier['number'] for dossier in raw['dossiers']] == [1, 2, 3, 4, 5]
+    assert raw['ignores'] == 2
+    assert raw['ignores_par_motif'] == {'déjà labellisé': 1, 'pas en instruction': 1}
 
 
 def test_fetch_dn_takes_only_the_listed_dossiers():
@@ -223,10 +223,9 @@ def test_dossier_numbers_refuses_anything_but_numbers():
 @pytest.mark.parametrize('overrides, reason', [
     ({}, ''),
     ({'state': 'en_construction'}, 'pas en instruction'),
-    ({'connectionUsager': DN_ACCOUNT}, 'sans FranceConnect'),
-    ({'connectionUsager': DN_ACCOUNT, 'prefilled': True}, ''),
-    ({'connectionUsager': DN_ACCOUNT, 'labels': [{'id': 'L', 'name': 'franceconnect'}]}, ''),
-    ({'state': 'en_construction', 'connectionUsager': DN_ACCOUNT}, 'pas en instruction'),
+    ({'connectionUsager': DN_ACCOUNT}, ''),
+    ({'connectionUsager': 'deleted'}, ''),
+    ({'labels': [{'id': 'L', 'name': 'franceconnect'}]}, ''),
     ({'labels': [{'id': 'L', 'name': 'à vérifier'}]}, 'déjà labellisé'),
     ({'traitements': [traitement('passe_en_instruction_automatiquement')]}, 'sans instructeur'),
 ])
@@ -404,7 +403,9 @@ def test_a_boursier_without_ine_is_kept_and_matched_on_identity(tmp_path):
     psp = read(paths['clean'], quoting=csv.QUOTE_ALL)
     assert psp['organisme'].tolist() == ['cnous']
     assert 'matricule' not in json.loads(psp['allocataire'].iloc[0])
-    assert read(paths['match'])[['situation', 'ine', 'genre']].values.tolist() == [['boursier', '', 'M']]
+    match = read(paths['match'])
+    assert match[['situation', 'ine']].values.tolist() == [['boursier', '']]
+    assert 'genre' not in match.columns
 
 
 @pytest.mark.parametrize('label, situation', [
@@ -507,7 +508,7 @@ def test_clean_offers_the_names_as_typed_to_the_matching(tmp_path):
     assert candidates.columns.tolist() == pipeline.MATCH_COLUMNS
     assert candidates.drop(columns='eligibility_result_id').to_dict('records') == [{
         'situation': 'AEEH', 'ine': '', 'nom': 'Dorvat', 'prenom': 'Éla',
-        'date_naissance': '2015-03-12', 'genre': 'F', 'allocataire_genre': 'M',
+        'date_naissance': '2015-03-12', 'allocataire_genre': 'M',
         'allocataire_nom': 'Dorvat', 'allocataire_prenom': 'Pim'}]
 
 
@@ -644,7 +645,29 @@ def test_split_a_loose_boursier_identity_is_to_review_with_its_own_reason(tmp_pa
         (0, '26-AAAA-AAAA', 'autre_parent'), (0, '26-BBBB-BBBB', 'identite')])
 
     assert (stats['doublons'], stats['a_verifier']) == (0, 1)
-    assert 'genre ou situation différents' in read(out['verdicts'])['motif'].iloc[0]
+    assert 'sous une autre aide' in read(out['verdicts'])['motif'].iloc[0]
+
+
+def test_split_a_contained_first_name_is_to_review_and_gets_no_code(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
+
+    _, stats, out = run_split(tmp_path, paths, [(0, '26-AAAA-AAAA', 'prenom_contenu')])
+
+    assert (stats['doublons'], stats['a_verifier'], stats['a_coder']) == (0, 1, 0)
+    verdicts = read(out['verdicts'])
+    assert verdicts['verdict'].tolist() == ['a_verifier']
+    assert verdicts['code_lamp01'].tolist() == ['']
+    assert 'contenu' in verdicts['motif'].iloc[0]
+    assert read(out['to_code'], quoting=csv.QUOTE_ALL).empty
+
+
+def test_split_an_exact_code_wins_over_a_contained_first_name(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
+
+    _, stats, _ = run_split(tmp_path, paths, [
+        (0, '26-AAAA-AAAA', 'prenom_contenu'), (0, '26-BBBB-BBBB', 'exacte')])
+
+    assert (stats['doublons'], stats['a_verifier']) == (1, 0)
 
 
 def test_split_a_doublon_carries_every_lamp01_code_it_matched(tmp_path):
@@ -656,6 +679,53 @@ def test_split_a_doublon_carries_every_lamp01_code_it_matched(tmp_path):
     verdicts = read(out['verdicts'])
     assert verdicts[['verdict', 'code_lamp01']].values.tolist() == [['doublon', '26-AAAA-AAAA, 26-BBBB-BBBB']]
     assert 'même INE' in verdicts['motif'].iloc[0]
+    # Two codes: the support picks the right one.
+    assert read(out['investigation'])['lamp01_id_psp'].nunique() == 2
+
+
+def test_split_an_ine_doublon_with_a_single_code_is_told_it_and_leaves_the_investigation(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
+
+    _, stats, out = run_split(tmp_path, paths, [
+        (0, '26-AAAA-AAAA', 'exacte'), (0, '26-AAAA-AAAA', 'ine'), (0, '26-AAAA-AAAA', 'prenom_contenu')])
+
+    assert (stats['doublons'], stats['doublons_transmis'], stats['a_verifier'], stats['a_coder']) == (
+        0, 1, 0, 0)
+    verdicts = read(out['verdicts'])
+    assert verdicts[['verdict', 'code_lamp01']].values.tolist() == [['doublon_transmis', '26-AAAA-AAAA']]
+    assert 'même INE' in verdicts['motif'].iloc[0]
+    assert read(out['investigation']).empty
+    assert read(out['to_code'], quoting=csv.QUOTE_ALL).empty
+
+
+def test_split_an_exact_code_beside_an_ine_one_leaves_the_doublon_to_the_support(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
+
+    _, stats, _ = run_split(tmp_path, paths, [(0, '26-AAAA-AAAA', 'ine'), (0, '26-BBBB-BBBB', 'exacte')])
+
+    assert (stats['doublons'], stats['doublons_transmis']) == (1, 0)
+
+
+def test_split_an_ine_alone_is_to_review(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
+
+    _, stats, out = run_split(tmp_path, paths, [(0, '26-AAAA-AAAA', 'ine_seul')])
+
+    assert (stats['doublons'], stats['doublons_transmis'], stats['a_verifier']) == (0, 0, 1)
+    verdicts = read(out['verdicts'])
+    assert verdicts[['verdict', 'code_lamp01']].values.tolist() == [['a_verifier', '']]
+    assert 'même INE' in verdicts['motif'].iloc[0]
+    assert read(out['investigation'])[['verdict', 'type']].values.tolist() == [['a_verifier', 'ine_seul']]
+
+
+def test_split_an_exact_code_wins_over_an_ine_alone(tmp_path):
+    _, paths = run_clean(tmp_path, dn=raw_dn(child_dossier()))
+
+    _, stats, out = run_split(tmp_path, paths, [
+        (0, '26-AAAA-AAAA', 'ine_seul'), (0, '26-BBBB-BBBB', 'exacte')])
+
+    assert (stats['doublons'], stats['a_verifier']) == (1, 0)
+    assert read(out['verdicts'])['code_lamp01'].tolist() == ['26-BBBB-BBBB']
 
 
 # --- whole Python chain -----------------------------------------------------------------
@@ -705,8 +775,8 @@ def write_verdicts(tmp_path, rows, annotated=None, without_annotation=()):
 
 
 def dn_line(number, index, verdict, eligibility_id='', motif='', prenom='Ola', code_lamp01=''):
-    if verdict == 'doublon':
-        motif = motif or pipeline.VERDICT_MOTIF['exacte']
+    if verdict in {'doublon', 'doublon_transmis'}:
+        motif = motif or pipeline.VERDICT_MOTIF['exacte' if verdict == 'doublon' else 'ine']
         code_lamp01 = code_lamp01 or '26-LAMP-0001'
     return {'reference': f'dn:{number}:enfant-{index}',
             'dossier_id': f'D{number}', 'dossier_number': str(number),
@@ -714,8 +784,8 @@ def dn_line(number, index, verdict, eligibility_id='', motif='', prenom='Ola', c
             'code_lamp01': code_lamp01, 'prenom': prenom, 'nom': 'Dorvat', 'email': 'pim@example.org'}
 
 
-def doublon_annotation(prenom, code_lamp01='26-LAMP-0001', kind='exacte'):
-    return mapping.DN_ANNOTATION_LINE['doublon'].format(
+def doublon_annotation(prenom, code_lamp01='26-LAMP-0001', kind='exacte', statut='doublon'):
+    return mapping.DN_ANNOTATION_LINE[statut].format(
         prenom=prenom, nom='Dorvat', motif=pipeline.VERDICT_MOTIF[kind], code_lamp01=code_lamp01)
 
 
@@ -747,6 +817,8 @@ def test_retours_annotates_messages_labels_and_accepts_a_fully_coded_dossier(tmp
     (['doublon'], ['L1', 'L4']),
     (['doublon', 'a_verifier'], ['L2', 'L4']),
     (['doublon', 'rejete'], ['L3', 'L4']),
+    (['doublon_transmis'], ['L1', 'L4']),
+    (['doublon_transmis', 'a_verifier'], ['L2', 'L4']),
 ])
 def test_retours_adds_the_doublon_label_on_top_of_the_dossier_label(tmp_path, verdicts, labels):
     write_verdicts(tmp_path, [dn_line(7, index, verdict, f'e{index}')
@@ -786,6 +858,25 @@ def test_retours_appends_this_run_codes_and_doublons_to_the_annotation_but_never
     assert 'Lio Dorvat : code pass Sport 26-TEST-E2' in message
     assert 'Mia Dorvat : un code pass Sport a déjà été attribué.' in message
     assert '26-OLD-0001' not in message
+
+
+def test_retours_tells_an_ine_doublon_its_lamp01_code_and_accepts_the_dossier(tmp_path):
+    write_verdicts(tmp_path, [
+        dn_line(7, 1, 'a_coder', 'e1'),
+        dn_line(7, 2, 'doublon_transmis', 'e2', prenom='Lio', code_lamp01='26-OLD-0001')])
+    dn = FakeDn([])
+
+    stats = run_retours(tmp_path, dn=dn)
+
+    assert stats['dossiers_dn_acceptes'] == 1
+    assert dn.calls[0][3] == '\n'.join([
+        'Ola Dorvat : 26-TEST-E1',
+        doublon_annotation('Lio', '26-OLD-0001', kind='ine', statut='doublon_transmis')])
+    assert "Code existant, envoyé à l'usager : 26-OLD-0001." in dn.calls[0][3]
+    message = dn.calls[1][2]
+    assert 'Ola Dorvat : code pass Sport 26-TEST-E1.' in message
+    assert 'Lio Dorvat : code pass Sport 26-OLD-0001 (déjà attribué).' in message
+    assert [call[0] for call in dn.calls] == ['annotation', 'message', 'label', 'label', 'accepter']
 
 
 def test_retours_of_a_verdicts_file_older_than_code_lamp01_annotates_no_doublon(tmp_path):
@@ -846,6 +937,25 @@ def test_retours_of_a_drop_refused_by_production(tmp_path):
         ['dn:7', 'annotation', 'fait'], ['dn:7', 'label', 'fait'], ['dn:7', 'label-doublon', 'fait'],
         ['dn:8', 'annotation', 'fait'], ['dn:8', 'message', 'fait'], ['dn:8', 'label', 'fait'],
         ['dn:8', 'label-doublon', 'fait'], ['dn:8', 'accepter', 'fait']]
+
+
+def test_retours_of_a_refused_drop_leaves_an_ine_doublon_without_message_to_the_support(tmp_path):
+    write_verdicts(tmp_path, [dn_line(7, 1, 'a_coder', 'e1'),
+                              dn_line(7, 2, 'doublon_transmis', 'e2', prenom='Lio'),
+                              dn_line(8, 1, 'doublon_transmis', 'e3')])
+    dn = FakeDn([])
+
+    run_retours(tmp_path, dn=dn, refused_drop='beneficiaires-insertion-1-x.csv')
+
+    # Dossier 7 gets no message: its doublon is noted for the support, as a manual one.
+    assert [call for call in dn.calls if call[1] == 'D7'] == [
+        ('annotation', 'D7', 'A7', doublon_annotation('Lio', kind='ine')),
+        ('label', 'D7', 'L2'), ('label', 'D7', 'L4')]
+    # Dossier 8 still gets its message, hence the code.
+    d8 = [call for call in dn.calls if call[1] == 'D8']
+    assert [call[0] for call in d8] == ['annotation', 'message', 'label', 'label', 'accepter']
+    assert d8[0][3] == doublon_annotation('Ola', kind='ine', statut='doublon_transmis')
+    assert 'Ola Dorvat : code pass Sport 26-LAMP-0001 (déjà attribué).' in d8[1][2]
 
 
 def test_retours_replay_skips_what_was_done_and_retries_a_refused_action(tmp_path):

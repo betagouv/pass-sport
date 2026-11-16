@@ -44,7 +44,7 @@
     "jose": "^6.2.15",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "next": "^16.4.2",
+    "next": "^16.4.5",
     "node-cache": "^5.1.2",
     "pg": "^8.23.1",
     "react": "^19.2.8",
@@ -79,9 +79,9 @@
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "prettier": "^3.9.10",
-    "sass": "^1.107.1",
+    "sass": "^1.108.1",
     "typescript": "^5.9.3",
     "webpack": "^5.110.1"
   },
-  "packageManager": "pnpm@11.4.0"
+  "packageManager": "pnpm@12.18.0"
 }

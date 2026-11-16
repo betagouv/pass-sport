@@ -35,7 +35,7 @@ export const DN_CHAMP_LABELS = {
   enfantsAeeh:
     "Un ou plusieurs de vos enfants sont-ils bénéficiaires de l'AEEH (Allocation d'éducation " +
     "de l'enfant handicapé) ?",
-  enfants: "Pour chaque enfant, remplissez les informations suivantes",
+  enfants: "Pour chaque enfant, vérifiez ou completez les informations suivantes",
 } as const;
 
 export const DN_ENFANT_CHAMP_LABELS = {

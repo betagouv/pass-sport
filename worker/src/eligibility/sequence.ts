@@ -7,6 +7,12 @@ import {
   toQfParams,
 } from "./client";
 import { API_PARTICULIER_VALIDATION_STATUS } from "./calls";
+import {
+  birthplaceAnnotation,
+  currentCorsicanBirthplace,
+  mayotteFallback,
+  needsBirthplaceFallback,
+} from "./birthplace";
 import { createCheckpointRunner } from "./checkpoint";
 import type { ApiParticulierRateGate } from "./rate-gate";
 import type { HistoryRecorder } from "../db/history";
@@ -104,31 +110,73 @@ export async function runEligibilitySequence(
   now: Date = new Date(),
 ): Promise<ResourceResult[]> {
   const checkpoint = createCheckpointRunner(job, queue, history, rateGate);
-  const { identity } = data;
+  const fcIdentity = data.identity;
+  const corsican = currentCorsicanBirthplace(fcIdentity);
+  const fallback = mayotteFallback(fcIdentity);
+  // Switched to the fallback once it answered: the later calls start from the code that works.
+  let identity = corsican;
+
+  type SelfCall = Omit<Parameters<typeof checkpoint.run>[0], "key" | "subject" | "annotation">;
+
+  const annotate = (who: PivotIdentity) =>
+    birthplaceAnnotation(fcIdentity, who, who === fallback ? "mayotte_2011" : "corse_1976");
+
+  const askSelf = async (
+    key: string,
+    build: (who: PivotIdentity) => SelfCall,
+    { withFallback }: { withFallback: boolean },
+  ): Promise<ResourceResult | undefined> => {
+    const row = await checkpoint.run({
+      key,
+      subject: "self",
+      annotation: annotate(identity),
+      ...build(identity),
+    });
+
+    if (!withFallback || !fallback || identity === fallback || !needsBirthplaceFallback(row)) {
+      return row;
+    }
+
+    const retry = await checkpoint.run({
+      key: `${key}:cog`,
+      subject: "self",
+      annotation: annotate(fallback),
+      ...build(fallback),
+    });
+
+    if (retry?.success) identity = fallback;
+
+    return retry;
+  };
 
   // Always first: quotient_familial is the only source of the household's children. Swept over
   // the campaign months and stopped on the first one under the threshold — a further month
-  // could no longer change the outcome and would only cost quota.
-  for (const mois of qfReferenceMonths(now)) {
-    const row = await checkpoint.run({
-      key: `qf:${mois}`,
-      resource: RESOURCE_META.qf.resource,
-      subject: "self",
-      params: toQfParams(identity, mois),
-      invoke: () => client.quotientFamilial(identity, mois),
-    });
+  // could no longer change the outcome and would only cost quota. The birthplace fallback is
+  // tried on the first month alone: the code answers the same whatever the month.
+  for (const [index, mois] of qfReferenceMonths(now).entries()) {
+    const row = await askSelf(
+      `qf:${mois}`,
+      (who) => ({
+        resource: RESOURCE_META.qf.resource,
+        params: toQfParams(who, mois),
+        invoke: () => client.quotientFamilial(who, mois),
+      }),
+      { withFallback: index === 0 },
+    );
 
     if (householdQfCovers(row?.data as QuotientFamilialData | null)) break;
   }
 
   const aahRow = isWithinBirthdateWindow(identity.birthdate, AAH_BIRTHDATE_MIN, AAH_BIRTHDATE_MAX)
-    ? await checkpoint.run({
-        key: "aah",
-        resource: RESOURCE_META.aah.resource,
-        subject: "self",
-        params: toDssParams(identity),
-        invoke: () => client.aah(identity),
-      })
+    ? await askSelf(
+        "aah",
+        (who) => ({
+          resource: RESOURCE_META.aah.resource,
+          params: toDssParams(who),
+          invoke: () => client.aah(who),
+        }),
+        { withFallback: true },
+      )
     : undefined;
 
   // The only short-circuit of the chain, and it stays within one subject: a second route for an
@@ -137,13 +185,15 @@ export async function runEligibilitySequence(
     !isAahBeneficiaryRow(aahRow) &&
     isWithinBirthdateWindow(identity.birthdate, CROUS_BIRTHDATE_MIN, CROUS_BIRTHDATE_MAX)
   ) {
-    await checkpoint.run({
-      key: "cnous",
-      resource: RESOURCE_META.cnous.resource,
-      subject: "self",
-      params: toCnousParams(identity),
-      invoke: () => client.cnous(identity),
-    });
+    await askSelf(
+      "cnous",
+      (who) => ({
+        resource: RESOURCE_META.cnous.resource,
+        params: toCnousParams(who),
+        invoke: () => client.cnous(who),
+      }),
+      { withFallback: true },
+    );
   }
 
   // Every child is asked about, never just the first one to answer yes: each of them is a

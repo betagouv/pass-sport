@@ -42,6 +42,7 @@ query dossiers($numero: Int!, $state: DossierState, $after: String) {
         labels { id name }
         traitements { event emailAgentTraitant dateTraitement }
         groupeInstructeur { instructeurs { id email } }
+        instructeurs { id email }
         champs {
           ...ChampValeur
           ... on RepetitionChamp { rows { champs { ...ChampValeur } } }

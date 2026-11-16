@@ -470,12 +470,14 @@ psql "$LAMP_DATABASE_URL" -v ON_ERROR_STOP=1 \
   --investigation-out "$INVESTIGATION_CSV"
 
 nb_doublons="$(grep -c ';doublon;' "$VERDICTS_CSV" || true)"
+nb_doublons_transmis="$(grep -c ';doublon_transmis;' "$VERDICTS_CSV" || true)"
 nb_a_verifier="$(grep -c ';a_verifier;' "$VERDICTS_CSV" || true)"
 log "$nb_doublons doublon(s), sans nouveau code ; détail des lignes lamp01 dans $INVESTIGATION_CSV"
+log "$nb_doublons_transmis doublon(s) INE, sans nouveau code : code lamp01 envoyé à l'usager"
 if (( nb_a_verifier > 0 )); then
   log "ATTENTION : $nb_a_verifier bénéficiaire(s) à vérifier à la main, aucun code : motifs dans $VERDICTS_CSV, lignes lamp01 dans $INVESTIGATION_CSV"
 fi
-COUNTS="$nb_rejets rejet(s), $nb_doublons doublon(s), $nb_a_verifier à vérifier"
+COUNTS="$nb_rejets rejet(s), $nb_doublons doublon(s), $nb_doublons_transmis doublon(s) INE transmis, $nb_a_verifier à vérifier"
 nb_codes=0
 
 if (( $(rows "$TO_CODE_CSV") > 0 )); then
