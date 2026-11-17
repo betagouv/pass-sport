@@ -38,6 +38,11 @@
 # avec `--skip-tags fc-cron` — pour rejouer le reste du provisioning, CLI Scalingo comprise,
 # avant que le volet FC (jeton, empreinte SSH) soit prêt.
 #
+# Avec `pass_sport_fc_alert_emails` renseigné dans le fichier de secrets, la même entrée
+# enchaîne après chaque passage une vérification qui prévient ces adresses, une seule fois par
+# panne, quand plusieurs passages d'affilée échouent ou restent bloqués — voir
+# tasks/ordonnancement.yml.
+#
 # Les tâches sont réparties dans tasks/ (un fichier par section, importé ci-dessous dans
 # l'ordre de jeu) : ce fichier ne sert que de sommaire et de définition des variables. Chaque
 # fichier de tasks/ porte les commentaires détaillés de ses propres tâches.
@@ -83,6 +88,15 @@
     # validés (empreinte SSH amorcée, essai à blanc réussi). Repasser à `false` (ou
     # `--extra-vars pass_sport_fc_cron_enabled=false`) pour redésactiver le passage.
     pass_sport_fc_cron_enabled: true
+    # Alerte courriel quand le passage FC est en panne (data/2026/partners/franceconnect/
+    # alerte_echecs.sh, lancé après chaque passage) : un seul courriel dès
+    # pass_sport_fc_alert_threshold passages en échec — ou écartés par le verrou — d'affilée.
+    # Adresses vides par défaut : elles viennent de ~/pass-sport-secrets.yml, ce dépôt est
+    # public. Liste vide : pas d'alerte, la ligne de crontab reste le seul passage.
+    pass_sport_fc_alert_emails: []
+    pass_sport_fc_alert_threshold: 3
+    # Même réserve que fc_prod_drop_dir : garder aligné à la main avec FC_RUN_DIR de data/.env.
+    pass_sport_fc_run_dir: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run"
     # LCA dashboards loader (data/2026/dashboard/run_dashboard.sh): reads what the LCA host
     # drops in tdb_drop_dir every morning and loads it into the site database. Posted disabled:
     # set to true once a --dry-run on a real extraction has passed.

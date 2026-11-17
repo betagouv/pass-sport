@@ -180,6 +180,32 @@ la crontab, activée par défaut (`pass_sport_fc_cron_enabled: true`).
 `data/.env`, pas dans ce fichier de secrets. Il reste nécessaire pour le reste du playbook
 (comptes opérateurs), d'où sa présence dans les deux commandes ci-dessus.
 
+### Alerte courriel quand le passage FC est en panne
+
+Avec `pass_sport_fc_alert_emails` renseigné dans `~/pass-sport-secrets.yml`, l'entrée
+`pass-sport-fc` enchaîne après chaque passage
+[alerte_echecs.sh](../../data/2026/partners/franceconnect/alerte_echecs.sh) :
+
+```crontab
+*/30 6-23 * * * …/run_fc_pipeline.sh; …/alerte_echecs.sh --seuil 3 --dossier-passages …/run --destinataire <adresse1> --destinataire <adresse2>
+```
+
+La vérification tourne donc à la même fréquence que le passage, juste après lui (`;` et non
+`&&`, pour qu'elle suive aussi un passage en échec), et jamais quand la cron est désactivée.
+Elle lit `run/passages.log` et envoie **un seul courriel par panne**, par le postfix de la
+machine (`/usr/sbin/sendmail`) :
+
+| Panne | Déclencheur | Témoin dans `run/` |
+| --- | --- | --- |
+| passage en échec | `pass_sport_fc_alert_threshold` (3 par défaut) passages `echec` d'affilée | `alerte-echec-envoyee` |
+| passage bloqué | autant de passages `ignore-verrou` d'affilée : un passage garde le verrou sans finir | `alerte-blocage-envoyee` |
+
+Les passages à blanc (`--dry-run`) ne comptent pas. L'alerte se réarme d'elle-même dès qu'un
+passage casse la série ; supprimer le témoin force un nouvel envoi. Le courriel ne reprend que
+les lignes de `passages.log`, jamais `run.log`, qui peut porter des données personnelles.
+
+Liste vide (défaut) : la ligne de crontab reste le seul passage, comme avant.
+
 ## Premier déploiement — le clone
 
 Le playbook vit dans le dépôt qu'il provisionne : le clone initial est donc un amorçage
@@ -265,6 +291,7 @@ Les noms des comptes opérateurs, eux, arrivent par `--extra-vars`, depuis un fi
 ```yaml
 # ~/pass-sport-secrets.yml — jamais versionné
 pass_sport_operators: [<compte1>, <compte2>]
+pass_sport_fc_alert_emails: [<adresse1>, <adresse2>]   # optionnel, voir « Alerte courriel »
 ```
 
 Trois choses ne vont dans aucun dépôt, public ou privé — un dépôt privé n'étant pas un
@@ -308,6 +335,14 @@ gestionnaire de secrets, il ne ferait que déplacer le problème :
    que `pass_sport_tdb_cron_enabled` vaut `false`. Idem pour `pass-sport-dn` tant que
    `pass_sport_dn_cron_enabled` vaut `false`, et pour `pass-sport-dn-doublons` tant que
    `pass_sport_dn_doublons_cron_enabled` vaut `false`.
+   Avec `pass_sport_fc_alert_emails` renseigné, la ligne `pass-sport-fc` se termine par
+   `alerte_echecs.sh … --destinataire …`. Vérifier une fois que le courriel part vraiment, sur
+   un faux dossier :
+   ```bash
+   sudo -u passsport bash -c 'd=$(mktemp -d); for i in 1 2 3; do echo "essai-$i  echec  1  test" >>"$d/passages.log"; done
+     /srv/pass-sport/data/2026/partners/franceconnect/alerte_echecs.sh --dossier-passages "$d" --destinataire <adresse1>'
+   mailq; sudo tail /var/log/mail.log   # remis, pas en attente
+   ```
 4. `systemctl list-units 'pass-sport-qf-batch@*'` doit être vide : aucune instance active tant
    que personne n'a lancé `systemctl start pass-sport-qf-batch@<partenaire>`.
 5. Aucun secret n'est parti dans le dépôt public :
