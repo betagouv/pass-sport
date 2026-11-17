@@ -27,14 +27,39 @@
 #
 # No run between midnight and 06:00: the first one is at 06:00, the last one at 23:30. That
 # night window is left to the Démarches Numériques run below.
+#
+# Alerte : avec pass_sport_fc_alert_emails renseigné, la ligne enchaîne alerte_echecs.sh après
+# le passage — `;` et non `&&`, sinon elle ne suivrait jamais un passage en échec, le seul qui
+# compte. Elle tourne donc aussi souvent que le passage, et pas quand la cron est désactivée.
+# `%` est refusé dans les adresses : crontab le lit comme un saut de ligne.
+- name: Paramètres de l'alerte FranceConnect valides
+  ansible.builtin.assert:
+    that:
+      - pass_sport_fc_alert_threshold | int >= 1
+      - pass_sport_fc_alert_emails | select('match', '^[^@%\s]+@[^@%\s]+$') | list | length
+        == pass_sport_fc_alert_emails | length
+    fail_msg: >-
+      pass_sport_fc_alert_threshold doit être un entier ≥ 1 et chaque adresse de
+      pass_sport_fc_alert_emails de la forme compte@domaine, sans espace ni %.
+    quiet: true
+  tags: [fc-cron]
+
 - name: Passage FranceConnect toutes les 30 minutes, de 6 h à minuit
   become: true
+  vars:
+    fc_dir: "{{ pass_sport_repo }}/data/2026/partners/franceconnect"
+    fc_alert_args: >-
+      --seuil {{ pass_sport_fc_alert_threshold | int }}
+      --dossier-passages {{ pass_sport_fc_run_dir | quote }}
+      {% for email in pass_sport_fc_alert_emails %}--destinataire {{ email | quote }} {% endfor %}
   ansible.builtin.cron:
     name: pass-sport-fc
     user: "{{ pass_sport_user }}"
     minute: '*/30'
     hour: '6-23'
-    job: "{{ pass_sport_repo }}/data/2026/partners/franceconnect/run_fc_pipeline.sh"
+    job: >-
+      {{ fc_dir }}/run_fc_pipeline.sh{% if pass_sport_fc_alert_emails %};
+      {{ fc_dir }}/alerte_echecs.sh {{ fc_alert_args | trim }}{% endif %}
     disabled: "{{ not pass_sport_fc_cron_enabled }}"
   tags: [fc-cron]
 

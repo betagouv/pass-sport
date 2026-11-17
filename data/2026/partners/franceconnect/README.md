@@ -184,6 +184,12 @@ Ce que le script garantit, et qu'un passage à la main doit respecter aussi :
   retente les courriels échoués et sert les appariés d'un passage précédent. Il ne l'est ni
   sur une erreur ni quand le verrou est déjà pris — le passage suivant s'en charge.
 
+Une panne durable prévient les opérateurs : [alerte_echecs.sh](alerte_echecs.sh), enchaîné
+après chaque passage par la même ligne de crontab, envoie un seul courriel après 3 passages
+`echec` d'affilée, ou 3 passages `ignore-verrou` (un passage bloqué), et retient l'envoi dans
+`run/alerte-echec-envoyee` / `run/alerte-blocage-envoyee` — voir
+[deploy/ansible/README.md](../../../../deploy/ansible/README.md#alerte-courriel-quand-le-passage-fc-est-en-panne).
+
 ### Passage à blanc
 
 Avant d'activer la cron, ou pour juger l'appariement sur les données du moment :
