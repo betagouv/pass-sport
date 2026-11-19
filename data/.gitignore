@@ -35,6 +35,8 @@ logs/
 2026/support-pipeline/run/
 # Same for run_dn.sh, raw API answers included.
 2026/dn-pipeline/run/
+# Same for run_spm.sh: the CPS file, its codes and the mail journal.
+2026/partners/spm/run/
 
 # One directory per run_dashboard.sh run: logs only.
 2026/dashboard/run/
