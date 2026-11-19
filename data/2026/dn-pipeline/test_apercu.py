@@ -39,6 +39,7 @@ def test_dn_overview_flags_missing_labels_and_champs(capsys):
     assert dossiers == [dossier]
     assert 'ok      Traité' in out and 'ABSENT  À vérifier' in out
     assert 'ABSENT  FranceConnect' in out
+    assert 'ABSENT  Code forcé' in out
     assert 'ok      Codes pass Sport (Texte long)' in out
     assert 'ABSENT  ine' in out and 'ok      enfants' in out
     assert 'Pim' not in out
