@@ -103,6 +103,9 @@ def child_dossier(number=34778465, child=None, **dossier):
     return dn_dossier(number, beneficiaire_de='', enfants=[enfant(**(child or {}))], **dossier)
 
 
+CODE_FORCE = {'id': 'L-force', 'name': mapping.DN_LABEL_CODE_FORCE}
+
+
 def raw_dn(*dossiers):
     return {'demarche': 1234, 'labels': {'traite': 'L1', 'a_verifier': 'L2', 'rejete': 'L3', 'doublon': 'L4'},
             'dossiers': list(dossiers)}
@@ -198,6 +201,18 @@ def test_fetch_dn_takes_the_dossiers_en_instruction_with_or_without_franceconnec
     assert raw['ignores_par_motif'] == {'déjà labellisé': 1, 'pas en instruction': 1}
 
 
+def test_fetch_dn_never_takes_a_code_force_dossier_holding_a_pipeline_label():
+    forced = dn_dossier(2, labels=[CODE_FORCE])
+    labelled = [dn_dossier(number, labels=[{'id': f'L-{key}', 'name': name}, CODE_FORCE])
+                for number, (key, name) in enumerate(mapping.DN_LABELS.items(), start=3)]
+
+    raw = pipeline.fetch_dn(FakeDn([dn_dossier(1), forced, *labelled]), 1234)
+
+    assert [dossier['number'] for dossier in raw['dossiers']] == [1, 2]
+    assert raw['codes_forces'] == 1
+    assert raw['ignores_par_motif'] == {'déjà labellisé': 4}
+
+
 def test_fetch_dn_takes_only_the_listed_dossiers():
     dossiers = [dn_dossier(1), dn_dossier(2), dn_dossier(3, state='en_construction')]
 
@@ -227,6 +242,11 @@ def test_dossier_numbers_refuses_anything_but_numbers():
     ({'connectionUsager': 'deleted'}, ''),
     ({'labels': [{'id': 'L', 'name': 'franceconnect'}]}, ''),
     ({'labels': [{'id': 'L', 'name': 'à vérifier'}]}, 'déjà labellisé'),
+    ({'labels': [{'id': 'F', 'name': 'code force'}]}, ''),
+    ({'labels': [{'id': 'L', 'name': 'à vérifier'}, {'id': 'F', 'name': 'code force'}]}, 'déjà labellisé'),
+    ({'labels': [CODE_FORCE], 'state': 'en_construction'}, 'pas en instruction'),
+    ({'labels': [CODE_FORCE], 'traitements': [traitement('passe_en_instruction_automatiquement')]},
+     'sans instructeur'),
     ({'traitements': [traitement('passe_en_instruction_automatiquement')]}, 'sans instructeur'),
 ])
 def test_dn_skip_reason(overrides, reason):
@@ -391,6 +411,34 @@ def test_dn_dossier_without_beneficiary_still_yields_a_rejected_line():
 ])
 def test_rejects_with_a_reason(dossier, motif):
     valid, rejected = pipeline.validate(pipeline.extract(raw_dn(dossier)))
+    assert valid.empty
+    assert motif in rejected['motif'].iloc[0]
+
+
+@pytest.mark.parametrize('dossier, motif', [
+    (child_dossier(child={'date_naissance': '2021-01-01'}),
+     'code forcé, hors fenêtre AEEH (01/01/2007 - 31/12/2020) : 01/01/2021'),
+    (child_dossier(child={'aeeh': 'Non', 'date_naissance': '2008-12-31'}),
+     'code forcé, hors fenêtre jeune (01/01/2009 - 31/12/2020) : 31/12/2008'),
+    (dn_dossier(beneficiaire_de=BOURSE, date_naissance='1997-12-31', enfants=[]),
+     'code forcé, hors fenêtre boursier (à partir du 01/01/1998) : 31/12/1997'),
+    (child_dossier(), ''),
+])
+def test_a_code_force_line_outside_its_dob_window_is_kept_and_says_so(dossier, motif):
+    valid, rejected = pipeline.validate(pipeline.extract(raw_dn({**dossier, 'labels': [CODE_FORCE]})))
+    assert rejected.empty
+    assert valid['motif'].tolist() == [motif]
+
+
+@pytest.mark.parametrize('dossier, motif', [
+    (child_dossier(caisse='RSI', child={'date_naissance': '2021-01-01'}), 'caisse inconnue'),
+    (child_dossier(code_insee='123456'), 'code INSEE invalide'),
+    (child_dossier(usager={'email': 'pim.example.org'}), 'email invalide'),
+    (child_dossier(child={'nom': ''}), 'champ vide : nom'),
+    (child_dossier(child={'aeeh': 'Non'}, foyer='Non'), "ni bénéficiaire de l'AEEH"),
+])
+def test_a_code_force_line_is_still_rejected_on_every_other_rule(dossier, motif):
+    valid, rejected = pipeline.validate(pipeline.extract(raw_dn({**dossier, 'labels': [CODE_FORCE]})))
     assert valid.empty
     assert motif in rejected['motif'].iloc[0]
 
@@ -636,6 +684,25 @@ def test_split_exact_is_a_doublon_another_parent_only_is_to_review_and_the_rest_
     assert investigation[[
         'saisie_allocataire_nom', 'saisie_allocataire_prenom', 'saisie_allocataire_genre',
     ]].iloc[0].tolist() == ['Dorvat', 'Pim', 'M']
+
+
+def test_split_codes_a_code_force_line_outside_its_window_but_still_matches_it(tmp_path):
+    forced = dn_dossier(7, beneficiaire_de='', labels=[CODE_FORCE], enfants=[
+        enfant('Ana', date_naissance='2021-01-01'), enfant('Bea', date_naissance='2021-01-01'),
+        enfant('Cia', date_naissance='2021-01-01')])
+    stats, paths = run_clean(tmp_path, dn=raw_dn(forced))
+    assert stats['codes_forces_hors_fenetre'] == 3
+
+    ids, stats, out = run_split(tmp_path, paths, [
+        (1, '26-AAAA-AAAA', 'exacte'), (2, '26-BBBB-BBBB', 'autre_parent')])
+
+    verdicts = read(out['verdicts']).set_index('reference')
+    references = [f'dn:7:enfant-{index}' for index in range(1, 4)]
+    assert verdicts.loc[references, 'verdict'].tolist() == ['a_coder', 'doublon', 'a_verifier']
+    assert verdicts.loc['dn:7:enfant-1', 'motif'] == (
+        'code forcé, hors fenêtre AEEH (01/01/2007 - 31/12/2020) : 01/01/2021')
+    assert 'pas le même parent' in verdicts.loc['dn:7:enfant-3', 'motif']
+    assert read(out['to_code'], quoting=csv.QUOTE_ALL)['eligibility_result_id'].tolist() == [ids[0]]
 
 
 def test_split_a_loose_boursier_identity_is_to_review_with_its_own_reason(tmp_path):
