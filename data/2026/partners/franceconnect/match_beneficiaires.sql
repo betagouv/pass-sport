@@ -42,8 +42,8 @@
 -- candidat présente donc jusqu'à deux personas allocataire (fc_norm_allocataires) — le
 -- connecté, et le conjoint quand la réponse quotient_familial en identifie un — et la
 -- stratégie apparie si l'un des deux atteint la ligne. Le verdict reste posé par candidat :
--- deux personas sur la même personne comptent pour un id_psp, deux personnes différentes
--- restent inconcluantes.
+-- deux personas sur la même personne comptent pour un id_psp ; deux id_psp distincts, l'un
+-- par chaque parent, relèvent de la règle du premier code (VERDICT ci-dessous).
 --
 -- A CHILD IS LOOKED UP UNDER ITS OWN SITUATION FIRST, then under the other one (AEEH <-> jeune)
 -- only when its own strategy reaches nobody. The two routes overlap and the sources do not rank
@@ -69,10 +69,17 @@
 -- {DAVID}. Dans un seul sens, ce code n'est jamais retrouvé et l'enfant en reçoit un second.
 --
 -- VERDICT STRICT : un candidat est apparié ssi sa stratégie retourne exactement UN id_psp.
--- Zéro ou plusieurs lignes = non apparié -> il recevra un code neuf, le moins risqué des
--- deux. Aucun départageur. Pour l'AAH : exactement une des deux stratégies retourne
--- exactement une ligne et l'autre aucune — deux stratégies à une ligne, même identique,
--- restent inconcluantes.
+-- Zéro ligne = non apparié -> il recevra un code neuf. Pour l'AAH et le boursier, plusieurs
+-- lignes = non apparié aussi, sans départageur : exactement une des deux stratégies AAH
+-- retourne exactement une ligne et l'autre aucune — deux stratégies à une ligne, même
+-- identique, restent inconcluantes.
+--
+-- FIRST CODE OF THE CHILD: on the child strategies (aeeh_*, qf_*), several id_psp means the
+-- child already holds several codes — one per parent, or a partner file coded over a
+-- FranceConnect code. Every row reached matches the child's full identity and one allocataire
+-- of the household, so the candidate gets the oldest of them (beneficiaires.created_at) instead
+-- of yet another code: both parents end up with the same one. Codes already sent stay as
+-- they are.
 
 \set ON_ERROR_STOP on
 
@@ -198,7 +205,9 @@ create temp table fc_essais (
 create temp table fc_apparies (
 	eligibility_result_id text not null,
 	id_psp text not null,
-	strategie text not null
+	strategie text not null,
+	-- Picked among several codes of the same child, by the first-code rule.
+	premier_code boolean not null default false
 ) on commit drop;
 
 -- --- boursier : l'INE ------------------------------------------------------------------
@@ -441,6 +450,17 @@ full join (
 where (coalesce(m.nb, 0) = 1 and coalesce(f.nb, 0) = 0)
    or (coalesce(m.nb, 0) = 0 and coalesce(f.nb, 0) = 1);
 
+-- First code of the child (see VERDICT in the header): a child strategy left unmatched here
+-- reached several id_psp, and takes the oldest.
+insert into fc_apparies (eligibility_result_id, id_psp, strategie, premier_code)
+select distinct on (e.eligibility_result_id) e.eligibility_result_id, e.id_psp, e.strategie, true
+from fc_essais e
+join public.beneficiaires b on b.id_psp = e.id_psp
+where e.strategie in ('aeeh_msa', 'aeeh_caf', 'qf_msa', 'qf_caf')
+  and not exists (select 1 from fc_apparies a
+                   where a.eligibility_result_id = e.eligibility_result_id)
+order by e.eligibility_result_id, b.created_at nulls last, e.id_psp;
+
 -- Un même id_psp servi à deux candidats différents signalerait un rapprochement trop lâche :
 -- mieux vaut refuser le passage que distribuer deux fois le même code.
 do $$
@@ -504,6 +524,8 @@ select
 	  where exists (select 1 from fc_essais e
 	                 where e.eligibility_result_id = a.eligibility_result_id and e.repli))
 		as par_repli_situation,
+	-- Already counted under their strategy too: the children that held several codes.
+	(select count(*) from fc_apparies where premier_code) as par_premier_code,
 	(select count(*) from fc_candidats
 	  where nullif(btrim(conjoint_nom), '') is not null
 	     or nullif(btrim(conjoint_nom_usage), '') is not null) as avec_conjoint,
