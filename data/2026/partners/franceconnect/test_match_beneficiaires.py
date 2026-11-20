@@ -519,6 +519,81 @@ def test_l_aah_ne_cherche_pas_dans_les_situations_enfant(pg):
     assert non_apparies == ['c1']
 
 
+# --- L'étudiant, entre la route boursier et celle de l'enfant --------------------------
+# The same student can be coded boursier from their own connection and AEEH/jeune from their
+# parent's. Last tier, beneficiary identity alone, for the candidates nothing else reached.
+
+# A student coded AEEH from the parent's connection, then boursier from their own.
+BASE_ETUDIANT_AEEH = dict(id_psp='PSP-S1', nom='TREVALUN', prenom='OSMIREL',
+                          date_naissance='2008-02-11 04:00:00', genre='F',
+                          organisme='CAF', situation='AEEH', allocataire_qualite='Mme',
+                          allocataire_nom='TREVALUN', allocataire_prenom='KESSIA')
+
+CANDIDAT_ETUDIANT = dict(situation='boursier', organisme='cnous', ine='INE5511',
+                         beneficiaire_nom='TREVALUN', beneficiaire_prenom='Osmirel Kadun',
+                         beneficiaire_date_naissance='2008-02-11', beneficiaire_genre='F')
+
+BASE_ETUDIANT_BOURSIER = dict(id_psp='PSP-S2', nom='TREVALUN', prenom='OSMIREL KADUN',
+                              date_naissance='2008-02-11 04:00:00', genre='F',
+                              organisme='cnous', situation='boursier',
+                              allocataire_matricule='INE5511', allocataire_qualite='Mme',
+                              allocataire_nom='TREVALUN', allocataire_prenom='OSMIREL KADUN')
+
+# The same student, from the parent's connection, under the caisse's prénoms.
+CANDIDAT_ENFANT_ETUDIANT = dict(situation='AEEH', organisme='CAF',
+                                allocataire_nom='TREVALUN', allocataire_prenom='Kessia',
+                                allocataire_qualite='Mme', allocataire_genre='female',
+                                beneficiaire_nom='TREVALUN', beneficiaire_prenom='Osmirel',
+                                beneficiaire_date_naissance='2008-02-11', beneficiaire_genre='F')
+
+
+def test_un_boursier_inconnu_par_son_ine_retrouve_son_code_aeeh(pg):
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_ETUDIANT_AEEH)], candidats=[candidat(**CANDIDAT_ETUDIANT)])
+    assert apparies == {'c1': 'PSP-S1'}
+    assert recap['par_boursier'] == 0
+    assert recap['par_repli_situation'] == 1
+
+
+def test_un_enfant_que_rien_n_atteint_retrouve_son_code_boursier(pg):
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_ETUDIANT_BOURSIER)],
+        candidats=[candidat(**CANDIDAT_ENFANT_ETUDIANT)])
+    assert apparies == {'c1': 'PSP-S2'}
+    assert recap['par_repli_situation'] == 1
+
+
+def test_un_enfant_boursier_retrouve_par_l_ine_le_code_de_sa_propre_connexion(pg):
+    cand = candidat(**{**CANDIDAT_ENFANT_ETUDIANT, 'situation': 'boursier', 'organisme': 'cnous',
+                       'ine': 'INE5511'})
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_ETUDIANT_BOURSIER)], candidats=[cand])
+    assert apparies == {'c1': 'PSP-S2'}
+    assert recap['par_boursier'] == 1
+
+
+def test_le_palier_identite_ne_joue_pas_quand_l_ine_a_conclu(pg):
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_ETUDIANT_BOURSIER), ligne_base(**BASE_ETUDIANT_AEEH)],
+        candidats=[candidat(**CANDIDAT_ETUDIANT)])
+    assert apparies == {'c1': 'PSP-S2'}
+    assert recap['par_repli_situation'] == 0
+
+
+def test_le_palier_identite_exige_la_date_de_naissance(pg):
+    base = ligne_base(**{**BASE_ETUDIANT_AEEH, 'date_naissance': '2008-02-12 04:00:00'})
+    apparies, non_apparies, _ = rapprocher(
+        pg, base=[base], candidats=[candidat(**CANDIDAT_ETUDIANT)])
+    assert apparies == {}
+    assert non_apparies == ['c1']
+
+
+def test_le_palier_identite_ne_cherche_pas_dans_l_aah(pg):
+    base = ligne_base(**{**BASE_ETUDIANT_AEEH, 'situation': 'AAH'})
+    apparies, _, _ = rapprocher(pg, base=[base], candidats=[candidat(**CANDIDAT_ETUDIANT)])
+    assert apparies == {}
+
+
 # --- Au moins un des deux allocataires du foyer --------------------------------------
 # The base holds the responsable dossier, who may be the OTHER parent than the connected
 # user: each candidate presents up to two allocataire personas, and the strategies match

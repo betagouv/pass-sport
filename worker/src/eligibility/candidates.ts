@@ -5,6 +5,7 @@ import {
   AEEH_BIRTHDATE_MIN,
   CROUS_BIRTHDATE_MAX,
   CROUS_BIRTHDATE_MIN,
+  CROUS_CHILD_BIRTHDATE_MAX,
   QF_BIRTHDATE_MAX,
   QF_BIRTHDATE_MIN,
   ALLOWANCE,
@@ -21,10 +22,14 @@ import {
 } from "./types";
 import {
   AEEH_RESOURCE,
+  CROUS_RESOURCE,
+  boursierIne,
   childAeehVerdict,
   findChildResource,
   hasAahRight,
   hasBourse,
+  isBoursierRow,
+  readBoursier,
   readQuotientFamilial,
 } from "./verdicts";
 
@@ -39,6 +44,9 @@ export type BeneficiaryCandidate = {
   // FranceConnect session identity, not from here.
   gender?: "male" | "female";
   nomUsage?: string;
+  // The CNOUS INE, on the boursier route only: what lets the student's own connection and their
+  // parent's land on the same code downstream.
+  ine?: string;
   eligibilities: Allowance[];
   reasons: string[];
 };
@@ -150,10 +158,13 @@ export const listBeneficiaryCandidates = (
       reasons.push(`AAH: bénéficiaire, ${age} ans (16-30)`);
     }
 
-    if (
+    const boursier =
       hasBourse(results) &&
-      isWithinBirthdateWindow(identity.birthdate, CROUS_BIRTHDATE_MIN, CROUS_BIRTHDATE_MAX)
-    ) {
+      isWithinBirthdateWindow(identity.birthdate, CROUS_BIRTHDATE_MIN, CROUS_BIRTHDATE_MAX);
+
+    const selfIne = boursier ? readBoursier(results)?.ine || undefined : undefined;
+
+    if (boursier) {
       eligibilities.push(ALLOWANCE.CROUS);
       reasons.push(`CROUS: boursier, ${age} ans (≤28)`);
     }
@@ -165,15 +176,18 @@ export const listBeneficiaryCandidates = (
       lastname: identity.family_name,
       firstname: identity.given_name,
       birthdate: identity.birthdate,
+      ...(selfIne ? { ine: selfIne } : {}),
       eligibilities,
       reasons,
     });
   }
 
-  // QF children, two exclusive routes:
+  // QF children, three exclusive routes:
   //   - QF: the household quotient is under the threshold -> every child 6-17 ans is
   //     eligible, no per-child call involved;
-  //   - AEEH: for 6-19 ans, on the child's own per-child verdict.
+  //   - AEEH: for 6-19 ans, on the child's own per-child verdict;
+  //   - CROUS: for 17-28 ans, on the child's own CNOUS answer, asked only when neither of the
+  //     two others carries them (planChildrenBoursierChecks in sequence.ts).
   // The windows overlap on 2009-2020; QF has priority there, which is also why sequence.ts
   // skips the AEEH call for those children.
   const qfCovers = householdQfCovers(qfData);
@@ -196,6 +210,8 @@ export const listBeneficiaryCandidates = (
     const reasons: string[] = [];
 
     const aeehVerdict = childAeehVerdict(findChildResource(results, AEEH_RESOURCE, childIndex));
+    const cnousRow = findChildResource(results, CROUS_RESOURCE, childIndex);
+    let ine: string | undefined;
 
     if (qfCovers && isWithinBirthdateWindow(birthdate, QF_BIRTHDATE_MIN, QF_BIRTHDATE_MAX)) {
       eligibilities.push(ALLOWANCE.QF);
@@ -208,6 +224,13 @@ export const listBeneficiaryCandidates = (
     ) {
       eligibilities.push(ALLOWANCE.AEEH);
       reasons.push(`AEEH: bénéficiaire, ${age} ans (6-19)`);
+    } else if (
+      isBoursierRow(cnousRow) &&
+      isWithinBirthdateWindow(birthdate, CROUS_BIRTHDATE_MIN, CROUS_CHILD_BIRTHDATE_MAX)
+    ) {
+      eligibilities.push(ALLOWANCE.CROUS);
+      reasons.push(`CROUS: boursier, ${age} ans (17-28)`);
+      ine = boursierIne(cnousRow);
     }
 
     candidates.push({
@@ -217,6 +240,7 @@ export const listBeneficiaryCandidates = (
       birthdate,
       gender,
       nomUsage: enfant.nom_usage,
+      ...(ine ? { ine } : {}),
       eligibilities,
       reasons,
     });

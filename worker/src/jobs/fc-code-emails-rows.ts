@@ -36,10 +36,10 @@ const beneficiaryIdentity = (row: FcCodeEmailRow): Partial<PivotIdentity> | null
 /**
  * Which of the three code templates this row gets, or why it gets none.
  *
- * `situation` is null on every row written before the column existed. `source` settles those on
- * its own whenever it says 'enfant': QF and AEEH are the only two routes that produce one, and
- * both mail code_indirect. A 'self' row without a situation is the residual case — AAH and the
- * boursier routes are indistinguishable there, and guessing would mail the wrong text.
+ * An 'enfant' row always mails code_indirect, whatever its route (QF, AEEH, or a boursier
+ * pronounced from the parent's connection): the mail goes to the parent. On a 'self' row,
+ * `situation` decides; it is null on the rows written before the column existed, where AAH and
+ * the boursier routes are indistinguishable and guessing would mail the wrong text.
  */
 export const decideEmailKind = (row: FcCodeEmailRow): EmailDecision => {
   if (!row.email) return { skip: "no_recipient" };
@@ -53,8 +53,9 @@ export const decideEmailKind = (row: FcCodeEmailRow): EmailDecision => {
     return { skip: "missing_identity" };
   }
 
-  if (row.situation) return { kind: codeEmailKindForAide(row.situation) };
+  // The parent is the recipient on every 'enfant' row, a boursier one included.
   if (row.source === "enfant") return { kind: "code_indirect" };
+  if (row.situation) return { kind: codeEmailKindForAide(row.situation) };
 
   return { skip: "unknown_situation" };
 };

@@ -84,7 +84,7 @@ const stubClient = (enfants: PersonneQuotientFamilial[]) => ({
   aah: vi.fn(async () =>
     ok("dss.allocation_adulte_handicape_identite", { est_beneficiaire: false }),
   ),
-  cnous: vi.fn(async () =>
+  cnous: vi.fn(async (_identity: PivotIdentity, _childIndex?: number) =>
     ok("cnous.etudiant_boursier_identite", { statut_boursier: { est_boursier: false } }),
   ),
   cnousByIne: vi.fn(),
@@ -415,5 +415,98 @@ describe("runEligibilitySequence — ressource en panne", () => {
     await expect(run(JEUNE_RATTACHE, client, { finalAttempt: true })).rejects.toThrow(
       "gave no verdict",
     );
+  });
+});
+
+describe("runEligibilitySequence — CNOUS des enfants du foyer", () => {
+  const AEEH = "dss.allocation_enfant_handicape_identite";
+
+  // In [...FRATRIE, AINE] seen from PARENT: Velmorak (24 ans) and AINE (18 ans) are past the QF
+  // window, Quorindel (12 ans) is covered by the household quotient.
+  const cnousChildIndexes = (client: ReturnType<typeof stubClient>) =>
+    client.cnous.mock.calls.map(([, childIndex]) => childIndex);
+
+  const aboveThreshold = (
+    client: ReturnType<typeof stubClient>,
+    enfants: PersonneQuotientFamilial[],
+  ) =>
+    client.quotientFamilial.mockResolvedValue(
+      ok("dss.quotient_familial_identite", {
+        ...qfData(enfants),
+        quotient_familial: { valeur: 900 },
+      }),
+    );
+
+  it("asks the CNOUS about every child of 17 ans or more that nothing else carries", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+
+    await run(PARENT, client);
+
+    expect(cnousChildIndexes(client)).toEqual([0, 2]);
+  });
+
+  it("asks under the child's identity, without the parent's commune de naissance", async () => {
+    const client = stubClient([AINE]);
+
+    await run(PARENT_NE_A_PARIS, client);
+
+    expect(client.cnous.mock.calls[0][0]).toMatchObject({
+      family_name: "OSTRENYA",
+      given_name: "Zephrandil",
+      birthdate: "2008-04-21",
+      gender: "male",
+    });
+    expect(client.cnous.mock.calls[0][0].birthplace).toBeUndefined();
+  });
+
+  it("spares the call for a child the AEEH already carries", async () => {
+    const client = stubClient([AINE]);
+    client.aeeh.mockImplementation(async (_child, childIndex) => ({
+      ...ok(AEEH, { status: "allocataire" }),
+      childIndex,
+    }));
+
+    await run(PARENT, client);
+
+    expect(client.cnous).not.toHaveBeenCalled();
+  });
+
+  it("spares the call for a 17 ans the household quotient covers", async () => {
+    const client = stubClient([{ ...AINE, date_naissance: "05/02/2009" }]);
+
+    await run(PARENT, client);
+
+    expect(client.cnous).not.toHaveBeenCalled();
+  });
+
+  it("asks a 17 ans the household quotient does not cover", async () => {
+    const enfants = [{ ...AINE, date_naissance: "05/02/2009" }];
+    const client = stubClient(enfants);
+    aboveThreshold(client, enfants);
+
+    await run(PARENT, client);
+
+    expect(cnousChildIndexes(client)).toEqual([0]);
+  });
+
+  it("never asks a child under 17 ans", async () => {
+    const enfants = [{ ...AINE, date_naissance: "01/03/2010" }];
+    const client = stubClient(enfants);
+    aboveThreshold(client, enfants);
+
+    await run(PARENT, client);
+
+    expect(client.cnous).not.toHaveBeenCalled();
+  });
+
+  it("checkpoints each child's answer under its own key", async () => {
+    const client = stubClient([...FRATRIE, AINE]);
+
+    const results = await run(PARENT, client);
+
+    expect(results.filter((r) => r.resource === "cnous.etudiant_boursier_identite")).toEqual([
+      expect.objectContaining({ checkpointKey: "cnous:0" }),
+      expect.objectContaining({ checkpointKey: "cnous:2" }),
+    ]);
   });
 });

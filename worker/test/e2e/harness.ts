@@ -315,12 +315,21 @@ class FakeApiClient implements ApiParticulierClient {
     );
   }
 
-  async cnous(): Promise<ResourceResult> {
-    return (
+  // Apart from the allocataire's own answer, so that turning one on leaves the other alone.
+  crousBoursierEnfant = false;
+  crousIne: string | undefined = undefined;
+
+  async cnous(_identity: PivotIdentity, childIndex?: number): Promise<ResourceResult> {
+    const estBoursier = childIndex === undefined ? this.crousBoursier : this.crousBoursierEnfant;
+    const row =
       this.takeFailure(RESOURCE_META.cnous) ??
       this.take429(RESOURCE_META.cnous) ??
-      okRow(RESOURCE_META.cnous, { statut_boursier: { est_boursier: this.crousBoursier } })
-    );
+      okRow(RESOURCE_META.cnous, {
+        ine: this.crousIne,
+        statut_boursier: { est_boursier: estBoursier },
+      });
+
+    return childIndex === undefined ? row : { ...row, childIndex };
   }
 
   async cnousByIne(): Promise<ResourceResult> {
@@ -486,6 +495,8 @@ export type Stack = {
 
   setAahBeneficiaire: (value: boolean) => void;
   setCrousBoursier: (value: boolean) => void;
+  setCrousBoursierEnfant: (value: boolean) => void;
+  setCrousIne: (ine: string | undefined) => void;
   setAeehBeneficiaire: (value: boolean) => void;
   // Household quotient the fake QF reports, so a test can cross the 700 threshold
   // without paying for a second container stack.
@@ -990,6 +1001,12 @@ export async function startStack(
     },
     setCrousBoursier: (value: boolean) => {
       apiClient.crousBoursier = value;
+    },
+    setCrousBoursierEnfant: (value: boolean) => {
+      apiClient.crousBoursierEnfant = value;
+    },
+    setCrousIne: (ine: string | undefined) => {
+      apiClient.crousIne = ine;
     },
     setAeehBeneficiaire: (value: boolean) => {
       apiClient.aeehBeneficiaire = value;

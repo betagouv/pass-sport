@@ -227,7 +227,10 @@ export const toBeneficiaryRowValues = (
   candidate: BeneficiaryCandidate,
   householdCaisse: Caisse | null,
 ): Required<
-  Pick<EligibilityRow, "source" | "enfantIdentite" | "isEligible" | "verdict" | "situation" | "caisse">
+  Pick<
+    EligibilityRow,
+    "source" | "enfantIdentite" | "isEligible" | "verdict" | "situation" | "caisse" | "ine"
+  >
 > => {
   // allocataire = connected FranceConnect user, enfant = the QF child ('self' rows leave enfant_* NULL).
   const enfantIdentite =
@@ -255,6 +258,7 @@ export const toBeneficiaryRowValues = (
     verdict: isEligible ? "eligible_pending" : "not_eligible",
     situation,
     caisse: situation === RESULT_SITUATION_BOURSIER ? ORGANISME_BOURSIER : householdCaisse,
+    ine: candidate.ine ?? null,
   };
 };
 
