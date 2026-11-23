@@ -15,6 +15,26 @@ export const DN_CLOSED_STATES = ['accepte', 'refuse', 'sans_suite'];
 
 export type DnDossierLink = Pick<DnDossier, 'number' | 'url'>;
 
+export const DN_DOSSIER_DELAY_MS = 60 * 60 * 1000;
+
+// Shared by the page and the POST route: a dossier already held is always handed back; a new one
+// waits an hour after the last verdict, and is never offered under existingOnly.
+export const canOfferDnDossier = ({
+  hasDossier,
+  lastVerdict,
+  existingOnly,
+  now = new Date(),
+}: {
+  hasDossier: boolean;
+  lastVerdict: Date | null;
+  existingOnly: boolean;
+  now?: Date;
+}): boolean =>
+  hasDossier ||
+  (!existingOnly &&
+    lastVerdict !== null &&
+    now.getTime() - lastVerdict.getTime() >= DN_DOSSIER_DELAY_MS);
+
 // A submitted or closed dossier lives at DN's own /dossiers/<n> page: a stable, token-free link
 // the page can show at once. A prefilled one (its URL is the key to it, and dead once claimed)
 // or a draft (DN purges abandoned ones) is looked up anew.

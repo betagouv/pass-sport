@@ -4,7 +4,7 @@
 
 import { getPool } from '@/app/services/database';
 import { dnDossierUrl, findDnDossierForSub } from '@/app/services/dn-dossier';
-import { stableDossierLink } from '@/app/services/dn-dossier-rules';
+import { canOfferDnDossier, stableDossierLink } from '@/app/services/dn-dossier-rules';
 
 jest.mock('../../src/app/services/database', () => ({ getPool: jest.fn() }));
 jest.mock('@sentry/nextjs', () => ({ withScope: jest.fn() }));
@@ -57,6 +57,40 @@ describe('stableDossierLink', () => {
 
   it('answers null without a dossier', () => {
     expect(stableDossierLink(null)).toBeNull();
+  });
+});
+
+describe('canOfferDnDossier', () => {
+  const NOW = new Date('2026-11-19T12:00:00Z');
+  const minutesAgo = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000);
+  const offer = (overrides: Partial<Parameters<typeof canOfferDnDossier>[0]>) =>
+    canOfferDnDossier({
+      hasDossier: false,
+      lastVerdict: minutesAgo(120),
+      existingOnly: false,
+      now: NOW,
+      ...overrides,
+    });
+
+  it('offers a new dossier once an hour has passed since the last verdict', () => {
+    expect(offer({ lastVerdict: minutesAgo(60) })).toBe(true);
+  });
+
+  it('withholds it within the hour', () => {
+    expect(offer({ lastVerdict: minutesAgo(59) })).toBe(false);
+  });
+
+  it('withholds it before any verdict', () => {
+    expect(offer({ lastVerdict: null })).toBe(false);
+  });
+
+  it('always hands back a dossier already held', () => {
+    expect(offer({ hasDossier: true, lastVerdict: null })).toBe(true);
+    expect(offer({ hasDossier: true, lastVerdict: minutesAgo(1), existingOnly: true })).toBe(true);
+  });
+
+  it('never offers a new one under existingOnly', () => {
+    expect(offer({ existingOnly: true })).toBe(false);
   });
 });
 
