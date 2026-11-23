@@ -68,7 +68,7 @@ SUIVI_COLUMNS = [
 EXTRACTED_COLUMNS = [
     *SUIVI_COLUMNS, 'genre', 'situation_label', 'situation', 'caisse', 'ine',
     'allocataire_genre', 'allocataire_prenom', 'allocataire_nom', 'allocataire_date_naissance',
-    'allocataire_matricule', 'code_insee', 'code_postal', 'commune', 'voie', 'motif',
+    'allocataire_matricule', 'code_insee', 'code_postal', 'commune', 'voie', 'code_force', 'motif',
 ]
 # Exactly the production schema, plus the run-local key split_writeback drops.
 CLEANED_COLUMNS = [
@@ -80,9 +80,11 @@ MATCH_COLUMNS = [
     'eligibility_result_id', 'situation', 'ine', 'nom', 'prenom', 'date_naissance',
     'allocataire_genre', 'allocataire_nom', 'allocataire_prenom',
 ]
+# motif: the DOB window a « Code forcé » line was let through despite, '' otherwise.
 IDENTITY_COLUMNS = [
     'eligibility_result_id', *SUIVI_COLUMNS, 'genre', 'situation', 'caisse',
     'allocataire_prenom', 'allocataire_nom', 'allocataire_genre', 'allocataire_date_naissance',
+    'motif',
 ]
 REJECT_COLUMNS = [*SUIVI_COLUMNS, 'motif']
 # code_lamp01: the codes lamp01 already holds for a doublon, for the support to check, or the one
@@ -199,9 +201,14 @@ def _holds_label(dossier: dict, name: str) -> bool:
     return any(mapping.fold(label['name']) == mapping.fold(name) for label in dossier['labels'])
 
 
+def dn_code_force(dossier: dict) -> bool:
+    return _holds_label(dossier, mapping.DN_LABEL_CODE_FORCE)
+
+
 def dn_skip_reason(dossier: dict) -> str:
     """Why the pipeline leaves a dossier alone, '' when it takes it: en instruction, none of the
-    pipeline's labels, and put en instruction by an instructeur of its groupe."""
+    pipeline's labels (even with « Code forcé »), and put en instruction by an instructeur of its
+    groupe."""
     if dossier['state'] != 'en_instruction':
         return 'pas en instruction'
     ours ={mapping.fold(name) for name in mapping.DN_LABELS.values()}
@@ -238,6 +245,7 @@ def fetch_dn(client: DnClient, numero: int, only: set[int] | None = None) -> dic
         'demarche': numero,
         'labels': {key: label_id_by_name[mapping.fold(name)] for key, name in mapping.DN_LABELS.items()},
         'dossiers': dossiers,
+        'codes_forces': sum(map(dn_code_force, dossiers)),
         'ignores': sum(skipped.values()),
         'ignores_par_motif': dict(skipped),
     }
@@ -260,6 +268,7 @@ def fetch(dn_out) -> dict:
     _write_json(dn, dn_out)
     return {
         'dn_dossiers': len(dn['dossiers']),
+        'dn_codes_forces': dn['codes_forces'],
         'dn_ignores': dn['ignores'],
         'dn_ignores_par_motif': dn['ignores_par_motif'],
     }
@@ -337,6 +346,7 @@ def _dossier_rows(dossier: dict, demarche) -> list[dict]:
         'code_postal': _text(address.get('postalCode')),
         'commune': _text(address.get('cityName')),
         'voie': _text(address.get('streetAddress')),
+        'code_force': 'oui' if dn_code_force(dossier) else '',
         'allocataire_genre': (_champ_text(_champ(champs, labels['allocataire_genre']))
                               or _text(demandeur.get('civilite'))),
         'allocataire_prenom': _text(demandeur.get('prenom')),
@@ -434,20 +444,34 @@ def _rejection_reason(row) -> str:
         return f"email invalide : {row['email']}"
     if row['code_insee'] and normalize_insee(row['code_insee']) is None:
         return f"code INSEE invalide : {row['code_insee']}"
-
-    dob_min, dob_max = DOB_WINDOWS[situation]
-    if birthdate < dob_min or (dob_max is not None and birthdate > dob_max):
-        bounds = f"{dob_min:%d/%m/%Y} - {dob_max:%d/%m/%Y}" if dob_max else f"à partir du {dob_min:%d/%m/%Y}"
-        return f"hors fenêtre {situation} ({bounds}) : {birthdate:%d/%m/%Y}"
     return ''
 
 
+def _window_reason(row) -> str:
+    """Outside its situation's DOB window, '' inside it or when the line has no window to check."""
+    situation, birthdate = row['situation'], parse_date(row['date_naissance'])
+    if situation not in DOB_WINDOWS or birthdate is None:
+        return ''
+    dob_min, dob_max = DOB_WINDOWS[situation]
+    if dob_min <= birthdate and (dob_max is None or birthdate <= dob_max):
+        return ''
+    bounds = f"{dob_min:%d/%m/%Y} - {dob_max:%d/%m/%Y}" if dob_max else f"à partir du {dob_min:%d/%m/%Y}"
+    return f"hors fenêtre {situation} ({bounds}) : {birthdate:%d/%m/%Y}"
+
+
 def validate(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Splits the extracted lines into (valid, rejected), each rejected line with its `motif`."""
+    """Splits the extracted lines into (valid, rejected), each rejected line with its `motif`. A
+    « Code forcé » line outside its DOB window stays valid, its `motif` saying so."""
     df = df.copy()
-    df['motif'] = df.apply(_rejection_reason, axis=1) if len(df) else pd.Series(dtype=str)
+    if len(df):
+        df['motif'] = df.apply(_rejection_reason, axis=1)
+        window = df.apply(_window_reason, axis=1)
+    else:
+        df['motif'] = window = pd.Series(dtype=str)
+    df['motif'] = df['motif'].mask(df['motif'].eq('') & df['code_force'].eq(''), window)
 
     valid = df[df['motif'] == ''].copy()
+    valid['motif'] = window[valid.index].map(lambda reason: f"code forcé, {reason}" if reason else '')
     valid['date_naissance'] = valid['date_naissance'].map(parse_date).map(lambda d: d.isoformat())
     # Only serves a later FranceConnect run to find the code again: missing or unreadable, it
     # is left out rather than rejecting the line.
@@ -594,6 +618,7 @@ def clean(dn_filepath, output_filepath, match_filepath, cnaf_extra_filepath, ide
         'lignes_rejetees': len(rejected) - len(duplicates),
         'doublons_du_lot': len(duplicates),
         'beneficiaires': len(valid),
+        'codes_forces_hors_fenetre': int(valid['motif'].ne('').sum()),
         **{f'situation_{s}': int((valid['situation'] == s).sum()) for s in DOB_WINDOWS},
         'rejets': str(rejects_filepath),
     }
@@ -654,7 +679,7 @@ def split(cleaned_filepath, correspondences_filepath, touched_filepath, identiti
     transmis = {rid for rid, kind in doublon_type.items() if kind == 'ine' and single_code[rid]}
 
     verdict = pd.Series('a_coder', index=identities.index)
-    motif = pd.Series('', index=identities.index)
+    motif = identities['motif'].copy()
     ids = identities['eligibility_result_id']
     is_doublon = ids.isin(doublon_type)
     verdict[is_doublon] = 'doublon'

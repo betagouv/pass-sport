@@ -45,7 +45,8 @@ def dn_overview(client: DnClient, numero: int) -> list[dict]:
     print(f"démarche {numero} : accès OK")
     print(f"labels de la démarche : {', '.join(sorted(labels)) or 'aucun'}")
     folded_labels = {mapping.fold(name) for name in labels}
-    for name in [*mapping.DN_LABELS.values(), mapping.DN_LABEL_FRANCECONNECT, mapping.DN_LABEL_DOUBLON_POTENTIEL]:
+    for name in [*mapping.DN_LABELS.values(), mapping.DN_LABEL_FRANCECONNECT, mapping.DN_LABEL_DOUBLON_POTENTIEL,
+                 mapping.DN_LABEL_CODE_FORCE]:
         print(f"  {_ok(mapping.fold(name) in folded_labels)} {name}")
 
     print(f"annotations privées : {', '.join(sorted(annotations)) or 'aucune'}")
