@@ -5,6 +5,7 @@
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { enqueueFcDnDossierJob, findDnDossierJobState } from '@/app/services/queue';
 import { findDnDossierForSub } from '@/app/services/dn-dossier';
+import { findApplicationForSub } from '@/app/services/applications';
 import { GET, POST } from '@/app/api/france-connect/dossier/route';
 import type { PivotIdentity } from '@/app/services/eligibility-job';
 
@@ -19,6 +20,10 @@ jest.mock('../../../../src/app/services/queue', () => ({
 
 jest.mock('../../../../src/app/services/dn-dossier', () => ({
   findDnDossierForSub: jest.fn(),
+}));
+
+jest.mock('../../../../src/app/services/applications', () => ({
+  findApplicationForSub: jest.fn(),
 }));
 
 const mockEnv = { FC_DN_DOSSIER_ENABLED: true, FC_DN_DOSSIER_EXISTING_ONLY: false };
@@ -37,6 +42,13 @@ const mockedLoadPocResult = loadPocResult as jest.Mock;
 const mockedEnqueue = enqueueFcDnDossierJob as jest.Mock;
 const mockedJobState = findDnDossierJobState as jest.Mock;
 const mockedFindDnDossierForSub = findDnDossierForSub as jest.Mock;
+const mockedFindApplicationForSub = findApplicationForSub as jest.Mock;
+
+const verdictMinutesAgo = (minutes: number) =>
+  mockedFindApplicationForSub.mockResolvedValue({
+    firstApplication: new Date(Date.now() - minutes * 60_000),
+    lastApplication: new Date(Date.now() - minutes * 60_000),
+  });
 
 // Fictional syllable-based identity: pass-sport processes real beneficiary data, so test
 // fixtures must never resemble a plausible real name.
@@ -79,6 +91,7 @@ beforeEach(() => {
   mockEnv.FC_DN_DOSSIER_ENABLED = true;
   mockEnv.FC_DN_DOSSIER_EXISTING_ONLY = false;
   mockedFindDnDossierForSub.mockResolvedValue(null);
+  verdictMinutesAgo(120);
   mockedEnqueue.mockResolvedValue({ queued: true });
   mockedJobState.mockResolvedValue(null);
 });
@@ -127,6 +140,34 @@ describe('réservée aux usagers ayant déjà un dossier', () => {
       expect(mockedEnqueue).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+// Le bouton n'apparaît qu'une heure après le dernier verdict : l'endpoint s'y tient aussi.
+describe('une heure après le dernier verdict', () => {
+  beforeEach(authenticate);
+
+  it.each([
+    ['dans l’heure qui suit le verdict', () => verdictMinutesAgo(59)],
+    ['sans verdict', () => mockedFindApplicationForSub.mockResolvedValue(null)],
+  ])('POST répond 403 sans rien mettre en file %s', async (_case, arrange) => {
+    arrange();
+
+    const response = await post();
+
+    expect(response.status).toBe(403);
+    expect(mockedFindApplicationForSub).toHaveBeenCalledWith('poc-sub-1');
+    expect(mockedEnqueue).not.toHaveBeenCalled();
+  });
+
+  it('POST rend son dossier à l’usager qui en a déjà un, même dans l’heure', async () => {
+    verdictMinutesAgo(1);
+    mockedFindDnDossierForSub.mockResolvedValue(DOSSIER);
+
+    const response = await post();
+
+    expect(response.status).toBe(202);
+    expect(mockedEnqueue).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('POST /api/france-connect/dossier', () => {

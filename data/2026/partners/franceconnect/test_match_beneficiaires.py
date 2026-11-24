@@ -31,7 +31,8 @@ DB_INIT_DIR = FC_DIR.parents[3] / 'lamp01' / 'db-init'
 # The columns of the recap SELECT that closes match_beneficiaires.sql, in its order.
 RECAP_COLONNES = [
     'candidats', 'par_boursier', 'par_aah_msa', 'par_aah_caf', 'par_aeeh_msa',
-    'par_aeeh_caf', 'par_qf_msa', 'par_qf_caf', 'par_repli_situation', 'avec_conjoint',
+    'par_aeeh_caf', 'par_qf_msa', 'par_qf_caf', 'par_repli_situation', 'par_premier_code',
+    'avec_conjoint',
     'inconcluants', 'non_apparies',
 ]
 
@@ -227,6 +228,19 @@ def test_boursier_ine_inconnu_reste_non_apparie(pg):
         candidats=[candidat(**{**CANDIDAT_BOURSIER, 'ine': 'INE999'})])
     assert apparies == {}
     assert non_apparies == ['c1']
+
+
+def test_boursier_deux_lignes_au_meme_ine_restent_inconcluantes(pg):
+    # The first-code rule is for children only: the INE route keeps the strict verdict.
+    doublon = ligne_base(**{**BASE_BOURSIER, 'id_psp': 'PSP-B2',
+                            'created_at': '2026-09-01 08:00:00+00'})
+    apparies, non_apparies, recap = rapprocher(
+        pg, base=[ligne_base(**BASE_BOURSIER), doublon],
+        candidats=[candidat(**CANDIDAT_BOURSIER)])
+    assert apparies == {}
+    assert non_apparies == ['c1']
+    assert recap['par_premier_code'] == 0
+    assert recap['inconcluants'] == 1
 
 
 # --- AAH : nom de naissance côté MSA, nom d'usage côté CAF, les deux essayées -------
@@ -570,22 +584,127 @@ def test_les_deux_personas_sur_la_meme_personne_comptent_pour_un(pg):
     assert recap['inconcluants'] == 0
 
 
-def test_conjoint_vers_une_autre_personne_rend_le_candidat_inconcluant(pg):
-    # The connected persona reaches one row, the conjoint another: two distinct id_psp,
-    # the strict verdict refuses to pick and the candidate gets a fresh code.
-    autre_foyer = ligne_base(**{**BASE_QF_MSA, 'id_psp': 'PSP-Q9',
-                                'allocataire_nom': 'ZELVIK', 'allocataire_prenom': 'HALVI',
-                                'allocataire_qualite': 'Mme',
-                                'allocataire_date_naissance': '1980-01-02'})
+def test_un_code_par_parent_rend_le_premier_code_de_l_enfant(pg):
+    # The connected persona reaches one row, the conjoint another: the child already holds
+    # one code per parent, and gets the oldest instead of a third — by date, not by id_psp.
+    code_du_parent = ligne_base(**{**BASE_QF_MSA, 'created_at': '2026-10-01 08:00:00+00'})
+    code_du_conjoint = ligne_base(**{**BASE_QF_MSA, 'id_psp': 'PSP-Q9',
+                                     'allocataire_nom': 'ZELVIK', 'allocataire_prenom': 'HALVI',
+                                     'allocataire_qualite': 'Mme',
+                                     'allocataire_date_naissance': '1980-01-02',
+                                     'created_at': '2026-09-01 08:00:00+00'})
     cand = candidat(**{**CANDIDAT_QF_MSA,
                        'conjoint_nom': 'ZELVIK', 'conjoint_prenom': 'Halvi',
                        'conjoint_date_naissance': '1980-01-02',
                        'conjoint_qualite': 'Mme', 'conjoint_genre': 'female'})
     apparies, non_apparies, recap = rapprocher(
-        pg, base=[ligne_base(**BASE_QF_MSA), autre_foyer], candidats=[cand])
-    assert apparies == {}
-    assert non_apparies == ['c1']
-    assert recap['inconcluants'] == 1
+        pg, base=[code_du_parent, code_du_conjoint], candidats=[cand])
+    assert apparies == {'c1': 'PSP-Q9'}
+    assert non_apparies == []
+    assert recap['par_qf_msa'] == 1
+    assert recap['par_premier_code'] == 1
+    assert recap['inconcluants'] == 0
+
+
+# --- First code of the child ----------------------------------------------------------
+# The case that left children with three AEEH codes: parent 1 connects and gets a code, a
+# CNAF file is coded over it under parent 2 (a usage name, no extra-field row), then parent 2
+# connects and reaches both codes — their own CNAF one, and parent 1's through the conjoint.
+
+BASE_ENFANT_FOYER = dict(nom='VELMARO', prenom='NIKO', date_naissance='2013-02-02 04:00:00',
+                         genre='M', organisme='CAF', situation='AEEH')
+
+CODE_FC_PARENT_1 = dict(BASE_ENFANT_FOYER, id_psp='PSP-P1', allocataire_qualite='M',
+                        allocataire_nom='TARVELIS', allocataire_prenom='OKAN',
+                        allocataire_date_naissance='1979-04-04',
+                        created_at='2026-10-14 08:00:18+00')
+
+EXTRA_FC_PARENT_1 = dict(id_psp='PSP-P1', cnaf_allocataire_nom_naissance='TARVELIS',
+                         cnaf_allocataire_date_naissance='1979-04-04',
+                         cnaf_allocataire_genre='male')
+
+CODE_CNAF_PARENT_2 = dict(BASE_ENFANT_FOYER, id_psp='PSP-P2', allocataire_qualite='Mme',
+                          allocataire_nom='BRUNEVA', allocataire_prenom='SILKA',
+                          created_at='2026-10-14 08:16:09+00')
+
+CODE_FC_PARENT_2 = dict(BASE_ENFANT_FOYER, id_psp='PSP-P3', allocataire_qualite='Mme',
+                        allocataire_nom='BRUNEVA', allocataire_prenom='SILKA MIRELLE',
+                        allocataire_date_naissance='1982-08-08',
+                        created_at='2026-10-14 09:31:40+00')
+
+EXTRA_FC_PARENT_2 = dict(id_psp='PSP-P3', cnaf_allocataire_nom_naissance='BRUNEVA',
+                         cnaf_allocataire_date_naissance='1982-08-08',
+                         cnaf_allocataire_genre='female')
+
+ENFANT_DU_FOYER = dict(situation='AEEH', organisme='CAF',
+                       beneficiaire_nom='VELMARO', beneficiaire_prenom='Niko',
+                       beneficiaire_date_naissance='2013-02-02', beneficiaire_genre='M')
+
+PARENT_2_CONNECTE = dict(ENFANT_DU_FOYER,
+                         allocataire_nom='BRUNEVA', allocataire_nom_usage='Bruneva',
+                         allocataire_prenom='Silka Mirelle',
+                         allocataire_date_naissance='1982-08-08', allocataire_qualite='Mme',
+                         allocataire_genre='female',
+                         conjoint_nom='TARVELIS', conjoint_nom_usage='', conjoint_prenom='Okan',
+                         conjoint_date_naissance='1979-04-04', conjoint_qualite='M',
+                         conjoint_genre='male')
+
+PARENT_1_CONNECTE = dict(ENFANT_DU_FOYER,
+                         allocataire_nom='TARVELIS', allocataire_nom_usage='',
+                         allocataire_prenom='Okan', allocataire_date_naissance='1979-04-04',
+                         allocataire_qualite='M', allocataire_genre='male',
+                         conjoint_nom='BRUNEVA', conjoint_nom_usage='Bruneva',
+                         conjoint_prenom='Silka', conjoint_date_naissance='1982-08-08',
+                         conjoint_qualite='Mme', conjoint_genre='female')
+
+
+def test_le_second_parent_recoit_le_code_du_premier_malgre_un_code_cnaf(pg):
+    apparies, non_apparies, recap = rapprocher(
+        pg, base=[ligne_base(**CODE_FC_PARENT_1), ligne_base(**CODE_CNAF_PARENT_2)],
+        extra=[ligne_extra(**EXTRA_FC_PARENT_1)], candidats=[candidat(**PARENT_2_CONNECTE)])
+    assert apparies == {'c1': 'PSP-P1'}
+    assert non_apparies == []
+    assert recap['par_aeeh_caf'] == 1
+    assert recap['par_premier_code'] == 1
+    assert recap['inconcluants'] == 0
+
+
+def test_un_enfant_a_trois_codes_recoit_le_premier(pg):
+    apparies, _, recap = rapprocher(
+        pg,
+        base=[ligne_base(**CODE_FC_PARENT_2), ligne_base(**CODE_CNAF_PARENT_2),
+              ligne_base(**CODE_FC_PARENT_1)],
+        extra=[ligne_extra(**EXTRA_FC_PARENT_1), ligne_extra(**EXTRA_FC_PARENT_2)],
+        candidats=[candidat(**PARENT_2_CONNECTE)])
+    assert apparies == {'c1': 'PSP-P1'}
+    assert recap['par_premier_code'] == 1
+
+
+def test_deux_codes_du_conjoint_rendent_le_plus_ancien(pg):
+    # Both existing codes belong to parent 2 (their FC code, then the CNAF one): parent 1 only
+    # reaches them through the conjoint, and still gets one of them rather than a new code.
+    code_fc = ligne_base(**{**CODE_FC_PARENT_2, 'created_at': '2026-09-24 07:00:47+00'})
+    apparies, _, recap = rapprocher(
+        pg, base=[ligne_base(**CODE_CNAF_PARENT_2), code_fc],
+        extra=[ligne_extra(**EXTRA_FC_PARENT_2)], candidats=[candidat(**PARENT_1_CONNECTE)])
+    assert apparies == {'c1': 'PSP-P3'}
+    assert recap['par_premier_code'] == 1
+
+
+def test_un_code_sans_date_passe_apres_les_codes_dates(pg):
+    sans_date = ligne_base(**{**CODE_FC_PARENT_1, 'created_at': None})
+    apparies, _, _ = rapprocher(
+        pg, base=[sans_date, ligne_base(**CODE_CNAF_PARENT_2)],
+        extra=[ligne_extra(**EXTRA_FC_PARENT_1)], candidats=[candidat(**PARENT_2_CONNECTE)])
+    assert apparies == {'c1': 'PSP-P2'}
+
+
+def test_a_date_egale_le_plus_petit_id_psp_l_emporte(pg):
+    meme_date = ligne_base(**{**CODE_CNAF_PARENT_2, 'created_at': CODE_FC_PARENT_1['created_at']})
+    apparies, _, _ = rapprocher(
+        pg, base=[meme_date, ligne_base(**CODE_FC_PARENT_1)],
+        extra=[ligne_extra(**EXTRA_FC_PARENT_1)], candidats=[candidat(**PARENT_2_CONNECTE)])
+    assert apparies == {'c1': 'PSP-P1'}
 
 
 # --- Codes issued by the FranceConnect pipeline itself -------------------------------

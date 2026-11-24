@@ -34,6 +34,21 @@ through the same runner, its files given as arguments (`./run_cnous_boursiers.sh
 the boursiers an earlier run injected are in the fresh lamp01 export, and set aside on the same
 criteria.
 
+The CPS de Saint-Pierre-et-Miquelon file of 2026-11-17 goes through
+[partners/spm/run_spm.sh](partners/spm/run_spm.sh), a one-shot run of the same shape (stop the
+FranceConnect and Grist/DN crons first). Its rows are filed as MSA under code organisme 459. The
+CPS flags no situation, so
+[18_11_2026_clean_spm.py](partners/spm/18_11_2026_clean_spm.py) reads it off the row:
+
+- allocataire = bénéficiaire → AAH;
+- otherwise, a quotient familial given → jeune (QF < 700);
+- otherwise → AEEH.
+
+It then applies the shared windows, sets aside who lamp01 already holds, and draws the codes.
+Unlike the CNOUS run, the runner also mails them once lamp01 holds them, through
+`pnpm codes:partner-emails`: `code_direct_aah`, or `code_indirect` for a parent. See
+[partners/spm/README.md](partners/spm/README.md).
+
 Steps ⑩ ③ ⑪ are also driven unattended, by
 [partners/franceconnect/run_fc_pipeline.sh](partners/franceconnect/run_fc_pipeline.sh) — the
 only source whose input is a live table rather than a frozen export, hence a cron rather than

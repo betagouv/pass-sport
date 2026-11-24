@@ -23,6 +23,23 @@ du demandeur est celle qu'il a saisie. Seuls ceux qui ne portent aucun des label
 (`Traité`, `À vérifier`, `Rejeté`, `Doublon`) sont pris. Pour faire repasser un dossier, lui
 retirer ses labels.
 
+### Label `Code forcé`
+
+Posé à la main par un instructeur sur un dossier en instruction, il **lève le contrôle de la
+fenêtre d'âge** : un enfant né en 2008 déclaré au titre du QF est codé. `verdicts.csv` le note
+(`code forcé, hors fenêtre jeune (…) : 31/12/2008`).
+
+Il ne lève rien d'autre :
+- un dossier qui porte un label du pipeline (`Traité`, `À vérifier`, `Rejeté`, `Doublon`) n'est
+  **jamais** pris, même avec `Code forcé`. Pour forcer un dossier `Rejeté` hors fenêtre, retirer
+  `Rejeté` et poser `Code forcé` ;
+- les autres contrôles (champ vide, genre, caisse ou situation inconnus, date illisible, email ou
+  code INSEE invalides), l'instructeur du dossier et **tout le rapprochement** (doublons de
+  lamp01, cas à vérifier, doublons du lot) s'appliquent.
+
+Le label reste sur le dossier, comme trace : le label du pipeline posé par le passage suffit à ce
+que le dossier ne soit plus repris.
+
 Chaque dossier reçoit ses réponses (annotation, message, acceptation) **au nom de l'instructeur
 qui l'a passé en instruction** : le dernier passage en instruction de ses `traitements`
 (`emailAgentTraitant`), retrouvé par son email parmi les instructeurs du groupe du dossier. Un
@@ -57,7 +74,8 @@ une réponse.
 Une ligne invalide est écartée avec son motif dans `rejets.csv` ; les autres continuent. Motifs :
 champ vide, genre, situation ou caisse inconnus, date illisible, email invalide, code INSEE
 invalide, hors fenêtre d'âge de la situation (AAH 1996-2010, AEEH 2007-2020, jeune 2009-2020,
-boursier à partir de 1998). Un boursier sans INE n'est pas rejeté. Le même bénéficiaire présent
+boursier à partir de 1998 ; pas contrôlée sur un dossier [`Code forcé`](#label-code-forcé)). Un
+boursier sans INE n'est pas rejeté. Le même bénéficiaire présent
 deux fois dans le lot (dans un dossier ou dans deux) sous le même parent n'est gardé qu'une fois :
 `doublon de dn:<dossier>:enfant-1`. Sous un autre parent, les deux restent et le second passe en
 **À vérifier** (`même enfant que dn:<dossier>:enfant-1, déclaré dans ce passage par un autre
@@ -108,7 +126,7 @@ laisse rien à faire au support) et chaque cas à vérifier, la ligne
 saisie (`saisie_*`, lien du dossier DN) et chaque ligne lamp01 touchée (`lamp01_*` : code,
 identité, situation, caisse, allocataire et sa date de naissance, date d'injection). Un dossier
 « À vérifier » jugé homonyme se relance en retirant son label : il repassera le même
-rapprochement (pas encore de forçage).
+rapprochement, que le label `Code forcé` ne contourne pas.
 
 ## Étapes
 
@@ -189,7 +207,7 @@ Chaque passage crée `run/<AAAA-MM-JJTHH-MM-SS>[-dry-run]/` et ajoute une ligne 
 |---|---|
 | `dn-brut.json` | réponse de l'API (dossiers à traiter) |
 | `rejets.csv` | lignes écartées et motif |
-| `verdicts.csv` | verdict de chaque ligne : `rejete`, `doublon`, `doublon_transmis`, `a_verifier`, `a_coder` ; pour un doublon, ses codes lamp01 (`code_lamp01`) |
+| `verdicts.csv` | verdict de chaque ligne : `rejete`, `doublon`, `doublon_transmis`, `a_verifier`, `a_coder` ; pour un doublon, ses codes lamp01 (`code_lamp01`) ; pour une ligne `Code forcé` codée hors fenêtre d'âge, le motif `code forcé, hors fenêtre …` |
 | `investigation.csv` | doublons (sauf `doublon_transmis`) et cas à vérifier, face aux lignes lamp01 touchées |
 | `prod.csv` | ce qui est déposé dans `/nfs/run` |
 | `lamp01.csv` | ce qui est injecté dans lamp01 |
@@ -324,6 +342,8 @@ il est signalé par un `ATTENTION` dans `run.log`.
     par le pipeline ;
   - le label `FranceConnect`, posé sur les dossiers pré-remplis par le worker ou déposés via
     FranceConnect ;
+  - le label `Code forcé`, que les instructeurs posent à la main (voir
+    [plus haut](#label-code-forcé)). Le pipeline ne l'exige pas : sans lui, rien n'est forcé ;
   - le champ `Ma date de naissance`, obligatoire : celle du bénéficiaire AAH ou boursier, et
     celle du parent pour ses enfants ;
   - l'annotation privée `Codes pass Sport`, de type **Texte long**. Sans elle, le passage

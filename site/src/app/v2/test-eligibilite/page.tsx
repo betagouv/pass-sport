@@ -10,10 +10,10 @@ import BeneficiaryRecap from './components/post-login-flow/BeneficiaryRecap';
 import DnDossierButton from './components/post-login-flow/DnDossierButton';
 import { loadPocResult } from '@/app/api/france-connect/session';
 import { findJobForSub } from '@/app/services/queue';
-import { findResultsForSub } from '@/app/services/applications';
+import { findApplicationForSub, findResultsForSub } from '@/app/services/applications';
 import { relanceAvailableAtForSub } from '@/app/services/relance-availability';
 import { findDnDossierForSub } from '@/app/services/dn-dossier';
-import { stableDossierLink } from '@/app/services/dn-dossier-rules';
+import { canOfferDnDossier, stableDossierLink } from '@/app/services/dn-dossier-rules';
 import {
   FC_DEBUGGING_ONLY,
   FC_DN_DOSSIER_ENABLED,
@@ -95,6 +95,17 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
   const hasDnDossier = dnDossier !== null;
   // Never the dossier itself: a prefilled one's URL is the key to it.
   const dnDossierLink = stableDossierLink(dnDossier);
+  const lastVerdict =
+    result && FC_DN_DOSSIER_ENABLED
+      ? ((await findApplicationForSub(result.sub))?.lastApplication ?? null)
+      : null;
+  const dnDossierOffered =
+    FC_DN_DOSSIER_ENABLED &&
+    canOfferDnDossier({
+      hasDossier: hasDnDossier,
+      lastVerdict,
+      existingOnly: FC_DN_DOSSIER_EXISTING_ONLY,
+    });
 
   // Raw FranceConnect identity + API Particulier response dumps (including their
   // errors) are debug-only and restricted to the local environment.
@@ -264,10 +275,8 @@ export default async function PocFcApiParticulier({ searchParams }: Props) {
             <EnqueueRetry allocataireIdentity={result.identity} jobInfo={existingJobInfo} />
           )}
 
-          {/* Whatever the verdicts, even before they land. */}
-          {FC_DN_DOSSIER_ENABLED && (!FC_DN_DOSSIER_EXISTING_ONLY || hasDnDossier) && (
-            <DnDossierButton hasDossier={hasDnDossier} link={dnDossierLink} />
-          )}
+          {/* Whatever the verdicts, but not before an hour has passed since the last one. */}
+          {dnDossierOffered && <DnDossierButton hasDossier={hasDnDossier} link={dnDossierLink} />}
           {/* Logout moved to the header quick-access item ("Se déconnecter"),
               shown while the POC session is live (see the root layout). */}
         </section>

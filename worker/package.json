@@ -22,6 +22,7 @@
     "cog:corse:generate": "tsx src/scripts/generate-cog-corse.ts",
     "email:test": "tsx src/scripts/send-test-email.ts",
     "codes:aah-emails": "tsx src/scripts/send-code-direct-aah.ts",
+    "codes:partner-emails": "tsx src/scripts/send-partner-code-emails.ts",
     "redis:decode": "tsx src/scripts/redis-decode.ts",
     "apip:rate": "tsx src/scripts/rate-config.ts",
     "apip:rate:probe": "tsx src/scripts/rate-gate-probe.ts",

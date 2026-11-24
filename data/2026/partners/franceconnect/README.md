@@ -67,8 +67,17 @@ flowchart TD
 candidat (résolus par `clean_fc_lib`), et qui ne cherche que les lignes de base portant cette
 même situation et cette même caisse (plus `exercice_id` et un `id_psp` non nul). Le verdict
 est **strict** : un candidat est apparié ssi sa stratégie retourne **exactement un** `id_psp`
-distinct. Zéro ou plusieurs = non apparié → code neuf, le comportement le moins risqué des
-deux. Aucun départageur.
+distinct. Zéro = non apparié → code neuf. Plusieurs : non apparié aussi pour l'AAH et le
+boursier, sans départageur.
+
+**Le premier code de l'enfant** (stratégies `aeeh_*` et `qf_*`) : plusieurs `id_psp` veut dire
+que l'enfant a déjà plusieurs codes — un par parent, ou un fichier partenaire codé par-dessus
+un code FranceConnect (le lot CNAF AEEH du 14/10 en a laissé une centaine à trois codes). Chaque
+ligne atteinte correspond à l'enfant sur son identité complète et à l'un des allocataires du
+foyer : le candidat reçoit la plus ancienne (`beneficiaires.created_at`, NULL en dernier, puis le
+plus petit `id_psp`) au lieu d'un code de plus. Les deux parents repartent ainsi avec le même
+code. Les codes déjà distribués ne sont pas touchés. Le récap compte ces appariements dans
+`par_premier_code`, en plus de leur stratégie.
 
 **Un enfant est cherché sous sa situation, puis sous l'autre** (AEEH ↔ jeune), seulement si la
 première n'atteint personne. Les sources ne classent pas les deux aides pareil : ce pipeline met
@@ -82,8 +91,8 @@ compte ces appariements dans `par_repli_situation`.
 responsable dossier, qui peut être l'AUTRE parent que celui qui s'est connecté. Chaque candidat
 présente donc jusqu'à deux personas allocataire — le connecté, et le conjoint quand
 `resolve_allocataire_conjoint` en identifie un — et la stratégie apparie si l'un des deux
-atteint la ligne. Le verdict strict reste posé par candidat : deux personas sur la même
-personne comptent pour un `id_psp`, deux personnes différentes restent inconcluantes.
+atteint la ligne. Le verdict reste posé par candidat : deux personas sur la même personne
+comptent pour un `id_psp` ; un code par parent relève du premier code de l'enfant.
 
 | stratégie | allocataire | bénéficiaire |
 |---|---|---|
@@ -183,6 +192,12 @@ Ce que le script garantit, et qu'un passage à la main doit respecter aussi :
 - **le job courriel est posé à chaque sortie réussie**, même sans nouveau bénéficiaire : il
   retente les courriels échoués et sert les appariés d'un passage précédent. Il ne l'est ni
   sur une erreur ni quand le verrou est déjà pris — le passage suivant s'en charge.
+
+Une panne durable prévient les opérateurs : [alerte_echecs.sh](alerte_echecs.sh), enchaîné
+après chaque passage par la même ligne de crontab, envoie un seul courriel après 3 passages
+`echec` d'affilée, ou 3 passages `ignore-verrou` (un passage bloqué), et retient l'envoi dans
+`run/alerte-echec-envoyee` / `run/alerte-blocage-envoyee` — voir
+[deploy/ansible/README.md](../../../../deploy/ansible/README.md#alerte-courriel-quand-le-passage-fc-est-en-panne).
 
 ### Passage à blanc
 

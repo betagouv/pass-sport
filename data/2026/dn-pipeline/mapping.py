@@ -71,6 +71,10 @@ DN_LABEL_FRANCECONNECT = 'FranceConnect'
 # Dossier.connectionUsager: france_connect, password or deleted.
 DN_CONNECTION_FRANCECONNECT = 'france_connect'
 
+# Put by an instructeur so a dossier's lines skip the DOB window check, every other check and the
+# matching still applying. Not one of DN_LABELS: a dossier holding one of those stays skipped.
+DN_LABEL_CODE_FORCE = 'Code forcé'
+
 # Put by dn_doublons.py on the dossiers en construction lamp01 may already know, which it then
 # leaves alone until someone removes it. Not one of DN_LABELS: still taken once en instruction.
 DN_LABEL_DOUBLON_POTENTIEL = 'Doublon potentiel'
