@@ -264,7 +264,7 @@ flowchart TB
     f3 --> DB_FSS[("DB_FSS_EXPORT_2026\nCSV + id_psp")]:::finalFile
 
     subgraph EMAIL_NB["⑨ linkmobility/1_email_campaign.ipynb  ·  run once per source, like ③"]
-        e1["Load ONE *-with-codes.csv (CAMPAIGN_INPUT_PATHFILE_2026)\nunwrap allocataire JSON · filter: keep rows with email only"]
+        e1["Load ONE *-with-codes.csv (CAMPAIGN_INPUT_PATHFILE_2026)\noptional: drop codes listed in CAMPAIGN_EXCLUDED_CODES_PATHFILE_2026\nunwrap allocataire JSON · filter: keep rows with email only"]
         e2["Map + rename columns (id_psp → code)\nformat names & birth date text"]
         e3{"Split by\nallocataire vs benef"}
         e1-->e2-->e3
