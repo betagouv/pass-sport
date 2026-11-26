@@ -99,11 +99,13 @@ export class RealClient implements ApiParticulierClient {
     );
   }
 
-  cnous(identity: PivotIdentity): Promise<ResourceResult> {
+  cnous(identity: PivotIdentity, childIndex?: number): Promise<ResourceResult> {
     // Generic GET: the SDK has no v5. It still merges defaultParams (recipient) and maps
     // errors, so the wrapper above behaves the same as on a resource method.
-    return this.call(RESOURCE_META.cnous, () =>
-      this.client.get(CNOUS_IDENTITE_PATH, { params: toCnousParams(identity) }),
+    return this.call(
+      RESOURCE_META.cnous,
+      () => this.client.get(CNOUS_IDENTITE_PATH, { params: toCnousParams(identity) }),
+      childIndex,
     );
   }
 

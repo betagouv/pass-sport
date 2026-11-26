@@ -29,6 +29,7 @@ export type ResultCaisse = Caisse | typeof ORGANISME_BOURSIER;
 //   AEEH   enfant       6-19 ans
 //   AAH    allocataire  16-30 ans
 //   CROUS  allocataire  jusqu'à 28 ans
+//   CROUS  enfant       17-28 ans (asked from the parent's connection, see sequence.ts)
 //
 // The same four windows live in site/utils/eligibility-test.ts (parcours hors FranceConnect)
 // and data/2026/partners/partners_lib.py. A change here has to be mirrored in both.
@@ -43,6 +44,9 @@ export const AAH_BIRTHDATE_MIN = "1996-01-01";
 export const AAH_BIRTHDATE_MAX = "2010-12-31";
 export const CROUS_BIRTHDATE_MIN = "1998-01-01";
 export const CROUS_BIRTHDATE_MAX = "2026-12-31";
+// No lower bound on the allocataire's own call, but one CNOUS call per child of every foyer would
+// burn quota on children too young for l'enseignement supérieur.
+export const CROUS_CHILD_BIRTHDATE_MAX = "2009-12-31";
 
 // Strictly below: 700 itself is NOT eligible.
 export const QF_ELIGIBILITY_THRESHOLD = 700;

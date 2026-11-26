@@ -53,7 +53,7 @@ describe("decideEmailKind", () => {
     expect(decideEmailKind(legacy)).toEqual({ kind: "code_direct_boursier" });
   });
 
-  it.each(["QF", "AEEH"] as const)("picks the indirect template on the %s route", (situation) => {
+  it.each(["QF", "AEEH", "boursier"] as const)("picks the indirect template on the %s route", (situation) => {
     const enfant = row({ source: "enfant", situation, enfantIdentite: ENFANT });
 
     expect(decideEmailKind(enfant)).toEqual({ kind: "code_indirect" });

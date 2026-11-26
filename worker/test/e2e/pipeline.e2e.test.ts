@@ -28,6 +28,8 @@ beforeEach(async () => {
   stack.setQfValeurByMois({});
   stack.setAahBeneficiaire(false);
   stack.setCrousBoursier(true);
+  stack.setCrousBoursierEnfant(false);
+  stack.setCrousIne(undefined);
   stack.setChildrenLastname("Enfant");
   stack.setQfFournisseur("CNAF");
   stack.setQfConjoint(null);
@@ -43,6 +45,17 @@ const historyActions = async (sub: string): Promise<string[]> =>
   (
     await stack.pool.query(
       "select action from eligibility_history where allocataire_fc_sub = $1 order by created_at, id",
+      [sub],
+    )
+  ).rows.map((e) => e.action);
+
+// The calls about the allocataire alone: the CNOUS is also asked about the foyer's students.
+const selfHistoryActions = async (sub: string): Promise<string[]> =>
+  (
+    await stack.pool.query(
+      `select action from eligibility_history
+       where allocataire_fc_sub = $1 and coalesce(subject, 'self') <> 'enfant'
+       order by created_at, id`,
       [sub],
     )
   ).rows.map((e) => e.action);
@@ -233,6 +246,27 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     expect((await enfantRows()).every((x) => x.caisse === "MSA")).toBe(true);
   });
 
+  // A student of the foyer is pronounced on from the parent's connection too, under the INE their
+  // own connection would carry: that is what hands both the same code downstream.
+  it("route boursier d'un enfant: la ligne enfant porte la bourse et l'INE", async () => {
+    stack.setCrousBoursierEnfant(true);
+    stack.setCrousIne("090123456AB");
+
+    await stack.enqueueAndWait(allocataire());
+
+    const enfants = await enfantRows();
+    const etudiant = enfants.find((x) => x.enfant_identite?.birthdate === "2005-01-01");
+    expect(etudiant).toMatchObject({
+      verdict: "eligible_pending",
+      situation: "boursier",
+      caisse: "cnous",
+      ine: "090123456AB",
+    });
+    // The children the AEEH carries stay AEEH, with no INE.
+    const aine = enfants.find((x) => x.enfant_identite?.birthdate === "2008-01-01");
+    expect(aine).toMatchObject({ situation: "AEEH", ine: null });
+  });
+
   // The bourse comes from CNOUS, not from the caisse that served the household quotient —
   // which is answering CNAF on this very job.
   it("route boursier: la caisse est 'cnous', pas celle du quotient", async () => {
@@ -263,10 +297,11 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       identity: { ...allocataireHorsFenetres().identity, sub },
     })) as { apCalls: number };
 
-    // 2 quotient_familial (août, septembre) + 3 AEEH. Neither AAH nor CROUS.
-    expect(apCalls).toBe(5);
+    // 2 quotient_familial (août, septembre) + 3 AEEH + the CNOUS about the 2005 child. Neither
+    // AAH nor CROUS about the allocataire.
+    expect(apCalls).toBe(6);
 
-    const actions = await historyActions(sub);
+    const actions = await selfHistoryActions(sub);
     expect(actions.some((a) => a.startsWith("dss.allocation_adulte_handicape"))).toBe(false);
     expect(actions.some((a) => a.startsWith("cnous."))).toBe(false);
 
@@ -350,15 +385,16 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       identity: { ...allocataire().identity, sub },
     })) as { apCalls: number };
 
-    // 2 quotient_familial + 1 AAH + 3 AEEH. Pas de CROUS.
-    expect(apCalls).toBe(6);
-    expect((await historyActions(sub)).some((a) => a.startsWith("cnous."))).toBe(false);
+    // 2 quotient_familial + 1 AAH + 3 AEEH + CROUS de l'enfant de 2005. Pas de CROUS self.
+    expect(apCalls).toBe(7);
+    expect((await selfHistoryActions(sub)).some((a) => a.startsWith("cnous."))).toBe(false);
 
     const self = await selfRows();
     expect(self[0].verdict).toBe("eligible_pending");
   });
 
-  // The fake QF returns four children: 2005 (21 ans, outside both windows), 2008 (18 ans,
+  // The fake QF returns four children: 2005 (21 ans, outside both child windows, asked about
+  // at the CNOUS only), 2008 (18 ans,
   // AEEH window only), 2009 (17 ans) and 2012 (14 ans, both windows). The household quotient
   // defaults to 1000, i.e. above the 700 threshold.
   const eligibleBirthdates = async () =>
@@ -370,8 +406,9 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
   it("chaque enfant 6-19 hors couverture QF est interrogé", async () => {
     const { apCalls } = (await stack.enqueueAndWait(allocataire())) as { apCalls: number };
 
-    // 2 quotient_familial + AAH + CROUS + 3 AEEH. L'enfant de 2005 est hors fenêtre.
-    expect(apCalls).toBe(7);
+    // 2 quotient_familial + AAH + CROUS + 3 AEEH + CROUS de l'enfant de 2005, hors des deux
+    // fenêtres enfant mais d'âge étudiant.
+    expect(apCalls).toBe(8);
     expect(await eligibleBirthdates()).toEqual(["2008-01-01", "2009-01-01", "2012-01-01"]);
   });
 
@@ -429,7 +466,8 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
 
     // 1 quotient_familial — le balayage s'arrête sur août — + AAH + CROUS + 1 seul AEEH:
     // l'aîné de 2008 est hors fenêtre QF, 2009 et 2012 sont déjà couverts par le quotient.
-    expect(apCalls).toBe(4);
+    // + CROUS de l'enfant de 2005.
+    expect(apCalls).toBe(5);
     // 2009 et 2012 par le quotient, 2008 par son verdict AEEH.
     expect(await eligibleBirthdates()).toEqual(["2008-01-01", "2009-01-01", "2012-01-01"]);
   });
@@ -440,8 +478,9 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
     stack.setQfValeurByMois({ "8": 900, "9": 650 });
     const { apCalls } = (await stack.enqueueAndWait(allocataire())) as { apCalls: number };
 
-    // 2 quotient_familial (août au-dessus, septembre en dessous) + AAH + CROUS + 1 AEEH.
-    expect(apCalls).toBe(5);
+    // 2 quotient_familial (août au-dessus, septembre en dessous) + AAH + CROUS + 1 AEEH + CROUS
+    // de l'enfant de 2005.
+    expect(apCalls).toBe(6);
     expect(await eligibleBirthdates()).toEqual(["2008-01-01", "2009-01-01", "2012-01-01"]);
   });
 
@@ -455,9 +494,10 @@ describe("worker eligibility pipeline (deterministic fakes)", () => {
       allocataire({ identity: { ...allocataire().identity, sub: "fc-sub-699" } }),
     )) as { apCalls: number };
 
-    // 700 n'est pas < 700: le second mois est interrogé, puis les trois AEEH.
-    expect(auSeuil.apCalls).toBe(7);
-    expect(sousLeSeuil.apCalls).toBe(4);
+    // 700 n'est pas < 700: le second mois est interrogé, puis les trois AEEH. Chacun pose en
+    // plus le CROUS de l'enfant de 2005.
+    expect(auSeuil.apCalls).toBe(8);
+    expect(sousLeSeuil.apCalls).toBe(5);
   });
 
   it("ne pose jamais de code pass Sport, ni dans la table ni dans la valeur de retour", async () => {

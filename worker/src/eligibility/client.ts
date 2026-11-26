@@ -4,7 +4,8 @@ import type { PivotIdentity, ResourceResult } from "./types";
 export interface ApiParticulierClient {
   quotientFamilial(identity: PivotIdentity, mois?: string): Promise<ResourceResult>;
   aah(identity: PivotIdentity): Promise<ResourceResult>;
-  cnous(identity: PivotIdentity): Promise<ResourceResult>;
+  // childIndex set when the student is a child of the connected allocataire's foyer.
+  cnous(identity: PivotIdentity, childIndex?: number): Promise<ResourceResult>;
   cnousByIne(ine: string): Promise<ResourceResult>;
   aeeh(child: PivotIdentity, childIndex: number): Promise<ResourceResult>;
 }

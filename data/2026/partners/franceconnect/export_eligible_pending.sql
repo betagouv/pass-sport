@@ -44,9 +44,14 @@ COPY (
     -- donc identique entre deux resoumissions : c'est l'ordre sur created_at qui isole le
     -- run courant. Les 'action' sont les RESOURCE_META[*].resource du worker
     -- (worker/src/eligibility/client.ts).
+    --
+    -- Les appels du pivot seuls : le CNOUS est aussi interrogé sur les enfants du foyer, sous la
+    -- même action, et la bourse d'un enfant n'a rien à dire du parent. Ce que ces appels-là ont
+    -- rendu, le worker l'a écrit sur la ligne de l'enfant (situation, ine).
     select distinct on (job_id, action) job_id, action, response_payload
     from eligibility_history
     where actor = 'api_particulier' and status = 'success'
+      and coalesce(subject, 'self') <> 'enfant'
     order by job_id, action, created_at desc
   )
   select
@@ -87,7 +92,12 @@ COPY (
     qf.response_payload -> 'data' -> 'quotient_familial' ->> 'fournisseur'   as qf_fournisseur,
     qf.response_payload -> 'data' -> 'enfants'                               as qf_enfants,
     aah.response_payload   -> 'data' ->> 'est_beneficiaire'                  as aah_est_beneficiaire,
-    crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier' as crous_est_boursier,
+    -- Sur une ligne 'enfant', la bourse est celle de l'enfant, interrogé depuis la connexion du
+    -- parent : le worker l'a tranchée dans `situation`.
+    case when r.source = 'enfant'
+         then (r.situation = 'boursier')::text
+         else crous.response_payload -> 'data' -> 'statut_boursier' ->> 'est_boursier'
+    end as crous_est_boursier,
 
     -- Ce qui sert au RAPPROCHEMENT avec la base bénéficiaires (match_beneficiaires.sql),
     -- et à rien d'autre : ces deux colonnes ne survivent pas au nettoyage.
@@ -102,7 +112,14 @@ COPY (
     -- L'INE, jointure EXACTE avec beneficiaires.allocataire_matricule sur les lignes CNOUS, qui y
     -- rangent l'INE du boursier. La réponse quotient_familial, elle, ne porte aucun
     -- identifiant de foyer : il n'existe pas d'équivalent pour CNAF et MSA.
-    crous.response_payload -> 'data' ->> 'ine'                               as crous_ine
+    --
+    -- Le même INE, que l'étudiant se connecte ou que son parent le fasse, est ce qui leur sert le
+    -- même code. `r.ine` d'abord ; la réponse du pivot pour les lignes 'self' antérieures à la
+    -- colonne. Jamais celle du pivot sur une ligne 'enfant'.
+    case when r.source = 'enfant'
+         then r.ine
+         else coalesce(r.ine, crous.response_payload -> 'data' ->> 'ine')
+    end as crous_ine
 
   from eligibility_results r
 

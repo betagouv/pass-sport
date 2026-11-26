@@ -204,16 +204,23 @@ def resolve_situation(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     qf_covers = quotient < partners.QF_MAX
     jeune = is_enfant & qf_covers & _birthdate_within(dob, partners.QF_DOB_MIN, partners.QF_DOB_MAX)
 
+    # Route boursier d'un enfant, interrogé au CNOUS depuis la connexion de son parent. Le worker
+    # ne pose cet appel que si ni le QF ni l'AEEH ne le couvrent : quand il a répondu boursier,
+    # l'AEEH n'a rien ouvert, ce que la fenêtre d'âge seule ci-dessous ne sait pas dire.
+    boursier_enfant = is_enfant & ~jeune & _is_true(df['crous_est_boursier']) \
+        & _birthdate_within(dob, CROUS_DOB_MIN)
+
     # Route AEEH : 6-19 ans, pour les enfants que le quotient ne couvre pas. Les deux fenêtres
     # se chevauchent sur tout 2009-2020 et QF y est prioritaire — d'où le `& ~jeune`, qui
     # reproduit le `else if` de candidates.ts et, côté worker, le filtre de planChildrenChecks.
-    aeeh = is_enfant & ~jeune & _birthdate_within(
+    aeeh = is_enfant & ~jeune & ~boursier_enfant & _birthdate_within(
         dob, partners.AEEH_DOB_MIN, partners.AEEH_DOB_MAX)
 
     # Routes de l'allocataire lui-même.
     aah = ~is_enfant & _is_true(df['aah_est_beneficiaire']) & _birthdate_within(
         dob, partners.AAH_DOB_MIN, partners.AAH_DOB_MAX)
-    boursier = ~is_enfant & _is_true(df['crous_est_boursier']) & _birthdate_within(dob, CROUS_DOB_MIN)
+    boursier = (~is_enfant & _is_true(df['crous_est_boursier']) & _birthdate_within(dob, CROUS_DOB_MIN)) \
+        | boursier_enfant
 
     # AAH l'emporte quand les deux sont vrais. candidates.ts n'ordonne pas les deux aides
     # (il les cumule dans `eligibilities`), mais une ligne PSP ne porte qu'une `situation` :
@@ -528,6 +535,23 @@ def _champ_du_json_allocataire(valeur, champ: str) -> str:
     except (TypeError, ValueError):
         return ''
     return str(allocataire.get(champ) or '') if isinstance(allocataire, dict) else ''
+
+
+def drop_duplicate_ine(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Ne garde qu'une ligne boursier par INE.
+
+    Un étudiant peut être remonté par sa propre connexion ET par celle de son parent, sous
+    deux identités qui ne s'écrivent pas pareil (tous ses prénoms côté FranceConnect, ceux de
+    la caisse côté quotient_familial) : FC_DEDUPLICATION_KEY_COLUMNS ne les réunit pas. L'INE,
+    si. La ligne écartée reste `eligible_pending` et retrouve par l'INE, au passage suivant,
+    le code servi à celle-ci.
+
+    Renvoie (df, nombre de lignes écartées).
+    """
+    ine = df['allocataire'].map(lambda v: _champ_du_json_allocataire(v, 'matricule')) \
+        if not df.empty else pd.Series(dtype=str)
+    doublon = (df['situation'] == 'boursier') & (ine != '') & ine.duplicated()
+    return df[~doublon], int(doublon.sum())
 
 
 # Colonnes du CSV de rapprochement. Elles ne vont pas en production : elles vivent le temps

@@ -87,6 +87,15 @@ stratégie de la ligne de base atteinte (`aeeh_*` sur une ligne AEEH, `qf_*` sur
 dans la même caisse. Un enfant codé sous les deux situations reçoit celui de la sienne. Le récap
 compte ces appariements dans `par_repli_situation`.
 
+**Un étudiant est cherché entre la route boursier et celle de l'enfant**, en dernier palier :
+le même étudiant peut être codé `boursier` par sa propre connexion et `AEEH`/`jeune` par celle de
+son parent (le worker n'interroge le CNOUS sur un enfant que si ni le QF ni l'AEEH ne le
+couvrent). Un candidat boursier que son INE n'atteint pas est cherché sur les lignes AEEH/jeune,
+un enfant AEEH/jeune que rien n'atteint sur les lignes `cnous`/`boursier` — sur l'identité du
+bénéficiaire seule (nom sous ses deux formes, prénoms contenus dans un sens ou dans l'autre,
+genre, naissance), verdict strict inchangé. Ces appariements sont comptés dans
+`par_repli_situation`.
+
 **Au moins un des deux allocataires du foyer** (AEEH et jeune) : la base partenaire porte le
 responsable dossier, qui peut être l'AUTRE parent que celui qui s'est connecté. Chaque candidat
 présente donc jusqu'à deux personas allocataire — le connecté, et le conjoint quand
@@ -96,7 +105,7 @@ comptent pour un `id_psp` ; un code par parent relève du premier code de l'enfa
 
 | stratégie | allocataire | bénéficiaire |
 |---|---|---|
-| **boursier** | `allocataire_matricule` = INE, exact — le CNOUS y range l'INE du boursier ; rien d'équivalent CNAF/MSA | — |
+| **boursier** | `allocataire_matricule` = INE, exact — le CNOUS y range l'INE du boursier ; rien d'équivalent CNAF/MSA. Même clé que l'étudiant se connecte ou que son parent le fasse | — |
 | **AAH MSA** | — | nom de **naissance** (`family_name`) · prénoms ⊆ · genre · naissance |
 | **AAH CAF** | — | nom d'**usage** (`preferred_username`), ou nom de **naissance** (`family_name`) confronté à `beneficiaire_cnaf_extra_field` · prénoms ⊆ · genre · naissance |
 | **AEEH MSA** | *l'un des deux allocataires du foyer* : nom de naissance · prénoms ⊆ · qualité (M/Mme) · naissance | nom · prénoms stricts · genre · naissance |
@@ -338,7 +347,10 @@ select count(*) from eligibility_results where verdict = 'eligible_pending';
 - **la situation** — `eligibility_results` ne retient que `source` (self/enfant) et un
   booléen d'éligibilité, jamais quelle aide a ouvert le droit. Elle se redéduit des réponses
   brutes d'API Particulier, conservées dans `eligibility_history.response_payload`, en rejouant les
-  règles de [candidates.ts](../../../../worker/src/eligibility/candidates.ts) ;
+  règles de [candidates.ts](../../../../worker/src/eligibility/candidates.ts). Exception, la route
+  boursier d'un enfant : le CNOUS est interrogé sur les enfants de 17 ans et plus que ni le QF ni
+  l'AEEH ne couvrent, et c'est la ligne elle-même (`situation`, `ine`) qui porte la réponse —
+  l'export ne lit que les appels du pivot (`subject = 'self'`) dans l'historique ;
 - **le genre des enfants** — `enfant_identite` ne porte que nom, prénom et date de naissance ;
   le sexe est retrouvé par appariement dans le tableau `enfants` de la réponse quotient
   familial ;
@@ -362,6 +374,12 @@ La fenêtre AEEH de cette source est celle de `partners_lib` (6-19 ans) : le wor
 l'AEEH pour chaque enfant de cette tranche que le quotient familial ne couvre pas déjà. C'est
 ce `& ~jeune` qui reste la seule différence avec le fichier partenaire, où la CNAF déclare
 elle-même l'AEEH sans regarder le quotient.
+
+Après la déduplication sur l'identité, une seconde ne garde qu'une ligne boursier par INE :
+l'étudiant et son parent remontent le même boursier sous deux identités que la première ne
+réunit pas (tous les prénoms côté FranceConnect, ceux de la caisse côté quotient). La ligne écartée
+reste `eligible_pending` et retrouve par l'INE, au passage suivant, le code servi à l'autre — le
+même mécanisme que pour les deux parents d'un même enfant.
 
 ## Étape 3 — génération des codes
 

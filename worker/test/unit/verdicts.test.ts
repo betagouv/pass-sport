@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   AEEH_RESOURCE,
+  boursierIne,
   childAeehVerdict,
   findChildResource,
   hasAahRight,
   isAahBeneficiaryRow,
+  isBoursierRow,
   readCaisse,
   readQuotientFamilial,
 } from "../../src/eligibility/verdicts";
@@ -137,5 +139,29 @@ describe("findChildResource", () => {
     expect(findChildResource(results, AEEH_RESOURCE, 0)?.httpStatus).toBe(422);
     expect(findChildResource(results, AEEH_RESOURCE, 1)?.httpStatus).toBe(404);
     expect(findChildResource(results, AEEH_RESOURCE, 2)).toBeUndefined();
+  });
+});
+
+describe("isBoursierRow / boursierIne", () => {
+  const CNOUS = "cnous.etudiant_boursier_identite";
+  const boursier = (estBoursier: boolean) =>
+    answered(CNOUS, { ine: "090123456AB", statut_boursier: { est_boursier: estBoursier } });
+
+  it("reads a 404 as 'pas boursier' and carries no INE", () => {
+    expect(isBoursierRow(notFound(CNOUS, 0))).toBe(false);
+    expect(boursierIne(notFound(CNOUS, 0))).toBeUndefined();
+  });
+
+  it("is false on an answer that says not boursier", () => {
+    expect(isBoursierRow(boursier(false))).toBe(false);
+  });
+
+  it("is true on a bourse, and reads its INE", () => {
+    expect(isBoursierRow(boursier(true))).toBe(true);
+    expect(boursierIne(boursier(true))).toBe("090123456AB");
+  });
+
+  it("is false when the call was never made", () => {
+    expect(isBoursierRow(undefined)).toBe(false);
   });
 });

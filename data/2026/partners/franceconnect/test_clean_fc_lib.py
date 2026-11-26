@@ -707,3 +707,61 @@ def test_les_champs_cnaf_sont_ceux_que_le_candidat_presentera_aux_strategies_caf
         assert extra.loc[resultat, 'cnaf_allocataire_genre'] == cand['allocataire_genre']
         assert extra.loc[resultat, 'cnaf_allocataire_date_naissance'] == \
             cand['allocataire_date_naissance']
+
+
+# --- Boursier interrogé depuis la connexion du parent -----------------------------
+
+ETUDIANT_DU_FOYER = dict(
+    qf_valeur='900', enfant_nom='TREVALUN', enfant_prenom='Osmirel',
+    enfant_date_naissance='2006-02-11', crous_est_boursier='true', crous_ine='INE5511',
+)
+
+
+def test_un_enfant_que_le_cnous_dit_boursier_est_en_situation_boursier():
+    assert situations([enfant_row(**ETUDIANT_DU_FOYER)])[0] == ['boursier']
+
+
+def test_un_enfant_boursier_de_18_ans_n_est_pas_classe_aeeh():
+    # 2008 is inside the AEEH window: the age alone would wrongly say AEEH.
+    row = enfant_row(**(ETUDIANT_DU_FOYER | {'enfant_date_naissance': '2008-04-11'}))
+    assert situations([row])[0] == ['boursier']
+
+
+def test_un_enfant_non_boursier_de_18_ans_reste_aeeh():
+    row = enfant_row(**(ETUDIANT_DU_FOYER | {
+        'enfant_date_naissance': '2008-04-11', 'crous_est_boursier': 'false', 'crous_ine': None}))
+    assert situations([row])[0] == ['AEEH']
+
+
+def test_un_enfant_boursier_est_rattache_au_cnous_par_son_ine():
+    df = beneficiaires_nettoyes([enfant_row(**ETUDIANT_DU_FOYER)])
+
+    assert df.loc[0, 'organisme'] == 'cnous'
+    assert df.loc[0, 'allocataire-matricule'] == 'INE5511'
+    assert lib.build_match_candidates(df).loc[0, 'ine'] == 'INE5511'
+
+
+def test_l_etudiant_et_son_parent_ne_font_qu_une_ligne_par_ine():
+    df = beneficiaires_nettoyes([
+        self_row(eligibility_result_id='etudiant', crous_est_boursier='true', crous_ine='INE5511',
+                 **{'allocataire-nom_naissance': 'TREVALUN', 'allocataire-prenom': 'Osmirel Kadun',
+                    'allocataire-date_naissance': '2006-02-11'}),
+        enfant_row(eligibility_result_id='parent', **ETUDIANT_DU_FOYER),
+    ])
+
+    dedup, ecartees = lib.drop_duplicate_ine(df)
+
+    assert list(dedup['eligibility_result_id']) == ['etudiant']
+    assert ecartees == 1
+
+
+def test_le_dedoublonnage_par_ine_ignore_les_lignes_sans_ine():
+    df = beneficiaires_nettoyes([
+        enfant_row(eligibility_result_id='a', enfant_prenom='Lirvan'),
+        enfant_row(eligibility_result_id='b', enfant_prenom='Toskel'),
+    ])
+
+    dedup, ecartees = lib.drop_duplicate_ine(df)
+
+    assert list(dedup['eligibility_result_id']) == ['a', 'b']
+    assert ecartees == 0
