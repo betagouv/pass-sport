@@ -16,6 +16,7 @@ export const QF_RESOURCE_PREFIX = "dss.quotient_familial";
 export const AAH_RESOURCE_PREFIX = "dss.allocation_adulte_handicape";
 export const CROUS_RESOURCE_PREFIX = "cnous.etudiant_boursier";
 export const AEEH_RESOURCE = "dss.allocation_enfant_handicape_identite";
+export const CROUS_RESOURCE = "cnous.etudiant_boursier_identite";
 
 const answeredAbout = (result: ResourceResult, prefix: string): boolean =>
   result.resource.startsWith(prefix) &&
@@ -82,6 +83,16 @@ export const hasAahRight = (results: ResourceResult[]): boolean =>
 
 export const hasBourse = (results: ResourceResult[]): boolean =>
   readBoursier(results)?.statut_boursier?.est_boursier === true;
+
+// Row-level, for the per-child CNOUS call. A 404 (unknown to the CNOUS) reads as not boursier.
+export const isBoursierRow = (row: ResourceResult | undefined): boolean =>
+  !!row?.success &&
+  (row.data as EtudiantBoursierData | null)?.statut_boursier?.est_boursier === true;
+
+// The key every code of the boursier route is matched on, downstream (data/'s
+// match_beneficiaires.sql joins it to beneficiaires.allocataire_matricule).
+export const boursierIne = (row: ResourceResult | undefined): string | undefined =>
+  (row?.success ? (row.data as EtudiantBoursierData | null)?.ine : undefined) || undefined;
 
 // true/false when the API answered about that child, null when there is no usable row — which
 // is also the case of a child never called because the household quotient already covers them.

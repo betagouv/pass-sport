@@ -149,6 +149,10 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
     df_final, doublons = partners.drop_duplicate_beneficiaries(
         df_valid, subset_columns=fc.FC_DEDUPLICATION_KEY_COLUMNS)
 
+    # Puis sur l'INE : l'étudiant et son parent remontent le même boursier sous deux identités
+    # que la clé ci-dessus ne réunit pas.
+    df_final, doublons_ine = fc.drop_duplicate_ine(df_final)
+
     # Garde-fous avant écriture : le CSV doit porter une clé de write-back par ligne, et pas
     # encore de code — c'est l'étape 3 qui les fabrique.
     assert df_final['eligibility_result_id'].notna().all()
@@ -180,6 +184,7 @@ def clean(input_filepath, output_filepath, match_filepath=None, cnaf_extra_filep
         'sans_situation': sans_situation,
         'lignes_ecartees': lignes_ecartees,
         'doublons_retires': doublons,
+        'doublons_ine_retires': doublons_ine,
         'beneficiaires': len(df_final),
         'genre_M': len(df_final[df_final['genre'] == 'M']),
         'genre_F': len(df_final[df_final['genre'] == 'F']),

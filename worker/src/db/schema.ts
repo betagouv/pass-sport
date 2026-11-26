@@ -211,6 +211,11 @@ export const eligibilityResults = pgTable(
     // there, and nothing has confirmed it.
     caisse: text("caisse").$type<ResultCaisse>(),
 
+    // The CNOUS INE of a boursier, on 'self' rows and on the 'enfant' rows a parent's connection
+    // pronounced boursier alike. data/'s FranceConnect pipeline matches the code on it, which is
+    // what hands the student and their parent the same code. Null on every other route.
+    ine: text("ine"),
+
     relanceAllowed: boolean("relance_allowed").notNull().default(false),
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

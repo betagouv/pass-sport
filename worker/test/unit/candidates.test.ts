@@ -427,3 +427,100 @@ describe("readConjointIdentite", () => {
     });
   });
 });
+
+describe("listBeneficiaryCandidates — boursier", () => {
+  const cnousResult = (
+    estBoursier: boolean,
+    { childIndex, ine }: { childIndex?: number; ine?: string } = {},
+  ): ResourceResult => ({
+    resource: "cnous.etudiant_boursier_identite",
+    label: "CNOUS",
+    httpStatus: 200,
+    success: true,
+    data: { ine, statut_boursier: { est_boursier: estBoursier } },
+    ...(childIndex === undefined ? {} : { childIndex }),
+  });
+
+  const ETUDIANT: PersonneQuotientFamilial = {
+    nom_naissance: "ZALQUIN",
+    prenoms: "Fenrys",
+    date_naissance: "2006-02-11",
+    sexe: "F",
+  };
+
+  it("carries the INE of an allocataire who is boursier", () => {
+    const candidates = listBeneficiaryCandidates({ ...IDENTITY, birthdate: "2005-01-20" }, [
+      qfResult([]),
+      aahResult(false),
+      cnousResult(true, { ine: "090123456AB" }),
+    ]);
+
+    expect(candidates[0]).toMatchObject({
+      source: "self",
+      eligibilities: ["CROUS"],
+      ine: "090123456AB",
+    });
+  });
+
+  it("pronounces a child boursier on the child's own CNOUS answer", () => {
+    const candidates = listBeneficiaryCandidates(IDENTITY, [
+      qfResult([ETUDIANT]),
+      cnousResult(true, { childIndex: 0, ine: "090654321CD" }),
+    ]);
+
+    expect(candidates).toEqual([
+      expect.objectContaining({
+        source: "enfant",
+        firstname: "Fenrys",
+        eligibilities: ["CROUS"],
+        ine: "090654321CD",
+      }),
+    ]);
+  });
+
+  it("never reads the allocataire's own bourse as the child's", () => {
+    const candidates = listBeneficiaryCandidates({ ...IDENTITY, birthdate: "1999-04-02" }, [
+      qfResult([ETUDIANT]),
+      cnousResult(true, { ine: "090123456AB" }),
+    ]);
+
+    expect(candidates.find((c) => c.source === "enfant")).toMatchObject({ eligibilities: [] });
+  });
+
+  it("leaves a child the CNOUS does not know as not eligible, without an INE", () => {
+    const candidates = listBeneficiaryCandidates(IDENTITY, [
+      qfResult([ETUDIANT]),
+      { ...cnousResult(false, { childIndex: 0 }), httpStatus: 404, success: false, data: null },
+    ]);
+
+    expect(candidates[0]).toMatchObject({ source: "enfant", eligibilities: [] });
+    expect(candidates[0].ine).toBeUndefined();
+  });
+
+  it("keeps the AEEH first for a child both routes would carry", () => {
+    const candidates = listBeneficiaryCandidates(IDENTITY, [
+      qfResult([{ ...ETUDIANT, date_naissance: "2008-02-11" }]),
+      {
+        resource: "dss.allocation_enfant_handicape_identite",
+        label: "AEEH",
+        httpStatus: 200,
+        success: true,
+        data: { status: "allocataire" },
+        childIndex: 0,
+      },
+      cnousResult(true, { childIndex: 0, ine: "090654321CD" }),
+    ]);
+
+    expect(candidates[0]).toMatchObject({ eligibilities: ["AEEH"] });
+    expect(candidates[0].ine).toBeUndefined();
+  });
+
+  it("opens no boursier route under 17 ans", () => {
+    const candidates = listBeneficiaryCandidates(IDENTITY, [
+      qfResult([{ ...ETUDIANT, date_naissance: "2010-03-01" }]),
+      cnousResult(true, { childIndex: 0, ine: "090654321CD" }),
+    ]);
+
+    expect(candidates[0]).toMatchObject({ eligibilities: [] });
+  });
+});

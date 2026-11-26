@@ -52,6 +52,13 @@
 -- files declare the AEEH regardless of the quotient. Each fallback row runs the strategy of the
 -- base row it reaches, since that is what fixes which fields its caisse wrote.
 --
+-- A STUDENT IS LOOKED UP ACROSS THE BOURSIER / CHILD ROUTES, as a last tier: a boursier whose
+-- INE reaches nobody, and a child whose own and fallback strategies reach nobody, are looked up
+-- on the beneficiary identity alone among the lines of the other kind. The same student can be
+-- coded boursier from their own connection and AEEH/jeune from their parent's (the worker only
+-- asks the CNOUS about a child nothing else carries), and both must land on one code. Prénoms
+-- compared both ways there: QF, FranceConnect and the CNOUS file do not list the same ones.
+--
 -- beneficiaire_cnaf_extra_field also holds a row for every code the FranceConnect pipeline
 -- itself issued under organisme CAF (clean_fc_lib.build_cnaf_extra_field_rows). That row is
 -- the only way the CAF strategies below find such a code again: its beneficiaires row holds
@@ -421,6 +428,34 @@ where repli.repli
   and exists (select 1 from fc_essais propre
               where propre.eligibility_result_id = repli.eligibility_result_id
                 and not propre.repli);
+
+-- --- Last tier: the student across the boursier / child routes ---------------------------
+-- Only for the candidates nothing above reached. Beneficiary identity alone: name (both forms),
+-- prénoms contained either way, genre, birthdate.
+create temp table fc_sans_essai on commit drop as
+select n.*
+from fc_norm n
+where not exists (select 1 from fc_essais e where e.eligibility_result_id = n.eligibility_result_id)
+  and n.benef_prenoms is not null
+  and n.benef_genre is not null
+  and n.benef_naissance is not null
+  and coalesce(n.benef_nom_naissance, n.benef_nom_usage) is not null;
+
+insert into fc_essais (eligibility_result_id, id_psp, strategie, repli)
+select distinct n.eligibility_result_id, b.id_psp,
+       case when n.situation = 'boursier' then 'enfant_identite' else 'boursier_identite' end,
+       true
+from fc_sans_essai n
+join public.beneficiaires b
+  on public.normalise_recherche(b.nom) in (n.benef_nom_naissance, n.benef_nom_usage)
+ and b.exercice_id = :exercice
+ and b.id_psp is not null
+ and b.genre::text = n.benef_genre
+ and b.date_naissance::date = n.benef_naissance
+ and (string_to_array(public.normalise_recherche(b.prenom), ' ') <@ n.benef_prenoms
+      or n.benef_prenoms <@ string_to_array(public.normalise_recherche(b.prenom), ' '))
+where (n.situation = 'boursier' and b.situation in ('AEEH', 'jeune'))
+   or (n.situation in ('AEEH', 'jeune') and b.organisme = 'cnous' and b.situation = 'boursier');
 
 -- Hors AAH, un candidat ne relève que d'une stratégie (sa situation et sa caisse la
 -- choisissent) : concluant ssi elle atteint exactement un id_psp.

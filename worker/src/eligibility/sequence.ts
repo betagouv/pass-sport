@@ -23,6 +23,7 @@ import {
   AEEH_BIRTHDATE_MIN,
   CROUS_BIRTHDATE_MAX,
   CROUS_BIRTHDATE_MIN,
+  CROUS_CHILD_BIRTHDATE_MAX,
   FRANCE_COG_INSEE,
   QF_BIRTHDATE_MAX,
   QF_BIRTHDATE_MIN,
@@ -37,7 +38,13 @@ import {
   type QuotientFamilialData,
   type ResourceResult,
 } from "./types";
-import { isAahBeneficiaryRow, readQuotientFamilial } from "./verdicts";
+import {
+  AEEH_RESOURCE,
+  childAeehVerdict,
+  findChildResource,
+  isAahBeneficiaryRow,
+  readQuotientFamilial,
+} from "./verdicts";
 
 // Synthetic pivot identity for a QF child (reuses the identité param builders). The parent's
 // lieu de naissance says nothing about the child's: the commune is never sent, and the pays
@@ -82,6 +89,33 @@ const planChildrenChecks = (
     return [{ childIndex, identity }];
   });
 
+// One planned per-child CNOUS call, so that a student can be pronounced on from their parent's
+// connection too. Asked only when no other route carries the child (QF, then AEEH, keep their
+// priority) and only from 17 ans: younger children are not in l'enseignement supérieur. Same
+// identity as the AEEH call, hence no commune de naissance.
+const planChildrenBoursierChecks = (
+  enfants: PersonneQuotientFamilial[],
+  qfCovers: boolean,
+  results: ResourceResult[],
+): ChildCheck[] =>
+  enfants.flatMap((enfant, childIndex) => {
+    const identity = enfantToIdentity(enfant);
+    if (!identity) return [];
+
+    const { birthdate } = identity;
+    if (!isWithinBirthdateWindow(birthdate, CROUS_BIRTHDATE_MIN, CROUS_CHILD_BIRTHDATE_MAX)) {
+      return [];
+    }
+    if (qfCovers && isWithinBirthdateWindow(birthdate, QF_BIRTHDATE_MIN, QF_BIRTHDATE_MAX)) {
+      return [];
+    }
+    if (childAeehVerdict(findChildResource(results, AEEH_RESOURCE, childIndex)) === true) {
+      return [];
+    }
+
+    return [{ childIndex, identity }];
+  });
+
 // France refused, the parent's pays is the only other one worth trying.
 export const needsParentCountryRetry = (
   row: ResourceResult | undefined,
@@ -96,7 +130,8 @@ export const parentCountryIdentity = (
   parent: PivotIdentity,
 ): PivotIdentity => ({ ...identity, birthcountry: parent.birthcountry });
 
-// Sequential API Particulier chain: QF (month by month) -> [AAH] -> [CROUS] -> per child: AEEH.
+// Sequential API Particulier chain: QF (month by month) -> [AAH] -> [CROUS] -> per child: AEEH,
+// then CROUS.
 // Nothing is selected by the usager any more: each resource is gated by its own birthdate
 // window alone. Sequential on purpose (never Promise.all). Checkpoints after every success so a
 // 429-interrupted job resumes instead of re-calling completed resources.
@@ -228,6 +263,17 @@ export async function runEligibilitySequence(
       childIndex: check.childIndex,
       params: toDssParams(paysParent),
       invoke: () => client.aeeh(paysParent, check.childIndex),
+    });
+  }
+
+  for (const check of planChildrenBoursierChecks(enfants, qfCovers, checkpoint.results)) {
+    await checkpoint.run({
+      key: `cnous:${check.childIndex}`,
+      resource: RESOURCE_META.cnous.resource,
+      subject: "enfant",
+      childIndex: check.childIndex,
+      params: toCnousParams(check.identity),
+      invoke: () => client.cnous(check.identity, check.childIndex),
     });
   }
 

@@ -296,6 +296,7 @@ export async function processFcRelanceJob(
           // email_kind stays null and email_sent stays false, which is precisely what makes the
           // row eligible to the fc_code_emails sweep once data/ has minted its code.
           caisse: situation === RESULT_SITUATION_BOURSIER ? ORGANISME_BOURSIER : householdCaisse,
+          ine: candidate.ine ?? null,
         })
         .where(
           and(

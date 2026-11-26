@@ -169,6 +169,13 @@
       "when": 1792754058751,
       "tag": "0023_add_fc_dn_dossiers",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795163363556,
+      "tag": "0024_add_eligibility_results_ine",
+      "breakpoints": true
     }
   ]
 }
