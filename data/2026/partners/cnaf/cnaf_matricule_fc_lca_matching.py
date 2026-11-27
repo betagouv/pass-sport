@@ -45,6 +45,9 @@ CNAF_COLUMNS = [
     'nom', 'prenom', 'date_naissance', 'genre', 'situation_origine',
 ]
 
+# The main CNAF export and LCA zero-pad matricules to 7 digits, the 2026-10-06 AEEH export does not
+MATRICULE_LENGTH = 7
+
 BASE_SCORE = 50
 
 # criterion -> (LCA column, CNAF column, points when equal, rejects the pair when different)
@@ -74,9 +77,16 @@ def _to_iso_date(values: pd.Series) -> pd.Series:
     return pd.to_datetime(values, format='%d/%m/%Y', errors='coerce').dt.strftime('%Y-%m-%d').fillna('')
 
 
+def pad_matricules(matricules: pd.Series) -> pd.Series:
+    """Zero-pad numeric matricules to MATRICULE_LENGTH digits (11883 -> 0011883), as LCA stores them."""
+    is_numeric = matricules.str.fullmatch(r'\d+')
+    return matricules.mask(is_numeric, matricules.str.zfill(MATRICULE_LENGTH))
+
+
 def _shape_cnaf(df: pd.DataFrame, fichier: str) -> pd.DataFrame:
     df = partners.normalize_allocataire_qualite(df)[CNAF_COLUMNS].copy()
     df = df.fillna('')
+    df['allocataire-matricule'] = pad_matricules(df['allocataire-matricule'])
     df['date_naissance'] = _to_iso_date(df['date_naissance'])
     df['allocataire-date_naissance'] = _to_iso_date(df['allocataire-date_naissance'])
     df['fichier_cnaf'] = fichier

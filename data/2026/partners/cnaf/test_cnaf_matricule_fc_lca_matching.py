@@ -187,21 +187,36 @@ def test_load_lca_courriel_column_required_only_with_the_option(tmp_path):
         poc.load_lca(str(path), avec_courriel=True)
 
 
-def test_load_cnaf_ars_reads_the_raw_export(tmp_path):
+def _write_cnaf_ars(path, **overrides):
     values = {column: '' for column in cnaf.CNAF_RAW_COLUMNS} | {
         'CODORG': '143', 'MATRICULE': '7000001', 'QUALDOS': 'MME', 'RESPDOS': 'KORANDE',
         'NOMNAIDOS': 'PELUVAN', 'PRENOMDOS': 'SOLIVE   ', 'DTNAIDOS': '21/07/1984',
         'ADRLIG5DESTDOS': '14400 BAYEUX', 'NOMENF': 'VORATEL', 'PRENOMENF': 'MIZALE',
-        'DTNAIENF': '09/03/2014', 'SEXENF': 'F', 'ORIGINESELECTION': 'ARS'}
-    path = tmp_path / 'cnaf.csv'
+        'DTNAIENF': '09/03/2014', 'SEXENF': 'F', 'ORIGINESELECTION': 'ARS'} | overrides
     path.write_text(
         "PASSPORT;143;20260906;160036;;;;;;;;;;;;;;;;;;;;;\r\n"
         + ';'.join(cnaf.CNAF_RAW_COLUMNS) + "\r\n"
         + ';'.join(values[c] for c in cnaf.CNAF_RAW_COLUMNS) + "\r\n"
         + "garbage\r\n",
         newline='')
+    return str(path)
 
-    df = poc.load_cnaf_ars(str(path))
+
+def _write_cnaf_aeeh(path, **overrides):
+    values = {column: '' for column in cnaf.CNAF_RAW_COLUMNS_10_06_2026} | {
+        'numorg': '143', 'matricul': '7000001', 'nomenf': 'VORATEL', 'prenomen': 'MIZALE',
+        'dtnaienf': '09/03/2014', 'sexeenf': 'F', 'QUALDOS': 'MR', 'RESPDOS': 'KORANDE',
+        'PRENOMDOS': 'SOLIVE', 'ADRLIG5DESTDOS': '14400 BAYEUX', 'EMAIL': 'x@exemple.test',
+        'DRT': 'AEEH'} | overrides
+    path.write_text(
+        ';'.join(cnaf.CNAF_RAW_COLUMNS_10_06_2026) + "\r\n"
+        + ';'.join(values[c] for c in cnaf.CNAF_RAW_COLUMNS_10_06_2026) + "\r\n",
+        newline='')
+    return str(path)
+
+
+def test_load_cnaf_ars_reads_the_raw_export(tmp_path):
+    df = poc.load_cnaf_ars(_write_cnaf_ars(tmp_path / 'cnaf.csv'))
 
     assert len(df) == 1
     assert df.iloc[0]['allocataire-qualite'] == 'Mme'
@@ -212,20 +227,38 @@ def test_load_cnaf_ars_reads_the_raw_export(tmp_path):
 
 
 def test_load_cnaf_aeeh_reads_the_raw_export(tmp_path):
-    values = {column: '' for column in cnaf.CNAF_RAW_COLUMNS_10_06_2026} | {
-        'numorg': '143', 'matricul': '7000001', 'nomenf': 'VORATEL', 'prenomen': 'MIZALE',
-        'dtnaienf': '09/03/2014', 'sexeenf': 'F', 'QUALDOS': 'MR', 'RESPDOS': 'KORANDE',
-        'PRENOMDOS': 'SOLIVE', 'ADRLIG5DESTDOS': '14400 BAYEUX', 'EMAIL': 'x@exemple.test',
-        'DRT': 'AEEH'}
-    path = tmp_path / 'cnaf_aeeh.csv'
-    path.write_text(
-        ';'.join(cnaf.CNAF_RAW_COLUMNS_10_06_2026) + "\r\n"
-        + ';'.join(values[c] for c in cnaf.CNAF_RAW_COLUMNS_10_06_2026) + "\r\n",
-        newline='')
-
-    df = poc.load_cnaf_aeeh(str(path))
+    df = poc.load_cnaf_aeeh(_write_cnaf_aeeh(tmp_path / 'cnaf_aeeh.csv'))
 
     assert len(df) == 1
     assert df.iloc[0]['allocataire-qualite'] == 'M'
     assert df.iloc[0]['allocataire-courriel'] == 'x@exemple.test'
     assert df.iloc[0]['fichier_cnaf'] == 'aeeh_10_06'
+
+
+@pytest.mark.parametrize('raw, expected', [
+    ('11883', '0011883'),
+    ('0011883', '0011883'),
+    ('7000001', '7000001'),
+    ('12345678901', '12345678901'),
+    ('A1883', 'A1883'),
+    ('', ''),
+])
+def test_pad_matricules(raw, expected):
+    assert poc.pad_matricules(pd.Series([raw])).tolist() == [expected]
+
+
+def test_same_household_in_both_files_with_unpadded_aeeh_matricule_is_unique(tmp_path):
+    # The main export zero-pads matricules to 7 digits, the 2026-10-06 AEEH export does not
+    df_cnaf = pd.concat([
+        poc.load_cnaf_ars(_write_cnaf_ars(tmp_path / 'cnaf.csv', MATRICULE='0011883',
+                                          QUALDOS='MR', ORIGINESELECTION='AEEH', DTNAIDOS='')),
+        poc.load_cnaf_aeeh(_write_cnaf_aeeh(tmp_path / 'cnaf_aeeh.csv', matricul='11883',
+                                            DTNAIDOS='21/07/1984')),
+    ], ignore_index=True)
+    lca = _lca(allocataire_qualite='M', allocataire_prenom='SOLIVE')
+
+    result, _ = poc.run(pd.DataFrame([lca]), df_cnaf)
+
+    assert result.loc[0, 'verdict'] == 'unique'
+    assert result.loc[0, 'matricule'] == '0011883'
+    assert result.loc[0, 'fichier_cnaf'] == 'aeeh_10_06|ars'
